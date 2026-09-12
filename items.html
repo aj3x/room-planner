@@ -55,6 +55,15 @@ main{display:grid;grid-template-columns:290px minmax(0,1fr);min-height:0;min-wid
 .field label{width:100px;flex:none;color:var(--ink2);font-size:12.5px}
 .field.wide label{width:auto}
 .field[hidden]{display:none}
+.picker{border:1px solid var(--line);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.picker-head{display:flex;align-items:center;gap:6px;padding:5px 7px;background:var(--panel);border-bottom:1px solid var(--line2);font-size:12px;font-weight:650}
+.picker-head .grow{flex:1;min-width:0}
+.picker-body{max-height:172px;overflow:auto;padding:3px}
+.pick{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:4px;cursor:pointer;min-width:0}
+.pick:hover{background:var(--panel)}
+.pick input{flex:none;width:auto;margin:0}
+.pick .nm{font-size:12.5px}
+.picker .empty{margin:5px;padding:11px}
 input[type=text],input[type=number],input[type=url],select,textarea{width:100%;min-width:0;padding:5px 7px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius)}
 input[type=text].len,input.deg{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
 input[type=color]{width:30px;height:26px;flex:none;padding:1px;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper)}
@@ -278,6 +287,70 @@ function uniqueId(base, taken){
   let n=2;
   while(taken.has(base+'-'+n)) n++;
   return base+'-'+n;
+}
+
+/* ------------------------- export ------------------------- */
+/* Same {app,version,exported,inventory} shape index.html's own export/import uses, so a file
+   made here opens there, and vice versa — this page just never carries rooms or settings. */
+const fileSlug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'export';
+function itemsExportPayload(items){
+  return { app:'room-planner', version:2, exported:new Date().toISOString(), inventory:items.map(clone) };
+}
+function downloadJSON(obj, name){
+  const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=name;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+function exportItems(items, name){
+  if(!items.length){ flash('Nothing to export',true); return; }
+  downloadJSON(itemsExportPayload(items), name);
+  flash('Exported '+items.length+' item'+(items.length===1?'':'s'));
+}
+function exportFolder(folderId){
+  const ids=itemFolderSubtreeIds(folderId);
+  const items=S.inventory.filter(i=>ids.has(i.folderId||null));
+  const f=itemFolderOf(folderId);
+  exportItems(items, 'room-planner-'+fileSlug(f?f.name:'library')+'.json');
+}
+/* tick-box list, shared by the "export the whole library" dialog */
+function pickerHTML(id, title, rows, emptyMsg){
+  const body = rows.length
+    ? rows.map(r=>`<label class="pick">
+        <input type="checkbox" value="${esc(r.value)}" ${r.checked?'checked':''}>
+        <span class="nm" title="${esc(r.label)}">${esc(r.label)}</span>
+        ${r.sub?`<span class="dim" title="${esc(r.sub)}">${esc(r.sub)}</span>`:''}
+      </label>`).join('')
+    : `<div class="empty">${esc(emptyMsg||'Nothing here')}</div>`;
+  return `<div class="picker" id="${id}">
+    <div class="picker-head"><span class="grow">${esc(title)}</span>
+      <button type="button" class="btn sm" data-all="1">All</button>
+      <button type="button" class="btn sm" data-all="0">None</button></div>
+    <div class="picker-body">${body}</div></div>`;
+}
+function pickerMount(id){
+  const el=$(id); if(!el) return;
+  el.addEventListener('click', e=>{
+    const b=e.target.closest('button[data-all]'); if(!b) return;
+    for(const c of el.querySelectorAll('input[type=checkbox]')) c.checked = b.dataset.all==='1';
+  });
+}
+const pickValues = id => [...$(id).querySelectorAll('input[type=checkbox]:checked')].map(c=>c.value);
+function exportLibraryDialog(){
+  const rows=S.inventory.map(i=>({value:i.id, label:i.name, sub:i.folderId?itemFolderPath(i.folderId).map(f=>f.name).join(' / '):'Top level', checked:true}));
+  openModal('Export items', `
+    <p class="hint" style="margin-top:0">Tick what should go in the file. The file can be re-imported here later, opened by index.html's own Import, or shared as-is — see <code>ITEM_SCHEMA.md</code> for the format.</p>
+    ${pickerHTML('xItems','Items',rows,'Your library is empty')}`,
+    'Export',
+    ()=>{
+      const ids=new Set(pickValues('xItems'));
+      if(!ids.size){ moError('Tick at least one item'); return false; }
+      const items=S.inventory.filter(i=>ids.has(i.id));
+      downloadJSON(itemsExportPayload(items), ids.size===S.inventory.length ? 'room-planner-library.json' : 'room-planner-items.json');
+    },
+    ()=>pickerMount('xItems'));
 }
 
 /* ------------------------- units (identical to index.html) ------------------------- */
@@ -864,7 +937,8 @@ function renderTools(){
   const box=$('explTools');
   if(nav.tab==='library'){
     box.innerHTML=`<button class="btn sm" id="btnNewFolder">New folder</button>
-      <button class="btn sm primary" id="btnNewItem">New item</button>`;
+      <button class="btn sm primary" id="btnNewItem">New item</button>
+      <button class="btn sm" id="btnExportLib">Export…</button>`;
     $('btnNewFolder').addEventListener('click', ()=>{
       askNewLibFolder('New folder', (n,tags)=>{
         S.itemFolders.push({id:uid(),name:n,parentId:nav.libFolderId,tags});
@@ -873,6 +947,7 @@ function renderTools(){
       });
     });
     $('btnNewItem').addEventListener('click', createNewItem);
+    $('btnExportLib').addEventListener('click', exportLibraryDialog);
   } else {
     box.innerHTML=`<button class="btn sm" id="btnNewMFolder">New folder</button>
       <button class="btn sm primary" id="btnAddListing">Add listing</button>`;
@@ -1306,6 +1381,7 @@ function renderLibraryFolder(box, folderId){
   const subs=childItemFolders(folderId), items=itemsInFolder(folderId);
   let html=crumbsHTML('library', folderId);
   html+=`<div class="viewhead"><span class="grow"></span>
+    ${(subs.length||items.length)?'<button class="btn sm" id="btnFolderExport">Export…</button>':''}
     ${f?'<button class="btn sm" id="btnFolderTags">Edit folder tags…</button>':''}</div>`;
   const inherited = f ? ancestorTags(folderId) : [];
   if(f && inherited.length){
@@ -1320,6 +1396,7 @@ function renderLibraryFolder(box, folderId){
   box.innerHTML=html;
   bindCrumbs(box,'library');
   if(f) $('btnFolderTags').addEventListener('click', ()=>folderTagsDialog(f.id));
+  if($('btnFolderExport')) $('btnFolderExport').addEventListener('click', ()=>exportFolder(folderId));
   bindGrid(box,'library');
 }
 function bindGrid(box, kind){
@@ -1371,6 +1448,7 @@ function itemMenu(id, anchor){
     {label:'Open', fn:()=>selectItem(id)},
     {label:'Move to folder…', fn:()=>moveItemDialog(it)},
     {label:'Duplicate', fn:()=>duplicateItem(id)},
+    {label:'Export…', fn:()=>exportItems([it], 'room-planner-'+fileSlug(it.name)+'.json')},
     {sep:true},
     {label:'Delete…', danger:true, fn:()=>deleteItemConfirm(id)},
   ], it.name);
@@ -1423,6 +1501,7 @@ function renderItemDetail(box, id){
         </div>
         <div class="row">
           <button class="btn sm" id="btnDupItem">Duplicate</button>
+          <button class="btn sm" id="btnExportItem">Export…</button>
           <button class="btn sm danger" id="btnDelItem">Delete</button>
         </div>
       </div>
@@ -1474,6 +1553,7 @@ function renderItemDetail(box, id){
   });
   $('btnMoveItem').addEventListener('click', ()=>moveItemDialog(it));
   $('btnDupItem').addEventListener('click', ()=>duplicateItem(it.id));
+  $('btnExportItem').addEventListener('click', ()=>exportItems([it], 'room-planner-'+fileSlug(it.name)+'.json'));
   $('btnDelItem').addEventListener('click', ()=>deleteItemConfirm(it.id));
 
   const prevCv=$('prevCv');
