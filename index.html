@@ -88,6 +88,21 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
 .chips button{padding:3px 8px;font-size:11.5px;border:1px solid var(--line);background:var(--paper);border-radius:20px}
 .chips button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 
+.tagfield{position:relative}
+.taginput{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:3px 4px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);cursor:text}
+.taginput.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.taginput .tag{display:inline-flex;align-items:center;gap:2px;padding:1px 3px 1px 8px;font-size:11.5px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);border-radius:20px;white-space:nowrap;max-width:100%}
+.taginput .tag span{overflow:hidden;text-overflow:ellipsis}
+.taginput .tag button{flex:none;background:none;border:0;padding:0 3px;color:inherit;font-size:12px;line-height:1;opacity:.65;border-radius:50%}
+.taginput .tag button:hover{opacity:1;color:var(--warn)}
+.taginput input[type=text]{flex:1 1 70px;width:auto;min-width:70px;border:0;padding:2px 3px;background:transparent}
+.taginput input[type=text]:focus-visible{outline:0}
+.tagsuggest{margin-top:4px;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper);box-shadow:var(--shadow);max-height:132px;overflow:auto;padding:3px}
+.tagsuggest[hidden]{display:none}
+.tagsuggest button{display:block;width:100%;text-align:left;padding:4px 7px;border:0;background:none;border-radius:4px;font-size:12.5px}
+.tagsuggest button:hover{background:var(--panel)}
+.tagsuggest button[aria-selected=true]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+
 #toolbar{position:absolute;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap;background:rgba(251,251,248,.94);padding:5px;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
 #readout{position:absolute;right:12px;bottom:12px;background:rgba(251,251,248,.94);border:1px solid var(--line);border-radius:var(--radius);padding:5px 9px;font-size:12px;color:var(--ink2);box-shadow:var(--shadow)}
 #modeTag{position:absolute;left:12px;bottom:12px;background:var(--accent);color:#fff;padding:5px 10px;border-radius:var(--radius);font-size:12px;box-shadow:var(--shadow)}
@@ -798,6 +813,7 @@ const mo=$('modal');
 let moOkFn=null;
 function openModal(title, bodyHTML, okLabel, onOk, onMount){
   $('moTitle').textContent=title;
+  tagInputs.clear();
   $('moBody').innerHTML=bodyHTML;
   $('moErr').textContent='';
   $('moOk').textContent=okLabel||'Save';
@@ -825,6 +841,114 @@ function askText(title,label,value,onOk){
 function askConfirm(title,msg,okLabel,onOk){
   openModal(title, `<p style="margin:0">${esc(msg)}</p>`, okLabel||'Delete', ()=>onOk());
 }
+
+/* ------------------------- tag input: chips + autocomplete -------------------------
+   Tags are shown as chips, the way they read elsewhere in the app. Tab or comma
+   commits what you typed (or the highlighted suggestion); backspace on an empty
+   box removes the whole chip before the caret, not one letter of it. */
+const tagInputs = new Map();                 // field id -> () => string[]
+function tagSuggestions(){
+  const s=new Set();
+  for(const it of S.inventory) for(const t of (it.tags||[])) s.add(t);
+  for(const f of S.folders) for(const t of (f.tags||[])) s.add(t);
+  return [...s].sort((a,b)=>a.localeCompare(b));
+}
+function tagFieldHTML(id, placeholder){
+  return `<div class="tagfield" id="${id}">
+    <div class="taginput"><input type="text" id="${id}Input" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="${esc(placeholder||'')}"></div>
+    <div class="tagsuggest" role="listbox" hidden></div>
+  </div>`;
+}
+/* mount after openModal has put the HTML in place; read the value with tagFieldValue(id) */
+function mountTagField(id, tags){
+  const root=$(id), box=root.querySelector('.taginput'),
+        inp=box.querySelector('input'), sug=root.querySelector('.tagsuggest');
+  const list=(tags||[]).slice();
+  let items=[], idx=-1;
+
+  const has = v => list.some(t=>t.toLowerCase()===v.toLowerCase());
+  function renderChips(){
+    for(const el of [...box.querySelectorAll('.tag')]) el.remove();
+    list.forEach((t,i)=>{
+      const el=document.createElement('span');
+      el.className='tag';
+      el.innerHTML=`<span>${esc(t)}</span><button type="button" tabindex="-1" aria-label="Remove ${esc(t)}">×</button>`;
+      el.querySelector('button').addEventListener('click', ev=>{
+        ev.stopPropagation(); list.splice(i,1); renderChips(); refresh(); inp.focus();
+      });
+      box.insertBefore(el, inp);
+    });
+  }
+  function commit(text){
+    const v=String(text==null?inp.value:text).trim();
+    inp.value='';
+    if(!v) return false;
+    if(!has(v)) list.push(v);
+    renderChips(); refresh(); return true;
+  }
+  function drawSug(){
+    if(!items.length){ sug.hidden=true; sug.innerHTML=''; return; }
+    sug.innerHTML=items.map((t,i)=>`<button type="button" role="option" data-i="${i}" aria-selected="${i===idx}">${esc(t)}</button>`).join('');
+    sug.hidden=false;
+    if(idx>=0){ const b=sug.children[idx]; if(b) b.scrollIntoView({block:'nearest'}); }
+  }
+  function refresh(){
+    if(document.activeElement!==inp){ items=[]; idx=-1; drawSug(); return; }
+    const q=inp.value.trim().toLowerCase();
+    let all=tagSuggestions().filter(t=>!has(t));
+    if(q) all=all.filter(t=>t.toLowerCase().includes(q))
+                 .sort((a,b)=> a.toLowerCase().indexOf(q)-b.toLowerCase().indexOf(q) || a.localeCompare(b));  // prefix matches first
+    items=all.slice(0,8);
+    // pre-highlight only a true prefix match, so a new tag that merely contains an
+    // existing one ("sofa bed" vs "sofa") isn't swapped out from under you
+    idx = (q && items.length && items[0].toLowerCase().startsWith(q)) ? 0 : -1;
+    drawSug();
+  }
+  const pick = i => { if(items[i]!=null) commit(items[i]); inp.focus(); };
+
+  // clicks anywhere in the box (gaps, chips, the × button) keep the caret in the input,
+  // so a chip is never re-rendered out from under the click that was removing it
+  box.addEventListener('mousedown', e=>{ if(e.target!==inp){ e.preventDefault(); inp.focus(); } });
+  sug.addEventListener('mousedown', e=>e.preventDefault());   // keep focus in the input
+  sug.addEventListener('click', e=>{
+    const b=e.target.closest('button[data-i]'); if(b) pick(+b.dataset.i);
+  });
+  inp.addEventListener('input', refresh);
+  inp.addEventListener('focus', ()=>{ box.classList.add('on'); refresh(); });
+  inp.addEventListener('blur', ()=>{ box.classList.remove('on'); commit(); items=[]; idx=-1; drawSug(); });
+  inp.addEventListener('keydown', e=>{
+    const k=e.key, typed=inp.value.trim(), hot=(idx>=0&&items[idx]!=null)?items[idx]:null;
+    if(k===','){ e.preventDefault(); commit(hot&&!typed?hot:null); return; }
+    if(k==='Tab'){
+      if(hot){ e.preventDefault(); commit(hot); return; }
+      if(typed){ e.preventDefault(); commit(); return; }
+      return;                                   // empty: let focus move on
+    }
+    if(k==='Enter'){
+      if(hot||typed){ e.preventDefault(); e.stopPropagation(); commit(hot||null); }
+      return;                                   // empty: the modal's Enter saves
+    }
+    if(k==='Backspace' && !inp.value){
+      if(list.length){ e.preventDefault(); list.pop(); renderChips(); refresh(); }
+      return;
+    }
+    if((k==='ArrowDown'||k==='ArrowUp') && items.length){
+      e.preventDefault();
+      idx = k==='ArrowDown' ? (idx+1)%items.length : (idx<=0?items.length-1:idx-1);
+      drawSug(); return;
+    }
+    if(k==='Escape' && !sug.hidden){ e.stopPropagation(); items=[]; idx=-1; drawSug(); }
+  });
+
+  renderChips();
+  tagInputs.set(id, ()=>{
+    const out=list.slice(), pending=inp.value.trim();
+    if(pending && !out.some(t=>t.toLowerCase()===pending.toLowerCase())) out.push(pending);
+    return out;
+  });
+  return inp;
+}
+const tagFieldValue = id => (tagInputs.get(id)||(()=>[]))();
 
 /* ------------------------- view ------------------------- */
 const cv=$('cv'), ctx=cv.getContext('2d');
@@ -1537,13 +1661,15 @@ function layoutActionSheet(id){
 function folderTagsDialog(id){
   const f=folderOf(id);
   openModal('Tag filter for '+f.name, `
-    <div class="field wide"><label style="width:auto">Tags</label></div>
-    <input type="text" id="fTags" value="${esc((f.tags||[]).join(', '))}" placeholder="living room, seating">
+    <div class="field wide"><label for="fTagsInput" style="width:auto">Tags</label></div>
+    ${tagFieldHTML('fTags','living room, seating')}
+    <p class="hint">Type to pick from tags you already use. Tab or comma adds one, backspace removes the last.</p>
     <p class="hint">When you switch into a room in this folder from a room in a different folder, the Things tab's tag filter is set to this automatically. Switching between rooms inside this same folder leaves your filter as you left it.</p>`,
     'Save', ()=>{
-      f.tags=$('fTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+      f.tags=tagFieldValue('fTags');
       renderTree(); save();
-    });
+    },
+    ()=>{ mountTagField('fTags', f.tags||[]); });
 }
 function deleteFolder(id){
   const f=folderOf(id); if(!f) return;
@@ -2000,9 +2126,9 @@ function itemDialog(id){
     <div class="field wide"><input type="checkbox" id="iPass" style="width:auto" ${it&&it.passThrough?'checked':''}>
       <label for="iPass" style="width:auto">Others can overlap this (rugs, mats)</label></div>
     <div class="field"><label for="iCount">How many you own</label><input type="number" id="iCount" min="1" step="1" value="${it&&it.count!=null?it.count:1}"></div>
-    <div class="field wide"><label for="iTags" style="width:auto">Tags</label></div>
-    <input type="text" id="iTags" value="${esc((it&&it.tags||[]).join(', '))}" placeholder="living room, seating, IKEA">
-    <p class="hint">Comma-separated. Used to filter your inventory and to set a folder's default filter.</p>
+    <div class="field wide"><label for="iTagsInput" style="width:auto">Tags</label></div>
+    ${tagFieldHTML('iTags','living room, seating, IKEA')}
+    <p class="hint">Type to pick from tags you already use. Tab or comma adds one, backspace removes the last. Used to filter your inventory and to set a folder's default filter.</p>
     <p class="hint">Plain numbers are read as ${({ftin:'inches',in:'inches',cm:'centimetres',mm:'millimetres',m:'metres'})[S.unit]}. You can also type 6'2", 30in, 75cm, 1.2m.</p>`,
     'Save',
     ()=>{
@@ -2027,7 +2153,7 @@ function itemDialog(id){
       }
       const name=($('iName').value||'').trim()||'Untitled';
       const count=Math.max(1, Math.round(parseFloat($('iCount').value))||1);
-      const tags=$('iTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+      const tags=tagFieldValue('iTags');
       if(id) Object.assign(itemOf(id),{name,color:dlgColor,shape,passThrough:$('iPass').checked,count,tags});
       else S.inventory.push({id:uid(),name,color:dlgColor,shape,passThrough:$('iPass').checked,count,tags});
       renderInv(); renderSel(); draw(); save();
@@ -2046,6 +2172,7 @@ function itemDialog(id){
       const paint=()=>{ sw.innerHTML=PALETTE.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-pressed="${c===dlgColor}"></button>`).join(''); };
       sw.addEventListener('click',e=>{ const b=e.target.closest('button'); if(b){ dlgColor=b.dataset.c; paint(); } });
       paint();
+      mountTagField('iTags', (it&&it.tags)||[]);
     });
 }
 $('btnAddItem').addEventListener('click',()=>itemDialog(null));
