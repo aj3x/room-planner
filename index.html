@@ -45,7 +45,9 @@ section h2::after{content:"";flex:1;height:1px;background:var(--line2)}
 .field.wide label{width:auto}
 input[type=text],input[type=number],select,textarea{width:100%;min-width:0;padding:5px 7px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius)}
 input[type=text].len,input.deg{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
-input[type=color]{width:30px;height:26px;padding:1px;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper)}
+input[type=color]{width:30px;height:26px;flex:none;padding:1px;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper)}
+input[type=text].hex{flex:1;min-width:58px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:lowercase}
+input.bad{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
 textarea{resize:vertical;min-height:74px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
 select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink2) 50%),linear-gradient(135deg,var(--ink2) 50%,transparent 50%);background-position:calc(100% - 13px) 12px,calc(100% - 9px) 12px;background-size:4px 4px;background-repeat:no-repeat;padding-right:24px}
 #unitSel{min-width:120px}
@@ -180,7 +182,7 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
         <h2>Room shape</h2>
         <div id="rectDims"></div>
         <div class="field"><label for="wallT">Wall</label><input type="text" class="len" id="wallT"></div>
-        <div class="field"><label for="floorCol">Floor</label><input type="color" id="floorCol"><span class="dim" id="areaOut"></span></div>
+        <div class="field"><label for="floorCol">Floor</label><input type="color" id="floorCol"><input type="text" class="hex" id="floorHex" maxlength="7" spellcheck="false" aria-label="Floor colour hex code"><span class="dim" id="areaOut"></span></div>
         <div class="field wide">
           <input type="checkbox" id="trimOn" style="width:auto">
           <label for="trimOn" style="width:auto">Baseboard</label>
@@ -779,7 +781,7 @@ function migrate(st){
       delete l.room.w; delete l.room.d;
     }
     l.room.wall = l.room.wall||114;
-    l.room.floor = l.room.floor||'#f5f3ee';
+    l.room.floor = normHex(l.room.floor)||'#f5f3ee';
     l.room.trim = l.room.trim||19;
     if(!Array.isArray(l.openings)){
       const map={N:0,E:1,S:2,W:3};
@@ -796,6 +798,7 @@ function migrate(st){
   for(const it of st.inventory){
     if(!Array.isArray(it.tags)) it.tags=[];
     if(it.count==null) it.count=1;
+    it.color = normHex(it.color) || PALETTE[0];
   }
   if(!Array.isArray(st.folders)) st.folders=[];
   if(!Array.isArray(st.tagFilter)) st.tagFilter=[];
@@ -1221,6 +1224,12 @@ function sizeLabel(it){
   return fmtLen(b.w,S.unit)+' × '+fmtLen(b.h,S.unit);
 }
 function clip(txt,wpx){ const max=Math.floor(wpx/7.2); return txt.length>max?txt.slice(0,Math.max(1,max-1))+'…':txt; }
+/* accepts #abc, #aabbcc, or the same without the # — returns canonical '#aabbcc' or null */
+function normHex(v){
+  let h=String(v==null?'':v).trim().replace(/^#/,'');
+  if(/^[0-9a-f]{3}$/i.test(h)) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  return /^[0-9a-f]{6}$/i.test(h) ? '#'+h.toLowerCase() : null;
+}
 function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
 function pickText(hex,light){
   const n=parseInt(hex.slice(1),16);
@@ -1744,6 +1753,7 @@ function renderRoom(){
   }
   $('wallT').value=fmtLen(r.wall,S.unit);
   $('floorCol').value=r.floor;
+  $('floorHex').value=r.floor; $('floorHex').classList.remove('bad');
   $('trimOn').checked=!!r.trimOn;
   $('trimD').value=fmtLen(r.trim,S.unit);
   $('trimD').disabled=!r.trimOn;
@@ -2022,8 +2032,17 @@ function bindLen(id,set){
 }
 bindLen('wallT', v=>{ L().room.wall=v; });
 bindLen('trimD', v=>{ L().room.trim=v; });
-$('floorCol').addEventListener('input', e=>{ L().room.floor=e.target.value; draw(); save(); });
+function setFloorColor(hex){ L().room.floor=hex; $('floorCol').value=hex; draw(); save(); }
+$('floorCol').addEventListener('input', e=>{ setFloorColor(e.target.value); $('floorHex').value=e.target.value; $('floorHex').classList.remove('bad'); });
 $('floorCol').addEventListener('change', ()=>commitRoom());
+$('floorHex').addEventListener('input', e=>{
+  const c=normHex(e.target.value);
+  e.target.classList.toggle('bad', !c);
+  if(c) setFloorColor(c);
+});
+/* typing an unfinished/bad code leaves the plan alone — snap the box back on the way out */
+$('floorHex').addEventListener('change', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); commitRoom(); });
+$('floorHex').addEventListener('blur', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); });
 $('trimOn').addEventListener('change', e=>{ L().room.trimOn=e.target.checked; renderRoom(); draw(); save(); commitRoom(); });
 
 $('btnPreRect').addEventListener('click', ()=>{
@@ -2114,7 +2133,7 @@ function shapeFieldHTML(type,sh){
 }
 function itemDialog(id){
   const it=id?itemOf(id):null;
-  dlgColor = it?it.color:PALETTE[S.inventory.length%PALETTE.length];
+  dlgColor = (it&&normHex(it.color)) || PALETTE[S.inventory.length%PALETTE.length];
   const type0 = it?it.shape.type:'rect';
   openModal(it?'Edit '+it.name:'Add a thing', `
     <div class="field"><label for="iName">Name</label><input type="text" id="iName" value="${esc(it?it.name:'')}" placeholder="Sofa"></div>
@@ -2123,6 +2142,7 @@ function itemDialog(id){
       <option value="lshape">L-shape</option><option value="poly">Custom outline</option></select></div>
     <div id="shapeFields"></div>
     <div class="field"><label>Colour</label><div class="swatches" id="iSwatches"></div></div>
+    <div class="field"><label for="iHex">Custom</label><input type="color" id="iColPick"><input type="text" class="hex" id="iHex" maxlength="7" spellcheck="false" placeholder="#6e8b7a"></div>
     <div class="field wide"><input type="checkbox" id="iPass" style="width:auto" ${it&&it.passThrough?'checked':''}>
       <label for="iPass" style="width:auto">Others can overlap this (rugs, mats)</label></div>
     <div class="field"><label for="iCount">How many you own</label><input type="number" id="iCount" min="1" step="1" value="${it&&it.count!=null?it.count:1}"></div>
@@ -2168,9 +2188,18 @@ function itemDialog(id){
       };
       sel2.addEventListener('change',fill);
       fill();
-      const sw=$('iSwatches');
-      const paint=()=>{ sw.innerHTML=PALETTE.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-pressed="${c===dlgColor}"></button>`).join(''); };
+      const sw=$('iSwatches'), pick=$('iColPick'), hx=$('iHex');
+      /* swatches + picker always show the live colour; the hex box is left alone while it's being typed in */
+      const syncSw=()=>{
+        sw.innerHTML=PALETTE.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-pressed="${c===dlgColor}" title="${c}"></button>`).join('');
+        pick.value=dlgColor;
+      };
+      const paint=()=>{ syncSw(); hx.value=dlgColor; hx.classList.remove('bad'); };
       sw.addEventListener('click',e=>{ const b=e.target.closest('button'); if(b){ dlgColor=b.dataset.c; paint(); } });
+      pick.addEventListener('input',()=>{ dlgColor=normHex(pick.value)||dlgColor; paint(); });
+      hx.addEventListener('input',()=>{ const c=normHex(hx.value); hx.classList.toggle('bad',!c); if(c){ dlgColor=c; syncSw(); } });
+      hx.addEventListener('change',paint);
+      hx.addEventListener('blur',paint);
       paint();
       mountTagField('iTags', (it&&it.tags)||[]);
     });
