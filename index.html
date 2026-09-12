@@ -1161,6 +1161,13 @@ function flash(msg){
 /* shift-drag a corner: align it with the X or Y coordinate of a neighbour */
 function snapCornerAxis(i,raw){
   const P=RP(), n=P.length, Pprev=P[(i-1+n)%n], Pnext=P[(i+1)%n];
+  const intersectionRadius=12/Math.max(view.scale,1e-6);
+  const intersections=[[Pprev[0],Pnext[1]], [Pnext[0],Pprev[1]]];
+  const nearIntersection=intersections
+    .map(point=>({point,d:Math.hypot(point[0]-raw[0],point[1]-raw[1])}))
+    .filter(hit=>hit.d<=intersectionRadius)
+    .sort((a,b)=>a.d-b.d)[0];
+  if(nearIntersection) return nearIntersection.point;
   const candidates=[];
   for(const neighbour of [Pprev,Pnext]){
     candidates.push([neighbour[0],raw[1]], [raw[0],neighbour[1]]);
