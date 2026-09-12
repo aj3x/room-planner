@@ -1157,42 +1157,17 @@ function flash(msg){
   el.textContent=msg; el.classList.add('on');
   clearTimeout(flashT); flashT=setTimeout(()=>el.classList.remove('on'),1100);
 }
-/* shift-drag a corner: snap it so an adjacent wall goes perpendicular (or straight)
-   relative to the wall on the far side of its neighbour; if both sides are close,
-   snap to the point that satisfies both at once */
-function refWallAngle(i,side){
-  const P=RP(), n=P.length;
-  const k = side==='prev' ? (i-2+n)%n : (i+1)%n;
-  const d = wallOf(k).dir;
-  return Math.atan2(d[1],d[0]);
-}
-function bestOnRef(P,refAngle,raw){
-  let best=null;
-  for(const offDeg of [0,90]){
-    const ang=refAngle+offDeg*Math.PI/180, dir=[Math.cos(ang),Math.sin(ang)];
-    const v=[raw[0]-P[0], raw[1]-P[1]], proj=v[0]*dir[0]+v[1]*dir[1];
-    const cand=[P[0]+dir[0]*proj, P[1]+dir[1]*proj];
-    const d=Math.hypot(cand[0]-raw[0], cand[1]-raw[1]);
-    if(!best||d<best.d) best={cand,dir,d};
-  }
-  return best;
-}
-function lineIntersect(P,dP,Q,dQ){
-  const denom=dP[0]*dQ[1]-dP[1]*dQ[0];
-  if(Math.abs(denom)<1e-9) return null;
-  const t=((Q[0]-P[0])*dQ[1]-(Q[1]-P[1])*dQ[0])/denom;
-  return [P[0]+dP[0]*t, P[1]+dP[1]*t];
-}
-function snapCornerOrtho(i,raw){
+/* shift-drag a corner: align it with the X or Y coordinate of a neighbour */
+function snapCornerAxis(i,raw){
   const P=RP(), n=P.length, Pprev=P[(i-1+n)%n], Pnext=P[(i+1)%n];
-  const A=bestOnRef(Pprev, refWallAngle(i,'prev'), raw);
-  const B=bestOnRef(Pnext, refWallAngle(i,'next'), raw);
-  const NEAR=300; // mm — close enough to both walls' snap to use their intersection
-  if(A.d<NEAR && B.d<NEAR){
-    const ip=lineIntersect(Pprev,A.dir,Pnext,B.dir);
-    if(ip) return ip;
+  const candidates=[];
+  for(const neighbour of [Pprev,Pnext]){
+    candidates.push([neighbour[0],raw[1]], [raw[0],neighbour[1]]);
   }
-  return A.d<=B.d ? A.cand : B.cand;
+  return candidates.reduce((best,cand)=>
+    Math.hypot(cand[0]-raw[0],cand[1]-raw[1]) < best.d
+      ? {point:cand,d:Math.hypot(cand[0]-raw[0],cand[1]-raw[1])} : best,
+    {point:raw,d:Infinity}).point;
 }
 function pickAt(x,y){
   const ps=L().placed;
@@ -1277,7 +1252,7 @@ cv.addEventListener('pointermove', e=>{
   }
   if(drag.mode==='corner'){
     const P=RP(), was=P[drag.i].slice();
-    const np = e.shiftKey ? snapCornerOrtho(drag.i,pt) : (e.altKey?pt:snapPt(pt));
+    const np = e.shiftKey ? snapCornerAxis(drag.i,pt) : (e.altKey?pt:snapPt(pt));
     P[drag.i]=np;
     if(!polySimple(P)) P[drag.i]=was; else clampOpenings();
     draw(); renderRoomSel(); renderWalls(); return;
