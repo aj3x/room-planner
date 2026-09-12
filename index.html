@@ -31,10 +31,22 @@ header h1 span{color:var(--ink3);font-weight:450}
 .spacer{flex:1}
 .hgroup{display:flex;align-items:center;gap:6px}
 
-main{display:grid;grid-template-columns:288px minmax(0,1fr) 276px;min-height:0;min-width:0}
-.pane{background:var(--paper);overflow-y:auto;padding:14px 14px 40px;min-width:0;display:flex;flex-direction:column;gap:16px}
+main{--lw:288px;--rw:276px;display:grid;grid-template-columns:var(--lw) minmax(0,1fr) var(--rw);min-height:0;min-width:0}
+main.lc{--lw:34px} main.rc{--rw:34px}
+.pane{background:var(--paper);overflow-y:auto;min-width:0;display:flex;flex-direction:column}
 .pane.left{border-right:1px solid var(--line)}
 .pane.right{border-left:1px solid var(--line)}
+.pane-head{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:6px;padding:7px 9px;background:var(--paper);border-bottom:1px solid var(--line2);cursor:pointer;user-select:none}
+.pane-head:hover{background:var(--panel)}
+.pane-head:hover .pane-toggle,.pane-head:hover .pane-name{color:var(--ink)}
+.pane.right .pane-head{flex-direction:row-reverse}
+.pane-name{flex:1;min-width:0;font-size:11.5px;font-weight:650;letter-spacing:.02em;text-transform:uppercase;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pane-toggle{flex:none;width:22px;height:22px;display:grid;place-items:center;border-radius:4px;color:var(--ink3);font-size:12px;line-height:1}
+.pane-body{padding:13px 14px 40px;min-width:0;display:flex;flex-direction:column;gap:16px}
+.pane.collapsed{overflow:hidden}
+.pane.collapsed .pane-body{display:none}
+.pane.collapsed .pane-head{flex-direction:column;gap:9px;padding:7px 4px;border-bottom:0}
+.pane.collapsed .pane-name{flex:0 0 auto;writing-mode:vertical-rl}
 #stage{position:relative;background:var(--panel2);min-width:0}
 canvas{display:block;width:100%;height:100%;touch-action:none}
 
@@ -70,7 +82,7 @@ ul.list li{display:flex;flex-direction:column;gap:5px;padding:6px 7px;border:1px
 ul.list li.on{border-color:var(--accent);background:var(--accent-soft)}
 li .r1,li .r2{display:flex;align-items:center;gap:7px;min-width:0}
 li .r2{gap:5px;justify-content:flex-end}
-li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3)}
+li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3);white-space:normal}
 .sw{width:14px;height:14px;flex:none;border-radius:3px;border:1px solid rgba(0,0,0,.18)}
 .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dim{font-size:11.5px;color:var(--ink3);white-space:nowrap}
@@ -128,6 +140,34 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
 .swatches button{width:21px;height:21px;border-radius:4px;border:1px solid rgba(0,0,0,.2)}
 .swatches button[aria-pressed=true]{box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--accent)}
 
+.pane-body section > h2{cursor:pointer;user-select:none}
+.pane-body section > h2::before{content:"\25BE";flex:none;width:9px;font-size:9px;color:var(--ink3)}
+.pane-body section.collapsed > h2::before{content:"\25B8"}
+.pane-body section.collapsed > h2{margin-bottom:0}
+.pane-body section.collapsed > *:not(h2){display:none}
+.pane-body section > h2:hover::before{color:var(--ink)}
+
+/* anchored dropdown menu — the ⋯ buttons open this, not the modal */
+.menu{position:fixed;z-index:60;min-width:184px;max-width:268px;padding:4px;background:var(--paper);border:1px solid var(--line);border-radius:7px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.menu .mtitle{padding:4px 9px 6px;font-size:11px;font-weight:650;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu button{display:block;width:100%;text-align:left;padding:5px 9px;border:0;background:none;border-radius:4px;font-size:12.5px;white-space:nowrap}
+.menu button:hover{background:var(--panel)}
+.menu button.danger{color:var(--warn)}
+.menu button.danger:hover{background:var(--warn-soft)}
+.menu .sep{height:1px;margin:4px 3px;background:var(--line2)}
+
+/* drag to move / reorder */
+.tree-row[draggable=true],ul.list li[draggable=true]{cursor:grab}
+.tree-row.dragging,ul.list li.dragging{opacity:.42}
+.tree-row.drop-into{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.tree-row.drop-before,ul.list li.drop-before{box-shadow:inset 0 2px 0 var(--accent)}
+.tree-row.drop-after,ul.list li.drop-after{box-shadow:inset 0 -2px 0 var(--accent)}
+#layoutTree{min-height:26px}
+#layoutTree.drop-root{background:var(--accent-soft);border-radius:var(--radius)}
+
+/* rename in place */
+.inline-edit{flex:1;min-width:0;width:100%;padding:1px 4px;font-size:12.5px;background:var(--paper);border:1px solid var(--accent);border-radius:4px}
+
 #tabs{display:none}
 @media (max-width:900px){
   header{flex-wrap:wrap;gap:8px;padding:8px 10px}
@@ -143,6 +183,8 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
   #tabs button[aria-pressed=true]{border-bottom-color:var(--accent);color:var(--accent);font-weight:600}
   .pane{order:3;max-height:44vh;border:0!important;border-top:1px solid var(--line)!important}
   .pane[hidden]{display:none}
+  .pane-head{display:none}
+  .pane.collapsed .pane-body{display:flex}
 }
 </style>
 </head>
@@ -173,7 +215,12 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
 
   <main>
     <div class="pane left" id="paneRoom">
-      <section>
+      <div class="pane-head" id="headLeft" role="button" tabindex="0" title="Hide the room panel" aria-label="Hide the room panel" aria-expanded="true" aria-controls="paneRoom">
+        <span class="pane-toggle" id="tglLeft" aria-hidden="true">⟨</span>
+        <span class="pane-name">Room</span>
+      </div>
+      <div class="pane-body">
+      <section data-sec="layout">
         <h2>Layout</h2>
         <div class="row" style="margin-bottom:8px">
           <button class="btn sm" id="btnNewFolder">New folder</button>
@@ -182,7 +229,7 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
         <div id="layoutTree"></div>
       </section>
 
-      <section>
+      <section data-sec="shape">
         <h2>Room shape</h2>
         <div id="rectDims"></div>
         <div class="field"><label for="wallT">Wall</label><input type="text" class="len" id="wallT"></div>
@@ -200,18 +247,18 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
         <p class="hint" id="drawHint" hidden>Click to place each corner. Click the first corner again (or press Enter) to close the shape. Walls are allowed to cross. Shift = square/straight snap. Esc cancels.</p>
       </section>
 
-      <section>
+      <section data-sec="walls">
         <h2>Walls</h2>
         <ul class="list" id="wallList"></ul>
         <p class="hint" id="wallHint"></p>
       </section>
 
-      <section>
+      <section data-sec="roomsel">
         <h2 id="roomSelTitle">Selected</h2>
         <div id="roomSelBox"></div>
       </section>
 
-      <section>
+      <section data-sec="openings">
         <h2>Doors &amp; windows</h2>
         <ul class="list" id="openList"></ul>
         <div class="row" style="margin-top:7px">
@@ -220,13 +267,14 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
         </div>
       </section>
 
-      <section>
+      <section data-sec="drawing">
         <h2>Drawing</h2>
         <div class="field"><label for="snapSel">Snap</label><select id="snapSel"></select></div>
         <div class="field wide"><input type="checkbox" id="showSwing" style="width:auto" checked><label for="showSwing" style="width:auto">Show door clearance</label></div>
         <div class="field wide"><input type="checkbox" id="showDims" style="width:auto" checked><label for="showDims" style="width:auto">Show sizes on shapes</label></div>
         <div class="field wide"><input type="checkbox" id="showOpen" style="width:auto" checked><label for="showOpen" style="width:auto">Show things opened out</label></div>
       </section>
+      </div>
     </div>
 
     <div id="stage">
@@ -253,24 +301,39 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
     </div>
 
     <div class="pane right" id="paneStuff">
-      <section>
+      <div class="pane-head" id="headRight" role="button" tabindex="0" title="Hide the things panel" aria-label="Hide the things panel" aria-expanded="true" aria-controls="paneStuff">
+        <span class="pane-toggle" id="tglRight" aria-hidden="true">⟩</span>
+        <span class="pane-name">Things</span>
+      </div>
+      <div class="pane-body">
+      <section data-sec="sel">
         <h2>Selected</h2>
         <div id="selBox"></div>
       </section>
-      <section>
+      <section data-sec="things">
         <h2>Your things</h2>
         <div class="chips" id="tagChips"></div>
         <div class="field wide" style="margin-top:7px">
           <input type="checkbox" id="onlyAvail" style="width:auto">
           <label for="onlyAvail" style="width:auto">Only things I still have stock of</label>
         </div>
+        <div class="field wide">
+          <label for="invScope">Stock is</label>
+          <select id="invScope">
+            <option value="project">shared across every room</option>
+            <option value="folder">shared within a folder</option>
+            <option value="room">counted per room</option>
+          </select>
+        </div>
+        <p class="hint" id="invScopeHint" style="margin-top:0"></p>
         <ul class="list" id="invList" style="margin-top:8px"></ul>
         <div class="row" style="margin-top:7px">
           <button class="btn sm primary" id="btnAddItem">Add a thing</button>
           <button class="btn sm" id="btnSamples">Add samples</button>
         </div>
-        <p class="hint">Things live in your inventory, so the same sofa can be tried in any layout.</p>
+        <p class="hint">Things live in your inventory, so the same sofa can be tried in any layout. Drag a row to reorder it; double-click its name to rename it.</p>
       </section>
+      </div>
     </div>
   </main>
 </div>
@@ -504,6 +567,9 @@ let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true,
          tagFilter:[],        // active tag chips in the Things pane
          untaggedOnly:false,  // the "Untagged" chip in the Things pane
          onlyAvailable:false, // "only show things I still have stock of"
+         invScope:'project',  // how far a thing's stock reaches: 'project' | 'folder' | 'room'
+         leftOpen:true, rightOpen:true,  // side panels open on wide screens
+         secClosed:[],        // data-sec keys of the sections folded shut
          lastFolderId:undefined};
 S.active = S.layouts[0].id;
 
@@ -520,9 +586,32 @@ const roomMode = () => S.mode==='room';
 const folderOf = id => id ? S.folders.find(f=>f.id===id) : null;
 const childFolders = pid => S.folders.filter(f=>(f.parentId||null)===(pid||null));
 const childLayouts = pid => S.layouts.filter(l=>(l.folderId||null)===(pid||null));
+/* ---- how far a thing's stock reaches ----
+   'project': one pool for everything — placing a sofa anywhere spends it.
+   'folder' : the rooms sitting DIRECTLY in a folder share a pool. A subfolder
+              keeps its own pool; it never draws on the folder above it.
+   'room'   : every room starts with the full stock of every thing. */
+const INV_SCOPES = {
+  project:{suffix:'across your rooms',
+           hint:'One pool for the whole project: placing a thing in any room takes it out of stock everywhere.'},
+  folder :{suffix:'in this folder',
+           hint:'Rooms sitting directly in the same folder share a pool. A subfolder keeps its own stock — it never draws on the folder above it.'},
+  room   :{suffix:'in this room',
+           hint:'Every room starts with the full stock. Only what you have placed in the room you are looking at is subtracted.'}
+};
+/* the rooms whose placements count against stock right now */
+function scopeLayouts(){
+  const cur=L();
+  if(S.invScope==='room') return cur?[cur]:[];
+  if(S.invScope==='folder'){
+    const fid=cur?(cur.folderId||null):null;
+    return S.layouts.filter(l=>(l.folderId||null)===fid);
+  }
+  return S.layouts;
+}
 function usedCount(itemId){
   let n=0;
-  for(const l of S.layouts) for(const p of l.placed) if(p.itemId===itemId) n++;
+  for(const l of scopeLayouts()) for(const p of l.placed) if(p.itemId===itemId) n++;
   return n;
 }
 const availableCount = it => Math.max(0, (it.count==null?1:it.count) - usedCount(it.id));
@@ -884,6 +973,10 @@ function migrate(st){
   if(st.untaggedOnly==null) st.untaggedOnly=false;
   if(st.onlyAvailable==null) st.onlyAvailable=false;
   if(st.showOpen==null) st.showOpen=true;
+  if(!INV_SCOPES[st.invScope]) st.invScope='project';
+  if(st.leftOpen==null) st.leftOpen=true;
+  if(st.rightOpen==null) st.rightOpen=true;
+  if(!Array.isArray(st.secClosed)) st.secClosed=[];
   st.mode = 'furniture';
   if(!st.layouts.some(l=>l.id===st.active)) st.active=st.layouts[0].id;
   const fl=st.layouts.find(l=>l.id===st.active);
@@ -924,6 +1017,92 @@ function askText(title,label,value,onOk){
 }
 function askConfirm(title,msg,okLabel,onOk){
   openModal(title, `<p style="margin:0">${esc(msg)}</p>`, okLabel||'Delete', ()=>onOk());
+}
+
+/* ------------------------- dropdown menus -------------------------
+   The ⋯ buttons open a small menu pinned to the button itself. Anything that
+   needs more than one click — a text box, a folder picker, a confirmation —
+   opens the modal from inside the menu. */
+let menuEl=null;
+function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl=null; } }
+function openMenu(anchor, actions, title){
+  closeMenu();
+  const el=document.createElement('div');
+  el.className='menu'; el.setAttribute('role','menu');
+  if(title){ const t=document.createElement('div'); t.className='mtitle'; t.textContent=title; el.appendChild(t); }
+  for(const a of actions){
+    if(a.sep){ const d=document.createElement('div'); d.className='sep'; el.appendChild(d); continue; }
+    const b=document.createElement('button');
+    b.type='button'; b.textContent=a.label;
+    if(a.danger) b.className='danger';
+    b.addEventListener('click', ()=>{ closeMenu(); a.fn(); });
+    el.appendChild(b);
+  }
+  document.body.appendChild(el);
+  const r=anchor.getBoundingClientRect(), m=el.getBoundingClientRect();
+  let x=r.left, y=r.bottom+4;
+  if(x+m.width > window.innerWidth-8) x=r.right-m.width;
+  if(y+m.height > window.innerHeight-8) y=r.top-m.height-4;
+  el.style.left=Math.max(8,Math.round(x))+'px';
+  el.style.top=Math.max(8,Math.round(y))+'px';
+  menuEl=el;
+  const f=el.querySelector('button'); if(f) f.focus();
+}
+document.addEventListener('pointerdown', e=>{ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }, true);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && menuEl) closeMenu(); }, true);
+window.addEventListener('resize', closeMenu);
+document.addEventListener('scroll', closeMenu, true);
+
+/* ------------------------- rename in place -------------------------
+   Double-clicking a name swaps it for a text box. Enter keeps it, Esc and
+   an empty box both leave the name alone; either way the caller re-renders. */
+function inlineEdit(el, value, done){
+  if(!el) return;
+  const row=el.closest('[draggable]');
+  if(row) row.draggable=false;          // so the text stays selectable
+  const inp=document.createElement('input');
+  inp.type='text'; inp.className='inline-edit'; inp.value=value;
+  el.replaceWith(inp);
+  inp.focus(); try{ inp.select(); }catch(e){}
+  let closed=false;
+  const finish=ok=>{
+    if(closed) return;
+    closed=true;
+    const v=inp.value.trim();
+    done(ok&&v ? v : null);
+  };
+  inp.addEventListener('keydown', e=>{
+    e.stopPropagation();
+    if(e.key==='Enter'){ e.preventDefault(); finish(true); }
+    else if(e.key==='Escape'){ e.preventDefault(); finish(false); }
+  });
+  inp.addEventListener('blur', ()=>finish(true));
+  for(const ev of ['click','dblclick','pointerdown']) inp.addEventListener(ev, e=>e.stopPropagation());
+}
+/* A plain click and the first click of a double-click look identical, so hold
+   the single-click action back long enough to see whether a second one lands.
+   Rows that re-render themselves on click need this or the second click would
+   arrive at a fresh element and never become a dblclick. */
+let clickT=null;
+function singleClick(fn){ clearTimeout(clickT); clickT=setTimeout(()=>{ clickT=null; fn(); }, 190); }
+function cancelSingleClick(){ clearTimeout(clickT); clickT=null; }
+
+/* ------------------------- drag to reorder ------------------------- */
+function moveBefore(arr, movedId, targetId, after){
+  const i=arr.findIndex(x=>x.id===movedId); if(i<0) return;
+  const [o]=arr.splice(i,1);
+  const j=targetId ? arr.findIndex(x=>x.id===targetId) : -1;
+  if(j<0) arr.push(o); else arr.splice(after?j+1:j, 0, o);
+}
+function clearDropMarks(root){
+  const box=root||document;
+  for(const el of box.querySelectorAll('.drop-into,.drop-before,.drop-after'))
+    el.classList.remove('drop-into','drop-before','drop-after');
+  if(root) root.classList.remove('drop-root');
+}
+function dropHalf(e,el){
+  const r=el.getBoundingClientRect();
+  return (e.clientY-r.top)/Math.max(1,r.height);
 }
 
 /* ------------------------- tag input: chips + autocomplete -------------------------
@@ -1685,15 +1864,65 @@ $('tabs').addEventListener('click', e=>{
   setTimeout(resize,0);
 });
 
-/* ------------------------- layout tree (folders + rooms) ------------------------- */
-function openActionSheet(title,actions){
-  const body=actions.map((a,i)=>`<button type="button" class="btn ${a.danger?'danger':''}" data-i="${i}" style="width:100%;margin-bottom:6px;text-align:left">${esc(a.label)}</button>`).join('');
-  openModal(title, `<div>${body}</div>`, null, null, ()=>{
-    $('moBody').querySelectorAll('button[data-i]').forEach(b=>{
-      b.addEventListener('click', ()=>{ closeModal(); actions[+b.dataset.i].fn(); });
-    });
+/* ------------------------- collapsing the side panels -------------------------
+   Only on wide screens: narrow ones already swap the panels with the tab bar,
+   so collapsing there would leave nothing to look at. */
+const wideLayout = () => !window.matchMedia('(max-width:900px)').matches;
+function applyPanes(){
+  const wide=wideLayout(), m=document.querySelector('main');
+  const lShut = wide && !S.leftOpen, rShut = wide && !S.rightOpen;
+  $('paneRoom').classList.toggle('collapsed', lShut);
+  $('paneStuff').classList.toggle('collapsed', rShut);
+  m.classList.toggle('lc', lShut);
+  m.classList.toggle('rc', rShut);
+  // the head is the button; its chevron always points the way the panel would move
+  const set=(headId,chevId,shut,isLeft,name)=>{
+    const h=$(headId), label=(shut?'Show ':'Hide ')+name;
+    $(chevId).textContent = (shut===isLeft) ? '\u27e9' : '\u27e8';
+    h.title=label; h.setAttribute('aria-label',label);
+    h.setAttribute('aria-expanded', String(!shut));
+  };
+  set('headLeft', 'tglLeft', lShut, true, 'the room panel');
+  set('headRight', 'tglRight', rShut, false, 'the things panel');
+}
+function togglePane(side){
+  if(!wideLayout()) return;
+  if(side==='left') S.leftOpen=!S.leftOpen; else S.rightOpen=!S.rightOpen;
+  closeMenu(); applyPanes(); save(); resize();
+}
+for(const [headId,side] of [['headLeft','left'],['headRight','right']]){
+  const h=$(headId);
+  h.addEventListener('click', ()=>togglePane(side));
+  h.addEventListener('keydown', e=>{
+    if(e.key==='Enter'||e.key===' '){ e.preventDefault(); togglePane(side); }
   });
 }
+
+/* ------------------------- collapsing sections ------------------------- */
+function applySections(){
+  for(const sec of document.querySelectorAll('.pane-body section[data-sec]')){
+    const shut=S.secClosed.includes(sec.dataset.sec);
+    sec.classList.toggle('collapsed', shut);
+    const h=sec.querySelector('h2');
+    if(h){ h.tabIndex=0; h.setAttribute('role','button'); h.setAttribute('aria-expanded', String(!shut)); }
+  }
+}
+function toggleSection(h){
+  const k=h.parentElement.dataset.sec;
+  S.secClosed = S.secClosed.includes(k) ? S.secClosed.filter(x=>x!==k) : S.secClosed.concat(k);
+  applySections(); save();
+}
+document.addEventListener('click', e=>{
+  const h=e.target.closest('.pane-body section[data-sec] > h2');
+  if(h) toggleSection(h);
+});
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Enter' && e.key!==' ') return;
+  const h=e.target.closest && e.target.closest('.pane-body section[data-sec] > h2');
+  if(h){ e.preventDefault(); toggleSection(h); }
+});
+
+/* ------------------------- layout tree (folders + rooms) ------------------------- */
 function folderLabel(f){
   const tags=(f.tags&&f.tags.length) ? `<span class="chips">${f.tags.map(t=>`<span class="dim" style="border:1px solid var(--line);border-radius:20px;padding:0 6px">${esc(t)}</span>`).join('')}</span>` : '';
   return `<span class="nm">${esc(f.name)}</span>${tags}`;
@@ -1702,17 +1931,17 @@ function renderTreeLevel(parentId,depth){
   let html='';
   for(const f of childFolders(parentId)){
     const open=treeOpen.has(f.id);
-    html+=`<div class="tree-row folder-row" data-folder="${f.id}" style="padding-left:${depth*14}px">
-      <button type="button" class="caret" data-act="toggle">${open?'▾':'▸'}</button>
-      <span class="ico">📁</span>${folderLabel(f)}
-      <button type="button" class="tree-more" data-act="more">⋯</button>
+    html+=`<div class="tree-row folder-row" draggable="true" data-folder="${f.id}" style="padding-left:${depth*14}px">
+      <button type="button" class="caret" data-act="toggle">${open?'\u25be':'\u25b8'}</button>
+      <span class="ico">\ud83d\udcc1</span>${folderLabel(f)}
+      <button type="button" class="tree-more" data-act="more" title="More\u2026" aria-label="More\u2026">\u22ef</button>
     </div>`;
     if(open) html+=renderTreeLevel(f.id,depth+1);
   }
   for(const l of childLayouts(parentId)){
-    html+=`<div class="tree-row layout-row ${l.id===S.active?'active':''}" data-layout="${l.id}" style="padding-left:${depth*14+18}px">
-      <span class="ico">📄</span><span class="nm">${esc(l.name)}</span>
-      <button type="button" class="tree-more" data-act="more">⋯</button>
+    html+=`<div class="tree-row layout-row ${l.id===S.active?'active':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*14+18}px">
+      <span class="ico">\ud83d\udcc4</span><span class="nm">${esc(l.name)}</span>
+      <button type="button" class="tree-more" data-act="more" title="More\u2026" aria-label="More\u2026">\u22ef</button>
     </div>`;
   }
   if(depth>0 && !childFolders(parentId).length && !childLayouts(parentId).length){
@@ -1721,48 +1950,140 @@ function renderTreeLevel(parentId,depth){
   return html;
 }
 function renderTree(){ $('layoutTree').innerHTML=renderTreeLevel(null,0); }
-$('layoutTree').addEventListener('click', e=>{
+const treeBox=$('layoutTree');
+const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layout="'+id+'"]');
+
+treeBox.addEventListener('click', e=>{
   const more=e.target.closest('[data-act=more]');
   const fRow=e.target.closest('.folder-row');
   const lRow=e.target.closest('.layout-row');
   if(more){
-    if(fRow) return folderActionSheet(fRow.dataset.folder);
-    if(lRow) return layoutActionSheet(lRow.dataset.layout);
+    cancelSingleClick();
+    if(fRow) folderMenu(fRow.dataset.folder, more);
+    else if(lRow) layoutMenu(lRow.dataset.layout, more);
     return;
   }
+  // held back briefly so a second click can turn into a rename instead
   if(fRow){
     const id=fRow.dataset.folder;
-    treeOpen.has(id)?treeOpen.delete(id):treeOpen.add(id);
-    renderTree(); return;
+    singleClick(()=>{ treeOpen.has(id)?treeOpen.delete(id):treeOpen.add(id); renderTree(); });
+    return;
   }
   if(lRow){
-    activateLayout(lRow.dataset.layout);
-    renderAll(); fit(); save(); return;
+    const id=lRow.dataset.layout;
+    singleClick(()=>{ activateLayout(id); renderAll(); fit(); save(); });
   }
 });
-function folderActionSheet(id){
-  const f=folderOf(id);
-  openActionSheet(f.name, [
+treeBox.addEventListener('dblclick', e=>{
+  cancelSingleClick();
+  if(e.target.closest('button')) return;
+  const row=e.target.closest('.tree-row'); if(!row) return;
+  if(row.dataset.folder) renameFolder(row.dataset.folder);
+  else renameLayout(row.dataset.layout);
+});
+function renameFolder(id){
+  const f=folderOf(id), row=treeRowEl(id);
+  if(!f||!row) return;
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderTree(); });
+}
+function renameLayout(id){
+  const l=S.layouts.find(x=>x.id===id), row=treeRowEl(id);
+  if(!l||!row) return;
+  inlineEdit(row.querySelector('.nm'), l.name, v=>{ if(v){ l.name=v; save(); } renderTree(); });
+}
+
+/* ---- drag a room or folder to move it: onto a folder puts it inside, on the
+        upper/lower edge of a row drops it beside that row ---- */
+let dragTree=null;
+treeBox.addEventListener('dragstart', e=>{
+  const row=e.target.closest('.tree-row'); if(!row) return;
+  cancelSingleClick(); closeMenu();
+  dragTree = row.dataset.folder ? {kind:'folder',id:row.dataset.folder} : {kind:'layout',id:row.dataset.layout};
+  row.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  try{ e.dataTransfer.setData('text/plain',dragTree.id); }catch(err){}
+});
+treeBox.addEventListener('dragend', ()=>{
+  dragTree=null;
+  clearDropMarks(treeBox);
+  for(const r of treeBox.querySelectorAll('.dragging')) r.classList.remove('dragging');
+});
+function treeDropSpot(e){
+  if(!dragTree) return null;
+  const row=e.target.closest('.tree-row');
+  if(!row) return {mode:'root'};
+  const isFolder=!!row.dataset.folder;
+  const id=isFolder?row.dataset.folder:row.dataset.layout;
+  if(isFolder && dragTree.kind==='folder' && id===dragTree.id) return null;
+  const t=dropHalf(e,row);
+  if(isFolder && t>=0.3 && t<=0.7) return {mode:'into',id,isFolder,row};
+  return {mode:t<0.5?'before':'after',id,isFolder,row};
+}
+treeBox.addEventListener('dragover', e=>{
+  const spot=treeDropSpot(e); if(!spot) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  clearDropMarks(treeBox);
+  if(spot.mode==='root'){ treeBox.classList.add('drop-root'); return; }
+  spot.row.classList.add(spot.mode==='into'?'drop-into':spot.mode==='before'?'drop-before':'drop-after');
+});
+treeBox.addEventListener('dragleave', e=>{ if(e.target===treeBox) clearDropMarks(treeBox); });
+treeBox.addEventListener('drop', e=>{
+  const spot=treeDropSpot(e), d=dragTree;
+  clearDropMarks(treeBox);
+  if(!spot||!d) return;
+  e.preventDefault();
+  let parent=null, targetId=null, after=false;
+  if(spot.mode==='into'){ parent=spot.id; treeOpen.add(parent); }
+  else if(spot.mode!=='root'){
+    const t = spot.isFolder ? folderOf(spot.id) : S.layouts.find(x=>x.id===spot.id);
+    if(!t) return;
+    parent = (spot.isFolder ? t.parentId : t.folderId) || null;
+    // folders and rooms are kept in separate lists, so only order against your own kind
+    if(spot.isFolder === (d.kind==='folder')){ targetId=spot.id; after=(spot.mode==='after'); }
+  }
+  if(d.kind==='folder'){
+    const f=folderOf(d.id); if(!f) return;
+    if(parent===d.id || folderDescendant(d.id,parent)){ flash("A folder can't go inside itself"); return; }
+    f.parentId=parent;
+    moveBefore(S.folders, d.id, targetId, after);
+  } else {
+    const l=S.layouts.find(x=>x.id===d.id); if(!l) return;
+    l.folderId=parent;
+    moveBefore(S.layouts, d.id, targetId, after);
+  }
+  dragTree=null;
+  renderTree(); renderInv(); save();
+});
+
+function folderMenu(id, anchor){
+  const f=folderOf(id); if(!f) return;
+  openMenu(anchor, [
+    {label:'Rename', fn:()=>renameFolder(id)},
     {label:'Add a room here', fn:()=>askText('New room','Name','Room', n=>{
       const l=blankLayout(n,id); S.layouts.push(l); treeOpen.add(id); activateLayout(l.id);
-      renderTree(); renderAll(); fit(); save();
+      renderAll(); fit(); save();
     })},
     {label:'Add a subfolder', fn:()=>askText('New folder','Name','Folder', n=>{
       S.folders.push({id:uid(),name:n,parentId:id,tags:[]}); treeOpen.add(id); renderTree(); save();
     })},
-    {label:'Edit tag filter', fn:()=>folderTagsDialog(id)},
-    {label:'Rename', fn:()=>askText('Rename folder','Name',f.name, n=>{ f.name=n; renderTree(); save(); })},
-    {label:'Delete folder (keeps its contents)', danger:true, fn:()=>deleteFolder(id)},
-  ]);
+    {sep:true},
+    {label:'Move to folder\u2026', fn:()=>moveDialog('folder',id)},
+    {label:'Edit tag filter\u2026', fn:()=>folderTagsDialog(id)},
+    {sep:true},
+    {label:'Delete folder\u2026', danger:true, fn:()=>deleteFolder(id)},
+  ], f.name);
 }
-function layoutActionSheet(id){
-  const l=S.layouts.find(x=>x.id===id);
-  openActionSheet(l.name, [
+function layoutMenu(id, anchor){
+  const l=S.layouts.find(x=>x.id===id); if(!l) return;
+  openMenu(anchor, [
+    {label:'Open', fn:()=>{ activateLayout(id); renderAll(); fit(); save(); }},
+    {label:'Rename', fn:()=>renameLayout(id)},
     {label:'Duplicate', fn:()=>duplicateLayout(id)},
-    {label:'Rename', fn:()=>askText('Rename room','Name',l.name, n=>{ l.name=n; renderTree(); save(); })},
-    {label:'Move to folder…', fn:()=>moveLayoutDialog(id)},
-    {label:'Delete', danger:true, fn:()=>deleteLayout(id)},
-  ]);
+    {label:'Move to folder\u2026', fn:()=>moveDialog('layout',id)},
+    {sep:true},
+    {label:'Delete room\u2026', danger:true, fn:()=>deleteLayout(id)},
+  ], l.name);
 }
 function folderTagsDialog(id){
   const f=folderOf(id);
@@ -1777,16 +2098,50 @@ function folderTagsDialog(id){
     },
     ()=>{ mountTagField('fTags', f.tags||[]); });
 }
+/* every folder and room under `id`, deepest last */
+function folderContents(id){
+  const folders=[], layouts=[];
+  (function walk(pid){
+    for(const f of childFolders(pid)){ folders.push(f); walk(f.id); }
+    for(const l of childLayouts(pid)) layouts.push(l);
+  })(id);
+  return {folders,layouts};
+}
 function deleteFolder(id){
   const f=folderOf(id); if(!f) return;
-  const parentName = folderOf(f.parentId) ? folderOf(f.parentId).name : 'the top level';
-  askConfirm('Delete this folder?', 'Its subfolders and rooms move up to '+parentName+'. Nothing is deleted.', 'Delete folder', ()=>{
-    for(const sub of childFolders(id)) sub.parentId=f.parentId;
-    for(const l of childLayouts(id)) l.folderId=f.parentId;
+  const up = folderOf(f.parentId) ? '\u201c'+folderOf(f.parentId).name+'\u201d' : 'the top level';
+  const {folders,layouts}=folderContents(id);
+  const drop=keep=>{
+    if(keep){
+      for(const sub of childFolders(id)) sub.parentId=f.parentId;
+      for(const l of childLayouts(id)) l.folderId=f.parentId;
+    } else {
+      const killF=new Set(folders.map(x=>x.id)), killL=new Set(layouts.map(x=>x.id));
+      S.layouts=S.layouts.filter(l=>!killL.has(l.id));
+      S.folders=S.folders.filter(x=>!killF.has(x.id));
+      for(const k of killF) treeOpen.delete(k);
+    }
     S.folders=S.folders.filter(x=>x.id!==id);
     treeOpen.delete(id);
-    renderTree(); save();
-  });
+    if(!S.layouts.length) S.layouts=[blankLayout()];
+    if(!S.layouts.some(l=>l.id===S.active)) activateLayout(S.layouts[0].id);
+    renderAll(); fit(); save();
+  };
+  if(!folders.length && !layouts.length){
+    askConfirm('Delete this folder?', '\u201c'+f.name+'\u201d is empty.', 'Delete folder', ()=>drop(false));
+    return;
+  }
+  const bits=[];
+  if(layouts.length) bits.push(layouts.length+' room'+(layouts.length>1?'s':''));
+  if(folders.length) bits.push(folders.length+' folder'+(folders.length>1?'s':''));
+  openModal('Delete \u201c'+f.name+'\u201d?', `
+    <p style="margin:0 0 10px">It holds ${esc(bits.join(' and '))}. Deleting the folder deletes all of that too.</p>
+    <div class="field wide">
+      <input type="checkbox" id="keepKids" style="width:auto">
+      <label for="keepKids" style="width:auto">Keep everything inside \u2014 move it up to ${esc(up)}</label>
+    </div>
+    <p class="hint">Your inventory is never touched, only the rooms themselves.</p>`,
+    'Delete folder', ()=>drop($('keepKids').checked));
 }
 function duplicateLayout(id){
   const src=S.layouts.find(x=>x.id===id); if(!src) return;
@@ -1794,31 +2149,40 @@ function duplicateLayout(id){
   c.id=uid(); c.name=c.name+' copy';
   c.openings.forEach(o=>o.id=uid());
   c.placed.forEach(p=>p.id=uid());
-  S.layouts.push(c);
+  S.layouts.splice(S.layouts.indexOf(src)+1, 0, c);
   activateLayout(c.id);
-  renderTree(); renderAll(); save();
+  renderAll(); save();
 }
 function deleteLayout(id){
   if(S.layouts.length===1){ flash('You need at least one room'); return; }
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
-  askConfirm('Delete this room?', '“'+l.name+'” will be removed. Your inventory stays.', 'Delete', ()=>{
+  askConfirm('Delete this room?', '\u201c'+l.name+'\u201d will be removed. Your inventory stays.', 'Delete', ()=>{
     S.layouts=S.layouts.filter(x=>x.id!==id);
     if(S.active===id) activateLayout(S.layouts[0].id);
-    renderTree(); renderAll(); fit(); save();
+    renderAll(); fit(); save();
   });
 }
-function moveLayoutDialog(id){
-  const l=S.layouts.find(x=>x.id===id); if(!l) return;
-  const opts=[{label:'No folder (top level)', fn:()=>{ l.folderId=null; renderTree(); save(); }}];
+/* the menu's long way round to what dragging does */
+function moveDialog(kind,id){
+  const obj = kind==='folder' ? folderOf(id) : S.layouts.find(x=>x.id===id);
+  if(!obj) return;
+  const cur = (kind==='folder' ? obj.parentId : obj.folderId) || '';
+  let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
   (function walk(pid,depth){
     for(const f of childFolders(pid)){
-      opts.push({label:'\u3000'.repeat(depth)+'📁 '+f.name, fn:()=>{
-        l.folderId=f.id; treeOpen.add(f.id); renderTree(); save();
-      }});
+      const bad = kind==='folder' && (f.id===id || folderDescendant(id,f.id));
+      if(!bad) opts+=`<option value="${f.id}" ${f.id===cur?'selected':''}>${'\u00a0\u00a0'.repeat(depth)}${esc(f.name)}</option>`;
       walk(f.id,depth+1);
     }
   })(null,0);
-  openActionSheet('Move “'+l.name+'” to…', opts);
+  openModal('Move \u201c'+obj.name+'\u201d', `
+    <div class="field wide"><label for="moFolder" style="width:auto">Folder</label></div>
+    <select id="moFolder">${opts}</select>`, 'Move', ()=>{
+      const v=$('moFolder').value||null;
+      if(kind==='folder') obj.parentId=v; else obj.folderId=v;
+      if(v) treeOpen.add(v);
+      renderTree(); renderInv(); save();
+    });
 }
 $('btnNewFolder').addEventListener('click', ()=>{
   askText('New folder','Name','Folder', n=>{ S.folders.push({id:uid(),name:n,parentId:null,tags:[]}); renderTree(); save(); });
@@ -2040,6 +2404,9 @@ $('onlyAvail').addEventListener('change', e=>{ S.onlyAvailable=e.target.checked;
 
 function renderInv(){
   $('onlyAvail').checked = S.onlyAvailable;
+  const sc = INV_SCOPES[S.invScope] || INV_SCOPES.project;
+  $('invScope').value = S.invScope;
+  $('invScopeHint').textContent = sc.hint;
   renderTagChips();
   const ul=$('invList');
   if(!S.inventory.length){
@@ -2055,38 +2422,105 @@ function renderInv(){
   for(const p of L().placed) counts[p.itemId]=(counts[p.itemId]||0)+1;
   ul.innerHTML=shown.map(i=>{
     const avail=availableCount(i), total=i.count==null?1:i.count;
-    return `<li data-id="${i.id}">
+    return `<li data-id="${i.id}" draggable="true">
     <div class="r1"><span class="sw" style="background:${i.color}"></span>
       <span class="nm" title="${esc(i.name)}">${esc(i.name)}</span>
       ${counts[i.id]?`<span class="count" title="in this room">${counts[i.id]}</span>`:''}</div>
-    <div class="dim">${esc(sizeLabel(i))}${hasOpen(i)?' · opens to '+esc(openSizeLabel(i)):''}${i.passThrough?' · things can sit on it':''} · ${avail} of ${total} available</div>
+    <div class="dim">${esc(sizeLabel(i))}${hasOpen(i)?' \u00b7 opens to '+esc(openSizeLabel(i)):''}${i.passThrough?' \u00b7 things can sit on it':''} \u00b7 ${avail} of ${total} free ${esc(sc.suffix)}</div>
     ${(i.tags&&i.tags.length)?`<div class="chips">${i.tags.map(t=>`<span class="dim" style="border:1px solid var(--line);border-radius:20px;padding:1px 7px">${esc(t)}</span>`).join('')}</div>`:''}
     <div class="r2">
       <button class="btn sm" data-act="place" ${avail<=0?'disabled title="None left to place"':''}>Place</button>
-      <button class="btn sm" data-act="edit">Edit</button>
-      <button class="btn sm danger" data-act="del">Delete</button>
+      <button class="btn sm" data-act="more" title="More\u2026" aria-label="More\u2026">\u22ef</button>
     </div></li>`;
   }).join('');
 }
-$('invList').addEventListener('click', e=>{
+$('invScope').addEventListener('change', e=>{ S.invScope=e.target.value; renderInv(); save(); });
+
+const invBox=$('invList');
+invBox.addEventListener('click', e=>{
   const li=e.target.closest('li[data-id]'); if(!li) return;
   const id=li.dataset.id, btn=e.target.closest('button');
-  if(!btn||btn.dataset.act==='place'){
-    const it=itemOf(id);
-    if(it && availableCount(it)<=0){ flash("You're out of stock for this — edit it to own more"); return; }
-    return place(id);
-  }
-  if(btn.dataset.act==='edit') return itemDialog(id);
-  if(btn.dataset.act==='del'){
-    const n=S.layouts.reduce((a,l)=>a+l.placed.filter(p=>p.itemId===id).length,0);
-    const kill=()=>{
-      S.inventory=S.inventory.filter(i=>i.id!==id);
-      for(const l of S.layouts) l.placed=l.placed.filter(p=>p.itemId!==id);
-      sel=null; renderInv(); renderSel(); draw(); save();
-    };
-    if(n) askConfirm('Delete this thing?', 'It is placed in '+n+' spot'+(n>1?'s':'')+'. Those will be removed too.', 'Delete', kill);
-    else kill();
-  }
+  if(btn && btn.dataset.act==='more'){ cancelSingleClick(); return itemMenu(id, btn); }
+  if(btn && btn.dataset.act==='place'){ cancelSingleClick(); return placeItem(id); }
+  if(!btn) singleClick(()=>placeItem(id));   // held back in case it becomes a rename
+});
+invBox.addEventListener('dblclick', e=>{
+  cancelSingleClick();
+  if(e.target.closest('button')) return;
+  const li=e.target.closest('li[data-id]'); if(!li) return;
+  renameItem(li.dataset.id);
+});
+function placeItem(id){
+  const it=itemOf(id); if(!it) return;
+  if(availableCount(it)<=0){ flash("You're out of stock for this \u2014 edit it to own more"); return; }
+  place(id);
+}
+function renameItem(id){
+  const it=itemOf(id), li=invBox.querySelector('li[data-id="'+id+'"]');
+  if(!it||!li) return;
+  inlineEdit(li.querySelector('.nm'), it.name, v=>{ if(v){ it.name=v; save(); } renderInv(); renderSel(); draw(); });
+}
+function itemMenu(id, anchor){
+  const it=itemOf(id); if(!it) return;
+  openMenu(anchor, [
+    {label:'Place in this room', fn:()=>placeItem(id)},
+    {label:'Rename', fn:()=>renameItem(id)},
+    {label:'Edit\u2026', fn:()=>itemDialog(id)},
+    {label:'Duplicate', fn:()=>{
+      const c=JSON.parse(JSON.stringify(it));
+      c.id=uid(); c.name=it.name+' copy';
+      S.inventory.splice(S.inventory.indexOf(it)+1, 0, c);
+      renderInv(); save();
+    }},
+    {sep:true},
+    {label:'Delete\u2026', danger:true, fn:()=>deleteItem(id)},
+  ], it.name);
+}
+function deleteItem(id){
+  const n=S.layouts.reduce((a,l)=>a+l.placed.filter(p=>p.itemId===id).length,0);
+  const kill=()=>{
+    S.inventory=S.inventory.filter(i=>i.id!==id);
+    for(const l of S.layouts) l.placed=l.placed.filter(p=>p.itemId!==id);
+    sel=null; renderInv(); renderSel(); draw(); save();
+  };
+  if(n) askConfirm('Delete this thing?', 'It is placed in '+n+' spot'+(n>1?'s':'')+'. Those will be removed too.', 'Delete', kill);
+  else kill();
+}
+
+/* ---- drag a thing up or down to reorder your list ---- */
+let dragInv=null;
+invBox.addEventListener('dragstart', e=>{
+  const li=e.target.closest('li[data-id]'); if(!li) return;
+  cancelSingleClick(); closeMenu();
+  dragInv=li.dataset.id;
+  li.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  try{ e.dataTransfer.setData('text/plain',dragInv); }catch(err){}
+});
+invBox.addEventListener('dragend', ()=>{
+  dragInv=null;
+  clearDropMarks(invBox);
+  for(const li of invBox.querySelectorAll('.dragging')) li.classList.remove('dragging');
+});
+invBox.addEventListener('dragover', e=>{
+  if(!dragInv) return;
+  const li=e.target.closest('li[data-id]');
+  if(!li || li.dataset.id===dragInv) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  clearDropMarks(invBox);
+  li.classList.add(dropHalf(e,li)<0.5?'drop-before':'drop-after');
+});
+invBox.addEventListener('dragleave', e=>{ if(e.target===invBox) clearDropMarks(invBox); });
+invBox.addEventListener('drop', e=>{
+  const li=e.target.closest('li[data-id]');
+  const after = li && li.classList.contains('drop-after');
+  clearDropMarks(invBox);
+  if(!dragInv || !li || li.dataset.id===dragInv) return;
+  e.preventDefault();
+  moveBefore(S.inventory, dragInv, li.dataset.id, after);
+  dragInv=null;
+  renderInv(); save();
 });
 
 function renderSel(){
@@ -2422,7 +2856,7 @@ $('fileIn').addEventListener('change', e=>{
       for(const k of Object.keys(roomHist)) delete roomHist[k];
       for(const k of Object.keys(furnHist)) delete furnHist[k];
       seedHistFor();
-      $('unitSel').value=S.unit; renderSnap(); renderAll(); fit(); save();
+      $('unitSel').value=S.unit; renderSnap(); applyPanes(); applySections(); renderAll(); fit(); save();
     }catch(err){ flash("That file isn't a Room Planner export"); }
   };
   rd.readAsText(f);
@@ -2434,6 +2868,7 @@ function applyLayoutMode(){
   if(window.matchMedia('(max-width:900px)').matches){
     for(const b of document.querySelectorAll('#tabs button')) $(b.dataset.pane).hidden = b.dataset.mode!==S.mode;
   } else { $('paneRoom').hidden=false; $('paneStuff').hidden=false; }
+  applyPanes();
 }
 window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
 (async function boot(){
@@ -2447,7 +2882,7 @@ window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
   $('unitSel').value=S.unit;
   $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen;
   seedHistFor();
-  renderSnap(); applyLayoutMode(); renderAll(); resize(); fit();
+  renderSnap(); applySections(); applyLayoutMode(); renderAll(); resize(); fit();
 })();
 </script>
 </body>
