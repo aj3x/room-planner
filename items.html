@@ -617,8 +617,27 @@ function recomputeFolderSubtree(folderId){
   const ids=itemFolderSubtreeIds(folderId);
   for(const it of S.inventory) if(it.folderId && ids.has(it.folderId)) applyTags(it);
 }
+function idSlug(s){
+  const v=String(s||'').trim().replace(/[^A-Za-z0-9!\-_.*'()]+/g,'-').replace(/^-+|-+$/g,'');
+  return v||'x';
+}
+function folderIdPrefix(folderId){
+  return itemFolderPath(folderId).map(f=>idSlug(f.name)).join('/');
+}
+/* keep the item's id filed under its folder's path, the way exportFolder/idNote already display it */
+function rehomeItemId(item, folderId){
+  const leaf=idLeaf(item.id);
+  const prefix=folderIdPrefix(folderId);
+  const base=prefix ? prefix+'/'+leaf : leaf;
+  const taken=new Set(S.inventory.filter(x=>x!==item).map(x=>x.id));
+  const newId=uniqueId(base, taken);
+  if(newId===item.id) return;
+  const oldId=item.id; item.id=newId;
+  for(const l of S.layouts) for(const p of l.placed) if(p.itemId===oldId) p.itemId=newId;
+}
 function moveItemToFolder(item, folderId){
   item.folderId=folderId||null;
+  rehomeItemId(item, folderId);
   applyTags(item);
 }
 function allTags(){
@@ -1478,6 +1497,7 @@ function createNewItem(){
     folderId:nav.libFolderId, tags:[], manualTags:[]});
   applyTags(it);
   S.inventory.push(it);
+  rehomeItemId(it, it.folderId);
   save(); selectItem(it.id);
   flash('New item created');
 }
