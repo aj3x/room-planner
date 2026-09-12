@@ -277,6 +277,16 @@ input[type=text].id{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monos
         <p class="hint" id="wallHint"></p>
       </section>
 
+      <section data-sec="structure">
+        <h2>Pillars &amp; interior walls</h2>
+        <ul class="list" id="structList"></ul>
+        <div class="row" style="margin-top:7px">
+          <button class="btn sm" id="btnAddPillar">Add pillar</button>
+          <button class="btn sm" id="btnDrawWall">Draw wall</button>
+        </div>
+        <p class="hint" id="structHint">These stand inside the room and block furniture, same as the walls around it. Drag a wall's end near another wall or corner to join them up.</p>
+      </section>
+
       <section data-sec="roomsel">
         <h2 id="roomSelTitle">Selected</h2>
         <div id="roomSelBox"></div>
@@ -612,7 +622,7 @@ const rectPts = (w,d) => [[0,0],[w,0],[w,d],[0,d]];
 
 function blankLayout(name,folderId){
   return {id:uid(), name:name||'My room', folderId:folderId||null,
-    room:{points:rectPts(4270,3660), wall:114, floor:'#f5f3ee', trimOn:false, trim:19},
+    room:{points:rectPts(4270,3660), wall:114, floor:'#f5f3ee', trimOn:false, trim:19, pillars:[], iwalls:[]},
     openings:[], placed:[]};
 }
 let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true, mode:'furniture',
@@ -754,6 +764,79 @@ function nearestOnWalls(pt){
   }
   return best;
 }
+
+/* ---- pillars & interior (freestanding) walls ----
+   These stand inside the room, not on its outline. A pillar is a small shape
+   with a position, reusing the same shapePoly/worldPoly a piece of furniture
+   uses. An interior wall is one straight thick segment; a run of several,
+   drawn end to end with snapping, reads as one connected partition even
+   though each segment is its own independent record — same as the room's own
+   corners and walls are independent points with no separate "this wall is
+   connected to that one" flag. */
+const pillarOf = id => L().room.pillars.find(p=>p.id===id);
+const iwallOf = id => L().room.iwalls.find(w=>w.id===id);
+function iwallGeom(w){
+  const dx=w.b[0]-w.a[0], dy=w.b[1]-w.a[1], len=Math.hypot(dx,dy)||1e-9;
+  const dir=[dx/len,dy/len];
+  return {dir, nrm:[-dir[1],dir[0]], len, mid:[(w.a[0]+w.b[0])/2,(w.a[1]+w.b[1])/2]};
+}
+function iwallPoly(w){
+  const g=iwallGeom(w), h=w.t/2, n=g.nrm;
+  return [
+    [w.a[0]+n[0]*h, w.a[1]+n[1]*h],
+    [w.b[0]+n[0]*h, w.b[1]+n[1]*h],
+    [w.b[0]-n[0]*h, w.b[1]-n[1]*h],
+    [w.a[0]-n[0]*h, w.a[1]-n[1]*h]
+  ];
+}
+const iwallLen = w => iwallGeom(w).len;
+const iwallAngle = w => norm360(-Math.atan2(w.b[1]-w.a[1], w.b[0]-w.a[0])*180/Math.PI);
+function setIWallLen(w,len){ const g=iwallGeom(w); w.b=[w.a[0]+g.dir[0]*len, w.a[1]+g.dir[1]*len]; }
+function setIWallAngle(w,deg){ const len=iwallLen(w), r=-deg*Math.PI/180; w.b=[w.a[0]+Math.cos(r)*len, w.a[1]+Math.sin(r)*len]; }
+/* move one end of a freestanding wall so it sits exactly `dist` from the room wall it's
+   currently closest to, sliding along the same foot-to-end direction it's already on */
+function setIWallEndDist(w,end,dist){
+  const near=nearestOnWalls(w[end]);
+  if(!near) return false;
+  const rw=wallOf(near.i);
+  const foot=[rw.a[0]+rw.dir[0]*near.t*rw.len, rw.a[1]+rw.dir[1]*near.t*rw.len];
+  const vx=w[end][0]-foot[0], vy=w[end][1]-foot[1];
+  const side=(vx*rw.nrm[0]+vy*rw.nrm[1])>=0 ? 1 : -1;
+  w[end]=[foot[0]+rw.nrm[0]*side*dist, foot[1]+rw.nrm[1]*side*dist];
+  return true;
+}
+/* every obstacle that stands in the floor besides the room's own outline —
+   used to keep furniture off pillars and interior walls the same way it is
+   kept off everything else it might bump into */
+function obstaclePolys(){
+  const out=[];
+  for(const pl of L().room.pillars) out.push({poly:worldPoly(pl,pl), name:'a pillar'});
+  for(const w of L().room.iwalls) out.push({poly:iwallPoly(w), name:'a wall'});
+  return out;
+}
+/* world-space radius a drag should snap within, so pillars/wall ends catch
+   onto a nearby corner, wall or other wall end regardless of zoom */
+const snapRadius = () => 14/Math.max(view.scale,1e-6);
+/* where a wall's end should land: magnetic onto a room corner, a room wall's
+   face, or another interior wall's end or run (so two walls "connect" by
+   simply sharing a point) — falling back to the ordinary grid snap */
+function snapWallPoint(raw, excludeId, magnetic){
+  if(magnetic){
+    const R=snapRadius(); let best=null;
+    const consider=c=>{ const d=Math.hypot(c[0]-raw[0],c[1]-raw[1]); if(d<=R&&(!best||d<best.d)) best={pt:c,d}; };
+    for(const v of RP()) consider(v);
+    for(const w of L().room.iwalls){ if(w.id===excludeId) continue; consider(w.a); consider(w.b); }
+    if(best) return best.pt.slice();
+    const nb=nearestOnWalls(raw);
+    if(nb && nb.d<=R){ const w=wallOf(nb.i); return [w.a[0]+w.dir[0]*nb.t*w.len, w.a[1]+w.dir[1]*nb.t*w.len]; }
+    for(const w of L().room.iwalls){
+      if(w.id===excludeId) continue;
+      const r=ptSegDist(raw,w.a,w.b);
+      if(r.d<=R) return [w.a[0]+(w.b[0]-w.a[0])*r.t, w.a[1]+(w.b[1]-w.a[1])*r.t];
+    }
+  }
+  return snapPt(raw);
+}
 function isRectRoom(){
   const P=RP();
   if(P.length!==4) return false;
@@ -771,6 +854,14 @@ function setRectSize(w,d){
 }
 
 /* ------------------------- openings ------------------------- */
+/* an opening's offset is always stored clockwise from the wall's start (wall.a);
+   o.corner just controls which corner the *displayed* distance is measured from —
+   'cw' (default) is that same start corner, 'ccw' is the wall's far/end corner. */
+function openingDispOffset(o,len){ return o.corner==='ccw' ? (len-o.width-o.offset) : o.offset; }
+function setOpeningDispOffset(o,len,val){
+  o.offset = o.corner==='ccw' ? (len-o.width-val) : val;
+  o.offset = Math.max(0, Math.min(o.offset, len-o.width));
+}
 function openGeom(o){
   const w = wallOf(o.wall);
   const p0=[w.a[0]+w.dir[0]*o.offset, w.a[1]+w.dir[1]*o.offset];
@@ -833,6 +924,10 @@ function collides(inst,poly){
   const me=itemOf(inst.itemId);
   if(me&&me.passThrough) return null;
   const test=shrink(poly,EPS), tb=bbox(poly);
+  for(const {poly:op,name} of obstaclePolys()){
+    if(!bbHit(tb,bbox(op))) continue;
+    if(polyHit(test,shrink(op,EPS))) return name;
+  }
   for(const other of L().placed){
     if(other.id===inst.id) continue;
     const oi=itemOf(other.itemId);
@@ -851,6 +946,7 @@ function validate(inst,poly){
 }
 function conflictSet(){
   const ps=L().placed, polys=[], bbs=[], out=new Set();
+  const obs=obstaclePolys();
   for(const p of ps){
     const it=itemOf(p.itemId), w=it?worldPoly(p,it):null;
     polys.push(w); bbs.push(w?bbox(w):null);
@@ -860,6 +956,10 @@ function conflictSet(){
     if(!insideRoom(polys[i])) out.add(ps[i].id);
     const it=itemOf(ps[i].itemId);
     if(it.passThrough) continue;
+    for(const o of obs){
+      if(!bbHit(bbs[i],bbox(o.poly))) continue;
+      if(polyHit(shrink(polys[i],EPS),shrink(o.poly,EPS))){ out.add(ps[i].id); break; }
+    }
     for(let j=i+1;j<ps.length;j++){
       const oj=itemOf(ps[j].itemId);
       if(!oj||oj.passThrough||!polys[j]) continue;
@@ -885,6 +985,7 @@ function openThroughWall(poly){
 function openConflicts(){
   const ps=L().placed, out=new Map();
   const solids=ps.map(p=>{ const it=itemOf(p.itemId); return (it&&!it.passThrough)?worldPoly(p,it):null; });
+  const obs=obstaclePolys();
   for(let i=0;i<ps.length;i++){
     const it=itemOf(ps[i].itemId);
     const op=it&&openPoly(ps[i],it);
@@ -898,6 +999,11 @@ function openConflicts(){
         out.set(ps[i].id,'Opened out, it runs into '+itemOf(ps[j].itemId).name);
         break;
       }
+    }
+    if(out.has(ps[i].id)) continue;
+    for(const o of obs){
+      if(!bbHit(ob,bbox(o.poly))) continue;
+      if(polyHit(test,shrink(o.poly,EPS))){ out.set(ps[i].id,'Opened out, it runs into '+o.name); break; }
     }
   }
   return out;
@@ -1006,6 +1112,23 @@ function normLayout(l){
   l.room.wall = l.room.wall||114;
   l.room.floor = normHex(l.room.floor)||'#f5f3ee';
   l.room.trim = l.room.trim||19;
+  if(!Array.isArray(l.room.pillars)) l.room.pillars=[];
+  for(const pl of l.room.pillars){
+    pl.id = pl.id||uid();
+    if(!pl.shape || !['rect','ellipse'].includes(pl.shape.type)) pl.shape={type:'rect',w:300,d:300};
+    pl.shape.w = Math.max(10, pl.shape.w||300);
+    pl.shape.d = Math.max(10, pl.shape.d||300);
+    pl.x = isFinite(pl.x)?pl.x:0;
+    pl.y = isFinite(pl.y)?pl.y:0;
+    pl.rot = isFinite(pl.rot)?pl.rot:0;
+  }
+  if(!Array.isArray(l.room.iwalls)) l.room.iwalls=[];
+  for(const w of l.room.iwalls){
+    w.id = w.id||uid();
+    if(!Array.isArray(w.a)||w.a.length<2) w.a=[0,0];
+    if(!Array.isArray(w.b)||w.b.length<2) w.b=[300,0];
+    w.t = Math.max(10, w.t||l.room.wall);
+  }
   if(!Array.isArray(l.openings)){
     const map={N:0,E:1,S:2,W:3};
     l.openings = (l.doors||[]).map(d=>({
@@ -1014,6 +1137,7 @@ function normLayout(l){
     }));
     delete l.doors;
   }
+  for(const o of l.openings) o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
   l.placed = Array.isArray(l.placed) ? l.placed.filter(p=>p&&p.itemId) : [];
   for(const p of l.placed) if(!p.id) p.id=uid();
   if(l.folderId===undefined) l.folderId=null;
@@ -1310,6 +1434,11 @@ function snapPt(p){
   const g=snapMM();
   return g>0 ? [Math.round(p[0]/g)*g, Math.round(p[1]/g)*g] : p;
 }
+/* lock a point onto the horizontal or vertical line through `a`, whichever the cursor is closer to */
+function axisLockFrom(a,pt){
+  const dx=pt[0]-a[0], dy=pt[1]-a[1];
+  return Math.abs(dx)>=Math.abs(dy) ? [pt[0],a[1]] : [a[0],pt[1]];
+}
 
 /* ------------------------- custom room drawing (walls may cross) ------------------------- */
 let drawState=null, drawCursor=null;
@@ -1341,10 +1470,30 @@ function drawSnapPoint(raw,shift){
   return p;
 }
 cv.addEventListener('mousemove', e=>{
-  if(!drawState) return;
+  if(!drawState && !wallDrawState) return;
   drawCursor=[wx(e.offsetX),wy(e.offsetY)];
+  wallDrawShift=e.shiftKey;
   draw();
 });
+
+/* ------------------------- drawing a freestanding wall ------------------------- */
+let wallDrawState=null, wallDrawShift=false;
+function startWallDraw(){
+  if(drawState) cancelCustomDraw();
+  if(!roomMode()) setMode('room');
+  wallDrawState={a:null}; drawCursor=null;
+  roomSel=null; renderRoomSel();
+  flash('Click the wall’s start, then its end. Esc cancels.');
+  draw();
+}
+function cancelWallDraw(){ wallDrawState=null; draw(); }
+function finishWallDraw(a,b){
+  const w={id:uid(), a, b, t:L().room.wall};
+  L().room.iwalls.push(w);
+  wallDrawState=null;
+  roomSel={kind:'iwall', id:w.id};
+  renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+}
 function drawCustomOverlay(){
   if(!drawState) return;
   const pts=drawState.pts;
@@ -1389,6 +1538,8 @@ function draw(){
     ctx.restore();
   }
   drawWalls();
+  drawIWalls();
+  drawPillars();
   for(const o of L().openings) drawOpening(o, S.showSwing ? blockedOpenings() : []);
 
   const bad=conflictSet(), openBad=openConflicts();
@@ -1400,6 +1551,7 @@ function draw(){
   drawWallLabels();
   if(roomMode()) drawHandles();
   drawCustomOverlay();
+  drawWallDrawOverlay();
   updateReadout(bad, openBad);
 }
 function gridStep(){
@@ -1437,6 +1589,46 @@ function drawWalls(){
     ctx.strokeStyle = o.kind==='window' ? '#cfd8e2' : r.floor;
     ctx.lineWidth=t*2+2;
     ctx.beginPath(); ctx.moveTo(sx(g.p0[0]),sy(g.p0[1])); ctx.lineTo(sx(g.p1[0]),sy(g.p1[1])); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawIWalls(){
+  for(const w of L().room.iwalls){
+    const poly=iwallPoly(w), isSel=roomMode()&&roomSel&&roomSel.kind==='iwall'&&roomSel.id===w.id;
+    pathPoly(poly);
+    ctx.fillStyle='#171b1a'; ctx.fill();
+    ctx.lineWidth = isSel?2.5:1;
+    ctx.strokeStyle = isSel?'#2e6b57':'rgba(23,27,26,.5)';
+    ctx.stroke();
+    if(isSel) for(const p of [w.a,w.b]){
+      ctx.beginPath(); ctx.rect(sx(p[0])-5,sy(p[1])-5,10,10);
+      ctx.fillStyle='#fbfbf8'; ctx.fill(); ctx.strokeStyle='#2e6b57'; ctx.lineWidth=2; ctx.stroke();
+    }
+  }
+}
+function drawPillars(){
+  for(const pl of L().room.pillars){
+    const poly=worldPoly(pl,pl), isSel=roomMode()&&roomSel&&roomSel.kind==='pillar'&&roomSel.id===pl.id;
+    pathPoly(poly);
+    ctx.fillStyle='#525b58'; ctx.fill();
+    ctx.lineWidth = isSel?2.5:1.25;
+    ctx.strokeStyle = isSel?'#2e6b57':'#171b1a';
+    ctx.stroke();
+  }
+}
+function drawWallDrawOverlay(){
+  if(!wallDrawState) return;
+  ctx.save();
+  if(wallDrawState.a && drawCursor){
+    const raw=wallDrawShift?axisLockFrom(wallDrawState.a,drawCursor):drawCursor;
+    const b=snapWallPoint(raw, null, true);
+    ctx.setLineDash([5,4]); ctx.lineWidth=2; ctx.strokeStyle='#2e6b57';
+    ctx.beginPath(); ctx.moveTo(sx(wallDrawState.a[0]),sy(wallDrawState.a[1])); ctx.lineTo(sx(b[0]),sy(b[1])); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if(wallDrawState.a){
+    ctx.beginPath(); ctx.arc(sx(wallDrawState.a[0]),sy(wallDrawState.a[1]),6,0,Math.PI*2);
+    ctx.fillStyle='#2e6b57'; ctx.fill();
   }
   ctx.restore();
 }
@@ -1661,6 +1853,15 @@ function pickAt(x,y){
 }
 function pickRoom(px,py){
   const P=RP(), pt=[wx(px),wy(py)];
+  for(let i=L().room.pillars.length-1;i>=0;i--){
+    const pl=L().room.pillars[i];
+    if(pointInPoly(pt, worldPoly(pl,pl))) return {kind:'pillar', id:pl.id};
+  }
+  for(const w of L().room.iwalls){
+    if(Math.hypot(px-sx(w.a[0]),py-sy(w.a[1]))<11) return {kind:'iwall', id:w.id, end:'a'};
+    if(Math.hypot(px-sx(w.b[0]),py-sy(w.b[1]))<11) return {kind:'iwall', id:w.id, end:'b'};
+    if(pointInPoly(pt, iwallPoly(w))) return {kind:'iwall', id:w.id, end:null};
+  }
   for(const o of L().openings){
     const g=openGeom(o);
     if(Math.hypot(px-sx(g.mid[0]), py-sy(g.mid[1])) < 12) return {kind:'opening', id:o.id};
@@ -1687,12 +1888,30 @@ cv.addEventListener('pointerdown', e=>{
     return;
   }
 
+  if(wallDrawState){
+    const raw0=[wx(px),wy(py)];
+    const raw = (wallDrawState.a && e.shiftKey) ? axisLockFrom(wallDrawState.a,raw0) : raw0;
+    const snapped=snapWallPoint(raw,null,!e.altKey);
+    if(!wallDrawState.a){ wallDrawState.a=snapped; draw(); return; }
+    if(Math.hypot(snapped[0]-wallDrawState.a[0], snapped[1]-wallDrawState.a[1])<50){ flash('Drag out a longer wall'); return; }
+    finishWallDraw(wallDrawState.a, snapped);
+    return;
+  }
+
   if(roomMode()){
     const hit=pickRoom(px,py);
     if(hit){
       roomSel=hit; sel=null;
       if(hit.kind==='opening') drag={mode:'open', id:hit.id};
       else if(hit.kind==='corner') drag={mode:'corner', i:hit.i};
+      else if(hit.kind==='pillar'){
+        const pl=pillarOf(hit.id);
+        drag={mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y};
+      }
+      else if(hit.kind==='iwall'){
+        if(hit.end) drag={mode:'iwall-end', id:hit.id, end:hit.end};
+        else { const w=iwallOf(hit.id); drag={mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1]}; }
+      }
       else drag={mode:'wall', i:hit.i, last:[wx(px),wy(py)]};
       renderRoomSel(); renderWalls(); renderOpen(); draw();
       return;
@@ -1759,6 +1978,28 @@ cv.addEventListener('pointermove', e=>{
     o.offset=Math.max(0,Math.min(near.t*len-o.width/2, len-o.width));
     draw(); renderRoomSel(); renderOpen(); return;
   }
+  if(drag.mode==='pillar'){
+    const pl=pillarOf(drag.id); if(!pl) return;
+    let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
+    if(!e.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
+    pl.x=nx; pl.y=ny;
+    draw(); renderRoomSel(); renderWalls(); return;
+  }
+  if(drag.mode==='iwall'){
+    const w=iwallOf(drag.id); if(!w) return;
+    let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
+    if(!e.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
+    const ddx=nx-w.a[0], ddy=ny-w.a[1];
+    w.a=[w.a[0]+ddx, w.a[1]+ddy]; w.b=[w.b[0]+ddx, w.b[1]+ddy];
+    draw(); renderRoomSel(); renderWalls(); return;
+  }
+  if(drag.mode==='iwall-end'){
+    const w=iwallOf(drag.id); if(!w) return;
+    const other = drag.end==='a' ? w.b : w.a;
+    const raw = e.shiftKey ? axisLockFrom(other,pt) : pt;
+    w[drag.end]=snapWallPoint(raw, drag.id, !e.altKey);
+    draw(); renderRoomSel(); renderWalls(); return;
+  }
 
   const inst=instOf(drag.id); if(!inst) return;
   const it=itemOf(inst.itemId); if(!it) return;
@@ -1803,7 +2044,7 @@ cv.addEventListener('pointermove', e=>{
 function endDrag(e){
   if(drag&&drag.mode!=='pan'){
     save();
-    if(drag.mode==='corner'||drag.mode==='wall'||drag.mode==='open') commitRoom();
+    if(['corner','wall','open','pillar','iwall','iwall-end'].includes(drag.mode)) commitRoom();
     else { commitFurn(); renderSel(); }
   }
   drag=null;
@@ -1827,6 +2068,10 @@ document.addEventListener('keydown', e=>{
     if(e.key==='Enter'){ finishCustomDraw(); return; }
     return;
   }
+  if(wallDrawState){
+    if(e.key==='Escape'){ cancelWallDraw(); return; }
+    return;
+  }
   if(e.key==='Escape'){
     if(!mo.hidden){ closeModal(); return; }
     sel=null; roomSel=null; renderSel(); renderRoomSel(); renderWalls(); renderOpen(); draw(); return;
@@ -1847,6 +2092,8 @@ document.addEventListener('keydown', e=>{
       e.preventDefault();
       if(roomSel.kind==='opening') deleteOpening(roomSel.id);
       else if(roomSel.kind==='corner') deleteCorner(roomSel.i);
+      else if(roomSel.kind==='pillar') deletePillar(roomSel.id);
+      else if(roomSel.kind==='iwall') deleteIWall(roomSel.id);
     }
     return;
   }
@@ -1914,10 +2161,21 @@ function renderAll(){
   renderTree(); renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
   renderInv(); renderSel(); renderSnap(); renderMode(); updateHistButtons(); draw();
 }
+/* the mode also lives in ?mode=, so a refresh (or a shared link) lands back in the same mode */
+function paramMode(){
+  const m=new URLSearchParams(location.search).get('mode');
+  return (m==='room'||m==='furniture') ? m : null;
+}
+function syncModeParam(){
+  const usp=new URLSearchParams(location.search);
+  usp.set('mode', S.mode);
+  history.replaceState(null,'',location.pathname+'?'+usp.toString()+location.hash);
+}
 function setMode(m){
   S.mode=m;
   if(m==='furniture') roomSel=null; else sel=null;
   renderMode(); renderRoomSel(); renderWalls(); renderOpen(); renderSel(); updateHistButtons(); draw(); save();
+  syncModeParam();
 }
 function renderMode(){
   for(const b of document.querySelectorAll('#modeSeg button')) b.setAttribute('aria-pressed', String(b.dataset.mode===S.mode));
@@ -2220,6 +2478,8 @@ function duplicateLayout(id){
   c.id=uid(); c.name=c.name+' copy';
   c.openings.forEach(o=>o.id=uid());
   c.placed.forEach(p=>p.id=uid());
+  c.room.pillars.forEach(p=>p.id=uid());
+  c.room.iwalls.forEach(w=>w.id=uid());
   S.layouts.splice(S.layouts.indexOf(src)+1, 0, c);
   activateLayout(c.id);
   renderAll(); save();
@@ -2310,6 +2570,53 @@ function renderWalls(){
   $('wallHint').textContent = roomMode()
     ? 'Drag a corner to move it — both walls that meet there follow. Drag a wall to slide it sideways.'
     : 'Switch to Room mode to drag corners and walls.';
+  renderObstacles();
+}
+const sizeLabelShape = sh => fmtLen(sh.w,S.unit)+' × '+fmtLen(sh.d,S.unit);
+function renderObstacles(){
+  const ul=$('structList'), room=L().room;
+  const rows=[
+    ...room.pillars.map(pl=>({kind:'pillar', id:pl.id, label:'Pillar', dim:sizeLabelShape(pl.shape)})),
+    ...room.iwalls.map(w=>({kind:'iwall', id:w.id, label:'Wall', dim:fmtLen(iwallLen(w),S.unit)}))
+  ];
+  if(!rows.length){ ul.innerHTML='<li style="border:0;padding:0"><div class="empty">No pillars or interior walls yet</div></li>'; return; }
+  ul.innerHTML=rows.map(r=>{
+    const on=roomSel&&roomSel.kind===r.kind&&roomSel.id===r.id;
+    return `<li data-kind="${r.kind}" data-id="${r.id}" class="${on?'on':''}">
+      <div class="r1"><span class="nm">${esc(r.label)}</span></div>
+      <div class="dim">${esc(r.dim)}</div>
+      <div class="r2"><button class="btn sm danger" data-act="del">Delete</button></div></li>`;
+  }).join('');
+}
+$('structList').addEventListener('click', e=>{
+  const li=e.target.closest('li[data-id]'); if(!li) return;
+  const kind=li.dataset.kind, id=li.dataset.id, btn=e.target.closest('button');
+  if(btn&&btn.dataset.act==='del'){ kind==='pillar'?deletePillar(id):deleteIWall(id); return; }
+  if(!roomMode()) setMode('room');
+  roomSel={kind, id};
+  renderRoomSel(); renderObstacles(); draw();
+});
+function addPillar(){
+  if(wallDrawState) cancelWallDraw();
+  if(drawState) cancelCustomDraw();
+  if(!roomMode()) setMode('room');
+  const b=bbox(RP()), c=centroid(RP())||[(b.x0+b.x1)/2,(b.y0+b.y1)/2];
+  const pl={id:uid(), x:c[0], y:c[1], rot:0, shape:{type:'rect',w:300,d:300}};
+  L().room.pillars.push(pl);
+  roomSel={kind:'pillar', id:pl.id};
+  renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+}
+$('btnAddPillar').addEventListener('click', addPillar);
+$('btnDrawWall').addEventListener('click', ()=>{ wallDrawState?cancelWallDraw():startWallDraw(); });
+function deletePillar(id){
+  L().room.pillars=L().room.pillars.filter(p=>p.id!==id);
+  if(roomSel&&roomSel.kind==='pillar'&&roomSel.id===id) roomSel=null;
+  renderRoomSel(); renderWalls(); draw(); save(); commitRoom();
+}
+function deleteIWall(id){
+  L().room.iwalls=L().room.iwalls.filter(w=>w.id!==id);
+  if(roomSel&&roomSel.kind==='iwall'&&roomSel.id===id) roomSel=null;
+  renderRoomSel(); renderWalls(); draw(); save(); commitRoom();
 }
 $('wallList').addEventListener('click', e=>{
   const li=e.target.closest('li[data-i]'); if(!li) return;
@@ -2362,6 +2669,8 @@ function renderRoomSel(){
   }
   if(roomSel.kind==='wall') return renderWallProps();
   if(roomSel.kind==='corner') return renderCornerProps();
+  if(roomSel.kind==='pillar') return renderPillarProps();
+  if(roomSel.kind==='iwall') return renderIWallProps();
   return renderOpeningProps();
 }
 function renderWallProps(){
@@ -2422,6 +2731,74 @@ function deleteCorner(i){
   roomSel=null;
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
 }
+function renderPillarProps(){
+  const pl=pillarOf(roomSel.id);
+  if(!pl){ roomSel=null; return renderRoomSel(); }
+  $('roomSelTitle').textContent='Pillar';
+  $('roomSelBox').innerHTML=`
+    <div class="field"><label for="plShape">Shape</label><select id="plShape">
+      <option value="rect" ${pl.shape.type==='rect'?'selected':''}>Rectangle</option>
+      <option value="ellipse" ${pl.shape.type==='ellipse'?'selected':''}>Round</option></select></div>
+    <div class="field"><label for="plW">Width</label><input type="text" class="len" id="plW" value="${esc(fmtLen(pl.shape.w,S.unit))}"></div>
+    <div class="field"><label for="plD">Depth</label><input type="text" class="len" id="plD" value="${esc(fmtLen(pl.shape.d,S.unit))}"></div>
+    <div class="field"><label for="plRot">Rotation</label><input type="number" class="deg" id="plRot" step="1" value="${Math.round(pl.rot||0)}"><span class="dim">°</span></div>
+    <div class="row"><button class="btn sm danger" id="plDel">Remove pillar</button></div>
+    <p class="hint">Drag it in the plan to move it.</p>`;
+  const go=()=>{
+    pl.shape.type=$('plShape').value;
+    const w=parseLen($('plW').value,S.unit), d=parseLen($('plD').value,S.unit);
+    if(isFinite(w)&&w>0) pl.shape.w=w;
+    if(isFinite(d)&&d>0) pl.shape.d=d;
+    const rot=parseFloat($('plRot').value);
+    if(isFinite(rot)) pl.rot=norm360(rot);
+    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+  };
+  $('plShape').addEventListener('change',go);
+  $('plW').addEventListener('change',go);
+  $('plD').addEventListener('change',go);
+  $('plRot').addEventListener('change',go);
+  $('plDel').addEventListener('click',()=>deletePillar(pl.id));
+}
+function renderIWallProps(){
+  const w=iwallOf(roomSel.id);
+  if(!w){ roomSel=null; return renderRoomSel(); }
+  const na=nearestOnWalls(w.a), nb=nearestOnWalls(w.b);
+  $('roomSelTitle').textContent='Wall';
+  $('roomSelBox').innerHTML=`
+    <div class="field"><label for="iwLen">Length</label><input type="text" class="len" id="iwLen" value="${esc(fmtLen(iwallLen(w),S.unit))}"></div>
+    <div class="field"><label for="iwAng">Direction</label><input type="number" class="deg" id="iwAng" step="1" value="${Math.round(iwallAngle(w))}"><span class="dim">°</span></div>
+    <div class="field"><label for="iwT">Thickness</label><input type="text" class="len" id="iwT" value="${esc(fmtLen(w.t,S.unit))}"></div>
+    <div class="field"><label for="iwDA">Gap to Wall ${na?na.i+1:'-'} (end A)</label><input type="text" class="len" id="iwDA" value="${esc(fmtLen(na?na.d:0,S.unit))}" ${na?'':'disabled'}></div>
+    <div class="field"><label for="iwDB">Gap to Wall ${nb?nb.i+1:'-'} (end B)</label><input type="text" class="len" id="iwDB" value="${esc(fmtLen(nb?nb.d:0,S.unit))}" ${nb?'':'disabled'}></div>
+    <div class="row"><button class="btn sm danger" id="iwDel">Remove wall</button></div>
+    <p class="hint">Drag either end to resize it or snap it onto another wall or corner. Drag the middle to move the whole wall. Hold Shift while drawing or dragging an end to lock it horizontal/vertical.</p>`;
+  $('iwLen').addEventListener('change', e=>{
+    const v=parseLen(e.target.value,S.unit);
+    if(isFinite(v)&&v>=50) setIWallLen(w,v); else flash('Give the wall a length');
+    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+  });
+  $('iwAng').addEventListener('change', e=>{
+    const v=parseFloat(e.target.value);
+    if(isFinite(v)) setIWallAngle(w,v);
+    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+  });
+  $('iwT').addEventListener('change', e=>{
+    const v=parseLen(e.target.value,S.unit);
+    if(isFinite(v)&&v>=10) w.t=v; else flash('Give the wall a thickness');
+    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+  });
+  $('iwDA').addEventListener('change', e=>{
+    const v=parseLen(e.target.value,S.unit);
+    if(isFinite(v)&&v>=0) setIWallEndDist(w,'a',v);
+    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+  });
+  $('iwDB').addEventListener('change', e=>{
+    const v=parseLen(e.target.value,S.unit);
+    if(isFinite(v)&&v>=0) setIWallEndDist(w,'b',v);
+    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+  });
+  $('iwDel').addEventListener('click',()=>deleteIWall(w.id));
+}
 
 const KIND = o => o.kind==='window' ? 'Window' : (o.dtype==='slide'?'Sliding door':o.dtype==='open'?'Doorway':'Hinged door');
 function renderOpen(){
@@ -2456,24 +2833,31 @@ function renderOpeningProps(){
   const o=openOf(roomSel.id);
   if(!o){ roomSel=null; return renderRoomSel(); }
   const len=wallOf(o.wall).len;
+  o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
   $('roomSelTitle').textContent=KIND(o);
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="oWall">Wall</label><select id="oWall">${RP().map((_,i)=>`<option value="${i}" ${i===o.wall?'selected':''}>Wall ${i+1}</option>`).join('')}</select></div>
     <div class="field"><label for="oW">Width</label><input type="text" class="len" id="oW" value="${esc(fmtLen(o.width,S.unit))}"></div>
-    <div class="field"><label for="oOff">From corner</label><input type="text" class="len" id="oOff" value="${esc(fmtLen(o.offset,S.unit))}"></div>
+    <div class="field"><label for="oCorner">Measure from</label><select id="oCorner">
+      <option value="cw" ${o.corner==='cw'?'selected':''}>Near corner (clockwise)</option>
+      <option value="ccw" ${o.corner==='ccw'?'selected':''}>Far corner (counter-clockwise)</option></select></div>
+    <div class="field"><label for="oOff">Distance from corner</label><input type="text" class="len" id="oOff" value="${esc(fmtLen(openingDispOffset(o,len),S.unit))}"></div>
     <div class="row"><button class="btn sm" id="oEdit">More options</button><button class="btn sm danger" id="oDel">Delete</button></div>
     <p class="hint">Wall ${o.wall+1} is ${esc(fmtLen(len,S.unit))} long. Drag the circle in the plan to slide it, or onto another wall.</p>`;
   const go=()=>{
-    const wv=parseLen($('oW').value,S.unit), ov=parseLen($('oOff').value,S.unit);
+    const wv=parseLen($('oW').value,S.unit);
     o.wall=+$('oWall').value;
+    o.corner=$('oCorner').value==='ccw'?'ccw':'cw';
     const l2=wallOf(o.wall).len;
     if(isFinite(wv)&&wv>=100) o.width=Math.min(wv,l2);
-    if(isFinite(ov)) o.offset=Math.max(0,Math.min(ov,l2-o.width));
+    const ov=parseLen($('oOff').value,S.unit);
+    if(isFinite(ov)) setOpeningDispOffset(o,l2,ov);
     clampOpenings();
     renderOpen(); renderRoomSel(); draw(); save(); commitRoom();
   };
   $('oWall').addEventListener('change',go);
   $('oW').addEventListener('change',go);
+  $('oCorner').addEventListener('change',go);
   $('oOff').addEventListener('change',go);
   $('oEdit').addEventListener('click',()=>openingDialog(o.id));
   $('oDel').addEventListener('click',()=>deleteOpening(o.id));
@@ -2727,6 +3111,7 @@ $('btnPreL').addEventListener('click', ()=>{
     });
 });
 $('btnDrawCustom').addEventListener('click', ()=>{
+  if(wallDrawState) cancelWallDraw();
   if(drawState) cancelCustomDraw(); else startCustomDraw();
 });
 
@@ -2746,7 +3131,9 @@ $('btnDel').addEventListener('click', ()=>{
   if(roomMode()&&roomSel){
     if(roomSel.kind==='opening') deleteOpening(roomSel.id);
     else if(roomSel.kind==='corner') deleteCorner(roomSel.i);
-    else flash('Select a corner or a door to remove');
+    else if(roomSel.kind==='pillar') deletePillar(roomSel.id);
+    else if(roomSel.kind==='iwall') deleteIWall(roomSel.id);
+    else flash('Select a corner, pillar, wall or door to remove');
   } else if(sel) removeSel();
 });
 $('btnPng').addEventListener('click', ()=>{
@@ -2922,10 +3309,15 @@ function openingDialog(id, kind, wallIdx){
   const o = id?openOf(id):null;
   const k = o?o.kind:(kind||'door');
   const wi = o?o.wall:(wallIdx!==undefined?wallIdx:0);
+  const corner = o?(o.corner==='ccw'?'ccw':'cw'):'cw';
+  const dispOff = o ? openingDispOffset(o, wallOf(wi).len) : 600;
   openModal(o?('Edit '+KIND(o).toLowerCase()):(k==='window'?'Add window':'Add door'), `
     <div class="field"><label for="dWall">Wall</label><select id="dWall">${RP().map((_,i)=>`<option value="${i}" ${i===wi?'selected':''}>Wall ${i+1} (${esc(fmtLen(wallOf(i).len,S.unit))})</option>`).join('')}</select></div>
     <div class="field"><label for="dWidth">Width</label><input type="text" class="len" id="dWidth" value="${esc(fmtLen(o?o.width:(k==='window'?1200:813),S.unit))}"></div>
-    <div class="field"><label for="dOffset">From corner</label><input type="text" class="len" id="dOffset" value="${esc(fmtLen(o?o.offset:600,S.unit))}"></div>
+    <div class="field"><label for="dCorner">Measure from</label><select id="dCorner">
+      <option value="cw" ${corner==='cw'?'selected':''}>Near corner (clockwise)</option>
+      <option value="ccw" ${corner==='ccw'?'selected':''}>Far corner (counter-clockwise)</option></select></div>
+    <div class="field"><label for="dOffset">Distance from corner</label><input type="text" class="len" id="dOffset" value="${esc(fmtLen(dispOff,S.unit))}"></div>
     ${k==='door' ? `
       <div class="field"><label for="dType">Type</label><select id="dType">
         <option value="hinge">Hinged</option><option value="slide">Sliding</option><option value="open">Open doorway</option></select></div>
@@ -2937,18 +3329,20 @@ function openingDialog(id, kind, wallIdx){
       </div>` : `
       <div class="field"><label for="dSill">Sill height</label><input type="text" class="len" id="dSill" value="${esc(fmtLen(o&&o.sill?o.sill:900,S.unit))}"></div>
       <p class="hint">Sill height is only a note for you — it doesn't change the plan.</p>`}
-    <p class="hint">Measured clockwise from the start of that wall. You can also drag it in the plan.</p>`,
+    <p class="hint">Measured from the wall's near corner (clockwise) by default — switch to the far corner above. You can also drag it in the plan.</p>`,
     'Save',
     ()=>{
       const wall=+$('dWall').value, len=wallOf(wall).len;
       let width=parseLen($('dWidth').value,S.unit);
-      let offset=parseLen($('dOffset').value,S.unit);
+      const cnr=$('dCorner').value==='ccw'?'ccw':'cw';
+      let dispOffset=parseLen($('dOffset').value,S.unit);
       if(!isFinite(width)||width<100){ moError('Give it a width of at least 100 mm'); return false; }
       if(width>len){ moError('That is wider than the wall ('+fmtLen(len,S.unit)+')'); return false; }
-      if(!isFinite(offset)) offset=0;
+      if(!isFinite(dispOffset)) dispOffset=0;
+      let offset = cnr==='ccw' ? (len-width-dispOffset) : dispOffset;
       offset=Math.max(0,Math.min(offset,len-width));
       const rec={
-        id:id||uid(), kind:k, wall, width, offset,
+        id:id||uid(), kind:k, wall, width, offset, corner:cnr,
         dtype: k==='door' ? $('dType').value : 'open',
         hinge: k==='door' ? $('dHinge').value : 'start',
         swing: k==='door' ? $('dSwing').value : 'in',
@@ -3274,6 +3668,9 @@ window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
       if(data){ S=data; if(!S.layouts.some(l=>l.id===S.active)) S.active=S.layouts[0].id; }
     }
   }catch(e){}
+  const pm=paramMode();
+  if(pm) S.mode=pm;
+  syncModeParam();
   $('unitSel').value=S.unit;
   $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen;
   seedHistFor();
