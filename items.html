@@ -614,6 +614,17 @@ function askText(title,label,value,onOk){
 function askConfirm(title,msg,okLabel,onOk){
   openModal(title, `<p style="margin:0">${esc(msg)}</p>`, okLabel||'Delete', ()=>onOk());
 }
+function askNewLibFolder(title,onOk){
+  openModal(title, `
+    <div class="field wide"><label style="width:auto">Name</label></div>
+    <input type="text" id="moText" value="Folder">
+    <div class="field wide" style="margin-top:10px"><label style="width:auto">Tags</label></div>
+    ${tagFieldHTML('fNewTags','living room, seating, IKEA')}
+    <p class="hint">Every item filed in this folder — or in any subfolder underneath it — carries these tags automatically.</p>`,
+    'Save',
+    ()=>{ const v=$('moText').value.trim(); if(!v){ moError('Enter a name'); return false; } onOk(v, tagFieldValue('fNewTags')); },
+    ()=>{ mountTagField('fNewTags', []); });
+}
 
 /* ------------------------- dropdown menu (identical pattern to index.html) ------------------------- */
 let menuEl=null;
@@ -855,8 +866,8 @@ function renderTools(){
     box.innerHTML=`<button class="btn sm" id="btnNewFolder">New folder</button>
       <button class="btn sm primary" id="btnNewItem">New item</button>`;
     $('btnNewFolder').addEventListener('click', ()=>{
-      askText('New folder','Name','Folder', n=>{
-        S.itemFolders.push({id:uid(),name:n,parentId:nav.libFolderId,tags:[]});
+      askNewLibFolder('New folder', (n,tags)=>{
+        S.itemFolders.push({id:uid(),name:n,parentId:nav.libFolderId,tags});
         if(nav.libFolderId) treeOpen.add(nav.libFolderId);
         save(); renderAll();
       });
@@ -1070,8 +1081,8 @@ function libFolderMenu(id, anchor){
   openMenu(anchor, [
     {label:'Open', fn:()=>goFolder('library',id)},
     {label:'Rename', fn:()=>renameLibFolder(id)},
-    {label:'New subfolder', fn:()=>askText('New folder','Name','Folder', n=>{
-      S.itemFolders.push({id:uid(),name:n,parentId:id,tags:[]}); treeOpen.add(id); save(); renderAll();
+    {label:'New subfolder', fn:()=>askNewLibFolder('New folder', (n,tags)=>{
+      S.itemFolders.push({id:uid(),name:n,parentId:id,tags}); treeOpen.add(id); save(); renderAll();
     })},
     {sep:true},
     {label:'Move to folder…', fn:()=>moveFolderDialog('library',id)},
