@@ -89,6 +89,10 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
 .tree-row.folder-row .chips{margin-left:2px}
 .chips button{padding:3px 8px;font-size:11.5px;border:1px solid var(--line);background:var(--paper);border-radius:20px}
 .chips button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.chips button.untagged{font-style:italic}
+.chips button.clear{display:inline-flex;align-items:center;gap:4px;border-style:dashed;color:var(--ink2)}
+.chips button.clear:hover{color:var(--warn);border-color:var(--warn)}
+.chips button.clear b{font-size:13px;line-height:1;font-weight:600}
 
 .tagfield{position:relative}
 .taginput{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:3px 4px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);cursor:text}
@@ -462,6 +466,7 @@ let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, mode:'furnitur
          inventory:[], layouts:[blankLayout()], active:null,
          folders:[],          // {id, name, parentId(null=root), tags:[...]}
          tagFilter:[],        // active tag chips in the Things pane
+         untaggedOnly:false,  // the "Untagged" chip in the Things pane
          onlyAvailable:false, // "only show things I still have stock of"
          lastFolderId:undefined};
 S.active = S.layouts[0].id;
@@ -492,7 +497,11 @@ function allTags(){
 }
 function itemMatchesFilter(it){
   if(S.onlyAvailable && availableCount(it)<=0) return false;
-  if(S.tagFilter.length && !(it.tags||[]).some(t=>S.tagFilter.includes(t))) return false;
+  const tags=it.tags||[];
+  if(S.tagFilter.length || S.untaggedOnly){
+    // the chips read as "any of these": a tag chip, or the Untagged chip
+    if(!(tags.some(t=>S.tagFilter.includes(t)) || (S.untaggedOnly && !tags.length))) return false;
+  }
   return true;
 }
 /* folder path from root to id, inclusive */
@@ -513,7 +522,7 @@ function activateLayout(id){
   S.active=id; sel=null; roomSel=null;
   seedHistFor();
   const fid = L() ? (L().folderId||null) : null;
-  if(fid !== S.lastFolderId) S.tagFilter = (folderOf(fid)?.tags||[]).slice();
+  if(fid !== S.lastFolderId){ S.tagFilter = (folderOf(fid)?.tags||[]).slice(); S.untaggedOnly=false; }
   S.lastFolderId = fid;
 }
 
@@ -802,6 +811,7 @@ function migrate(st){
   }
   if(!Array.isArray(st.folders)) st.folders=[];
   if(!Array.isArray(st.tagFilter)) st.tagFilter=[];
+  if(st.untaggedOnly==null) st.untaggedOnly=false;
   if(st.onlyAvailable==null) st.onlyAvailable=false;
   st.mode = 'furniture';
   if(!st.layouts.some(l=>l.id===st.active)) st.active=st.layouts[0].id;
@@ -1919,14 +1929,24 @@ function renderOpeningProps(){
 
 function renderTagChips(){
   const tags=allTags(), box=$('tagChips');
+  // the Untagged chip only earns its place when it actually splits the list
+  const showUntagged = tags.length && S.inventory.some(it=>!(it.tags||[]).length);
+  if(!showUntagged) S.untaggedOnly=false;
   if(!tags.length){ box.innerHTML=''; box.hidden=true; return; }
   box.hidden=false;
-  box.innerHTML=tags.map(t=>`<button type="button" data-t="${esc(t)}" aria-pressed="${S.tagFilter.includes(t)}">${esc(t)}</button>`).join('');
+  let html = tags.map(t=>`<button type="button" data-t="${esc(t)}" aria-pressed="${S.tagFilter.includes(t)}">${esc(t)}</button>`).join('');
+  if(showUntagged) html += `<button type="button" class="untagged" data-untagged="1" aria-pressed="${S.untaggedOnly}">Untagged</button>`;
+  if(S.tagFilter.length || S.untaggedOnly) html += `<button type="button" class="clear" data-clear="1" title="Clear the tag filter"><b>\u00d7</b>Clear</button>`;
+  box.innerHTML=html;
 }
 $('tagChips').addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b) return;
-  const t=b.dataset.t;
-  S.tagFilter = S.tagFilter.includes(t) ? S.tagFilter.filter(x=>x!==t) : [...S.tagFilter,t];
+  if(b.dataset.clear){ S.tagFilter=[]; S.untaggedOnly=false; }
+  else if(b.dataset.untagged){ S.untaggedOnly=!S.untaggedOnly; }
+  else {
+    const t=b.dataset.t;
+    S.tagFilter = S.tagFilter.includes(t) ? S.tagFilter.filter(x=>x!==t) : [...S.tagFilter,t];
+  }
   renderTagChips(); renderInv(); save();
 });
 $('onlyAvail').addEventListener('change', e=>{ S.onlyAvailable=e.target.checked; renderInv(); save(); });
