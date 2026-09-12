@@ -225,6 +225,7 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
         <div class="field"><label for="snapSel">Snap</label><select id="snapSel"></select></div>
         <div class="field wide"><input type="checkbox" id="showSwing" style="width:auto" checked><label for="showSwing" style="width:auto">Show door clearance</label></div>
         <div class="field wide"><input type="checkbox" id="showDims" style="width:auto" checked><label for="showDims" style="width:auto">Show sizes on shapes</label></div>
+        <div class="field wide"><input type="checkbox" id="showOpen" style="width:auto" checked><label for="showOpen" style="width:auto">Show things opened out</label></div>
       </section>
     </div>
 
@@ -385,6 +386,41 @@ function worldPoly(inst,item){
   const local=shapePoly(item.shape), r=(inst.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
   return local.map(([x,y])=>[inst.x+x*c-y*s, inst.y+x*s+y*c]);
 }
+/* ---- open state ----
+   Some things need more floor when they are in use: a dresser's drawers pull
+   out, a table gains a leaf, a recliner kicks its feet forward. That extra
+   floor lives on the item as how far it reaches past its own footprint on each
+   side (`item.open = {top,bottom,left,right}` in mm, in the item's own
+   unrotated frame, so it turns with the piece). It is advisory only: it never
+   blocks a placement, it only warns. */
+const OPEN_SIDES=['top','bottom','left','right'];
+function normOpen(o){
+  if(!o||typeof o!=='object') return null;
+  const r={}; let any=false;
+  for(const k of OPEN_SIDES){
+    const v=Math.max(0, parseFloat(o[k])||0);
+    r[k]=v; if(v>0) any=true;
+  }
+  return any ? r : null;
+}
+const hasOpen = it => !!(it && it.open);
+/* the box an item covers once it is open, in local (unrotated) coordinates */
+function openLocalBox(it){
+  if(!hasOpen(it)) return null;
+  const b=bbox(shapePoly(it.shape)), o=it.open;
+  return {x0:b.x0-o.left, y0:b.y0-o.top, x1:b.x1+o.right, y1:b.y1+o.bottom};
+}
+function openPoly(inst,it){
+  const b=openLocalBox(it);
+  if(!b) return null;
+  const r=(inst.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
+  return [[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]]
+    .map(([x,y])=>[inst.x+x*c-y*s, inst.y+x*s+y*c]);
+}
+function openSizeLabel(it){
+  const b=openLocalBox(it);
+  return b ? fmtLen(b.x1-b.x0,S.unit)+' × '+fmtLen(b.y1-b.y0,S.unit) : '';
+}
 function shrink(poly,amt){
   const b=bbox(poly),cx=(b.x0+b.x1)/2,cy=(b.y0+b.y1)/2;
   return poly.map(([x,y])=>{
@@ -462,7 +498,7 @@ function blankLayout(name,folderId){
     room:{points:rectPts(4270,3660), wall:114, floor:'#f5f3ee', trimOn:false, trim:19},
     openings:[], placed:[]};
 }
-let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, mode:'furniture',
+let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true, mode:'furniture',
          inventory:[], layouts:[blankLayout()], active:null,
          folders:[],          // {id, name, parentId(null=root), tags:[...]}
          tagFilter:[],        // active tag chips in the Things pane
@@ -690,6 +726,39 @@ function conflictSet(){
   }
   return out;
 }
+/* An open footprint may sit over the trim — a drawer clears a baseboard — so
+   this is a plainer test than insideRoom(): only the wall line itself counts. */
+function openThroughWall(poly){
+  const R=RP();
+  for(const v of poly) if(!pointInPoly(v,R)) return true;
+  for(let i=0;i<poly.length;i++){
+    const a=poly[i], b=poly[(i+1)%poly.length];
+    for(let j=0;j<R.length;j++) if(segHit(a,b,R[j],R[(j+1)%R.length])) return true;
+  }
+  return false;
+}
+/* id -> why, for every placed thing that hasn't the room to open. Kept apart
+   from conflictSet() because these never make a placement illegal. */
+function openConflicts(){
+  const ps=L().placed, out=new Map();
+  const solids=ps.map(p=>{ const it=itemOf(p.itemId); return (it&&!it.passThrough)?worldPoly(p,it):null; });
+  for(let i=0;i<ps.length;i++){
+    const it=itemOf(ps[i].itemId);
+    const op=it&&openPoly(ps[i],it);
+    if(!op) continue;
+    if(openThroughWall(op)){ out.set(ps[i].id,'Opened out, it reaches past the wall'); continue; }
+    const ob=bbox(op), test=shrink(op,EPS);
+    for(let j=0;j<ps.length;j++){
+      if(j===i||!solids[j]) continue;
+      if(!bbHit(ob,bbox(solids[j]))) continue;
+      if(polyHit(test,shrink(solids[j],EPS))){
+        out.set(ps[i].id,'Opened out, it runs into '+itemOf(ps[j].itemId).name);
+        break;
+      }
+    }
+  }
+  return out;
+}
 const isBad = inst => { const it=itemOf(inst.itemId); return it ? !validate(inst,worldPoly(inst,it)).ok : false; };
 /* while a piece is overlapping we let it move freely, but never off the floor */
 function centreInside(inst){
@@ -808,11 +877,13 @@ function migrate(st){
     if(!Array.isArray(it.tags)) it.tags=[];
     if(it.count==null) it.count=1;
     it.color = normHex(it.color) || PALETTE[0];
+    it.open = normOpen(it.open);
   }
   if(!Array.isArray(st.folders)) st.folders=[];
   if(!Array.isArray(st.tagFilter)) st.tagFilter=[];
   if(st.untaggedOnly==null) st.untaggedOnly=false;
   if(st.onlyAvailable==null) st.onlyAvailable=false;
+  if(st.showOpen==null) st.showOpen=true;
   st.mode = 'furniture';
   if(!st.layouts.some(l=>l.id===st.active)) st.active=st.layouts[0].id;
   const fl=st.layouts.find(l=>l.id===st.active);
@@ -1076,15 +1147,16 @@ function draw(){
   drawWalls();
   for(const o of L().openings) drawOpening(o, S.showSwing ? blockedOpenings() : []);
 
-  const bad=conflictSet();
+  const bad=conflictSet(), openBad=openConflicts();
   ctx.globalAlpha = roomMode() ? .42 : 1;
+  for(const p of L().placed) if(showOpenFor(p)) drawOpenRegion(p, openBad.has(p.id));
   for(const p of L().placed) drawItem(p, !roomMode()&&p.id===sel, bad.has(p.id));
   ctx.globalAlpha = 1;
 
   drawWallLabels();
   if(roomMode()) drawHandles();
   drawCustomOverlay();
-  updateReadout(bad);
+  updateReadout(bad, openBad);
 }
 function gridStep(){
   const imp = S.unit==='ftin'||S.unit==='in';
@@ -1171,6 +1243,20 @@ function drawOpening(o,blocked){
     ctx.fillStyle = isSel ? '#2e6b57' : '#fbfbf8'; ctx.fill();
     ctx.strokeStyle='#2e6b57'; ctx.lineWidth=2; ctx.stroke();
   }
+}
+/* the open footprint is always drawn for whatever you have hold of, so you can
+   see where it will reach as you place it, toggle on or off */
+const showOpenFor = p => S.showOpen || (!roomMode() && p.id===sel);
+function drawOpenRegion(p,bad){
+  const it=itemOf(p.itemId);
+  const poly=it&&openPoly(p,it);
+  if(!poly) return;
+  pathPoly(poly);
+  ctx.fillStyle = bad ? 'rgba(176,74,50,.12)' : hexA(it.color,.15);
+  ctx.fill();
+  ctx.setLineDash([5,4]); ctx.lineWidth=1.25;
+  ctx.strokeStyle = bad ? 'rgba(176,74,50,.7)' : hexA(it.color,.55);
+  ctx.stroke(); ctx.setLineDash([]);
 }
 function drawItem(p,isSel,isBadPos){
   const it=itemOf(p.itemId);
@@ -1278,16 +1364,17 @@ function drawHandles(){
     ctx.strokeStyle='#2e6b57'; ctx.lineWidth=2; ctx.stroke();
   }
 }
-function updateReadout(bad){
+function updateReadout(bad,openBad){
   let used=0;
   for(const p of L().placed){
     const it=itemOf(p.itemId);
     if(it&&!it.passThrough) used+=polyArea(shapePoly(it.shape));
   }
-  const total=polyArea(RP())||1, n=bad?bad.size:0;
+  const total=polyArea(RP())||1, n=bad?bad.size:0, no=openBad?openBad.size:0;
   const el=$('readout');
-  el.textContent = L().placed.length+' placed · '+Math.round(used/total*100)+'% of floor covered'+(n?' · '+n+" don't fit":'');
-  el.style.color = n?'#b04a32':'';
+  el.textContent = L().placed.length+' placed · '+Math.round(used/total*100)+'% of floor covered'
+    +(n?' · '+n+" don't fit":'')+(no?' · '+no+" can't open":'');
+  el.style.color = (n||no)?'#b04a32':'';
   const tag=$('modeTag');
   tag.textContent = roomMode() ? 'Editing the room' : 'Room locked';
   tag.className = roomMode() ? '' : 'locked';
@@ -1972,7 +2059,7 @@ function renderInv(){
     <div class="r1"><span class="sw" style="background:${i.color}"></span>
       <span class="nm" title="${esc(i.name)}">${esc(i.name)}</span>
       ${counts[i.id]?`<span class="count" title="in this room">${counts[i.id]}</span>`:''}</div>
-    <div class="dim">${esc(sizeLabel(i))}${i.passThrough?' · things can sit on it':''} · ${avail} of ${total} available</div>
+    <div class="dim">${esc(sizeLabel(i))}${hasOpen(i)?' · opens to '+esc(openSizeLabel(i)):''}${i.passThrough?' · things can sit on it':''} · ${avail} of ${total} available</div>
     ${(i.tags&&i.tags.length)?`<div class="chips">${i.tags.map(t=>`<span class="dim" style="border:1px solid var(--line);border-radius:20px;padding:1px 7px">${esc(t)}</span>`).join('')}</div>`:''}
     <div class="r2">
       <button class="btn sm" data-act="place" ${avail<=0?'disabled title="None left to place"':''}>Place</button>
@@ -2011,8 +2098,11 @@ function renderSel(){
   const inst=sel&&instOf(sel), it=inst&&itemOf(inst.itemId);
   if(!inst||!it){ box.innerHTML='<div class="empty">Nothing selected. Click a shape in the room.</div>'; return; }
   const b=bbox(worldPoly(inst,it)), rb=bbox(RP());
+  const openWhy = hasOpen(it) ? openConflicts().get(inst.id) : null;
   box.innerHTML=`
     <div class="field"><span class="sw" style="background:${it.color}"></span><strong class="nm">${esc(it.name)}</strong></div>
+    ${hasOpen(it)?`<div class="dim">Opens out to ${esc(openSizeLabel(it))}</div>`:''}
+    ${openWhy?`<div class="dim" style="color:var(--warn)">${esc(openWhy)}</div>`:''}
     <div class="field"><label for="sX">From left</label><input type="text" class="len" id="sX" value="${esc(fmtLen(b.x0-rb.x0,S.unit))}"></div>
     <div class="field"><label for="sY">From top</label><input type="text" class="len" id="sY" value="${esc(fmtLen(b.y0-rb.y0,S.unit))}"></div>
     <div class="field"><label for="sR">Angle</label><input type="number" class="deg" id="sR" step="15" value="${Math.round(inst.rot||0)}"><span class="dim">°</span></div>
@@ -2107,6 +2197,7 @@ $('unitSel').addEventListener('change', e=>{ S.unit=e.target.value; renderSnap()
 $('snapSel').addEventListener('change', e=>{ S.snap=e.target.value; save(); });
 $('showSwing').addEventListener('change', e=>{ S.showSwing=e.target.checked; draw(); save(); });
 $('showDims').addEventListener('change', e=>{ S.showDims=e.target.checked; draw(); save(); });
+$('showOpen').addEventListener('change', e=>{ S.showOpen=e.target.checked; draw(); save(); });
 $('btnUndo').addEventListener('click',()=>{ roomMode()?undoRoom():undoFurn(); });
 $('btnRedo').addEventListener('click',()=>{ roomMode()?redoRoom():redoFurn(); });
 $('btnZoomIn').addEventListener('click',()=>zoomAt(1.25,W/2,H/2));
@@ -2130,6 +2221,7 @@ $('btnPng').addEventListener('click', ()=>{
 
 /* ------------------------- item dialog ------------------------- */
 let dlgColor=PALETTE[0];
+const openV = (it,k) => fmtLen((it&&it.open&&it.open[k])||0, S.unit);
 function shapeFieldHTML(type,sh){
   const v=(k,def)=>fmtLen(sh&&sh[k]!==undefined?sh[k]:def,S.unit);
   if(type==='poly'){
@@ -2165,6 +2257,15 @@ function itemDialog(id){
     <div class="field"><label for="iHex">Custom</label><input type="color" id="iColPick"><input type="text" class="hex" id="iHex" maxlength="7" spellcheck="false" placeholder="#6e8b7a"></div>
     <div class="field wide"><input type="checkbox" id="iPass" style="width:auto" ${it&&it.passThrough?'checked':''}>
       <label for="iPass" style="width:auto">Others can overlap this (rugs, mats)</label></div>
+    <div class="field wide"><input type="checkbox" id="iOpenOn" style="width:auto" ${hasOpen(it)?'checked':''}>
+      <label for="iOpenOn" style="width:auto">It opens out further (drawers, leaves, recliners)</label></div>
+    <div id="openFields" ${hasOpen(it)?'':'hidden'}>
+      <div class="field"><label for="oTop">Opens up</label><input type="text" class="len" id="oTop" value="${esc(openV(it,'top'))}"></div>
+      <div class="field"><label for="oBottom">Opens down</label><input type="text" class="len" id="oBottom" value="${esc(openV(it,'bottom'))}"></div>
+      <div class="field"><label for="oLeft">Opens left</label><input type="text" class="len" id="oLeft" value="${esc(openV(it,'left'))}"></div>
+      <div class="field"><label for="oRight">Opens right</label><input type="text" class="len" id="oRight" value="${esc(openV(it,'right'))}"></div>
+      <p class="hint">How far it reaches out past its own footprint when it is in use, as the shape sits here before you turn it — a dresser with 20" of drawer opens down. The open footprint never stops you putting something somewhere, it only warns when there is not room for it.</p>
+    </div>
     <div class="field"><label for="iCount">How many you own</label><input type="number" id="iCount" min="1" step="1" value="${it&&it.count!=null?it.count:1}"></div>
     <div class="field wide"><label for="iTagsInput" style="width:auto">Tags</label></div>
     ${tagFieldHTML('iTags','living room, seating, IKEA')}
@@ -2194,8 +2295,12 @@ function itemDialog(id){
       const name=($('iName').value||'').trim()||'Untitled';
       const count=Math.max(1, Math.round(parseFloat($('iCount').value))||1);
       const tags=tagFieldValue('iTags');
-      if(id) Object.assign(itemOf(id),{name,color:dlgColor,shape,passThrough:$('iPass').checked,count,tags});
-      else S.inventory.push({id:uid(),name,color:dlgColor,shape,passThrough:$('iPass').checked,count,tags});
+      const open = $('iOpenOn').checked ? normOpen({
+        top:parseLen($('oTop').value,S.unit),    bottom:parseLen($('oBottom').value,S.unit),
+        left:parseLen($('oLeft').value,S.unit),  right:parseLen($('oRight').value,S.unit)
+      }) : null;
+      if(id) Object.assign(itemOf(id),{name,color:dlgColor,shape,passThrough:$('iPass').checked,count,tags,open});
+      else S.inventory.push({id:uid(),name,color:dlgColor,shape,passThrough:$('iPass').checked,count,tags,open});
       renderInv(); renderSel(); draw(); save();
     },
     ()=>{
@@ -2221,6 +2326,8 @@ function itemDialog(id){
       hx.addEventListener('change',paint);
       hx.addEventListener('blur',paint);
       paint();
+      const oc=$('iOpenOn');
+      oc.addEventListener('change',()=>{ $('openFields').hidden=!oc.checked; });
       mountTagField('iTags', (it&&it.tags)||[]);
     });
 }
@@ -2288,7 +2395,8 @@ $('btnSamples').addEventListener('click', ()=>{
   add('Round table',{type:'ellipse',w:1070,d:1070});
   add('Desk',{type:'rect',w:1220,d:610});
   add('Corner desk',{type:'lshape',w:1520,d:1520,cw:900,cd:900,corner:'se'});
-  add('Dresser',{type:'rect',w:1220,d:460});
+  add('Dresser',{type:'rect',w:1220,d:460},{open:{top:0,bottom:520,left:0,right:0}});
+  add('Extending table',{type:'rect',w:1520,d:900},{open:{top:0,bottom:0,left:0,right:460}});
   add('Rug 5×8',{type:'rect',w:1520,d:2440},{passThrough:true});
   renderInv(); save();
 });
@@ -2337,6 +2445,7 @@ window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
     }
   }catch(e){}
   $('unitSel').value=S.unit;
+  $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen;
   seedHistFor();
   renderSnap(); applyLayoutMode(); renderAll(); resize(); fit();
 })();
