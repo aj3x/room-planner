@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Item Library</title>
+<style>
+:root{
+  --ink:#171b1a; --ink2:#525b58; --ink3:#818b87;
+  --line:#d3d8cf; --line2:#e2e6dd;
+  --paper:#fbfbf8; --panel:#eef0ea; --panel2:#e5e8df;
+  --accent:#2e6b57; --accent-soft:#d7e4dd;
+  --warn:#b04a32; --warn-soft:#f2dcd5;
+  --radius:5px; --shadow:0 1px 0 rgba(23,27,26,.06), 0 8px 24px -14px rgba(23,27,26,.4);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;max-width:100%;overflow-x:hidden}
+body{
+  font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:13.5px;line-height:1.45;color:var(--ink);background:var(--panel);
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;overscroll-behavior:none;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+#appRoot{display:grid;grid-template-rows:auto 1fr;height:100%}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 14px;background:var(--paper);border-bottom:1px solid var(--line)}
+header h1{font-size:14.5px;font-weight:650;margin:0;letter-spacing:-.01em;white-space:nowrap}
+header h1 span{color:var(--ink3);font-weight:450}
+.hgroup{display:flex;align-items:center;gap:6px}
+a.btn,a.btn:visited{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
+
+main{display:grid;grid-template-columns:290px minmax(0,1fr);min-height:0;min-width:0}
+.pane.left{background:var(--paper);border-right:1px solid var(--line);overflow-y:auto;min-width:0;display:flex;flex-direction:column}
+#content{overflow-y:auto;min-width:0;background:var(--panel2)}
+
+.btn{padding:5px 10px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);white-space:nowrap}
+.btn:hover{background:var(--panel)}
+.btn:disabled{opacity:.4;cursor:default;pointer-events:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger:hover{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.btn.sm{padding:3px 7px;font-size:12px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hint{font-size:11.5px;color:var(--ink3);margin:6px 0 0}
+.hint code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;background:var(--panel);border:1px solid var(--line2);border-radius:3px;padding:0 3px}
+.dim{font-size:11.5px;color:var(--ink3)}
+.sw{width:14px;height:14px;flex:none;border-radius:3px;border:1px solid rgba(0,0,0,.18);display:inline-block}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chips .tagchip{padding:1px 8px;font-size:11px;border:1px solid var(--line);background:var(--paper);border-radius:20px;color:var(--ink2)}
+.chips .tagchip.inherit{border-style:dashed;color:var(--ink3);font-style:italic}
+.empty{border:1px dashed var(--line);border-radius:var(--radius);padding:16px 12px;color:var(--ink3);font-size:12.5px;text-align:center}
+.field{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.field label{width:100px;flex:none;color:var(--ink2);font-size:12.5px}
+.field.wide label{width:auto}
+.field[hidden]{display:none}
+input[type=text],input[type=number],input[type=url],select,textarea{width:100%;min-width:0;padding:5px 7px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius)}
+input[type=text].len,input.deg{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+input[type=color]{width:30px;height:26px;flex:none;padding:1px;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper)}
+input[type=text].hex{flex:1;min-width:58px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:lowercase}
+input.bad{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+textarea{resize:vertical;min-height:74px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink2) 50%),linear-gradient(135deg,var(--ink2) 50%,transparent 50%);background-position:calc(100% - 13px) 12px,calc(100% - 9px) 12px;background-size:4px 4px;background-repeat:no-repeat;padding-right:24px}
+.swatches{display:flex;gap:5px;flex-wrap:wrap}
+.swatches button{width:21px;height:21px;border-radius:4px;border:1px solid rgba(0,0,0,.2)}
+.swatches button[aria-pressed=true]{box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--accent)}
+input[type=text].id{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+details.adv{margin-top:11px;border-top:1px solid var(--line2);padding-top:9px}
+details.adv > summary{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;list-style:none;font-size:12px;font-weight:650;color:var(--ink2)}
+details.adv > summary::-webkit-details-marker{display:none}
+details.adv > summary::before{content:"\25b8";flex:none;width:9px;font-size:9px;color:var(--ink3)}
+details.adv[open] > summary::before{content:"\25be"}
+details.adv .advbody{padding-top:10px}
+
+/* ---- tag input ---- */
+.tagfield{position:relative}
+.taginput{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:3px 4px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);cursor:text}
+.taginput.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.taginput .tag{display:inline-flex;align-items:center;gap:2px;padding:1px 3px 1px 8px;font-size:11.5px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);border-radius:20px;white-space:nowrap;max-width:100%}
+.taginput .tag span{overflow:hidden;text-overflow:ellipsis}
+.taginput .tag button{flex:none;background:none;border:0;padding:0 3px;color:inherit;font-size:12px;line-height:1;opacity:.65;border-radius:50%}
+.taginput .tag button:hover{opacity:1;color:var(--warn)}
+.taginput input[type=text]{flex:1 1 70px;width:auto;min-width:70px;border:0;padding:2px 3px;background:transparent}
+.taginput input[type=text]:focus-visible{outline:0}
+.tagsuggest{margin-top:4px;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper);box-shadow:var(--shadow);max-height:132px;overflow:auto;padding:3px;position:absolute;z-index:8;left:0;right:0}
+.tagsuggest[hidden]{display:none}
+.tagsuggest button{display:block;width:100%;text-align:left;padding:4px 7px;border:0;background:none;border-radius:4px;font-size:12.5px}
+.tagsuggest button:hover{background:var(--panel)}
+.tagsuggest button[aria-selected=true]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+
+/* ---- modal ---- */
+#modal{position:fixed;inset:0;background:rgba(23,27,26,.34);display:grid;place-items:center;padding:14px;z-index:50}
+#modal[hidden]{display:none}
+#modalCard{background:var(--paper);border:1px solid var(--line);border-radius:8px;width:min(460px,100%);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px -28px rgba(23,27,26,.6)}
+#moTitle{padding:13px 16px;border-bottom:1px solid var(--line2);font-weight:650}
+#moBody{padding:14px 16px;overflow:auto}
+#moFoot{padding:11px 16px;border-top:1px solid var(--line2);display:flex;gap:8px;align-items:center}
+#moErr{flex:1;color:var(--warn);font-size:12px;min-height:1em}
+
+/* ---- dropdown menu ---- */
+.menu{position:fixed;z-index:60;min-width:184px;max-width:268px;padding:4px;background:var(--paper);border:1px solid var(--line);border-radius:7px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.menu .mtitle{padding:4px 9px 6px;font-size:11px;font-weight:650;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu button{display:block;width:100%;text-align:left;padding:5px 9px;border:0;background:none;border-radius:4px;font-size:12.5px;white-space:nowrap}
+.menu button:hover{background:var(--panel)}
+.menu button.danger{color:var(--warn)}
+.menu button.danger:hover{background:var(--warn-soft)}
+.menu .sep{height:1px;margin:4px 3px;background:var(--line2)}
+
+/* ---- flash ---- */
+#flash{position:fixed;left:50%;transform:translateX(-50%);top:12px;background:var(--accent);color:#fff;padding:5px 11px;border-radius:var(--radius);font-size:12.5px;opacity:0;pointer-events:none;transition:opacity .18s;z-index:70}
+#flash.warn{background:var(--warn)}
+#flash.on{opacity:1}
+
+/* ---- explorer / tree ---- */
+.libtabs{display:flex;border-bottom:1px solid var(--line2);flex:none}
+.libtabs button{flex:1;padding:9px 4px;background:var(--paper);border:0;border-bottom:2px solid transparent;font-size:12.5px;font-weight:600;color:var(--ink2)}
+.libtabs button:hover{background:var(--panel)}
+.libtabs button[aria-pressed=true]{color:var(--accent);border-bottom-color:var(--accent)}
+.expl-top{padding:9px 10px 0;flex:none}
+.expl-tools{display:flex;gap:6px;padding:9px 10px}
+#tree{padding:2px 6px 16px;display:flex;flex-direction:column;gap:1px;flex:1;min-height:26px}
+#tree.drop-root{background:var(--accent-soft);border-radius:var(--radius)}
+.tree-row{display:flex;align-items:center;gap:5px;padding:5px 4px;border-radius:var(--radius);cursor:pointer;min-width:0;cursor:grab}
+.tree-row:hover{background:var(--panel)}
+.tree-row.active{background:var(--accent-soft)}
+.tree-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+.tree-row .ico{flex:none;font-size:12px}
+.tree-row .caret{flex:none;width:16px;background:none;border:0;padding:0;color:var(--ink3);font-size:10px;cursor:pointer}
+.tree-row .tree-more{flex:none;background:none;border:0;padding:2px 5px;color:var(--ink3);font-size:14px;border-radius:4px;line-height:1}
+.tree-row .tree-more:hover{background:var(--panel2);color:var(--ink)}
+.tree-row.dragging{opacity:.42}
+.tree-row.drop-into{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.tree-row.drop-before{box-shadow:inset 0 2px 0 var(--accent)}
+.tree-row.drop-after{box-shadow:inset 0 -2px 0 var(--accent)}
+.tree-row.root-row{font-weight:650}
+.inline-edit{flex:1;min-width:0;width:100%;padding:1px 4px;font-size:12.5px;background:var(--paper);border:1px solid var(--accent);border-radius:4px}
+
+/* ---- crumbs + grid ---- */
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:16px 20px 0}
+.crumbs button{background:none;border:0;padding:3px 5px;color:var(--ink2);border-radius:4px;font-size:12.5px}
+.crumbs button:hover{background:var(--panel)}
+.crumbs button:last-child{color:var(--ink);font-weight:650}
+.crumbs .sep{color:var(--ink3);font-size:11px}
+.viewhead{display:flex;align-items:center;gap:8px;padding:10px 20px 0;flex-wrap:wrap}
+.viewhead .grow{flex:1}
+.foldertagbar{margin:12px 20px 0;padding:10px 12px;background:var(--paper);border:1px solid var(--line2);border-radius:7px}
+.foldertagbar .lbl{font-size:11px;font-weight:650;color:var(--ink3);text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px}
+.searchbox{padding:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:11px;padding:14px 20px 50px}
+.tile{border:1px solid var(--line2);border-radius:8px;background:var(--paper);padding:0;cursor:pointer;display:flex;flex-direction:column;min-width:0;text-align:left;overflow:hidden;position:relative}
+.tile:hover{border-color:var(--accent);box-shadow:var(--shadow)}
+.tile .thumb{height:66px;background:var(--panel2);display:grid;place-items:center;overflow:hidden}
+.tile .thumb .ico{font-size:28px}
+.tile .body{padding:8px 9px 9px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .nm{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .more{position:absolute;top:4px;right:4px;background:rgba(251,251,248,.9);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;line-height:1.4;color:var(--ink2)}
+.tile .more:hover{background:var(--paper);color:var(--ink)}
+.tile.dragover{outline:2px solid var(--accent);outline-offset:-2px}
+.tile[draggable=true]{cursor:grab}
+.tile.dragging{opacity:.42}
+
+/* ---- detail page ---- */
+.detail{padding:18px 22px 60px;max-width:680px}
+.dhead{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
+.dhead .grow{flex:1;min-width:0}
+#dName{font-size:19px;font-weight:650;padding:5px 7px;border:1px solid transparent;border-radius:6px;width:100%}
+#dName:hover,#dName:focus{border-color:var(--line);background:var(--paper)}
+.preview{width:100%;height:150px;background:var(--paper);border:1px solid var(--line2);border-radius:8px;display:grid;place-items:center;margin-bottom:14px}
+.section-h{font-size:11px;font-weight:650;color:var(--ink3);text-transform:uppercase;letter-spacing:.02em;margin:18px 0 8px;display:flex;align-items:center;gap:8px}
+.section-h::after{content:"";flex:1;height:1px;background:var(--line2)}
+.statline{font-size:12.5px;color:var(--ink2);background:var(--paper);border:1px solid var(--line2);border-radius:6px;padding:8px 10px}
+.crumbline{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+/* ---- market ---- */
+.marketnote{margin:12px 20px 0;padding:9px 12px;background:var(--accent-soft);color:var(--accent);border-radius:7px;font-size:12px}
+.addmode-tabs{display:flex;gap:6px;margin-bottom:10px}
+.addmode-tabs button{flex:1}
+.dropzone{border:1.5px dashed var(--line);border-radius:8px;padding:18px;text-align:center;color:var(--ink3);font-size:12.5px}
+.dropzone.over{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.listing-status{font-size:12px;color:var(--ink3);padding:2px 0}
+
+@media (max-width:760px){
+  main{grid-template-columns:minmax(0,1fr)}
+  .pane.left{border-right:0;border-bottom:1px solid var(--line);max-height:38vh}
+}
+</style>
+</head>
+<body>
+<div id="appRoot">
+  <header>
+    <div class="hgroup">
+      <h1>Item Library <span>· Room Planner</span></h1>
+    </div>
+    <div class="hgroup">
+      <label for="unitSel" style="color:var(--ink2);font-size:12.5px">Units</label>
+      <select id="unitSel">
+        <option value="ftin">feet &amp; inches</option>
+        <option value="in">inches</option>
+        <option value="cm">centimetres</option>
+        <option value="mm">millimetres</option>
+        <option value="m">metres</option>
+      </select>
+      <a class="btn" href="index.html">&larr; Room Planner</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="pane left">
+      <div class="libtabs">
+        <button data-tab="library" aria-pressed="true">My Library</button>
+        <button data-tab="market" aria-pressed="false">Marketplace</button>
+      </div>
+      <div class="expl-top">
+        <input type="text" id="searchBox" placeholder="Search your items&hellip;">
+      </div>
+      <div class="expl-tools" id="explTools"></div>
+      <div id="tree"></div>
+    </div>
+    <div id="content"></div>
+  </main>
+</div>
+
+<div id="flash"></div>
+
+<div id="modal" hidden>
+  <div id="modalCard" role="dialog" aria-modal="true" aria-labelledby="moTitle">
+    <div id="moTitle">Title</div>
+    <div id="moBody"></div>
+    <div id="moFoot">
+      <span id="moErr"></span>
+      <button type="button" class="btn" id="moCancel">Cancel</button>
+      <button type="button" class="btn primary" id="moOk">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ===================================================================
+   Item Library — a separate page for the same room-planner.js state.
+   Shares the localStorage key with index.html: this page owns
+   S.inventory, S.itemFolders, S.marketFolders, S.marketListings and
+   leaves every other field (layouts, room folders, prefs) untouched,
+   round-tripping them byte-for-byte so index.html never notices this
+   page exists except for the things it deliberately shares.
+   =================================================================== */
+
+/* ------------------------- tiny shared helpers (kept identical to index.html) ------------------------- */
+const $ = id => document.getElementById(id);
+const uid = () => Math.random().toString(36).slice(2,10);
+const clone = v => JSON.parse(JSON.stringify(v));
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const PALETTE=['#6e8b7a','#a8735a','#5c7a99','#b8975a','#8a6e96','#4f6b63','#a55b57','#7e8c99','#6b7f4e','#9c6b8e','#57707d','#8c8577'];
+function normHex(v){
+  let h=String(v==null?'':v).trim().replace(/^#/,'');
+  if(/^[0-9a-f]{3}$/i.test(h)) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  return /^[0-9a-f]{6}$/i.test(h) ? '#'+h.toLowerCase() : null;
+}
+
+/* ids: same rules as index.html so a thing exported from here still fits there */
+const ID_SAFE = /^[A-Za-z0-9!\-_.*'()]+$/;
+const idParts  = s => String(s).split('/');
+const idFolder = s => idParts(s).slice(0,-1).join('/');
+const idLeaf   = s => idParts(s).slice(-1)[0];
+function idProblem(raw){
+  const v=String(raw==null?'':raw).trim();
+  if(!v) return 'Give it an id';
+  if(v.length>200) return 'That id is too long';
+  if(v[0]==='/'||v[v.length-1]==='/') return "An id can't start or end with /";
+  const parts=idParts(v);
+  if(parts.some(x=>!x)) return "An id can't have an empty part between two slashes";
+  if(parts.some(x=>!ID_SAFE.test(x))) return "Ids can use a–z A–Z 0–9 and ! - _ . * ' ( ) , with / between folders";
+  return null;
+}
+function uniqueId(base, taken){
+  if(!taken.has(base)) return base;
+  let n=2;
+  while(taken.has(base+'-'+n)) n++;
+  return base+'-'+n;
+}
+
+/* ------------------------- units (identical to index.html) ------------------------- */
+const MM = {mm:1, cm:10, m:1000, in:25.4, ft:304.8};
+const BARE = {ftin:'in', in:'in', cm:'cm', mm:'mm', m:'m'};
+const UNIT_RE = /(-?\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?)\s*(millimet(?:er|re)s?|mm|centimet(?:er|re)s?|cm|met(?:er|re)s?|m|inch(?:es)?|in|feet|foot|ft|"|”|'|’)?/g;
+function unitKey(tok){
+  if(!tok) return null;
+  tok = tok.toLowerCase();
+  if(tok==='mm'||tok.startsWith('millim')) return 'mm';
+  if(tok==='cm'||tok.startsWith('centim')) return 'cm';
+  if(tok==='m'||tok.startsWith('met')) return 'm';
+  if(tok==='in'||tok.startsWith('inch')||tok==='"'||tok==='”') return 'in';
+  if(tok==='ft'||tok==='feet'||tok==='foot'||tok==="'"||tok==='’') return 'ft';
+  return null;
+}
+function parseLen(str, dispUnit){
+  if(str===null||str===undefined) return NaN;
+  let s = String(str).trim().toLowerCase().replace(/[−–—]/g,'-');
+  if(!s) return NaN;
+  UNIT_RE.lastIndex = 0;
+  let total=0, found=false, m;
+  while((m = UNIT_RE.exec(s))){
+    if(m[0].trim()===''){ if(UNIT_RE.lastIndex===m.index) UNIT_RE.lastIndex++; continue; }
+    let num=m[1], val;
+    if(num.includes('/')){ const [a,b]=num.split('/').map(parseFloat); val = b ? a/b : NaN; }
+    else val = parseFloat(num);
+    if(!isFinite(val)) continue;
+    total += val * MM[unitKey(m[2]) || BARE[dispUnit] || 'mm'];
+    found = true;
+  }
+  return found ? total : NaN;
+}
+const trimNum = (n,dp) => String(parseFloat(n.toFixed(dp)));
+const unitWord = () => ({ftin:'inches',in:'inches',cm:'centimetres',mm:'millimetres',m:'metres'})[S.unit];
+function fmtLen(mm,u){
+  if(!isFinite(mm)) return '—';
+  switch(u){
+    case 'mm': return Math.round(mm)+' mm';
+    case 'cm': return trimNum(mm/10,1)+' cm';
+    case 'm':  return trimNum(mm/1000,2)+' m';
+    case 'in': return trimNum(mm/25.4,2)+'"';
+    default:{
+      let e=Math.round(mm/25.4*8); const neg=e<0; e=Math.abs(e);
+      let ft=Math.floor(e/96); e-=ft*96;
+      let inch=Math.floor(e/8), fr=e-inch*8, frS='';
+      if(fr){ let n=fr,d=8; while(n%2===0){n/=2;d/=2;} frS=' '+n+'/'+d; }
+      let out='';
+      if(ft) out+=ft+"' ";
+      if(inch||frS||!ft) out+=inch+frS+'"';
+      return (neg?'-':'')+out.trim();
+    }
+  }
+}
+
+/* ------------------------- geometry (only what a shape preview / size label needs) ------------------------- */
+function shapePoly(shape){
+  const t = shape.type;
+  if(t==='rect'){ const w=shape.w/2,d=shape.d/2; return [[-w,-d],[w,-d],[w,d],[-w,d]]; }
+  if(t==='ellipse'){
+    const a=shape.w/2,b=shape.d/2,N=44,p=[];
+    for(let i=0;i<N;i++){const th=i/N*Math.PI*2;p.push([Math.cos(th)*a,Math.sin(th)*b]);}
+    return p;
+  }
+  if(t==='lshape'){
+    const w=shape.w,d=shape.d,cw=Math.min(shape.cw,w-1),cd=Math.min(shape.cd,d-1);
+    let p;
+    switch(shape.corner){
+      case 'ne': p=[[0,0],[w-cw,0],[w-cw,cd],[w,cd],[w,d],[0,d]]; break;
+      case 'se': p=[[0,0],[w,0],[w,d-cd],[w-cw,d-cd],[w-cw,d],[0,d]]; break;
+      case 'sw': p=[[0,0],[w,0],[w,d],[cw,d],[cw,d-cd],[0,d-cd]]; break;
+      default:   p=[[cw,0],[w,0],[w,d],[0,d],[0,cd],[cw,cd]]; break;
+    }
+    return recenter(p);
+  }
+  return recenter((shape.points||[[0,0],[100,0],[100,100],[0,100]]).map(p=>[p[0],p[1]]));
+}
+function recenter(p){ const b=bbox(p),cx=(b.x0+b.x1)/2,cy=(b.y0+b.y1)/2; return p.map(q=>[q[0]-cx,q[1]-cy]); }
+function bbox(p){
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const q of p){ if(q[0]<x0)x0=q[0]; if(q[0]>x1)x1=q[0]; if(q[1]<y0)y0=q[1]; if(q[1]>y1)y1=q[1]; }
+  return {x0,y0,x1,y1,w:x1-x0,h:y1-y0};
+}
+function sizeLabel(it){
+  const s=it.shape;
+  if(!s) return '—';
+  if(s.type==='rect'||s.type==='ellipse'||s.type==='lshape') return fmtLen(s.w,S.unit)+' × '+fmtLen(s.d,S.unit);
+  const b=bbox(shapePoly(s));
+  return fmtLen(b.w,S.unit)+' × '+fmtLen(b.h,S.unit);
+}
+const OPEN_SIDES=['top','bottom','left','right'];
+function normOpen(o){
+  if(!o||typeof o!=='object') return null;
+  const r={}; let any=false;
+  for(const k of OPEN_SIDES){
+    const v=Math.max(0, parseFloat(o[k])||0);
+    r[k]=v; if(v>0) any=true;
+  }
+  return any ? r : null;
+}
+const hasOpen = it => !!(it && it.open);
+function openLocalBox(it){
+  if(!hasOpen(it)) return null;
+  const b=bbox(shapePoly(it.shape)), o=it.open;
+  return {x0:b.x0-o.left, y0:b.y0-o.top, x1:b.x1+o.right, y1:b.y1+o.bottom};
+}
+function openSizeLabel(it){
+  const b=openLocalBox(it);
+  return b ? fmtLen(b.x1-b.x0,S.unit)+' × '+fmtLen(b.y1-b.y0,S.unit) : '';
+}
+function drawPreview(cv,it){
+  const ctx=cv.getContext('2d');
+  const dpr=Math.min(window.devicePixelRatio||1,2.5);
+  const W=cv.clientWidth||260, H=cv.clientHeight||150;
+  cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  if(!it||!it.shape) return;
+  const ob=hasOpen(it)?openLocalBox(it):null;
+  const b=ob?{x0:ob.x0,y0:ob.y0,x1:ob.x1,y1:ob.y1,w:ob.x1-ob.x0,h:ob.y1-ob.y0}:bbox(shapePoly(it.shape));
+  const pad=18, s=Math.min((W-pad*2)/Math.max(b.w,1),(H-pad*2)/Math.max(b.h,1));
+  const cx=W/2-((b.x0+b.x1)/2)*s, cy=H/2-((b.y0+b.y1)/2)*s;
+  const toPx=([x,y])=>[cx+x*s, cy+y*s];
+  if(ob){
+    ctx.beginPath();
+    [[ob.x0,ob.y0],[ob.x1,ob.y0],[ob.x1,ob.y1],[ob.x0,ob.y1]].forEach((p,i)=>{const [x,y]=toPx(p); i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+    ctx.closePath();
+    ctx.setLineDash([4,3]); ctx.strokeStyle=var_(it.color); ctx.lineWidth=1.3; ctx.stroke(); ctx.setLineDash([]);
+  }
+  const poly=shapePoly(it.shape);
+  ctx.beginPath();
+  poly.forEach((p,i)=>{const [x,y]=toPx(p); i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.closePath();
+  ctx.fillStyle=hexA(it.color,.85); ctx.fill();
+  ctx.strokeStyle=it.color; ctx.lineWidth=1.5; ctx.stroke();
+}
+function hexA(hex,a){ const n=parseInt((hex||'#6e8b7a').slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+function var_(hex){ return hex||'#2e6b57'; }
+
+/* ------------------------- storage: same key, same shape, as index.html ------------------------- */
+const KEY='room-planner:v2';
+const Store=(()=>{
+  const api=(typeof window!=='undefined'&&window.storage&&typeof window.storage.get==='function')?window.storage:null;
+  const mem={};
+  return {
+    async get(k){
+      if(api){ try{ const r=await api.get(k); if(r&&r.value!==undefined) return r.value; }catch(e){} }
+      try{ const v=localStorage.getItem(k); if(v!==null) return v; }catch(e){}
+      return mem[k]??null;
+    },
+    async set(k,v){
+      mem[k]=v;
+      if(api){ try{ await api.set(k,v); return; }catch(e){} }
+      try{ localStorage.setItem(k,v); }catch(e){}
+    }
+  };
+})();
+let saveT=null;
+function save(){ clearTimeout(saveT); saveT=setTimeout(()=>Store.set(KEY,JSON.stringify(S)),300); }
+
+function rectPts(w,d){ return [[0,0],[w,0],[w,d],[0,d]]; }
+/* only ever used to seed a brand-new project — mirrors index.html's blankLayout so a
+   file this page creates from scratch still opens cleanly there */
+function blankLayout(name){
+  return {id:uid(), name:name||'My room', folderId:null,
+    room:{points:rectPts(4270,3660), wall:114, floor:'#f5f3ee', trimOn:false, trim:19, pillars:[], iwalls:[]},
+    openings:[], placed:[]};
+}
+function defaultState(){
+  const l=blankLayout();
+  return {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true, mode:'furniture',
+    inventory:[], layouts:[l], active:l.id,
+    folders:[], tagFilter:[], untaggedOnly:false, onlyAvailable:false, invScope:'project',
+    leftOpen:true, rightOpen:true, secClosed:[], lastFolderId:null,
+    itemFolders:[], marketFolders:[], marketListings:[],
+    uiLib:{tab:'library', libFolderId:null, marketFolderId:null}};
+}
+/* same shape as index.html's normItem — kept in lockstep so an item is valid on both pages */
+function normItem(it){
+  it.id = it.id || uid();
+  it.name = it.name || 'Untitled';
+  if(!Array.isArray(it.tags)) it.tags=[];
+  if(it.count==null) it.count=1;
+  it.color = normHex(it.color) || PALETTE[0];
+  it.open = normOpen(it.open);
+  if(!it.shape) it.shape={type:'rect',w:900,d:600};
+  return it;
+}
+let S=null;
+async function loadState(){
+  let st=null;
+  try{ const raw=await Store.get(KEY); if(raw) st=JSON.parse(raw); }catch(e){}
+  if(!st || typeof st!=='object' || !Array.isArray(st.layouts) || !st.layouts.length) st=defaultState();
+  if(!Array.isArray(st.inventory)) st.inventory=[];
+  if(!Array.isArray(st.itemFolders)) st.itemFolders=[];
+  if(!Array.isArray(st.marketFolders)) st.marketFolders=[];
+  if(!Array.isArray(st.marketListings)) st.marketListings=[];
+  if(!st.uiLib || typeof st.uiLib!=='object') st.uiLib={tab:'library', libFolderId:null, marketFolderId:null};
+  if(!st.unit) st.unit='ftin';
+  for(const it of st.inventory){
+    normItem(it);
+    if(it.folderId===undefined) it.folderId=null;
+    if(!Array.isArray(it.manualTags)) it.manualTags=(it.tags||[]).slice();
+  }
+  for(const f of st.itemFolders){ f.parentId=f.parentId||null; if(!Array.isArray(f.tags)) f.tags=[]; }
+  for(const f of st.marketFolders) f.parentId=f.parentId||null;
+  for(const l of st.marketListings) l.parentId=l.parentId||null;
+  S=st;
+  for(const it of S.inventory) reconcileTags(it);
+}
+
+/* pick up a save made in another tab (index.html or another copy of this page) instead of clobbering it */
+window.addEventListener('storage', e=>{
+  if(e.key!==KEY || e.newValue==null || !mo.hidden) return;
+  try{
+    const st=JSON.parse(e.newValue);
+    if(st && Array.isArray(st.layouts) && st.layouts.length){ S=st; renderAll(); }
+  }catch(err){}
+});
+
+/* ------------------------- item folders: the tree that carries a tag onto everything inside it ------------------------- */
+const childItemFolders = pid => S.itemFolders.filter(f=>(f.parentId||null)===(pid||null));
+const itemFolderOf = id => id ? S.itemFolders.find(f=>f.id===id) : null;
+const itemsInFolder = fid => S.inventory.filter(i=>(i.folderId||null)===(fid||null));
+function itemFolderDescendant(id,parentId){
+  let f=itemFolderOf(parentId);
+  while(f){ if(f.id===id) return true; f=itemFolderOf(f.parentId); }
+  return false;
+}
+function itemFolderPath(id){
+  const out=[]; let f=itemFolderOf(id);
+  while(f){ out.unshift(f); f=itemFolderOf(f.parentId); }
+  return out;
+}
+function itemFolderSubtreeIds(id){
+  const out=new Set([id]);
+  (function walk(pid){ for(const f of childItemFolders(pid)){ out.add(f.id); walk(f.id); } })(id);
+  return out;
+}
+function ancestorTags(folderId){
+  const s=new Set();
+  for(const f of itemFolderPath(folderId)) for(const t of (f.tags||[])) s.add(t);
+  return [...s];
+}
+/* item.tags is what index.html reads and filters by, so it has to keep carrying both the
+   tags picked by hand and the ones a folder imposes. item.manualTags is the authoritative
+   hand-picked half; item.tags is always just their union with the current folder chain. */
+function applyTags(item){
+  item.tags=[...new Set([...(item.manualTags||[]), ...ancestorTags(item.folderId)])];
+}
+/* whatever shows up in item.tags that isn't explained by the CURRENT folder chain is folded
+   back into manualTags, so an edit made from index.html's own tag box is never lost — it's
+   simply promoted to "manual" the next time this page looks at it. This is only safe to run
+   right after loading a possibly-externally-edited state: run it after a folder reassignment
+   made by this page itself and a stale tag from the OLD folder gets wrongly promoted, since
+   at that point item.tags still reflects the old chain. Folder moves use applyTags instead. */
+function reconcileTags(item){
+  const inherited=ancestorTags(item.folderId);
+  const manual=new Set(item.manualTags||[]);
+  for(const t of (item.tags||[])) if(!inherited.includes(t)) manual.add(t);
+  item.manualTags=[...manual];
+  applyTags(item);
+}
+function recomputeFolderSubtree(folderId){
+  const ids=itemFolderSubtreeIds(folderId);
+  for(const it of S.inventory) if(it.folderId && ids.has(it.folderId)) applyTags(it);
+}
+function moveItemToFolder(item, folderId){
+  item.folderId=folderId||null;
+  applyTags(item);
+}
+function allTags(){
+  const s=new Set();
+  for(const it of S.inventory) for(const t of (it.tags||[])) s.add(t);
+  for(const f of S.itemFolders) for(const t of (f.tags||[])) s.add(t);
+  return [...s].sort((a,b)=>a.localeCompare(b));
+}
+function usedTotal(itemId){
+  let n=0;
+  for(const l of S.layouts) for(const p of l.placed) if(p.itemId===itemId) n++;
+  return n;
+}
+/* strip a deleted item out of every room, the same way index.html's deleteItem does */
+function purgeItem(id){
+  S.inventory=S.inventory.filter(i=>i.id!==id);
+  for(const l of S.layouts) l.placed=l.placed.filter(p=>p.itemId!==id);
+}
+
+/* ------------------------- marketplace tree (folders only — no tags to inherit) ------------------------- */
+const childMarketFolders = pid => S.marketFolders.filter(f=>(f.parentId||null)===(pid||null));
+const marketFolderOf = id => id ? S.marketFolders.find(f=>f.id===id) : null;
+const listingsInFolder = fid => S.marketListings.filter(l=>(l.parentId||null)===(fid||null));
+function marketFolderDescendant(id,parentId){
+  let f=marketFolderOf(parentId);
+  while(f){ if(f.id===id) return true; f=marketFolderOf(f.parentId); }
+  return false;
+}
+function marketFolderPath(id){
+  const out=[]; let f=marketFolderOf(id);
+  while(f){ out.unshift(f); f=marketFolderOf(f.parentId); }
+  return out;
+}
+const marketCache=new Map();   // listingId -> {items, error, loading} — never persisted, refetched per session
+
+/* ------------------------- modal (identical pattern to index.html) ------------------------- */
+const mo=$('modal');
+let moOkFn=null;
+function openModal(title, bodyHTML, okLabel, onOk, onMount){
+  $('moTitle').textContent=title;
+  tagInputs.clear();
+  $('moBody').innerHTML=bodyHTML;
+  $('moErr').textContent='';
+  $('moOk').textContent=okLabel||'Save';
+  $('moOk').hidden = !onOk;
+  moOkFn=onOk||null;
+  mo.hidden=false;
+  if(onMount) onMount();
+  const f=$('moBody').querySelector('input,select,textarea');
+  if(f){ f.focus(); if(f.select) try{f.select();}catch(e){} }
+}
+function closeModal(){ mo.hidden=true; moOkFn=null; }
+const moError = m => { $('moErr').textContent=m; };
+$('moCancel').addEventListener('click', closeModal);
+$('moOk').addEventListener('click', ()=>{ if(!moOkFn) return closeModal(); if(moOkFn()===false) return; closeModal(); });
+mo.addEventListener('click', e=>{ if(e.target===mo) closeModal(); });
+mo.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && e.target.tagName!=='TEXTAREA'){ e.preventDefault(); $('moOk').click(); }
+});
+function askText(title,label,value,onOk){
+  openModal(title,
+    `<div class="field wide"><label style="width:auto">${esc(label)}</label></div>
+     <input type="text" id="moText" value="${esc(value||'')}">`, 'Save',
+    ()=>{ const v=$('moText').value.trim(); if(!v){ moError('Enter a name'); return false; } onOk(v); });
+}
+function askConfirm(title,msg,okLabel,onOk){
+  openModal(title, `<p style="margin:0">${esc(msg)}</p>`, okLabel||'Delete', ()=>onOk());
+}
+
+/* ------------------------- dropdown menu (identical pattern to index.html) ------------------------- */
+let menuEl=null;
+function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl=null; } }
+function openMenu(anchor, actions, title){
+  closeMenu();
+  const el=document.createElement('div');
+  el.className='menu'; el.setAttribute('role','menu');
+  if(title){ const t=document.createElement('div'); t.className='mtitle'; t.textContent=title; el.appendChild(t); }
+  for(const a of actions){
+    if(a.sep){ const d=document.createElement('div'); d.className='sep'; el.appendChild(d); continue; }
+    const b=document.createElement('button');
+    b.type='button'; b.textContent=a.label;
+    if(a.danger) b.className='danger';
+    b.addEventListener('click', ()=>{ closeMenu(); a.fn(); });
+    el.appendChild(b);
+  }
+  document.body.appendChild(el);
+  const r=anchor.getBoundingClientRect(), m=el.getBoundingClientRect();
+  let x=r.left, y=r.bottom+4;
+  if(x+m.width > window.innerWidth-8) x=r.right-m.width;
+  if(y+m.height > window.innerHeight-8) y=r.top-m.height-4;
+  el.style.left=Math.max(8,Math.round(x))+'px';
+  el.style.top=Math.max(8,Math.round(y))+'px';
+  menuEl=el;
+  const f=el.querySelector('button'); if(f) f.focus();
+}
+document.addEventListener('pointerdown', e=>{ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }, true);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && menuEl) closeMenu(); }, true);
+window.addEventListener('resize', closeMenu);
+document.addEventListener('scroll', closeMenu, true);
+
+/* ------------------------- rename in place / single-vs-double click (identical pattern) ------------------------- */
+function inlineEdit(el, value, done){
+  if(!el) return;
+  const row=el.closest('[draggable]');
+  if(row) row.draggable=false;
+  const inp=document.createElement('input');
+  inp.type='text'; inp.className='inline-edit'; inp.value=value;
+  el.replaceWith(inp);
+  inp.focus(); try{ inp.select(); }catch(e){}
+  let closed=false;
+  const finish=ok=>{
+    if(closed) return;
+    closed=true;
+    const v=inp.value.trim();
+    done(ok&&v ? v : null);
+  };
+  inp.addEventListener('keydown', e=>{
+    e.stopPropagation();
+    if(e.key==='Enter'){ e.preventDefault(); finish(true); }
+    else if(e.key==='Escape'){ e.preventDefault(); finish(false); }
+  });
+  inp.addEventListener('blur', ()=>finish(true));
+  for(const ev of ['click','dblclick','pointerdown']) inp.addEventListener(ev, e=>e.stopPropagation());
+}
+let clickT=null;
+function singleClick(fn){ clearTimeout(clickT); clickT=setTimeout(()=>{ clickT=null; fn(); }, 190); }
+function cancelSingleClick(){ clearTimeout(clickT); clickT=null; }
+
+function moveBefore(arr, movedId, targetId, after){
+  const i=arr.findIndex(x=>x.id===movedId); if(i<0) return;
+  const [o]=arr.splice(i,1);
+  const j=targetId ? arr.findIndex(x=>x.id===targetId) : -1;
+  if(j<0) arr.push(o); else arr.splice(after?j+1:j, 0, o);
+}
+function clearDropMarks(root){
+  const box=root||document;
+  for(const el of box.querySelectorAll('.drop-into,.drop-before,.drop-after,.dragover'))
+    el.classList.remove('drop-into','drop-before','drop-after','dragover');
+  if(root) root.classList.remove('drop-root');
+}
+function dropHalf(e,el){
+  const r=el.getBoundingClientRect();
+  return (e.clientY-r.top)/Math.max(1,r.height);
+}
+
+/* ------------------------- tag input: chips + autocomplete (adds an onChange hook for auto-save) ------------------------- */
+const tagInputs = new Map();
+function tagFieldHTML(id, placeholder){
+  return `<div class="tagfield" id="${id}">
+    <div class="taginput"><input type="text" id="${id}Input" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="${esc(placeholder||'')}"></div>
+    <div class="tagsuggest" role="listbox" hidden></div>
+  </div>`;
+}
+function mountTagField(id, tags, onChange){
+  const root=$(id), box=root.querySelector('.taginput'),
+        inp=box.querySelector('input'), sug=root.querySelector('.tagsuggest');
+  const list=(tags||[]).slice();
+  let items=[], idx=-1;
+  const has = v => list.some(t=>t.toLowerCase()===v.toLowerCase());
+  function renderChips(){
+    for(const el of [...box.querySelectorAll('.tag')]) el.remove();
+    list.forEach((t,i)=>{
+      const el=document.createElement('span');
+      el.className='tag';
+      el.innerHTML=`<span>${esc(t)}</span><button type="button" tabindex="-1" aria-label="Remove ${esc(t)}">×</button>`;
+      el.querySelector('button').addEventListener('click', ev=>{
+        ev.stopPropagation(); list.splice(i,1); renderChips(); refresh(); inp.focus(); if(onChange) onChange(list.slice());
+      });
+      box.insertBefore(el, inp);
+    });
+  }
+  function commit(text){
+    const v=String(text==null?inp.value:text).trim();
+    inp.value='';
+    if(!v) return false;
+    if(!has(v)){ list.push(v); if(onChange) onChange(list.slice()); }
+    renderChips(); refresh(); return true;
+  }
+  function drawSug(){
+    if(!items.length){ sug.hidden=true; sug.innerHTML=''; return; }
+    sug.innerHTML=items.map((t,i)=>`<button type="button" role="option" data-i="${i}" aria-selected="${i===idx}">${esc(t)}</button>`).join('');
+    sug.hidden=false;
+    if(idx>=0){ const b=sug.children[idx]; if(b) b.scrollIntoView({block:'nearest'}); }
+  }
+  function refresh(){
+    if(document.activeElement!==inp){ items=[]; idx=-1; drawSug(); return; }
+    const q=inp.value.trim().toLowerCase();
+    let all=allTags().filter(t=>!has(t));
+    if(q) all=all.filter(t=>t.toLowerCase().includes(q))
+                 .sort((a,b)=> a.toLowerCase().indexOf(q)-b.toLowerCase().indexOf(q) || a.localeCompare(b));
+    items=all.slice(0,8);
+    idx = (q && items.length && items[0].toLowerCase().startsWith(q)) ? 0 : -1;
+    drawSug();
+  }
+  const pick = i => { if(items[i]!=null) commit(items[i]); inp.focus(); };
+  box.addEventListener('mousedown', e=>{ if(e.target!==inp){ e.preventDefault(); inp.focus(); } });
+  sug.addEventListener('mousedown', e=>e.preventDefault());
+  sug.addEventListener('click', e=>{ const b=e.target.closest('button[data-i]'); if(b) pick(+b.dataset.i); });
+  inp.addEventListener('input', refresh);
+  inp.addEventListener('focus', ()=>{ box.classList.add('on'); refresh(); });
+  inp.addEventListener('blur', ()=>{ box.classList.remove('on'); commit(); items=[]; idx=-1; drawSug(); });
+  inp.addEventListener('keydown', e=>{
+    const k=e.key, typed=inp.value.trim(), hot=(idx>=0&&items[idx]!=null)?items[idx]:null;
+    if(k===','){ e.preventDefault(); commit(hot&&!typed?hot:null); return; }
+    if(k==='Tab'){
+      if(hot){ e.preventDefault(); commit(hot); return; }
+      if(typed){ e.preventDefault(); commit(); return; }
+      return;
+    }
+    if(k==='Enter'){ if(hot||typed){ e.preventDefault(); e.stopPropagation(); commit(hot||null); } return; }
+    if(k==='Backspace' && !inp.value){
+      if(list.length){ e.preventDefault(); list.pop(); renderChips(); refresh(); if(onChange) onChange(list.slice()); }
+      return;
+    }
+    if((k==='ArrowDown'||k==='ArrowUp') && items.length){
+      e.preventDefault();
+      idx = k==='ArrowDown' ? (idx+1)%items.length : (idx<=0?items.length-1:idx-1);
+      drawSug(); return;
+    }
+    if(k==='Escape' && !sug.hidden){ e.stopPropagation(); items=[]; idx=-1; drawSug(); }
+  });
+  renderChips();
+  tagInputs.set(id, ()=>{
+    const out=list.slice(), pending=inp.value.trim();
+    if(pending && !out.some(t=>t.toLowerCase()===pending.toLowerCase())) out.push(pending);
+    return out;
+  });
+  return inp;
+}
+const tagFieldValue = id => (tagInputs.get(id)||(()=>[]))();
+
+/* ------------------------- flash ------------------------- */
+let flashT=null;
+function flash(msg, warn){
+  if(!msg) return;
+  const el=$('flash');
+  el.textContent=msg; el.classList.toggle('warn',!!warn); el.classList.add('on');
+  clearTimeout(flashT); flashT=setTimeout(()=>el.classList.remove('on'),1100);
+}
+
+/* ------------------------- shape fields (identical to index.html's item dialog) ------------------------- */
+function shapeFieldHTML(type,sh){
+  const v=(k,def)=>fmtLen(sh&&sh[k]!==undefined?sh[k]:def,S.unit);
+  if(type==='poly'){
+    const pts = sh&&sh.type==='poly'
+      ? sh.points.map(p=>fmtLen(p[0],S.unit)+', '+fmtLen(p[1],S.unit)).join('\n')
+      : '0, 0\n36", 0\n36", 20"\n0, 20"';
+    return `<div class="field wide" style="align-items:flex-start"><label style="width:88px">Corners</label>
+      <textarea id="pPts" spellcheck="false">${esc(pts)}</textarea></div>
+      <p class="hint">One corner per line as <code>across, down</code>, in order around the outline.</p>`;
+  }
+  let h=`<div class="field"><label for="fW">Width</label><input type="text" class="len" id="fW" value="${esc(v('w',900))}"></div>
+         <div class="field"><label for="fD">Depth</label><input type="text" class="len" id="fD" value="${esc(v('d',600))}"></div>`;
+  if(type==='lshape'){
+    h+=`<div class="field"><label for="fCW">Notch across</label><input type="text" class="len" id="fCW" value="${esc(v('cw',400))}"></div>
+        <div class="field"><label for="fCD">Notch down</label><input type="text" class="len" id="fCD" value="${esc(v('cd',300))}"></div>
+        <div class="field"><label for="fCorner">Notch at</label><select id="fCorner">
+          <option value="nw">Top left</option><option value="ne">Top right</option>
+          <option value="se">Bottom right</option><option value="sw">Bottom left</option></select></div>`;
+  }
+  return h;
+}
+function readShapeFromForm(type){
+  if(type==='poly'){
+    const pts=$('pPts').value.split('\n').map(line=>{
+      const [a,b]=line.split(',');
+      return [parseLen(a,S.unit), parseLen(b,S.unit)];
+    }).filter(p=>isFinite(p[0])&&isFinite(p[1]));
+    if(pts.length<3) return {error:'An outline needs at least 3 corners'};
+    return {shape:{type:'poly', points:pts}};
+  }
+  const w=parseLen($('fW').value,S.unit), d=parseLen($('fD').value,S.unit);
+  if(!isFinite(w)||!isFinite(d)||w<=0||d<=0) return {error:'Width and depth must be positive'};
+  const shape={type,w,d};
+  if(type==='lshape'){
+    shape.cw=Math.max(1,Math.min(parseLen($('fCW').value,S.unit)||w/2, w-1));
+    shape.cd=Math.max(1,Math.min(parseLen($('fCD').value,S.unit)||d/2, d-1));
+    shape.corner=$('fCorner').value;
+  }
+  return {shape};
+}
+
+/* ------------------------- navigation state (not persisted, except tab + folder) ------------------------- */
+let nav = {tab:'library', libFolderId:null, marketFolderId:null, selItemId:null, selListingId:null, searching:false};
+let treeOpen = new Set();
+
+function goFolder(kind, id){
+  if(kind==='library'){ nav.libFolderId=id; nav.selItemId=null; S.uiLib.libFolderId=id; }
+  else { nav.marketFolderId=id; nav.selListingId=null; S.uiLib.marketFolderId=id; }
+  nav.searching=false; $('searchBox').value='';
+  save(); renderAll();
+}
+function selectItem(id){ nav.selItemId=id; nav.selListingId=null; renderAll(); }
+function selectListing(id){ nav.selListingId=id; nav.selItemId=null; renderAll(); }
+
+/* ------------------------- rendering: shell ------------------------- */
+function renderAll(){
+  for(const b of document.querySelectorAll('.libtabs button')) b.setAttribute('aria-pressed', String(b.dataset.tab===nav.tab));
+  $('searchBox').placeholder = nav.tab==='library' ? 'Search your items…' : 'Search the marketplace…';
+  renderTools();
+  renderTree();
+  renderContent();
+}
+function renderTools(){
+  const box=$('explTools');
+  if(nav.tab==='library'){
+    box.innerHTML=`<button class="btn sm" id="btnNewFolder">New folder</button>
+      <button class="btn sm primary" id="btnNewItem">New item</button>`;
+    $('btnNewFolder').addEventListener('click', ()=>{
+      askText('New folder','Name','Folder', n=>{
+        S.itemFolders.push({id:uid(),name:n,parentId:nav.libFolderId,tags:[]});
+        if(nav.libFolderId) treeOpen.add(nav.libFolderId);
+        save(); renderAll();
+      });
+    });
+    $('btnNewItem').addEventListener('click', createNewItem);
+  } else {
+    box.innerHTML=`<button class="btn sm" id="btnNewMFolder">New folder</button>
+      <button class="btn sm primary" id="btnAddListing">Add listing</button>`;
+    $('btnNewMFolder').addEventListener('click', ()=>{
+      askText('New folder','Name','Folder', n=>{
+        S.marketFolders.push({id:uid(),name:n,parentId:nav.marketFolderId});
+        if(nav.marketFolderId) treeOpen.add('m:'+nav.marketFolderId);
+        save(); renderAll();
+      });
+    });
+    $('btnAddListing').addEventListener('click', addListingDialog);
+  }
+}
+
+document.querySelectorAll('.libtabs button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    nav.tab=b.dataset.tab; nav.searching=false; $('searchBox').value='';
+    S.uiLib.tab=nav.tab; save();
+    renderAll();
+  });
+});
+let searchT=null;
+$('searchBox').addEventListener('input', e=>{
+  clearTimeout(searchT);
+  const q=e.target.value;
+  searchT=setTimeout(()=>{ nav.searching=!!q.trim(); nav.selItemId=null; nav.selListingId=null; markActiveTreeRow(); renderContent(); }, 120);
+});
+
+/* ------------------------- tree: folders only, lazily expanded — items/listings never render here ------------------------- */
+function folderTagsInline(f){
+  if(!f.tags||!f.tags.length) return '';
+  return `<span class="chips">${f.tags.map(t=>`<span class="tagchip">${esc(t)}</span>`).join('')}</span>`;
+}
+function renderLibTreeLevel(parentId,depth){
+  let html='';
+  for(const f of childItemFolders(parentId)){
+    const open=treeOpen.has(f.id);
+    html+=`<div class="tree-row" draggable="true" data-folder="${f.id}" style="padding-left:${depth*14}px">
+      <button type="button" class="caret" data-act="toggle">${open?'▾':'▸'}</button>
+      <span class="ico">📁</span><span class="nm">${esc(f.name)}</span>${folderTagsInline(f)}
+      <button type="button" class="tree-more" data-act="more" title="More…" aria-label="More…">⋯</button>
+    </div>`;
+    if(open) html+=renderLibTreeLevel(f.id,depth+1);
+  }
+  return html;
+}
+function renderMarketTreeLevel(parentId,depth){
+  let html='';
+  for(const f of childMarketFolders(parentId)){
+    const key='m:'+f.id, open=treeOpen.has(key);
+    html+=`<div class="tree-row" draggable="true" data-mfolder="${f.id}" style="padding-left:${depth*14}px">
+      <button type="button" class="caret" data-act="toggle">${open?'▾':'▸'}</button>
+      <span class="ico">📁</span><span class="nm">${esc(f.name)}</span>
+      <button type="button" class="tree-more" data-act="more" title="More…" aria-label="More…">⋯</button>
+    </div>`;
+    if(open) html+=renderMarketTreeLevel(f.id,depth+1);
+  }
+  return html;
+}
+function renderTree(){
+  const box=$('tree');
+  if(nav.tab==='library'){
+    box.innerHTML=`<div class="tree-row root-row ${nav.libFolderId===null&&!nav.searching?'active':''}" data-root="1">
+        <span class="ico">📚</span><span class="nm">Library</span></div>`
+      + renderLibTreeLevel(null,1);
+  } else {
+    box.innerHTML=`<div class="tree-row root-row ${nav.marketFolderId===null&&!nav.searching?'active':''}" data-root="1">
+        <span class="ico">🏪</span><span class="nm">Marketplace</span></div>`
+      + renderMarketTreeLevel(null,1);
+  }
+  markActiveTreeRow();
+}
+function markActiveTreeRow(){
+  const box=$('tree');
+  for(const row of box.querySelectorAll('.tree-row')) row.classList.remove('active');
+  if(nav.searching) return;
+  if(nav.tab==='library'){
+    if(nav.libFolderId===null){ const r=box.querySelector('[data-root]'); if(r) r.classList.add('active'); }
+    else { const r=box.querySelector('[data-folder="'+nav.libFolderId+'"]'); if(r) r.classList.add('active'); }
+  } else {
+    if(nav.marketFolderId===null){ const r=box.querySelector('[data-root]'); if(r) r.classList.add('active'); }
+    else { const r=box.querySelector('[data-mfolder="'+nav.marketFolderId+'"]'); if(r) r.classList.add('active'); }
+  }
+}
+
+const treeBox=$('tree');
+treeBox.addEventListener('click', e=>{
+  const more=e.target.closest('[data-act=more]');
+  const root=e.target.closest('[data-root]');
+  const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]');
+  if(more && row){
+    cancelSingleClick();
+    if(row.dataset.folder) libFolderMenu(row.dataset.folder, more);
+    else marketFolderMenu(row.dataset.mfolder, more);
+    return;
+  }
+  if(root){ singleClick(()=>goFolder(nav.tab, null)); return; }
+  if(row){
+    const isLib=!!row.dataset.folder, id=isLib?row.dataset.folder:row.dataset.mfolder;
+    const key=isLib?id:'m:'+id;
+    singleClick(()=>{
+      if(treeOpen.has(key)) treeOpen.delete(key); else treeOpen.add(key);
+      goFolder(isLib?'library':'market', id);
+    });
+  }
+});
+treeBox.addEventListener('dblclick', e=>{
+  cancelSingleClick();
+  if(e.target.closest('button')) return;
+  const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]'); if(!row) return;
+  if(row.dataset.folder) renameLibFolder(row.dataset.folder);
+  else renameMarketFolder(row.dataset.mfolder);
+});
+function renameLibFolder(id){
+  const f=itemFolderOf(id), row=treeBox.querySelector('[data-folder="'+id+'"]');
+  if(!f||!row) return;
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderAll(); });
+}
+function renameMarketFolder(id){
+  const f=marketFolderOf(id), row=treeBox.querySelector('[data-mfolder="'+id+'"]');
+  if(!f||!row) return;
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderAll(); });
+}
+
+/* ---- drag: reparent a library folder, or drop a library item onto one ---- */
+let dragLib=null;   // {kind:'folder'|'item', id}
+treeBox.addEventListener('dragstart', e=>{
+  const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]'); if(!row) return;
+  cancelSingleClick(); closeMenu();
+  dragLib = row.dataset.folder ? {kind:'folder',id:row.dataset.folder,realm:'library'} : {kind:'folder',id:row.dataset.mfolder,realm:'market'};
+  row.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  try{ e.dataTransfer.setData('text/plain',dragLib.id); }catch(err){}
+});
+treeBox.addEventListener('dragend', ()=>{
+  dragLib=null; clearDropMarks(treeBox);
+  for(const r of treeBox.querySelectorAll('.dragging')) r.classList.remove('dragging');
+});
+function libDropSpot(e){
+  const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]');
+  const root=e.target.closest('[data-root]');
+  if(root) return {mode:'root'};
+  if(!row) return null;
+  const isLib=!!row.dataset.folder;
+  if(gridDragItem && !isLib) return null;              // items only ever drop onto library folders
+  const id=isLib?row.dataset.folder:row.dataset.mfolder;
+  if(dragLib && dragLib.kind==='folder' && id===dragLib.id) return null;
+  const t=dropHalf(e,row);
+  if(t>=0.25 && t<=0.75) return {mode:'into',id,isLib,row};
+  return {mode:t<0.5?'before':'after',id,isLib,row};
+}
+treeBox.addEventListener('dragover', e=>{
+  if(!dragLib && !gridDragItem) return;
+  const spot=libDropSpot(e); if(!spot) return;
+  e.preventDefault(); e.dataTransfer.dropEffect='move';
+  clearDropMarks(treeBox);
+  if(spot.mode==='root'){ treeBox.classList.add('drop-root'); return; }
+  if(gridDragItem){ if(spot.isLib) spot.row.classList.add('drop-into'); return; }
+  spot.row.classList.add(spot.mode==='into'?'drop-into':spot.mode==='before'?'drop-before':'drop-after');
+});
+treeBox.addEventListener('dragleave', e=>{ if(e.target===treeBox) clearDropMarks(treeBox); });
+treeBox.addEventListener('drop', e=>{
+  const spot=libDropSpot(e);
+  clearDropMarks(treeBox);
+  if(!spot) return;
+  e.preventDefault();
+  if(gridDragItem){
+    if(spot.mode!=='root' && !spot.isLib) return;
+    const it=S.inventory.find(x=>x.id===gridDragItem); if(!it) return;
+    moveItemToFolder(it, spot.mode==='root'?null:spot.id);
+    gridDragItem=null; save(); renderAll();
+    flash('Moved “'+it.name+'”');
+    return;
+  }
+  const d=dragLib; if(!d) return;
+  if(d.realm==='library'){
+    const f=itemFolderOf(d.id); if(!f) return;
+    let parent=null, targetId=null, after=false;
+    if(spot.mode==='into'){ parent=spot.id; treeOpen.add(parent); }
+    else if(spot.mode!=='root' && spot.isLib){
+      const t=itemFolderOf(spot.id); if(!t) return;
+      parent=t.parentId||null; targetId=spot.id; after=(spot.mode==='after');
+    } else if(spot.mode!=='root') return;
+    if(parent===d.id || itemFolderDescendant(d.id,parent)){ flash("A folder can't go inside itself",true); return; }
+    f.parentId=parent;
+    moveBefore(S.itemFolders, d.id, targetId, after);
+    recomputeFolderSubtree(d.id);
+  } else {
+    const f=marketFolderOf(d.id); if(!f) return;
+    let parent=null, targetId=null, after=false;
+    if(spot.mode==='into'){ parent=spot.id; treeOpen.add('m:'+parent); }
+    else if(spot.mode!=='root' && !spot.isLib){
+      const t=marketFolderOf(spot.id); if(!t) return;
+      parent=t.parentId||null; targetId=spot.id; after=(spot.mode==='after');
+    } else if(spot.mode!=='root') return;
+    if(parent===d.id || marketFolderDescendant(d.id,parent)){ flash("A folder can't go inside itself",true); return; }
+    f.parentId=parent;
+    moveBefore(S.marketFolders, d.id, targetId, after);
+  }
+  dragLib=null; save(); renderAll();
+});
+
+/* ------------------------- folder menus ------------------------- */
+function libFolderMenu(id, anchor){
+  const f=itemFolderOf(id); if(!f) return;
+  openMenu(anchor, [
+    {label:'Open', fn:()=>goFolder('library',id)},
+    {label:'Rename', fn:()=>renameLibFolder(id)},
+    {label:'New subfolder', fn:()=>askText('New folder','Name','Folder', n=>{
+      S.itemFolders.push({id:uid(),name:n,parentId:id,tags:[]}); treeOpen.add(id); save(); renderAll();
+    })},
+    {sep:true},
+    {label:'Move to folder…', fn:()=>moveFolderDialog('library',id)},
+    {label:'Set folder tags…', fn:()=>folderTagsDialog(id)},
+    {sep:true},
+    {label:'Delete folder…', danger:true, fn:()=>deleteLibFolder(id)},
+  ], f.name);
+}
+function marketFolderMenu(id, anchor){
+  const f=marketFolderOf(id); if(!f) return;
+  openMenu(anchor, [
+    {label:'Open', fn:()=>goFolder('market',id)},
+    {label:'Rename', fn:()=>renameMarketFolder(id)},
+    {label:'New subfolder', fn:()=>askText('New folder','Name','Folder', n=>{
+      S.marketFolders.push({id:uid(),name:n,parentId:id}); treeOpen.add('m:'+id); save(); renderAll();
+    })},
+    {sep:true},
+    {label:'Move to folder…', fn:()=>moveFolderDialog('market',id)},
+    {sep:true},
+    {label:'Delete folder…', danger:true, fn:()=>deleteMarketFolder(id)},
+  ], f.name);
+}
+function folderTagsDialog(id){
+  const f=itemFolderOf(id); if(!f) return;
+  openModal('Tag everything in “'+f.name+'”', `
+    <div class="field wide"><label style="width:auto">Tags</label></div>
+    ${tagFieldHTML('fTags','living room, seating, IKEA')}
+    <p class="hint">Every item filed in this folder — or in any subfolder underneath it — carries these tags automatically, right alongside whatever tags you put on the item itself. They show up in the Room Planner's own tag filter too.</p>
+    <p class="hint">Removing a tag here removes it from everything below — unless an item also has it as one of its own tags.</p>`,
+    'Save', ()=>{
+      f.tags=tagFieldValue('fTags');
+      recomputeFolderSubtree(id);
+      save(); renderAll();
+    },
+    ()=>{ mountTagField('fTags', f.tags||[]); });
+}
+function itemFolderContents(id){
+  const folders=[], items=[];
+  (function walk(pid){
+    for(const f of childItemFolders(pid)){ folders.push(f); walk(f.id); }
+    for(const it of itemsInFolder(pid)) items.push(it);
+  })(id);
+  return {folders,items};
+}
+function deleteLibFolder(id){
+  const f=itemFolderOf(id); if(!f) return;
+  const up=itemFolderOf(f.parentId) ? '“'+itemFolderOf(f.parentId).name+'”' : 'the top level';
+  const {folders,items}=itemFolderContents(id);
+  const drop=keep=>{
+    if(keep){
+      const movedSubs=childItemFolders(id).slice(), movedItems=itemsInFolder(id).slice();
+      for(const sub of movedSubs) sub.parentId=f.parentId;
+      for(const it of movedItems) it.folderId=f.parentId;
+      for(const it of movedItems) applyTags(it);
+      for(const sub of movedSubs) recomputeFolderSubtree(sub.id);
+    } else {
+      const killIds=new Set(items.map(x=>x.id));
+      for(const iid of killIds) purgeItem(iid);
+      const killF=new Set(folders.map(x=>x.id));
+      S.itemFolders=S.itemFolders.filter(x=>!killF.has(x.id));
+      for(const k of killF) treeOpen.delete(k);
+    }
+    S.itemFolders=S.itemFolders.filter(x=>x.id!==id);
+    treeOpen.delete(id);
+    if(nav.libFolderId===id || (keep===false && folders.some(x=>x.id===nav.libFolderId))) goFolder('library',null);
+    save(); renderAll();
+  };
+  if(!folders.length && !items.length){
+    askConfirm('Delete this folder?', '“'+f.name+'” is empty.', 'Delete folder', ()=>drop(false));
+    return;
+  }
+  const bits=[];
+  if(items.length) bits.push(items.length+' item'+(items.length>1?'s':''));
+  if(folders.length) bits.push(folders.length+' folder'+(folders.length>1?'s':''));
+  openModal('Delete “'+f.name+'”?', `
+    <p style="margin:0 0 10px">It holds ${esc(bits.join(' and '))}. Deleting the folder deletes all of that too, including any of those things placed in a room.</p>
+    <div class="field wide"><input type="checkbox" id="keepKids" style="width:auto">
+      <label style="width:auto">Keep everything inside — move it up to ${esc(up)}</label></div>`,
+    'Delete folder', ()=>drop($('keepKids').checked));
+}
+function marketFolderContents(id){
+  const folders=[], listings=[];
+  (function walk(pid){
+    for(const f of childMarketFolders(pid)){ folders.push(f); walk(f.id); }
+    for(const l of listingsInFolder(pid)) listings.push(l);
+  })(id);
+  return {folders,listings};
+}
+function deleteMarketFolder(id){
+  const f=marketFolderOf(id); if(!f) return;
+  const up=marketFolderOf(f.parentId) ? '“'+marketFolderOf(f.parentId).name+'”' : 'the top level';
+  const {folders,listings}=marketFolderContents(id);
+  const drop=keep=>{
+    if(keep){
+      for(const sub of childMarketFolders(id)) sub.parentId=f.parentId;
+      for(const l of listingsInFolder(id)) l.parentId=f.parentId;
+    } else {
+      const killL=new Set(listings.map(x=>x.id)), killF=new Set(folders.map(x=>x.id));
+      S.marketListings=S.marketListings.filter(x=>!killL.has(x.id));
+      S.marketFolders=S.marketFolders.filter(x=>!killF.has(x.id));
+      for(const k of killF) treeOpen.delete('m:'+k);
+    }
+    S.marketFolders=S.marketFolders.filter(x=>x.id!==id);
+    treeOpen.delete('m:'+id);
+    if(nav.marketFolderId===id) goFolder('market',null);
+    save(); renderAll();
+  };
+  if(!folders.length && !listings.length){
+    askConfirm('Delete this folder?', '“'+f.name+'” is empty.', 'Delete folder', ()=>drop(false));
+    return;
+  }
+  const bits=[];
+  if(listings.length) bits.push(listings.length+' listing'+(listings.length>1?'s':''));
+  if(folders.length) bits.push(folders.length+' folder'+(folders.length>1?'s':''));
+  openModal('Delete “'+f.name+'”?', `
+    <p style="margin:0 0 10px">It holds ${esc(bits.join(' and '))}.</p>
+    <div class="field wide"><input type="checkbox" id="keepKids" style="width:auto">
+      <label style="width:auto">Keep everything inside — move it up to ${esc(up)}</label></div>
+    <p class="hint">Nothing in the marketplace is ever in your inventory, so there's nothing else to clean up.</p>`,
+    'Delete folder', ()=>drop($('keepKids').checked));
+}
+function moveFolderDialog(realm,id){
+  const isLib=realm==='library';
+  const obj = isLib ? itemFolderOf(id) : marketFolderOf(id);
+  if(!obj) return;
+  const cur=obj.parentId||'';
+  let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
+  (function walk(pid,depth){
+    const kids = isLib ? childItemFolders(pid) : childMarketFolders(pid);
+    for(const f of kids){
+      const bad = f.id===id || (isLib?itemFolderDescendant(id,f.id):marketFolderDescendant(id,f.id));
+      if(!bad) opts+=`<option value="${f.id}" ${f.id===cur?'selected':''}>${'  '.repeat(depth)}${esc(f.name)}</option>`;
+      walk(f.id,depth+1);
+    }
+  })(null,0);
+  openModal('Move “'+obj.name+'”', `
+    <div class="field wide"><label style="width:auto">Folder</label></div>
+    <select id="moFolder">${opts}</select>`, 'Move', ()=>{
+      const v=$('moFolder').value||null;
+      obj.parentId=v;
+      if(isLib){ if(v) treeOpen.add(v); recomputeFolderSubtree(id); }
+      else if(v) treeOpen.add('m:'+v);
+      save(); renderAll();
+    });
+}
+function moveItemDialog(item){
+  const cur=item.folderId||'';
+  let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
+  (function walk(pid,depth){
+    for(const f of childItemFolders(pid)){
+      opts+=`<option value="${f.id}" ${f.id===cur?'selected':''}>${'  '.repeat(depth)}${esc(f.name)}</option>`;
+      walk(f.id,depth+1);
+    }
+  })(null,0);
+  openModal('Move “'+item.name+'”', `
+    <div class="field wide"><label style="width:auto">Folder</label></div>
+    <select id="moFolder">${opts}</select>`, 'Move', ()=>{
+      const v=$('moFolder').value||null;
+      moveItemToFolder(item, v);
+      if(v) treeOpen.add(v);
+      save(); renderAll();
+    });
+}
+
+/* ------------------------- main content router ------------------------- */
+function renderContent(){
+  const box=$('content');
+  if(nav.searching){ renderSearchResults(box); return; }
+  if(nav.tab==='library'){
+    if(nav.selItemId) renderItemDetail(box, nav.selItemId);
+    else renderLibraryFolder(box, nav.libFolderId);
+  } else {
+    if(nav.selListingId) renderListingDetail(box, nav.selListingId);
+    else renderMarketFolder(box, nav.marketFolderId);
+  }
+}
+function crumbsHTML(kind, folderId){
+  const isLib=kind==='library';
+  const path = isLib ? itemFolderPath(folderId) : marketFolderPath(folderId);
+  const rootLabel = isLib ? 'Library' : 'Marketplace';
+  let html=`<div class="crumbs"><button data-crumb="">${esc(rootLabel)}</button>`;
+  for(const f of path) html+=`<span class="sep">/</span><button data-crumb="${f.id}">${esc(f.name)}</button>`;
+  html+='</div>';
+  return html;
+}
+function bindCrumbs(box, kind){
+  box.querySelectorAll('[data-crumb]').forEach(b=>{
+    b.addEventListener('click', ()=>goFolder(kind, b.dataset.crumb||null));
+  });
+}
+
+/* ------------------------- library: folder view ------------------------- */
+function itemTile(it){
+  const chips=(it.tags&&it.tags.length) ? `<div class="chips">${it.tags.slice(0,3).map(t=>{
+      const inherited = !it.manualTags || !it.manualTags.includes(t);
+      return `<span class="tagchip${inherited?' inherit':''}">${esc(t)}</span>`;
+    }).join('')}${it.tags.length>3?`<span class="tagchip">+${it.tags.length-3}</span>`:''}</div>` : '';
+  return `<button type="button" class="tile" draggable="true" data-item="${it.id}">
+    <span class="more" data-act="more" title="More…" aria-label="More…">⋯</span>
+    <div class="thumb" style="background:${hexA(it.color,.18)}"><span class="sw" style="width:28px;height:28px;border-radius:6px;background:${it.color}"></span></div>
+    <div class="body"><div class="nm" title="${esc(it.name)}">${esc(it.name)}</div>
+      <div class="dim">${esc(sizeLabel(it))}</div>${chips}</div>
+  </button>`;
+}
+function folderTile(f){
+  return `<button type="button" class="tile folder" data-openfolder="${f.id}">
+    <div class="thumb"><span class="ico">📁</span></div>
+    <div class="body"><div class="nm" title="${esc(f.name)}">${esc(f.name)}</div>
+      <div class="dim">${esc(folderCountLabel(f.id))}</div></div>
+  </button>`;
+}
+function folderCountLabel(fid){
+  const n=childItemFolders(fid).length, m=itemsInFolder(fid).length;
+  const bits=[];
+  if(n) bits.push(n+' folder'+(n>1?'s':''));
+  if(m) bits.push(m+' item'+(m>1?'s':''));
+  return bits.length?bits.join(', '):'Empty';
+}
+function renderLibraryFolder(box, folderId){
+  const f=itemFolderOf(folderId);
+  const subs=childItemFolders(folderId), items=itemsInFolder(folderId);
+  let html=crumbsHTML('library', folderId);
+  html+=`<div class="viewhead"><span class="grow"></span>
+    ${f?'<button class="btn sm" id="btnFolderTags">Edit folder tags…</button>':''}</div>`;
+  const inherited = f ? ancestorTags(folderId) : [];
+  if(f && inherited.length){
+    html+=`<div class="foldertagbar"><div class="lbl">Everything here is tagged</div>
+      <div class="chips">${inherited.map(t=>`<span class="tagchip">${esc(t)}</span>`).join('')}</div></div>`;
+  }
+  if(!subs.length && !items.length){
+    html+=`<div class="grid"><div class="empty" style="grid-column:1/-1">Nothing here yet. Add a new item, or drag one in from the tree.</div></div>`;
+  } else {
+    html+=`<div class="grid">${subs.map(folderTile).join('')}${items.map(itemTile).join('')}</div>`;
+  }
+  box.innerHTML=html;
+  bindCrumbs(box,'library');
+  if(f) $('btnFolderTags').addEventListener('click', ()=>folderTagsDialog(f.id));
+  bindGrid(box,'library');
+}
+function bindGrid(box, kind){
+  box.querySelectorAll('[data-openfolder]').forEach(t=>{
+    t.addEventListener('click', ()=>goFolder(kind, t.dataset.openfolder));
+  });
+  if(kind==='library'){
+    box.querySelectorAll('[data-item]').forEach(t=>{
+      t.addEventListener('click', e=>{
+        if(e.target.closest('[data-act=more]')) return;
+        selectItem(t.dataset.item);
+      });
+      t.querySelector('[data-act=more]').addEventListener('click', e=>{ e.stopPropagation(); itemMenu(t.dataset.item, e.currentTarget); });
+      t.addEventListener('dragstart', e=>{
+        gridDragItem=t.dataset.item; t.classList.add('dragging');
+        e.dataTransfer.effectAllowed='move';
+        try{ e.dataTransfer.setData('text/plain',gridDragItem); }catch(err){}
+      });
+      t.addEventListener('dragend', ()=>{ gridDragItem=null; t.classList.remove('dragging'); clearDropMarks(); });
+    });
+    box.querySelectorAll('[data-openfolder]').forEach(t=>{
+      t.addEventListener('dragover', e=>{ if(!gridDragItem) return; e.preventDefault(); t.classList.add('dragover'); });
+      t.addEventListener('dragleave', ()=>t.classList.remove('dragover'));
+      t.addEventListener('drop', e=>{
+        e.preventDefault(); t.classList.remove('dragover');
+        if(!gridDragItem) return;
+        const it=S.inventory.find(x=>x.id===gridDragItem); if(!it) return;
+        moveItemToFolder(it, t.dataset.openfolder);
+        gridDragItem=null; save(); renderAll();
+        flash('Moved “'+it.name+'”');
+      });
+    });
+  } else {
+    box.querySelectorAll('[data-listing]').forEach(t=>{
+      t.addEventListener('click', e=>{
+        if(e.target.closest('[data-act=more]')) return;
+        selectListing(t.dataset.listing);
+      });
+      const more=t.querySelector('[data-act=more]');
+      if(more) more.addEventListener('click', e=>{ e.stopPropagation(); listingMenu(t.dataset.listing, e.currentTarget); });
+    });
+  }
+}
+let gridDragItem=null;
+
+function itemMenu(id, anchor){
+  const it=S.inventory.find(x=>x.id===id); if(!it) return;
+  openMenu(anchor, [
+    {label:'Open', fn:()=>selectItem(id)},
+    {label:'Move to folder…', fn:()=>moveItemDialog(it)},
+    {label:'Duplicate', fn:()=>duplicateItem(id)},
+    {sep:true},
+    {label:'Delete…', danger:true, fn:()=>deleteItemConfirm(id)},
+  ], it.name);
+}
+function duplicateItem(id){
+  const it=S.inventory.find(x=>x.id===id); if(!it) return;
+  const c=clone(it);
+  c.id=uniqueId(it.id+'-copy', new Set(S.inventory.map(x=>x.id)));
+  c.name=it.name+' copy';
+  S.inventory.push(c);
+  save(); selectItem(c.id);
+  flash('Duplicated');
+}
+function deleteItemConfirm(id){
+  const it=S.inventory.find(x=>x.id===id); if(!it) return;
+  const n=usedTotal(id);
+  const kill=()=>{
+    purgeItem(id);
+    if(nav.selItemId===id) nav.selItemId=null;
+    save(); renderAll();
+  };
+  if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+' across your rooms. Those will be removed too.', 'Delete', kill);
+  else askConfirm('Delete this item?', '“'+it.name+'” will be removed for good.', 'Delete', kill);
+}
+function createNewItem(){
+  const it=normItem({id:uid(), name:'Untitled', shape:{type:'rect',w:900,d:600}, color:PALETTE[S.inventory.length%PALETTE.length],
+    folderId:nav.libFolderId, tags:[], manualTags:[]});
+  applyTags(it);
+  S.inventory.push(it);
+  save(); selectItem(it.id);
+  flash('New item created');
+}
+
+/* ------------------------- library: item detail (the "individual" view) ------------------------- */
+function renderItemDetail(box, id){
+  const it=S.inventory.find(x=>x.id===id);
+  if(!it){ nav.selItemId=null; renderLibraryFolder(box, nav.libFolderId); return; }
+  const inherited=ancestorTags(it.folderId);
+  const manual=(it.manualTags||[]).filter(t=>!inherited.includes(t));
+  const used=usedTotal(it.id);
+  box.innerHTML = crumbsHTML('library', it.folderId) + `
+    <div class="detail">
+      <div class="dhead">
+        <div class="grow">
+          <input type="text" id="dName" value="${esc(it.name)}" aria-label="Item name">
+          <div class="crumbline dim" style="margin-top:4px">
+            <span>In ${it.folderId?esc(itemFolderPath(it.folderId).map(f=>f.name).join(' / ')):'Library (top level)'}</span>
+            <button class="btn sm" id="btnMoveItem">Move…</button>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn sm" id="btnDupItem">Duplicate</button>
+          <button class="btn sm danger" id="btnDelItem">Delete</button>
+        </div>
+      </div>
+      <div class="preview"><canvas id="prevCv" style="width:100%;height:100%;overflow:hidden"></canvas></div>
+
+      <div class="section-h">Shape &amp; appearance</div>
+      <div class="field"><label for="iShape">Shape</label><select id="iShape">
+        <option value="rect">Rectangle</option><option value="ellipse">Circle / oval</option>
+        <option value="lshape">L-shape</option><option value="poly">Custom outline</option></select></div>
+      <div id="shapeFields"></div>
+      <div class="field"><label>Colour</label><div class="swatches" id="iSwatches"></div></div>
+      <div class="field"><label for="iHex">Custom</label><input type="color" id="iColPick"><input type="text" class="hex" id="iHex" maxlength="7" spellcheck="false"></div>
+      <div class="field wide"><input type="checkbox" id="iPass" style="width:auto" ${it.passThrough?'checked':''}>
+        <label style="width:auto">Others can overlap this (rugs, mats)</label></div>
+
+      <div class="section-h">Opens out</div>
+      <div class="field wide"><input type="checkbox" id="iOpenOn" style="width:auto" ${hasOpen(it)?'checked':''}>
+        <label style="width:auto">It opens out further (drawers, leaves, recliners)</label></div>
+      <div id="openFields" ${hasOpen(it)?'':'hidden'}>
+        <div class="field"><label for="oTop">Opens up</label><input type="text" class="len" id="oTop" value="${esc(fmtLen((it.open&&it.open.top)||0,S.unit))}"></div>
+        <div class="field"><label for="oBottom">Opens down</label><input type="text" class="len" id="oBottom" value="${esc(fmtLen((it.open&&it.open.bottom)||0,S.unit))}"></div>
+        <div class="field"><label for="oLeft">Opens left</label><input type="text" class="len" id="oLeft" value="${esc(fmtLen((it.open&&it.open.left)||0,S.unit))}"></div>
+        <div class="field"><label for="oRight">Opens right</label><input type="text" class="len" id="oRight" value="${esc(fmtLen((it.open&&it.open.right)||0,S.unit))}"></div>
+      </div>
+
+      <div class="section-h">Stock &amp; tags</div>
+      <div class="field"><label for="iCount">How many you own</label><input type="number" id="iCount" min="1" step="1" value="${it.count!=null?it.count:1}"></div>
+      <div class="field wide"><label style="width:auto">Your tags</label></div>
+      ${tagFieldHTML('iTags','living room, seating, IKEA')}
+      ${inherited.length?`<p class="hint">Plus, from its folder: ${inherited.map(t=>esc(t)).join(', ')}</p>`:''}
+
+      <div class="section-h">Where it stands</div>
+      <div class="statline">${used ? 'Placed in '+used+' spot'+(used>1?'s':'')+' across your rooms.' : 'Not placed anywhere yet.'}</div>
+
+      <details class="adv" id="iAdv">
+        <summary>Advanced</summary>
+        <div class="advbody">
+          <div class="field"><label for="iId">Id</label><input type="text" class="id" id="iId" spellcheck="false" autocapitalize="off" autocorrect="off" value="${esc(it.id)}"></div>
+          <p class="hint" id="iIdNote"></p>
+          <p class="hint">Letters, digits and ! - _ . * ' ( ) . Use / to file it away like a folder — <code>ikea/kallax/4x2</code> and <code>ikea/kallax/2x4</code> then sit together.</p>
+        </div>
+      </details>
+    </div>`;
+  bindCrumbs(box,'library');
+
+  $('dName').addEventListener('change', e=>{
+    it.name=(e.target.value||'').trim()||'Untitled';
+    e.target.value=it.name; save(); flash('Saved');
+  });
+  $('btnMoveItem').addEventListener('click', ()=>moveItemDialog(it));
+  $('btnDupItem').addEventListener('click', ()=>duplicateItem(it.id));
+  $('btnDelItem').addEventListener('click', ()=>deleteItemConfirm(it.id));
+
+  const prevCv=$('prevCv');
+  const redrawPreview=()=>drawPreview(prevCv,it);
+
+  const shapeSel=$('iShape');
+  function fillShapeFields(){
+    $('shapeFields').innerHTML=shapeFieldHTML(shapeSel.value, it.shape.type===shapeSel.value?it.shape:null);
+    if(shapeSel.value==='lshape' && it.shape.type==='lshape') $('fCorner').value=it.shape.corner;
+    bindShapeInputs();
+  }
+  function commitShape(){
+    const r=readShapeFromForm(shapeSel.value);
+    if(r.error){ flash(r.error, true); return false; }
+    it.shape=r.shape; save(); redrawPreview(); return true;
+  }
+  function bindShapeInputs(){
+    for(const id2 of ['fW','fD','fCW','fCD']){ const el=$(id2); if(el) el.addEventListener('change', commitShape); }
+    const fc=$('fCorner'); if(fc) fc.addEventListener('change', commitShape);
+    const pp=$('pPts'); if(pp) pp.addEventListener('change', commitShape);
+  }
+  shapeSel.value=it.shape.type;
+  fillShapeFields();
+  shapeSel.addEventListener('change', ()=>{ fillShapeFields(); commitShape(); });
+
+  const sw=$('iSwatches'), pick=$('iColPick'), hx=$('iHex');
+  function paintColor(){
+    sw.innerHTML=PALETTE.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-pressed="${c===it.color}" title="${c}"></button>`).join('');
+    pick.value=it.color; hx.value=it.color; hx.classList.remove('bad'); redrawPreview();
+  }
+  sw.addEventListener('click', e=>{ const b=e.target.closest('button'); if(b){ it.color=b.dataset.c; paintColor(); save(); } });
+  pick.addEventListener('input', ()=>{ const c=normHex(pick.value); if(c){ it.color=c; paintColor(); save(); } });
+  hx.addEventListener('input', ()=>{ const c=normHex(hx.value); hx.classList.toggle('bad',!c); if(c){ it.color=c; sw.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.c===c))); pick.value=c; save(); redrawPreview(); } });
+  hx.addEventListener('blur', paintColor);
+  paintColor();
+
+  $('iPass').addEventListener('change', e=>{ it.passThrough=e.target.checked; save(); });
+
+  const oc=$('iOpenOn');
+  oc.addEventListener('change', ()=>{
+    $('openFields').hidden=!oc.checked;
+    if(!oc.checked){ it.open=null; save(); redrawPreview(); }
+    else { commitOpen(); }
+  });
+  function commitOpen(){
+    if(!$('iOpenOn').checked){ it.open=null; save(); redrawPreview(); return; }
+    it.open=normOpen({top:parseLen($('oTop').value,S.unit),bottom:parseLen($('oBottom').value,S.unit),
+      left:parseLen($('oLeft').value,S.unit),right:parseLen($('oRight').value,S.unit)}) || {top:0,bottom:0,left:0,right:0};
+    save(); redrawPreview();
+  }
+  for(const id2 of ['oTop','oBottom','oLeft','oRight']) $(id2).addEventListener('change', commitOpen);
+
+  $('iCount').addEventListener('change', e=>{
+    it.count=Math.max(1, Math.round(parseFloat(e.target.value))||1);
+    e.target.value=it.count; save();
+  });
+
+  mountTagField('iTags', manual, list=>{
+    it.manualTags=list.slice();
+    applyTags(it);
+    save();
+  });
+
+  const idIn=$('iId'), idNote=$('iIdNote');
+  const sayId=()=>{
+    const v=idIn.value.trim(), bad=idProblem(v);
+    idIn.classList.toggle('bad', !!bad && !!v);
+    if(bad){ idNote.textContent=v?bad:''; return; }
+    const fol=idFolder(v);
+    idNote.textContent = fol ? 'Filed under '+fol+', as '+idLeaf(v) : 'No folder — sits at the top level.';
+  };
+  idIn.addEventListener('input', sayId); sayId();
+  idIn.addEventListener('change', ()=>{
+    const v=idIn.value.trim(), bad=idProblem(v);
+    if(bad){ flash(bad,true); idIn.value=it.id; sayId(); return; }
+    if(v===it.id) return;
+    if(S.inventory.some(x=>x.id===v && x!==it)){ flash('Another item already uses that id',true); idIn.value=it.id; sayId(); return; }
+    const oldId=it.id; it.id=v;
+    for(const l of S.layouts) for(const p of l.placed) if(p.itemId===oldId) p.itemId=v;
+    save(); flash('Renamed');
+  });
+
+  redrawPreview();
+}
+
+/* ------------------------- library: search across every folder ------------------------- */
+function renderSearchResults(box){
+  const q=$('searchBox').value.trim().toLowerCase();
+  if(nav.tab==='library'){
+    const hits=S.inventory.filter(it=>it.name.toLowerCase().includes(q) || (it.tags||[]).some(t=>t.toLowerCase().includes(q)));
+    let html=`<div class="crumbs"><button data-crumb="">Library</button><span class="sep">/</span><button>Search: "${esc($('searchBox').value.trim())}"</button></div>`;
+    html += hits.length
+      ? `<div class="grid">${hits.map(it=>{
+          const path=it.folderId?itemFolderPath(it.folderId).map(f=>f.name).join(' / '):'Top level';
+          return `<button type="button" class="tile" data-item="${it.id}">
+            <div class="thumb" style="background:${hexA(it.color,.18)}"><span class="sw" style="width:28px;height:28px;border-radius:6px;background:${it.color}"></span></div>
+            <div class="body"><div class="nm">${esc(it.name)}</div><div class="dim">${esc(path)}</div></div>
+          </button>`;
+        }).join('')}</div>`
+      : `<div class="grid"><div class="empty" style="grid-column:1/-1">Nothing matches "${esc(q)}".</div></div>`;
+    box.innerHTML=html;
+    bindCrumbs(box,'library');
+    box.querySelectorAll('[data-item]').forEach(t=>t.addEventListener('click', ()=>selectItem(t.dataset.item)));
+  } else {
+    let html=`<div class="crumbs"><button data-crumb="">Marketplace</button><span class="sep">/</span><button>Search: "${esc($('searchBox').value.trim())}"</button></div>`;
+    const hits=S.marketListings.filter(l=>l.name.toLowerCase().includes(q));
+    html += hits.length
+      ? `<div class="grid">${hits.map(listingTile).join('')}</div>`
+      : `<div class="grid"><div class="empty" style="grid-column:1/-1">Nothing matches "${esc(q)}".</div></div>`;
+    box.innerHTML=html;
+    bindCrumbs(box,'market');
+    bindGrid(box,'market');
+  }
+}
+
+/* ------------------------- marketplace: folder view ------------------------- */
+function listingTile(l){
+  const icon = l.kind==='link' ? '🔗' : '📦';
+  const sub = l.kind==='link' ? 'Link' : (l.content&&Array.isArray(l.content.inventory) ? l.content.inventory.length+' item'+(l.content.inventory.length===1?'':'s') : 'File');
+  return `<button type="button" class="tile" data-listing="${l.id}">
+    <span class="more" data-act="more" title="More…" aria-label="More…">⋯</span>
+    <div class="thumb"><span class="ico">${icon}</span></div>
+    <div class="body"><div class="nm" title="${esc(l.name)}">${esc(l.name)}</div><div class="dim">${esc(sub)}</div></div>
+  </button>`;
+}
+function marketFolderTile(f){
+  const n=childMarketFolders(f.id).length, m=listingsInFolder(f.id).length;
+  const bits=[]; if(n) bits.push(n+' folder'+(n>1?'s':'')); if(m) bits.push(m+' listing'+(m>1?'s':''));
+  return `<button type="button" class="tile folder" data-openfolder="${f.id}">
+    <div class="thumb"><span class="ico">📁</span></div>
+    <div class="body"><div class="nm">${esc(f.name)}</div><div class="dim">${bits.length?esc(bits.join(', ')):'Empty'}</div></div>
+  </button>`;
+}
+function renderMarketFolder(box, folderId){
+  const subs=childMarketFolders(folderId), listings=listingsInFolder(folderId);
+  let html=crumbsHTML('market', folderId);
+  html+=`<div class="marketnote">Nothing here joins your inventory until you open a listing and click Add. Uploading a file or pasting a link just files it away for browsing.</div>`;
+  if(!subs.length && !listings.length){
+    html+=`<div class="grid"><div class="empty" style="grid-column:1/-1">No listings yet. Add one from a file, a link, or pasted JSON.</div></div>`;
+  } else {
+    html+=`<div class="grid">${subs.map(marketFolderTile).join('')}${listings.map(listingTile).join('')}</div>`;
+  }
+  box.innerHTML=html;
+  bindCrumbs(box,'market');
+  bindGrid(box,'market');
+}
+function listingMenu(id, anchor){
+  const l=S.marketListings.find(x=>x.id===id); if(!l) return;
+  openMenu(anchor, [
+    {label:'Open', fn:()=>selectListing(id)},
+    {label:'Move to folder…', fn:()=>moveListingDialog(l)},
+    {sep:true},
+    {label:'Delete…', danger:true, fn:()=>askConfirm('Delete this listing?', '“'+l.name+'” will be removed from the marketplace. Nothing in your inventory is affected.', 'Delete', ()=>{
+      S.marketListings=S.marketListings.filter(x=>x.id!==id);
+      marketCache.delete(id);
+      if(nav.selListingId===id) nav.selListingId=null;
+      save(); renderAll();
+    })},
+  ], l.name);
+}
+function moveListingDialog(l){
+  const cur=l.parentId||'';
+  let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
+  (function walk(pid,depth){
+    for(const f of childMarketFolders(pid)){
+      opts+=`<option value="${f.id}" ${f.id===cur?'selected':''}>${'  '.repeat(depth)}${esc(f.name)}</option>`;
+      walk(f.id,depth+1);
+    }
+  })(null,0);
+  openModal('Move “'+l.name+'”', `<div class="field wide"><label style="width:auto">Folder</label></div>
+    <select id="moFolder">${opts}</select>`, 'Move', ()=>{
+      l.parentId=$('moFolder').value||null;
+      save(); renderAll();
+    });
+}
+
+/* ------------------------- marketplace: add a listing ------------------------- */
+function addListingDialog(){
+  pendingFile=null;
+  openModal('Add a listing', `
+    <div class="field"><label for="lName">Name</label><input type="text" id="lName" placeholder="IKEA catalogue"></div>
+    <div class="addmode-tabs">
+      <button type="button" class="btn sm" data-mode="file" aria-pressed="true">Upload file</button>
+      <button type="button" class="btn sm" data-mode="link" aria-pressed="false">Paste a link</button>
+      <button type="button" class="btn sm" data-mode="paste" aria-pressed="false">Paste JSON</button>
+    </div>
+    <div id="modeFile"><div class="dropzone" id="dropZone">Drop a Room Planner export here, or
+      <label class="btn sm" style="display:inline-block;margin-top:6px;cursor:pointer">Choose file<input type="file" id="lFile" accept="application/json,.json" hidden></label></div>
+      <p class="hint" id="lFileNote"></p></div>
+    <div id="modeLink" hidden><input type="url" id="lUrl" placeholder="https://…/items.json">
+      <p class="hint">Fetched fresh each time you open this listing — nothing is downloaded now. If the site blocks cross-origin requests, use Paste JSON instead.</p></div>
+    <div id="modePaste" hidden><textarea id="lPaste" placeholder='{"inventory":[ ... ]}' style="min-height:120px"></textarea></div>
+    <p class="hint">Any of these can be a full Room Planner export, or just <code>{"inventory":[…]}</code>. Adding it here doesn't touch your inventory — you grab items from it one at a time, or all at once, from inside the listing.</p>`,
+    'Add', ()=>{
+      const name=($('lName').value||'').trim()||'Untitled listing';
+      const mode=$('modeFile').hidden ? ($('modeLink').hidden?'paste':'link') : 'file';
+      if(mode==='link'){
+        const url=($('lUrl').value||'').trim();
+        if(!/^https?:\/\//i.test(url)){ moError('Enter a valid http(s) link'); return false; }
+        S.marketListings.push({id:uid(), name, parentId:nav.marketFolderId, kind:'link', url, addedAt:Date.now()});
+        save(); renderAll();
+        return;
+      }
+      let raw=null;
+      if(mode==='paste'){
+        try{ raw=JSON.parse($('lPaste').value); }catch(e){ moError('That is not valid JSON'); return false; }
+      } else {
+        raw=pendingFile;
+      }
+      if(!raw || !Array.isArray(raw.inventory)){ moError('That file doesn’t look like a Room Planner export — it needs an "inventory" array'); return false; }
+      const content={inventory: raw.inventory.filter(i=>i&&typeof i==='object'&&i.shape).map(i=>normItem(clone(i)))};
+      S.marketListings.push({id:uid(), name, parentId:nav.marketFolderId, kind:'file', content, addedAt:Date.now()});
+      save(); renderAll();
+    },
+    ()=>{
+      const tabs=[...document.querySelectorAll('.addmode-tabs button')];
+      tabs.forEach(b=>b.addEventListener('click', ()=>{
+        tabs.forEach(x=>x.setAttribute('aria-pressed', String(x===b)));
+        $('modeFile').hidden = b.dataset.mode!=='file';
+        $('modeLink').hidden = b.dataset.mode!=='link';
+        $('modePaste').hidden = b.dataset.mode!=='paste';
+      }));
+      const dz=$('dropZone'), fileIn=$('lFile');
+      function readFile(file){
+        if(!file) return;
+        const r=new FileReader();
+        r.onload=()=>{ try{ pendingFile=JSON.parse(r.result); $('lFileNote').textContent='Loaded “'+file.name+'”'; if(!$('lName').value.trim()) $('lName').value=file.name.replace(/\.json$/i,''); }
+          catch(e){ pendingFile=null; $('lFileNote').textContent='That file isn’t valid JSON.'; } };
+        r.readAsText(file);
+      }
+      fileIn.addEventListener('change', ()=>readFile(fileIn.files[0]));
+      dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('over'); });
+      dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
+      dz.addEventListener('drop', e=>{ e.preventDefault(); dz.classList.remove('over'); readFile(e.dataTransfer.files[0]); });
+    });
+}
+let pendingFile=null;
+
+/* ------------------------- marketplace: listing detail (lazy-loaded) ------------------------- */
+function renderListingDetail(box, id){
+  const l=S.marketListings.find(x=>x.id===id);
+  if(!l){ nav.selListingId=null; renderMarketFolder(box, nav.marketFolderId); return; }
+  box.innerHTML = crumbsHTML('market', l.parentId) + `
+    <div class="detail" style="max-width:900px">
+      <div class="dhead"><div class="grow"><h1 style="font-size:19px;margin:2px 0 4px">${esc(l.name)}</h1>
+        <div class="dim">${l.kind==='link'?esc(l.url):'Uploaded file'}</div></div>
+        <div class="row">
+          <button class="btn sm" id="btnAddAll">Add all to library</button>
+          <button class="btn sm danger" id="btnDelListing">Delete listing</button>
+        </div></div>
+      <div id="listingBody"><div class="listing-status">Loading…</div></div>
+    </div>`;
+  bindCrumbs(box,'market');
+  $('btnDelListing').addEventListener('click', ()=>{
+    askConfirm('Delete this listing?', '“'+l.name+'” will be removed from the marketplace.', 'Delete', ()=>{
+      S.marketListings=S.marketListings.filter(x=>x.id!==id);
+      nav.selListingId=null; save(); renderAll();
+    });
+  });
+  loadListing(l).then(res=>{
+    if(nav.selListingId!==id) return;   // navigated away while it was loading
+    const body=$('listingBody'); if(!body) return;
+    if(res.error){
+      body.innerHTML=`<div class="empty">${esc(res.error)}</div>`;
+      return;
+    }
+    if(!res.items.length){ body.innerHTML=`<div class="empty">This listing has no items.</div>`; return; }
+    body.innerHTML=`<div class="grid">${res.items.map((it,i)=>`
+      <div class="tile" style="cursor:default">
+        <div class="thumb" style="background:${hexA(it.color,.18)}"><span class="sw" style="width:28px;height:28px;border-radius:6px;background:${it.color}"></span></div>
+        <div class="body"><div class="nm">${esc(it.name)}</div><div class="dim">${esc(sizeLabel(it))}</div>
+          <button class="btn sm" data-add="${i}" style="margin-top:2px">Add to library</button></div>
+      </div>`).join('')}</div>`;
+    body.querySelectorAll('[data-add]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        addToLibrary(res.items[+b.dataset.add]);
+        b.textContent='Added'; b.disabled=true;
+      });
+    });
+    $('btnAddAll').addEventListener('click', ()=>{
+      for(const it of res.items) addToLibrary(it);
+      flash('Added '+res.items.length+' item'+(res.items.length===1?'':'s')+' to your library');
+      body.querySelectorAll('[data-add]').forEach(b=>{ b.textContent='Added'; b.disabled=true; });
+    });
+  });
+}
+function addToLibrary(raw){
+  const it=normItem(clone(raw));
+  it.id=uniqueId(it.id||uid(), new Set(S.inventory.map(x=>x.id)));
+  it.folderId=null;
+  it.manualTags=(it.tags||[]).slice();
+  S.inventory.push(it);
+  save();
+}
+/* the one place that actually reaches out over the network — and only when a listing is opened */
+async function loadListing(l){
+  if(l.kind==='file') return {items:(l.content&&l.content.inventory)||[]};
+  if(marketCache.has(l.id)) return marketCache.get(l.id);
+  try{
+    const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(), 10000);
+    const res=await fetch(l.url,{signal:ctl.signal});
+    clearTimeout(t);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data||!Array.isArray(data.inventory)) throw new Error('No "inventory" array in that file');
+    const out={items:data.inventory.filter(i=>i&&typeof i==='object'&&i.shape).map(i=>normItem(clone(i)))};
+    marketCache.set(l.id, out);
+    return out;
+  }catch(e){
+    const out={error:'Couldn’t load this link (' + (e.name==='AbortError'?'timed out':e.message) + '). The site may not allow cross-origin requests — try Paste JSON instead when adding a listing.'};
+    return out;
+  }
+}
+
+/* ------------------------- boot ------------------------- */
+(async function boot(){
+  await loadState();
+  nav.tab = S.uiLib.tab==='market' ? 'market' : 'library';
+  nav.libFolderId = itemFolderOf(S.uiLib.libFolderId) ? S.uiLib.libFolderId : null;
+  nav.marketFolderId = marketFolderOf(S.uiLib.marketFolderId) ? S.uiLib.marketFolderId : null;
+  document.querySelectorAll('.libtabs button').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.tab===nav.tab)));
+  $('unitSel').value=S.unit;
+  $('unitSel').addEventListener('change', e=>{ S.unit=e.target.value; save(); renderAll(); });
+  renderAll();
+})();
+</script>
+</body>
+</html>

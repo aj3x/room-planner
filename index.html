@@ -71,6 +71,7 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .btn.primary:hover{filter:brightness(1.08)}
 .btn.danger:hover{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
 .btn.sm{padding:3px 7px;font-size:12px}
+a.btn,a.btn:visited{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
 .row{display:flex;gap:6px;flex-wrap:wrap}
 .hint{font-size:11.5px;color:var(--ink3);margin:6px 0 0}
 .hint code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;background:var(--panel);border:1px solid var(--line2);border-radius:3px;padding:0 3px}
@@ -346,6 +347,7 @@ input[type=text].id{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monos
       </section>
       <section data-sec="things">
         <h2>Your things</h2>
+        <a class="btn sm" href="items.html" target="_blank" rel="noopener" style="margin-bottom:8px">Open item library &#8599;</a>
         <div class="chips" id="tagChips"></div>
         <div class="field wide" style="margin-top:7px">
           <input type="checkbox" id="onlyAvail" style="width:auto">
