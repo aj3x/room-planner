@@ -55,6 +55,7 @@ section h2::after{content:"";flex:1;height:1px;background:var(--line2)}
 .field{display:flex;align-items:center;gap:8px;margin-bottom:7px}
 .field label{width:88px;flex:none;color:var(--ink2);font-size:12.5px}
 .field.wide label{width:auto}
+.field[hidden]{display:none}
 input[type=text],input[type=number],select,textarea{width:100%;min-width:0;padding:5px 7px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius)}
 input[type=text].len,input.deg{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
 input[type=color]{width:30px;height:26px;flex:none;padding:1px;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper)}
@@ -72,6 +73,7 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .btn.sm{padding:3px 7px;font-size:12px}
 .row{display:flex;gap:6px;flex-wrap:wrap}
 .hint{font-size:11.5px;color:var(--ink3);margin:6px 0 0}
+.hint code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;background:var(--panel);border:1px solid var(--line2);border-radius:3px;padding:0 3px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;flex:none}
 .seg button{padding:4px 11px;background:var(--paper);border:0;border-right:1px solid var(--line);font-size:12px;white-space:nowrap}
 .seg button:last-child{border-right:0}
@@ -139,6 +141,28 @@ li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3
 .swatches{display:flex;gap:5px;flex-wrap:wrap}
 .swatches button{width:21px;height:21px;border-radius:4px;border:1px solid rgba(0,0,0,.2)}
 .swatches button[aria-pressed=true]{box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--accent)}
+
+/* a folded-away block inside a modal — <details> is fine in a sandboxed frame, <dialog>/<form> are not */
+details.adv{margin-top:11px;border-top:1px solid var(--line2);padding-top:9px}
+details.adv > summary{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;list-style:none;font-size:12px;font-weight:650;color:var(--ink2)}
+details.adv > summary::-webkit-details-marker{display:none}
+details.adv > summary::before{content:"\25b8";flex:none;width:9px;font-size:9px;color:var(--ink3)}
+details.adv[open] > summary::before{content:"\25be"}
+details.adv > summary:hover,details.adv > summary:hover::before{color:var(--ink)}
+details.adv .advbody{padding-top:10px}
+input[type=text].id{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+
+/* tick-box lists — export picks what leaves, import picks what comes in */
+.picker{border:1px solid var(--line);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.picker-head{display:flex;align-items:center;gap:6px;padding:5px 7px;background:var(--panel);border-bottom:1px solid var(--line2);font-size:12px;font-weight:650}
+.picker-head .grow{flex:1;min-width:0}
+.picker-body{max-height:172px;overflow:auto;padding:3px}
+.pick{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:4px;cursor:pointer;min-width:0}
+.pick:hover{background:var(--panel)}
+.pick input{flex:none;width:auto;margin:0}
+.pick.locked{cursor:default;color:var(--ink2)}
+.pick .nm{font-size:12.5px}
+.picker .empty{margin:5px;padding:11px}
 
 .pane-body section > h2{cursor:pointer;user-select:none}
 .pane-body section > h2::before{content:"\25BE";flex:none;width:9px;font-size:9px;color:var(--ink3)}
@@ -389,6 +413,7 @@ function parseLen(str, dispUnit){
   return found ? total : NaN;
 }
 const trimNum = (n,dp) => String(parseFloat(n.toFixed(dp)));
+const unitWord = () => ({ftin:'inches',in:'inches',cm:'centimetres',mm:'millimetres',m:'metres'})[S.unit];
 function fmtLen(mm,u){
   if(!isFinite(mm)) return '—';
   switch(u){
@@ -554,6 +579,35 @@ function polySimple(P){
 /* ------------------------- state ------------------------- */
 const PALETTE=['#6e8b7a','#a8735a','#5c7a99','#b8975a','#8a6e96','#4f6b63','#a55b57','#7e8c99','#6b7f4e','#9c6b8e','#57707d','#8c8577'];
 const uid = () => Math.random().toString(36).slice(2,10);
+
+/* ---- ids ----
+   A thing's id is visible and editable (Advanced, in the edit dialog), so it is held to a
+   character set that survives a URL and an S3-style key: letters, digits and ! - _ . * ' ( ).
+   A forward slash groups ids into folders the way an S3 key does — "ikea/kallax/4x2" and
+   "ikea/kallax/2x4" sit in the same folder — which is what a future marketplace browses by.
+   Slashes can't lead, trail, or double up, so every part of the path is a real name. */
+const ID_SAFE = /^[A-Za-z0-9!\-_.*'()]+$/;
+const idParts  = s => String(s).split('/');
+const idFolder = s => idParts(s).slice(0,-1).join('/');
+const idLeaf   = s => idParts(s).slice(-1)[0];
+function idProblem(raw){
+  const v=String(raw==null?'':raw).trim();
+  if(!v) return 'Give it an id';
+  if(v.length>200) return 'That id is too long';
+  if(v[0]==='/'||v[v.length-1]==='/') return "An id can't start or end with /";
+  const parts=idParts(v);
+  if(parts.some(x=>!x)) return "An id can't have an empty part between two slashes";
+  if(parts.some(x=>!ID_SAFE.test(x))) return "Ids can use a–z A–Z 0–9 and ! - _ . * ' ( ) , with / between folders";
+  return null;
+}
+/* keep an id unique against ids already spoken for, by adding -2, -3 … */
+function uniqueId(base, taken){
+  if(!taken.has(base)) return base;
+  let n=2;
+  while(taken.has(base+'-'+n)) n++;
+  return base+'-'+n;
+}
+const clone = v => JSON.parse(JSON.stringify(v));
 const rectPts = (w,d) => [[0,0],[w,0],[w,d],[0,d]];
 
 function blankLayout(name,folderId){
@@ -938,36 +992,47 @@ function updateHistButtons(){
   btnR.disabled = h.idx>=h.stack.length-1;
 }
 
-/* older saves used a width/depth rectangle, N/E/S/W doors, tagless/countless items, and no folders */
+/* older saves used a width/depth rectangle, N/E/S/W doors, tagless/countless items, and no folders.
+   normLayout/normItem are split out so the importer can clean up one room or one thing
+   lifted out of a file without pushing a whole state object through migrate(). */
+function normLayout(l){
+  l.id = l.id || uid();
+  l.name = l.name || 'My room';
+  l.room = l.room || {};
+  if(!Array.isArray(l.room.points)){
+    l.room.points = rectPts(l.room.w||4270, l.room.d||3660);
+    delete l.room.w; delete l.room.d;
+  }
+  l.room.wall = l.room.wall||114;
+  l.room.floor = normHex(l.room.floor)||'#f5f3ee';
+  l.room.trim = l.room.trim||19;
+  if(!Array.isArray(l.openings)){
+    const map={N:0,E:1,S:2,W:3};
+    l.openings = (l.doors||[]).map(d=>({
+      id:d.id||uid(), kind:'door', wall:map[d.wall]??0, offset:d.offset||0, width:d.width||813,
+      dtype:d.type||'hinge', hinge:d.hinge||'start', swing:d.swing||'in'
+    }));
+    delete l.doors;
+  }
+  l.placed = Array.isArray(l.placed) ? l.placed.filter(p=>p&&p.itemId) : [];
+  for(const p of l.placed) if(!p.id) p.id=uid();
+  if(l.folderId===undefined) l.folderId=null;
+  return l;
+}
+function normItem(it){
+  it.id = it.id || uid();
+  it.name = it.name || 'Untitled';
+  if(!Array.isArray(it.tags)) it.tags=[];
+  if(it.count==null) it.count=1;
+  it.color = normHex(it.color) || PALETTE[0];
+  it.open = normOpen(it.open);
+  return it;
+}
 function migrate(st){
-  if(!st||!st.layouts) return null;
-  for(const l of st.layouts){
-    l.room = l.room || {};
-    if(!Array.isArray(l.room.points)){
-      l.room.points = rectPts(l.room.w||4270, l.room.d||3660);
-      delete l.room.w; delete l.room.d;
-    }
-    l.room.wall = l.room.wall||114;
-    l.room.floor = normHex(l.room.floor)||'#f5f3ee';
-    l.room.trim = l.room.trim||19;
-    if(!Array.isArray(l.openings)){
-      const map={N:0,E:1,S:2,W:3};
-      l.openings = (l.doors||[]).map(d=>({
-        id:d.id||uid(), kind:'door', wall:map[d.wall]??0, offset:d.offset||0, width:d.width||813,
-        dtype:d.type||'hinge', hinge:d.hinge||'start', swing:d.swing||'in'
-      }));
-      delete l.doors;
-    }
-    l.placed = l.placed||[];
-    if(l.folderId===undefined) l.folderId=null;
-  }
+  if(!st||!Array.isArray(st.layouts)||!st.layouts.length) return null;
+  for(const l of st.layouts) normLayout(l);
   st.inventory = st.inventory||[];
-  for(const it of st.inventory){
-    if(!Array.isArray(it.tags)) it.tags=[];
-    if(it.count==null) it.count=1;
-    it.color = normHex(it.color) || PALETTE[0];
-    it.open = normOpen(it.open);
-  }
+  for(const it of st.inventory) normItem(it);
   if(!Array.isArray(st.folders)) st.folders=[];
   if(!Array.isArray(st.tagFilter)) st.tagFilter=[];
   if(st.untaggedOnly==null) st.untaggedOnly=false;
@@ -1746,6 +1811,12 @@ function endDrag(e){
 }
 cv.addEventListener('pointerup',endDrag);
 cv.addEventListener('pointercancel',endDrag);
+/* in Room mode, double-clicking a wall types its length in rather than dragging for it */
+cv.addEventListener('dblclick', e=>{
+  if(drawState||!roomMode()) return;
+  const hit=pickRoom(e.offsetX,e.offsetY);
+  if(hit&&hit.kind==='wall'){ drag=null; wallDialog(hit.i); }
+});
 cv.addEventListener('wheel', e=>{ e.preventDefault(); zoomAt(e.deltaY<0?1.11:1/1.11, e.offsetX, e.offsetY); }, {passive:false});
 
 document.addEventListener('keydown', e=>{
@@ -2246,6 +2317,36 @@ $('wallList').addEventListener('click', e=>{
   roomSel={kind:'wall', i:+li.dataset.i};
   renderWalls(); renderRoomSel(); draw();
 });
+$('wallList').addEventListener('dblclick', e=>{
+  const li=e.target.closest('li[data-i]'); if(li) wallDialog(+li.dataset.i);
+});
+
+/* double-clicking a wall — in the plan or in the wall list — types its length in.
+   Same two values as the Selected panel, just close to hand while you are in the plan. */
+function wallDialog(i){
+  if(!roomMode()) setMode('room');
+  const P=RP();
+  if(!(i>=0&&i<P.length)) return;
+  const w=wallOf(i);
+  roomSel={kind:'wall', i};
+  renderWalls(); renderRoomSel(); draw();
+  openModal('Wall '+(i+1), `
+    <div class="field"><label for="wdLen">Length</label><input type="text" class="len" id="wdLen" value="${esc(fmtLen(w.len,S.unit))}"></div>
+    <div class="field"><label for="wdAng">Direction</label><input type="number" class="deg" id="wdAng" step="1" value="${Math.round(wallAngle(i))}"><span class="dim">°</span></div>
+    <p class="hint">The far corner moves, so the wall after this one follows along. 0° points right, 90° points up.</p>
+    <p class="hint">Plain numbers are read as ${unitWord()}. You can also type 6'2", 30in, 75cm, 1.2m.</p>`,
+    'Save',
+    ()=>{
+      const len=parseLen($('wdLen').value,S.unit);
+      if(!isFinite(len)||len<100){ moError('Give the wall a length of at least 100 mm'); return false; }
+      const deg=parseFloat($('wdAng').value);
+      let ok=true;
+      if(isFinite(deg) && Math.round(deg)!==Math.round(wallAngle(i))) ok=setWallAngle(i,deg);
+      if(ok) ok=setWallLen(i,len);
+      renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+      if(!ok) return false;   // tryRoomEdit rolled it back and flashed why — stay open
+    });
+}
 
 function renderRoomSel(){
   const box=$('roomSelBox'), t=$('roomSelTitle');
@@ -2467,8 +2568,10 @@ function itemMenu(id, anchor){
     {label:'Rename', fn:()=>renameItem(id)},
     {label:'Edit\u2026', fn:()=>itemDialog(id)},
     {label:'Duplicate', fn:()=>{
-      const c=JSON.parse(JSON.stringify(it));
-      c.id=uid(); c.name=it.name+' copy';
+      const c=clone(it);
+      // keep the copy in the same id folder as the original: ikea/kallax/4x2 → ikea/kallax/4x2-copy
+      c.id=uniqueId(it.id+'-copy', new Set(S.inventory.map(x=>x.id)));
+      c.name=it.name+' copy';
       S.inventory.splice(S.inventory.indexOf(it)+1, 0, c);
       renderInv(); save();
     }},
@@ -2677,9 +2780,26 @@ function shapeFieldHTML(type,sh){
   }
   return h;
 }
+/* renaming a thing's id rewrites every reference to it: what is placed in each room now,
+   and what sits in the furniture history, so an undo can't resurrect the old id */
+function retagItem(oldId,newId){
+  const it=itemOf(oldId);
+  if(!it||oldId===newId) return;
+  it.id=newId;
+  for(const l of S.layouts) for(const p of l.placed) if(p.itemId===oldId) p.itemId=newId;
+  for(const k of Object.keys(furnHist)){
+    const h=furnHist[k];
+    h.stack=h.stack.map(snap=>{
+      const o=JSON.parse(snap);
+      for(const p of (o.placed||[])) if(p.itemId===oldId) p.itemId=newId;
+      return JSON.stringify(o);
+    });
+  }
+}
 function itemDialog(id){
   const it=id?itemOf(id):null;
   dlgColor = (it&&normHex(it.color)) || PALETTE[S.inventory.length%PALETTE.length];
+  const dlgId = it ? it.id : uid();
   const type0 = it?it.shape.type:'rect';
   openModal(it?'Edit '+it.name:'Add a thing', `
     <div class="field"><label for="iName">Name</label><input type="text" id="iName" value="${esc(it?it.name:'')}" placeholder="Sofa"></div>
@@ -2704,7 +2824,15 @@ function itemDialog(id){
     <div class="field wide"><label for="iTagsInput" style="width:auto">Tags</label></div>
     ${tagFieldHTML('iTags','living room, seating, IKEA')}
     <p class="hint">Type to pick from tags you already use. Tab or comma adds one, backspace removes the last. Used to filter your inventory and to set a folder's default filter.</p>
-    <p class="hint">Plain numbers are read as ${({ftin:'inches',in:'inches',cm:'centimetres',mm:'millimetres',m:'metres'})[S.unit]}. You can also type 6'2", 30in, 75cm, 1.2m.</p>`,
+    <p class="hint">Plain numbers are read as ${unitWord()}. You can also type 6'2", 30in, 75cm, 1.2m.</p>
+    <details class="adv" id="iAdv">
+      <summary>Advanced</summary>
+      <div class="advbody">
+        <div class="field"><label for="iId">Id</label><input type="text" class="id" id="iId" spellcheck="false" autocapitalize="off" autocorrect="off" value="${esc(dlgId)}"></div>
+        <p class="hint" id="iIdNote"></p>
+        <p class="hint">Letters, digits and ! - _ . * ' ( ) . Use / to file it away like a folder — <code>ikea/kallax/4x2</code> and <code>ikea/kallax/2x4</code> then sit together. Rooms that already use this thing follow the rename.</p>
+      </div>
+    </details>`,
     'Save',
     ()=>{
       const type=$('iShape').value;
@@ -2733,8 +2861,15 @@ function itemDialog(id){
         top:parseLen($('oTop').value,S.unit),    bottom:parseLen($('oBottom').value,S.unit),
         left:parseLen($('oLeft').value,S.unit),  right:parseLen($('oRight').value,S.unit)
       }) : null;
-      if(id) Object.assign(itemOf(id),{name,color:dlgColor,shape,passThrough:$('iPass').checked,count,tags,open});
-      else S.inventory.push({id:uid(),name,color:dlgColor,shape,passThrough:$('iPass').checked,count,tags,open});
+      const newId=($('iId').value||'').trim();
+      const bad=idProblem(newId);
+      if(bad){ $('iAdv').open=true; moError(bad); return false; }
+      if(S.inventory.some(x=>x.id===newId && x.id!==id)){ $('iAdv').open=true; moError('Another thing already uses that id'); return false; }
+      if(id){
+        Object.assign(itemOf(id),{name,color:dlgColor,shape,passThrough:$('iPass').checked,count,tags,open});
+        retagItem(id,newId);
+      }
+      else S.inventory.push({id:newId,name,color:dlgColor,shape,passThrough:$('iPass').checked,count,tags,open});
       renderInv(); renderSel(); draw(); save();
     },
     ()=>{
@@ -2763,6 +2898,21 @@ function itemDialog(id){
       const oc=$('iOpenOn');
       oc.addEventListener('change',()=>{ $('openFields').hidden=!oc.checked; });
       mountTagField('iTags', (it&&it.tags)||[]);
+      const idIn=$('iId'), idNote=$('iIdNote');
+      const sayId=()=>{
+        const v=idIn.value.trim(), bad=idProblem(v);
+        idIn.classList.toggle('bad', !!bad && !!v);
+        if(bad){ idNote.textContent=v?bad:''; return; }
+        const f=idFolder(v);
+        idNote.textContent = f ? 'Filed under '+f+', as '+idLeaf(v) : 'No folder — sits at the top level.';
+      };
+      idIn.addEventListener('input',sayId);
+      sayId();
+      // the block sits at the bottom of a tall dialog — bring it into view when it opens
+      $('iAdv').addEventListener('toggle', ()=>{
+        const a=$('iAdv');
+        if(a.open && a.scrollIntoView) a.scrollIntoView({block:'nearest'});
+      });
     });
 }
 $('btnAddItem').addEventListener('click',()=>itemDialog(null));
@@ -2834,30 +2984,275 @@ $('btnSamples').addEventListener('click', ()=>{
   add('Rug 5×8',{type:'rect',w:1520,d:2440},{passThrough:true});
   renderInv(); save();
 });
-$('btnExport').addEventListener('click', ()=>{
-  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+
+/* ---- tick-box lists ----
+   Export and import are both "tick what you mean", so they share this. A row can be
+   locked: ticked and not un-tickable, which is how a room drags its things along. */
+function pickerHTML(id, title, rows, emptyMsg){
+  const body = rows.length
+    ? rows.map(r=>`<label class="pick${r.locked?' locked':''}">
+        <input type="checkbox" value="${esc(r.value)}" ${r.checked?'checked':''} ${r.locked?'disabled':''}>
+        <span class="nm" title="${esc(r.label)}">${esc(r.label)}</span>
+        ${r.sub?`<span class="dim" title="${esc(r.sub)}">${esc(r.sub)}</span>`:''}
+      </label>`).join('')
+    : `<div class="empty">${esc(emptyMsg||'Nothing here')}</div>`;
+  return `<div class="picker" id="${id}">
+    <div class="picker-head"><span class="grow">${esc(title)}</span>
+      <button type="button" class="btn sm" data-all="1">All</button>
+      <button type="button" class="btn sm" data-all="0">None</button></div>
+    <div class="picker-body">${body}</div></div>`;
+}
+function pickerMount(id, onChange){
+  const el=$(id); if(!el) return;
+  el.addEventListener('click', e=>{
+    const b=e.target.closest('button[data-all]'); if(!b) return;
+    for(const c of el.querySelectorAll('input[type=checkbox]:not(:disabled)')) c.checked = b.dataset.all==='1';
+    if(onChange) onChange();
+  });
+  el.addEventListener('change', ()=>{ if(onChange) onChange(); });
+}
+/* a locked row is disabled but still ticked, and :checked matches it — so it counts */
+const pickValues = id => [...$(id).querySelectorAll('input[type=checkbox]:checked')].map(c=>c.value);
+const plural = (n,w) => n+' '+w+(n===1?'':'s');
+const fileSlug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'export';
+/* folder path of a room, read out of whichever folder list it belongs to */
+function folderLine(l, folders){
+  const list = folders || S.folders;
+  const names=[];
+  let f = l.folderId ? list.find(x=>x.id===l.folderId) : null;
+  while(f){ names.unshift(f.name); f = f.parentId ? list.find(x=>x.id===f.parentId) : null; }
+  return names.join(' / ');
+}
+function ancestorFolderIds(folders, id){
+  const out=new Set();
+  let f = id ? folders.find(x=>x.id===id) : null;
+  while(f && !out.has(f.id)){ out.add(f.id); f = f.parentId ? folders.find(x=>x.id===f.parentId) : null; }
+  return out;
+}
+
+/* ------------------------- export ------------------------- */
+const PREF_KEYS=['unit','snap','showSwing','showDims','showOpen','invScope','onlyAvailable'];
+function exportPayload(roomIds, itemIds, withPrefs){
+  const layouts=S.layouts.filter(l=>roomIds.includes(l.id)).map(clone);
+  const keep=new Set();
+  for(const l of layouts) for(const id of ancestorFolderIds(S.folders, l.folderId)) keep.add(id);
+  const out={
+    app:'room-planner', version:2, exported:new Date().toISOString(),
+    folders:S.folders.filter(f=>keep.has(f.id)).map(clone),
+    layouts,
+    inventory:S.inventory.filter(i=>itemIds.includes(i.id)).map(clone)
+  };
+  if(withPrefs) for(const k of PREF_KEYS) out[k]=S[k];
+  if(layouts.some(l=>l.id===S.active)) out.active=S.active;
+  return out;
+}
+function exportName(layouts, itemIds){
+  if(!layouts.length) return 'room-planner-things.json';
+  if(layouts.length===1) return 'room-planner-'+fileSlug(layouts[0].name)+'.json';
+  if(!itemIds.length) return 'room-planner-rooms.json';
+  return 'room-planner.json';
+}
+function downloadJSON(obj, name){
+  const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download='room-planner.json';
+  a.download=name;
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-});
+}
+function exportDialog(){
+  const rooms=S.layouts.map(l=>({value:l.id, label:l.name, sub:folderLine(l), checked:true}));
+  const things=S.inventory.map(i=>({value:i.id, label:i.name, sub:i.id, checked:true}));
+  openModal('Export', `
+    <p class="hint" style="margin-top:0">Tick what should go in the file.</p>
+    ${pickerHTML('xRooms','Rooms',rooms,'You have no rooms to export')}
+    ${pickerHTML('xThings','Things',things,'Your inventory is empty')}
+    <div class="field wide"><input type="checkbox" id="xPrefs" style="width:auto" checked>
+      <label for="xPrefs" style="width:auto">Settings — units, snap, stock, and what the plan shows</label></div>
+    <p class="hint" id="xNote"></p>`,
+    'Export',
+    ()=>{
+      const roomIds=pickValues('xRooms'), itemIds=pickValues('xThings');
+      if(!roomIds.length && !itemIds.length){ moError('Tick at least one room or thing'); return false; }
+      const picked=S.layouts.filter(l=>roomIds.includes(l.id));
+      downloadJSON(exportPayload(roomIds,itemIds,$('xPrefs').checked), exportName(picked,itemIds));
+    },
+    ()=>{
+      /* a room is no use without the things standing in it, so picking a room locks those on */
+      const syncUsed=()=>{
+        const picked=new Set(pickValues('xRooms')), need=new Set();
+        for(const l of S.layouts) if(picked.has(l.id)) for(const p of l.placed) need.add(p.itemId);
+        for(const c of $('xThings').querySelectorAll('input[type=checkbox]')){
+          const must=need.has(c.value);
+          c.disabled=must;
+          if(must) c.checked=true;
+          c.closest('.pick').classList.toggle('locked',must);
+        }
+        $('xNote').textContent = need.size
+          ? 'Things standing in the rooms you picked come along whether or not they are ticked, so the plan still holds together at the other end.'
+          : '';
+      };
+      pickerMount('xRooms', syncUsed);
+      pickerMount('xThings');
+      syncUsed();
+    });
+}
+$('btnExport').addEventListener('click', exportDialog);
+
+/* ------------------------- import ------------------------- */
+/* pull the parts out of a file without assuming it is a whole project — a things-only
+   or rooms-only export is a perfectly good file */
+function readImport(data){
+  if(!data || typeof data!=='object') return null;
+  const layouts = (Array.isArray(data.layouts)?data.layouts:[]).filter(l=>l&&typeof l==='object').map(l=>normLayout(clone(l)));
+  const inventory = (Array.isArray(data.inventory)?data.inventory:[]).filter(i=>i&&typeof i==='object'&&i.shape).map(i=>normItem(clone(i)));
+  const folders = (Array.isArray(data.folders)?data.folders:[]).filter(f=>f&&f.id).map(f=>{
+    const c=clone(f);
+    c.name=c.name||'Folder';
+    c.parentId=c.parentId||null;
+    if(!Array.isArray(c.tags)) c.tags=[];
+    return c;
+  });
+  if(!layouts.length && !inventory.length) return null;
+  const prefs={};
+  for(const k of PREF_KEYS) if(data[k]!==undefined) prefs[k]=data[k];
+  if(prefs.unit && !['ftin','in','cm','mm','m'].includes(prefs.unit)) delete prefs.unit;
+  if(prefs.invScope && !INV_SCOPES[prefs.invScope]) delete prefs.invScope;
+  if(prefs.snap!==undefined) prefs.snap=String(prefs.snap);
+  for(const k of ['showSwing','showDims','showOpen','onlyAvailable']) if(prefs[k]!==undefined) prefs[k]=!!prefs[k];
+  return {layouts, folders, inventory, active:data.active, prefs:Object.keys(prefs).length?prefs:null};
+}
+function importDialog(inc){
+  const rooms=inc.layouts.map(l=>({value:l.id, label:l.name, sub:folderLine(l,inc.folders), checked:true}));
+  const things=inc.inventory.map(i=>({value:i.id, label:i.name, sub:i.id, checked:true}));
+  openModal('Import', `
+    <div class="field"><label for="imHow">Bring it in</label><select id="imHow">
+      <option value="add">alongside what I have</option>
+      <option value="replace">instead of what I have</option></select></div>
+    <p class="hint" id="imHowNote" style="margin-top:0"></p>
+    ${pickerHTML('imRooms','Rooms in this file',rooms,'No rooms in this file')}
+    ${pickerHTML('imThings','Things in this file',things,'No things in this file')}
+    ${inc.prefs?`<div class="field wide"><input type="checkbox" id="imPrefs" style="width:auto">
+      <label for="imPrefs" style="width:auto">Settings — units, snap, stock, and what the plan shows</label></div>`:''}
+    <div class="field" id="imDupeRow"><label for="imDupe">Same id</label><select id="imDupe">
+      <option value="mine">keep the one I have</option>
+      <option value="copy">add the file's as a copy</option></select></div>
+    <p class="hint" id="imDupeNote">Two things can share an id — <code>ikea/kallax/4x2</code> in your inventory and in this file. That reads as the same product, so by default yours is kept and the rooms coming in point at it.</p>`,
+    'Import',
+    ()=>{
+      const roomIds=pickValues('imRooms'), itemIds=pickValues('imThings');
+      if(!roomIds.length && !itemIds.length){ moError('Tick at least one room or thing'); return false; }
+      const replace=$('imHow').value==='replace';
+      if(replace && !roomIds.length){ moError('Replacing needs at least one room — a project has to have somewhere to stand'); return false; }
+      applyImport(inc, roomIds, itemIds, !!($('imPrefs')&&$('imPrefs').checked), replace, $('imDupe').value);
+    },
+    ()=>{
+      pickerMount('imRooms'); pickerMount('imThings');
+      const how=$('imHow');
+      const sayHow=()=>{
+        const rep=how.value==='replace';
+        $('imHowNote').textContent = rep
+          ? 'Everything you have now — rooms, things and all — is swapped for what you tick below. This one cannot be undone.'
+          : 'What you tick is added to your project. Nothing you already have is touched.';
+        $('imDupeRow').hidden=rep;
+        $('imDupeNote').hidden=rep;
+      };
+      how.addEventListener('change',sayHow);
+      sayHow();
+    });
+}
+function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
+  const layouts=inc.layouts.filter(l=>roomIds.includes(l.id)).map(clone);
+  const items=inc.inventory.filter(i=>itemIds.includes(i.id)).map(clone);
+  const keep=new Set();
+  for(const l of layouts) for(const id of ancestorFolderIds(inc.folders, l.folderId)) keep.add(id);
+  const folders=inc.folders.filter(f=>keep.has(f.id)).map(clone);
+
+  if(replace){
+    const st={
+      mode:'furniture', tagFilter:[], untaggedOnly:false,
+      leftOpen:S.leftOpen, rightOpen:S.rightOpen, secClosed:S.secClosed.slice(),
+      inventory:items, folders, layouts
+    };
+    for(const k of PREF_KEYS) st[k]=S[k];
+    if(wantPrefs && inc.prefs) Object.assign(st, inc.prefs);
+    const have=new Set(items.map(i=>i.id));
+    for(const l of st.layouts) l.placed=l.placed.filter(p=>have.has(p.itemId));
+    st.active = st.layouts.some(l=>l.id===inc.active) ? inc.active : st.layouts[0].id;
+    const done=migrate(st);
+    if(!done){ flash("There was nothing in that file to import"); return; }
+    S=done;
+    sel=null; roomSel=null;
+    for(const k of Object.keys(roomHist)) delete roomHist[k];
+    for(const k of Object.keys(furnHist)) delete furnHist[k];
+    seedHistFor();
+    $('unitSel').value=S.unit;
+    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen;
+    renderSnap(); applyPanes(); applySections(); renderAll(); fit(); save();
+    flash('Replaced your project with '+plural(S.layouts.length,'room')+' and '+plural(S.inventory.length,'thing'));
+    return;
+  }
+
+  /* adding: an id that is already spoken for either points at what you have, or is
+     brought in beside it under id-2 — and every reference in the file follows along */
+  const takenItems=new Set(S.inventory.map(i=>i.id));
+  const itemMap={};
+  let addedItems=0;
+  for(const it of items){
+    if(takenItems.has(it.id) && dupe==='mine'){ itemMap[it.id]=it.id; continue; }
+    const nid=uniqueId(it.id, takenItems);
+    itemMap[it.id]=nid; it.id=nid;
+    takenItems.add(nid);
+    S.inventory.push(it);
+    addedItems++;
+  }
+  /* a folder id that already exists here IS that folder — importing the same file twice
+     files the rooms into the folder you already have rather than growing a twin of it */
+  const takenFolders=new Set(S.folders.map(f=>f.id));
+  const folderMap={}, freshFolders=[];
+  for(const f of folders){
+    folderMap[f.id]=f.id;
+    if(takenFolders.has(f.id)) continue;
+    takenFolders.add(f.id);
+    freshFolders.push(f);
+  }
+  for(const f of freshFolders){
+    f.parentId = f.parentId ? (folderMap[f.parentId]||null) : null;
+    S.folders.push(f);
+  }
+  const takenLayouts=new Set(S.layouts.map(l=>l.id));
+  for(const l of layouts){
+    if(takenLayouts.has(l.id)) l.id=uid();
+    takenLayouts.add(l.id);
+    l.folderId = l.folderId ? (folderMap[l.folderId]||null) : null;
+    l.placed = l.placed.filter(p=>{
+      // the thing came in with the room, or one of yours already answers to that id
+      const target = itemMap[p.itemId] || (takenItems.has(p.itemId) ? p.itemId : null);
+      if(!target) return false;
+      p.itemId=target;
+      p.id=uid();
+      return true;
+    });
+    S.layouts.push(l);
+  }
+  if(wantPrefs && inc.prefs){
+    Object.assign(S, inc.prefs);
+    $('unitSel').value=S.unit;
+    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen;
+    renderSnap();
+  }
+  renderAll(); save();
+  flash('Added '+plural(layouts.length,'room')+' and '+plural(addedItems,'thing'));
+}
 $('btnImport').addEventListener('click',()=>$('fileIn').click());
 $('fileIn').addEventListener('change', e=>{
   const f=e.target.files[0]; if(!f) return;
   const rd=new FileReader();
   rd.onload=()=>{
-    try{
-      const data=migrate(JSON.parse(rd.result));
-      if(!data) throw new Error('bad');
-      S=data;
-      if(!S.layouts.some(l=>l.id===S.active)) S.active=S.layouts[0].id;
-      sel=null; roomSel=null;
-      for(const k of Object.keys(roomHist)) delete roomHist[k];
-      for(const k of Object.keys(furnHist)) delete furnHist[k];
-      seedHistFor();
-      $('unitSel').value=S.unit; renderSnap(); applyPanes(); applySections(); renderAll(); fit(); save();
-    }catch(err){ flash("That file isn't a Room Planner export"); }
+    let inc=null;
+    try{ inc=readImport(JSON.parse(rd.result)); }catch(err){ inc=null; }
+    if(!inc){ flash("That file isn't a Room Planner export"); return; }
+    importDialog(inc);
   };
   rd.readAsText(f);
   e.target.value='';
