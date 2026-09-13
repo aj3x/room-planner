@@ -136,6 +136,8 @@ details.adv .advbody{padding-top:10px}
 .tree-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
 .tree-row .ico{flex:none;font-size:12px}
 .tree-row .caret{flex:none;width:16px;background:none;border:0;padding:0;color:var(--ink3);font-size:10px;cursor:pointer}
+.tree-row .caret-zone{flex:none;display:inline-flex;justify-content:flex-end;align-items:center;padding-right:2px;color:var(--ink3);font-size:10px;cursor:pointer}
+.tree-row .ico.sw{width:9px;height:9px;border-radius:3px;margin:0 1px}
 .tree-row .tree-more{flex:none;background:none;border:0;padding:2px 5px;color:var(--ink3);font-size:14px;border-radius:4px;line-height:1}
 .tree-row .tree-more:hover{background:var(--panel2);color:var(--ink)}
 .tree-row.dragging{opacity:.42}
@@ -1004,12 +1006,19 @@ function renderLibTreeLevel(parentId,depth){
   let html='';
   for(const f of childItemFolders(parentId)){
     const open=treeOpen.has(f.id);
-    html+=`<div class="tree-row" draggable="true" data-folder="${f.id}" style="padding-left:${depth*14}px">
-      <button type="button" class="caret" data-act="toggle">${open?'▾':'▸'}</button>
+    html+=`<div class="tree-row" draggable="true" data-folder="${f.id}">
+      <span class="caret-zone" data-act="toggle" style="width:${depth*14+16}px">${open?'▾':'▸'}</span>
       <span class="ico">📁</span><span class="nm">${esc(f.name)}</span>${folderTagsInline(f)}
       <button type="button" class="tree-more" data-act="more" title="More…" aria-label="More…">⋯</button>
     </div>`;
     if(open) html+=renderLibTreeLevel(f.id,depth+1);
+  }
+  for(const it of itemsInFolder(parentId)){
+    html+=`<div class="tree-row" draggable="false" data-item="${it.id}">
+      <span class="caret-zone" style="width:${depth*14+16}px"></span>
+      <span class="ico sw" style="background:${it.color}"></span><span class="nm">${esc(it.name)}</span>
+      <button type="button" class="tree-more" data-act="more" title="More…" aria-label="More…">⋯</button>
+    </div>`;
   }
   return html;
 }
@@ -1017,12 +1026,20 @@ function renderMarketTreeLevel(parentId,depth){
   let html='';
   for(const f of childMarketFolders(parentId)){
     const key='m:'+f.id, open=treeOpen.has(key);
-    html+=`<div class="tree-row" draggable="true" data-mfolder="${f.id}" style="padding-left:${depth*14}px">
-      <button type="button" class="caret" data-act="toggle">${open?'▾':'▸'}</button>
+    html+=`<div class="tree-row" draggable="true" data-mfolder="${f.id}">
+      <span class="caret-zone" data-act="toggle" style="width:${depth*14+16}px">${open?'▾':'▸'}</span>
       <span class="ico">📁</span><span class="nm">${esc(f.name)}</span>
       <button type="button" class="tree-more" data-act="more" title="More…" aria-label="More…">⋯</button>
     </div>`;
     if(open) html+=renderMarketTreeLevel(f.id,depth+1);
+  }
+  for(const l of listingsInFolder(parentId)){
+    const icon = l.kind==='link' ? '🔗' : '📦';
+    html+=`<div class="tree-row" draggable="false" data-listing="${l.id}">
+      <span class="caret-zone" style="width:${depth*14+16}px"></span>
+      <span class="ico">${icon}</span><span class="nm">${esc(l.name)}</span>
+      <button type="button" class="tree-more" data-act="more" title="More…" aria-label="More…">⋯</button>
+    </div>`;
   }
   return html;
 }
@@ -1044,10 +1061,12 @@ function markActiveTreeRow(){
   for(const row of box.querySelectorAll('.tree-row')) row.classList.remove('active');
   if(nav.searching) return;
   if(nav.tab==='library'){
-    if(nav.libFolderId===null){ const r=box.querySelector('[data-root]'); if(r) r.classList.add('active'); }
+    if(nav.selItemId){ const r=box.querySelector('[data-item="'+nav.selItemId+'"]'); if(r) r.classList.add('active'); }
+    else if(nav.libFolderId===null){ const r=box.querySelector('[data-root]'); if(r) r.classList.add('active'); }
     else { const r=box.querySelector('[data-folder="'+nav.libFolderId+'"]'); if(r) r.classList.add('active'); }
   } else {
-    if(nav.marketFolderId===null){ const r=box.querySelector('[data-root]'); if(r) r.classList.add('active'); }
+    if(nav.selListingId){ const r=box.querySelector('[data-listing="'+nav.selListingId+'"]'); if(r) r.classList.add('active'); }
+    else if(nav.marketFolderId===null){ const r=box.querySelector('[data-root]'); if(r) r.classList.add('active'); }
     else { const r=box.querySelector('[data-mfolder="'+nav.marketFolderId+'"]'); if(r) r.classList.add('active'); }
   }
 }
@@ -1056,22 +1075,34 @@ const treeBox=$('tree');
 treeBox.addEventListener('click', e=>{
   const more=e.target.closest('[data-act=more]');
   const root=e.target.closest('[data-root]');
-  const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]');
+  const toggle=e.target.closest('[data-act=toggle]');
+  const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder],.tree-row[data-item],.tree-row[data-listing]');
   if(more && row){
     cancelSingleClick();
     if(row.dataset.folder) libFolderMenu(row.dataset.folder, more);
-    else marketFolderMenu(row.dataset.mfolder, more);
+    else if(row.dataset.mfolder) marketFolderMenu(row.dataset.mfolder, more);
+    else if(row.dataset.item) itemMenu(row.dataset.item, more);
+    else if(row.dataset.listing) listingMenu(row.dataset.listing, more);
     return;
   }
   if(root){ singleClick(()=>goFolder(nav.tab, null)); return; }
-  if(row){
-    const isLib=!!row.dataset.folder, id=isLib?row.dataset.folder:row.dataset.mfolder;
-    const key=isLib?id:'m:'+id;
-    singleClick(()=>{
+  if(!row) return;
+  if(toggle){
+    cancelSingleClick();
+    if(row.dataset.folder){
+      const id=row.dataset.folder;
+      if(treeOpen.has(id)) treeOpen.delete(id); else treeOpen.add(id);
+    } else if(row.dataset.mfolder){
+      const key='m:'+row.dataset.mfolder;
       if(treeOpen.has(key)) treeOpen.delete(key); else treeOpen.add(key);
-      goFolder(isLib?'library':'market', id);
-    });
+    }
+    renderTree();
+    return;
   }
+  if(row.dataset.folder){ singleClick(()=>goFolder('library', row.dataset.folder)); return; }
+  if(row.dataset.mfolder){ singleClick(()=>goFolder('market', row.dataset.mfolder)); return; }
+  if(row.dataset.item){ singleClick(()=>selectItem(row.dataset.item)); return; }
+  if(row.dataset.listing){ singleClick(()=>selectListing(row.dataset.listing)); return; }
 });
 treeBox.addEventListener('dblclick', e=>{
   cancelSingleClick();
