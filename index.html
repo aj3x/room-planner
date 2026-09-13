@@ -455,7 +455,15 @@ const SNAPS = {
 const EPS = 2;
 const norm360 = d => ((d%360)+360)%360;
 
+const shapePolyCache=new WeakMap();
 function shapePoly(shape){
+  const cached=shapePolyCache.get(shape);
+  if(cached) return cached;
+  const p=shapePolyCompute(shape);
+  shapePolyCache.set(shape,p);
+  return p;
+}
+function shapePolyCompute(shape){
   const t = shape.type;
   if(t==='rect'){ const w=shape.w/2,d=shape.d/2; return [[-w,-d],[w,-d],[w,d],[-w,d]]; }
   if(t==='ellipse'){
@@ -947,7 +955,21 @@ function validate(inst,poly){
   if(c) return {ok:false, why:'Bumps into '+c};
   return {ok:true};
 }
+let conflictSetCache=null;
+function conflictSetSig(){
+  const l=L(), ps=l.placed;
+  let s=l.id+'|'+ps.length+'|'+roomSig;
+  for(const p of ps) s+='|'+p.id+','+p.x+','+p.y+','+(p.rot||0)+','+p.itemId;
+  return s;
+}
 function conflictSet(){
+  const sig=conflictSetSig();
+  if(conflictSetCache && conflictSetCache.sig===sig) return conflictSetCache.out;
+  const out=conflictSetCompute();
+  conflictSetCache={sig,out};
+  return out;
+}
+function conflictSetCompute(){
   const ps=L().placed, polys=[], bbs=[], out=new Set();
   const obs=obstaclePolys();
   for(const p of ps){
@@ -1073,7 +1095,8 @@ function commit(map,snapFn){
   h.idx=h.stack.length-1;
   updateHistButtons();
 }
-const commitRoom = () => commit(roomHist,snapRoom);
+let roomSig=0;
+const commitRoom = () => { commit(roomHist,snapRoom); roomSig++; };
 const commitFurn = () => commit(furnHist,snapFurn);
 function stepHist(map,snapFn,applyFn,dir){
   const h=histEntry(map,snapFn);
@@ -1083,7 +1106,7 @@ function stepHist(map,snapFn,applyFn,dir){
   updateHistButtons();
 }
 function applyRoomSnap(s){
-  L().room=s.room; L().openings=s.openings; roomSel=null;
+  L().room=s.room; L().openings=s.openings; roomSel=null; roomSig++;
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save();
 }
 function applyFurnSnap(s){
@@ -1414,7 +1437,7 @@ function resize(){
   W=Math.max(1,Math.floor(r.width)); H=Math.max(1,Math.floor(r.height));
   cv.width=W*dpr; cv.height=H*dpr;
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  draw();
+  scheduleDraw();
 }
 function fit(){
   const b=bbox(RP()), pad=64;
@@ -1430,7 +1453,7 @@ function zoomAt(f,px,py){
   const bx=wx(px),by=wy(py);
   view.scale=Math.max(.004,Math.min(3,view.scale*f));
   view.ox=px-bx*view.scale; view.oy=py-by*view.scale;
-  draw();
+  scheduleDraw();
 }
 const snapMM = () => parseFloat(S.snap)||0;
 function snapPt(p){
@@ -1476,7 +1499,7 @@ cv.addEventListener('mousemove', e=>{
   if(!drawState && !wallDrawState) return;
   drawCursor=[wx(e.offsetX),wy(e.offsetY)];
   wallDrawShift=e.shiftKey;
-  draw();
+  scheduleDraw();
 });
 
 /* ------------------------- drawing a freestanding wall ------------------------- */
@@ -1557,6 +1580,12 @@ function draw(){
   drawCustomOverlay();
   drawWallDrawOverlay();
   updateReadout(bad, openBad);
+}
+let drawPending=false;
+function scheduleDraw(){
+  if(drawPending) return;
+  drawPending=true;
+  requestAnimationFrame(()=>{ drawPending=false; draw(); });
 }
 function gridStep(){
   const imp = S.unit==='ftin'||S.unit==='in';
@@ -1953,14 +1982,14 @@ cv.addEventListener('pointermove', e=>{
 
   if(drag.mode==='pan'){
     view.ox=drag.ox+(px-drag.px); view.oy=drag.oy+(py-drag.py);
-    draw(); return;
+    scheduleDraw(); return;
   }
   if(drag.mode==='corner'){
     const P=RP(), was=P[drag.i].slice();
     const np = e.shiftKey ? snapCornerAxis(drag.i,pt) : (e.altKey?pt:snapPt(pt));
     P[drag.i]=np;
     if(!polySimple(P)) P[drag.i]=was; else clampOpenings();
-    draw(); renderRoomSel(); renderWalls(); return;
+    roomSig++; scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
   if(drag.mode==='wall'){
     const P=RP(), n=P.length, i=drag.i, w=wallOf(i);
@@ -1971,7 +2000,7 @@ cv.addEventListener('pointermove', e=>{
     P[(i+1)%n]=[b[0]+w.nrm[0]*k, b[1]+w.nrm[1]*k];
     if(!polySimple(P)){ P[i]=a; P[(i+1)%n]=b; }
     else { drag.last=pt; clampOpenings(); }
-    draw(); renderRoomSel(); renderWalls(); return;
+    roomSig++; scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
   if(drag.mode==='open'){
     const o=openOf(drag.id); if(!o) return;
@@ -1980,14 +2009,14 @@ cv.addEventListener('pointermove', e=>{
     const len=wallOf(near.i).len;
     o.width=Math.min(o.width,len);
     o.offset=Math.max(0,Math.min(near.t*len-o.width/2, len-o.width));
-    draw(); renderRoomSel(); renderOpen(); return;
+    roomSig++; scheduleDraw(); renderRoomSel(); renderOpen(); return;
   }
   if(drag.mode==='pillar'){
     const pl=pillarOf(drag.id); if(!pl) return;
     let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
     if(!e.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     pl.x=nx; pl.y=ny;
-    draw(); renderRoomSel(); renderWalls(); return;
+    roomSig++; scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
   if(drag.mode==='iwall'){
     const w=iwallOf(drag.id); if(!w) return;
@@ -1995,14 +2024,14 @@ cv.addEventListener('pointermove', e=>{
     if(!e.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     const ddx=nx-w.a[0], ddy=ny-w.a[1];
     w.a=[w.a[0]+ddx, w.a[1]+ddy]; w.b=[w.b[0]+ddx, w.b[1]+ddy];
-    draw(); renderRoomSel(); renderWalls(); return;
+    roomSig++; scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
   if(drag.mode==='iwall-end'){
     const w=iwallOf(drag.id); if(!w) return;
     const other = drag.end==='a' ? w.b : w.a;
     const raw = e.shiftKey ? axisLockFrom(other,pt) : pt;
     w[drag.end]=snapWallPoint(raw, drag.id, !e.altKey);
-    draw(); renderRoomSel(); renderWalls(); return;
+    roomSig++; scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
 
   const inst=instOf(drag.id); if(!inst) return;
@@ -2014,7 +2043,7 @@ cv.addEventListener('pointermove', e=>{
     const prev=inst.rot;
     inst.rot=norm360(deg);
     if(!drag.loose && !validate(inst,worldPoly(inst,it)).ok) inst.rot=prev;
-    draw(); renderSel(); return;
+    scheduleDraw(); renderSel(); return;
   }
   let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
   const g=snapMM();
@@ -2043,7 +2072,7 @@ cv.addEventListener('pointermove', e=>{
       if(t<1e-4){ inst.x=px0; inst.y=py0; flash(why); }
     }
   }
-  draw();
+  scheduleDraw();
 });
 function endDrag(e){
   if(drag&&drag.mode!=='pan'){
