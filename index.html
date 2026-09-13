@@ -955,21 +955,7 @@ function validate(inst,poly){
   if(c) return {ok:false, why:'Bumps into '+c};
   return {ok:true};
 }
-let conflictSetCache=null;
-function conflictSetSig(){
-  const l=L(), ps=l.placed;
-  let s=l.id+'|'+ps.length+'|'+roomSig;
-  for(const p of ps) s+='|'+p.id+','+p.x+','+p.y+','+(p.rot||0)+','+p.itemId;
-  return s;
-}
 function conflictSet(){
-  const sig=conflictSetSig();
-  if(conflictSetCache && conflictSetCache.sig===sig) return conflictSetCache.out;
-  const out=conflictSetCompute();
-  conflictSetCache={sig,out};
-  return out;
-}
-function conflictSetCompute(){
   const ps=L().placed, polys=[], bbs=[], out=new Set();
   const obs=obstaclePolys();
   for(const p of ps){
@@ -1033,6 +1019,18 @@ function openConflicts(){
   }
   return out;
 }
+/* conflictSet()/openConflicts() are both ~O(N^2) over placed items and run every
+   draw(). Cache them together against a cheap key — a per-layout revision bumped
+   by every commit/live-drag mutation, plus array lengths as a backstop — so a
+   redraw triggered by nothing but panning/zooming/hover reuses the last result. */
+let conflictsCache=null;
+function getConflicts(){
+  const l=L();
+  const key=l.id+':'+(l._rev||0)+':'+l.room.points.length+':'+l.placed.length;
+  if(conflictsCache && conflictsCache.key===key) return conflictsCache;
+  conflictsCache={key, bad:conflictSet(), openBad:openConflicts()};
+  return conflictsCache;
+}
 const isBad = inst => { const it=itemOf(inst.itemId); return it ? !validate(inst,worldPoly(inst,it)).ok : false; };
 /* while a piece is overlapping we let it move freely, but never off the floor */
 function centreInside(inst){
@@ -1095,9 +1093,9 @@ function commit(map,snapFn){
   h.idx=h.stack.length-1;
   updateHistButtons();
 }
-let roomSig=0;
-const commitRoom = () => { commit(roomHist,snapRoom); roomSig++; };
-const commitFurn = () => commit(furnHist,snapFurn);
+const bumpRev = () => { const l=L(); l._rev=(l._rev||0)+1; };
+const commitRoom = () => { commit(roomHist,snapRoom); bumpRev(); };
+const commitFurn = () => { commit(furnHist,snapFurn); bumpRev(); };
 function stepHist(map,snapFn,applyFn,dir){
   const h=histEntry(map,snapFn);
   const ni=h.idx+dir;
@@ -1106,11 +1104,11 @@ function stepHist(map,snapFn,applyFn,dir){
   updateHistButtons();
 }
 function applyRoomSnap(s){
-  L().room=s.room; L().openings=s.openings; roomSel=null; roomSig++;
+  L().room=s.room; L().openings=s.openings; roomSel=null; bumpRev();
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save();
 }
 function applyFurnSnap(s){
-  L().placed=s.placed; sel=null;
+  L().placed=s.placed; sel=null; bumpRev();
   renderInv(); renderSel(); draw(); save();
 }
 const undoRoom=()=>stepHist(roomHist,snapRoom,applyRoomSnap,-1);
@@ -1569,7 +1567,7 @@ function draw(){
   const blocked = S.showSwing ? blockedOpenings() : [];
   for(const o of L().openings) drawOpening(o, blocked);
 
-  const bad=conflictSet(), openBad=openConflicts();
+  const {bad,openBad}=getConflicts();
   ctx.globalAlpha = roomMode() ? .42 : 1;
   for(const p of L().placed) if(showOpenFor(p)) drawOpenRegion(p, openBad.has(p.id));
   for(const p of L().placed) drawItem(p, !roomMode()&&p.id===sel, bad.has(p.id));
@@ -1989,7 +1987,7 @@ cv.addEventListener('pointermove', e=>{
     const np = e.shiftKey ? snapCornerAxis(drag.i,pt) : (e.altKey?pt:snapPt(pt));
     P[drag.i]=np;
     if(!polySimple(P)) P[drag.i]=was; else clampOpenings();
-    roomSig++; scheduleDraw(); renderRoomSel(); renderWalls(); return;
+    bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
   if(drag.mode==='wall'){
     const P=RP(), n=P.length, i=drag.i, w=wallOf(i);
@@ -2000,7 +1998,7 @@ cv.addEventListener('pointermove', e=>{
     P[(i+1)%n]=[b[0]+w.nrm[0]*k, b[1]+w.nrm[1]*k];
     if(!polySimple(P)){ P[i]=a; P[(i+1)%n]=b; }
     else { drag.last=pt; clampOpenings(); }
-    roomSig++; scheduleDraw(); renderRoomSel(); renderWalls(); return;
+    bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
   if(drag.mode==='open'){
     const o=openOf(drag.id); if(!o) return;
@@ -2009,14 +2007,14 @@ cv.addEventListener('pointermove', e=>{
     const len=wallOf(near.i).len;
     o.width=Math.min(o.width,len);
     o.offset=Math.max(0,Math.min(near.t*len-o.width/2, len-o.width));
-    roomSig++; scheduleDraw(); renderRoomSel(); renderOpen(); return;
+    bumpRev(); scheduleDraw(); renderRoomSel(); renderOpen(); return;
   }
   if(drag.mode==='pillar'){
     const pl=pillarOf(drag.id); if(!pl) return;
     let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
     if(!e.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     pl.x=nx; pl.y=ny;
-    roomSig++; scheduleDraw(); renderRoomSel(); renderWalls(); return;
+    bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
   if(drag.mode==='iwall'){
     const w=iwallOf(drag.id); if(!w) return;
@@ -2024,14 +2022,14 @@ cv.addEventListener('pointermove', e=>{
     if(!e.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     const ddx=nx-w.a[0], ddy=ny-w.a[1];
     w.a=[w.a[0]+ddx, w.a[1]+ddy]; w.b=[w.b[0]+ddx, w.b[1]+ddy];
-    roomSig++; scheduleDraw(); renderRoomSel(); renderWalls(); return;
+    bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
   if(drag.mode==='iwall-end'){
     const w=iwallOf(drag.id); if(!w) return;
     const other = drag.end==='a' ? w.b : w.a;
     const raw = e.shiftKey ? axisLockFrom(other,pt) : pt;
     w[drag.end]=snapWallPoint(raw, drag.id, !e.altKey);
-    roomSig++; scheduleDraw(); renderRoomSel(); renderWalls(); return;
+    bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
 
   const inst=instOf(drag.id); if(!inst) return;
@@ -2043,7 +2041,7 @@ cv.addEventListener('pointermove', e=>{
     const prev=inst.rot;
     inst.rot=norm360(deg);
     if(!drag.loose && !validate(inst,worldPoly(inst,it)).ok) inst.rot=prev;
-    scheduleDraw(); renderSel(); return;
+    bumpRev(); scheduleDraw(); renderSel(); return;
   }
   let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
   const g=snapMM();
@@ -2072,7 +2070,7 @@ cv.addEventListener('pointermove', e=>{
       if(t<1e-4){ inst.x=px0; inst.y=py0; flash(why); }
     }
   }
-  scheduleDraw();
+  bumpRev(); scheduleDraw();
 });
 function endDrag(e){
   if(drag&&drag.mode!=='pan'){
@@ -3052,7 +3050,7 @@ function renderSel(){
   const inst=sel&&instOf(sel), it=inst&&itemOf(inst.itemId);
   if(!inst||!it){ box.innerHTML='<div class="empty">Nothing selected. Click a shape in the room.</div>'; return; }
   const b=bbox(worldPoly(inst,it)), rb=bbox(RP());
-  const openWhy = hasOpen(it) ? openConflicts().get(inst.id) : null;
+  const openWhy = hasOpen(it) ? getConflicts().openBad.get(inst.id) : null;
   box.innerHTML=`
     <div class="field"><span class="sw" style="background:${it.color}"></span><strong class="nm">${esc(it.name)}</strong></div>
     ${hasOpen(it)?`<div class="dim">Opens out to ${esc(openSizeLabel(it))}</div>`:''}
