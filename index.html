@@ -609,6 +609,7 @@ function idProblem(raw){
   if(v[0]==='/'||v[v.length-1]==='/') return "An id can't start or end with /";
   const parts=idParts(v);
   if(parts.some(x=>!x)) return "An id can't have an empty part between two slashes";
+  if(parts.some(x=>x==='..')) return "An id can't have .. as a part";
   if(parts.some(x=>!ID_SAFE.test(x))) return "Ids can use a–z A–Z 0–9 and ! - _ . * ' ( ) , with / between folders";
   return null;
 }
@@ -1542,7 +1543,8 @@ function draw(){
   drawWalls();
   drawIWalls();
   drawPillars();
-  for(const o of L().openings) drawOpening(o, S.showSwing ? blockedOpenings() : []);
+  const blocked = S.showSwing ? blockedOpenings() : [];
+  for(const o of L().openings) drawOpening(o, blocked);
 
   const bad=conflictSet(), openBad=openConflicts();
   ctx.globalAlpha = roomMode() ? .42 : 1;

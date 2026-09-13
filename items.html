@@ -281,6 +281,7 @@ function idProblem(raw){
   if(v[0]==='/'||v[v.length-1]==='/') return "An id can't start or end with /";
   const parts=idParts(v);
   if(parts.some(x=>!x)) return "An id can't have an empty part between two slashes";
+  if(parts.some(x=>x==='..')) return "An id can't have .. as a part";
   if(parts.some(x=>!ID_SAFE.test(x))) return "Ids can use a–z A–Z 0–9 and ! - _ . * ' ( ) , with / between folders";
   return null;
 }
@@ -621,7 +622,7 @@ function recomputeFolderSubtree(folderId){
 }
 function idSlug(s){
   const v=String(s||'').trim().replace(/[^A-Za-z0-9!\-_.*'()]+/g,'-').replace(/^-+|-+$/g,'');
-  return v||'x';
+  return (!v||v==='..')?'x':v;
 }
 function folderIdPrefix(folderId){
   return itemFolderPath(folderId).map(f=>idSlug(f.name)).join('/');
