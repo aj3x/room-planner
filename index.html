@@ -226,8 +226,12 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:11px;padding:14px 20px 50px}
 .tile{border:1px solid var(--line2);border-radius:8px;background:var(--paper);padding:0;cursor:pointer;display:flex;flex-direction:column;min-width:0;text-align:left;overflow:hidden;position:relative}
 .tile:hover{border-color:var(--accent);box-shadow:var(--shadow)}
-.tile .thumb{height:66px;background:var(--panel2);display:grid;place-items:center;overflow:hidden}
+.tile .thumb{height:66px;background:var(--panel2);display:grid;place-items:center;overflow:hidden;position:relative}
 .tile .thumb .ico{font-size:28px}
+.tile .addOverlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(20,20,20,.55);opacity:0;transition:opacity .15s;pointer-events:none}
+.tile:hover .addOverlay,.tile:focus-within .addOverlay{opacity:1;pointer-events:auto}
+.tile .addOverlay:hover{background:rgba(20,20,20,.75)}
+.tile .addOverlay .plus{color:#fff;font-size:24px;font-weight:700;line-height:1;pointer-events:none}
 .tile .body{padding:8px 9px 9px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .tile .nm{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tile .more{position:absolute;top:4px;right:4px;background:rgba(251,251,248,.9);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;line-height:1.4;color:var(--ink2)}
@@ -736,6 +740,7 @@ let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true,
          marketFolders:[],     // Marketplace tab folder tree, for ad hoc listings only
          marketListings:[],    // ad hoc listings: {id, name, parentId, kind:'file'|'link'|'paste', ...}
          marketSubs:[],        // subscribed remote marketplaces: {id, url, name, version, addedAt}
+         defaultMarketDismissed:false, // user removed the built-in default marketplace subscription; don't re-add it
          uiLib:{tab:'library', libFolderId:null, marketFolderId:null}};
 S.active = S.layouts[0].id;
 
@@ -1290,6 +1295,7 @@ function migrate(st){
   if(!Array.isArray(st.marketFolders)) st.marketFolders=[];
   if(!Array.isArray(st.marketListings)) st.marketListings=[];
   if(!Array.isArray(st.marketSubs)) st.marketSubs=[];
+  if(st.defaultMarketDismissed==null) st.defaultMarketDismissed=false;
   if(!st.uiLib || typeof st.uiLib!=='object') st.uiLib={tab:'library', libFolderId:null, marketFolderId:null};
   for(const it of st.inventory){
     if(it.folderId===undefined) it.folderId=null;
@@ -2296,6 +2302,8 @@ function place(itemId){
 
 /* ------------------------- panels ------------------------- */
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* strip diacritics so "a" also finds "ä", "café" also finds "cafe", etc. */
+function normSearch(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
 function renderAll(){
   renderTree(); renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
   renderInv(); renderSel(); renderSnap(); renderMode(); updateHistButtons(); draw();
@@ -3725,6 +3733,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     const done=migrate(st);
     if(!done){ flash("There was nothing in that file to import"); return; }
     S=done;
+    ensureDefaultMarket().then(()=>{ if(!isCanvasMode(S.mode)) renderLibAll(); });
     sel=null; roomSel=null;
     for(const k of Object.keys(roomHist)) delete roomHist[k];
     for(const k of Object.keys(furnHist)) delete furnHist[k];
@@ -3858,6 +3867,17 @@ function idSlug(s){
   return (!v||v==='..')?'x':v;
 }
 function folderIdPrefix(folderId){ return itemFolderPath(folderId).map(f=>idSlug(f.name)).join('/'); }
+/* find (or create) the itemFolder chain matching an id's own path segments, e.g.
+   "ikea/kallax/4x2" -> ikea > kallax, so an imported item lands where its id says it belongs. */
+function ensureItemFolderPath(parts){
+  let parentId=null;
+  for(const name of parts){
+    let f=childItemFolders(parentId).find(x=>x.name===name);
+    if(!f){ f={id:uid(), name, parentId, tags:[]}; S.itemFolders.push(f); }
+    parentId=f.id;
+  }
+  return parentId;
+}
 /* keep an item's id filed under its folder's path, S3-key style */
 function rehomeItemId(item, folderId){
   const leaf=idLeaf(item.id);
@@ -3929,6 +3949,16 @@ async function fetchJSON(url, timeoutMs){
 const resolveURL = (base,rel) => new URL(rel, base).href;
 const marketIndexCache=new Map();   // subId -> [{id,name,tags}]
 const marketItemCache=new Map();    // subId -> Map(itemId -> item)
+const DEFAULT_MARKET_URL='https://raw.githubusercontent.com/aj3x/room-planner/main/marketplace/market.json';
+async function ensureDefaultMarket(){
+  if(S.defaultMarketDismissed) return;
+  if(S.marketSubs.some(s=>s.url===DEFAULT_MARKET_URL)) return;
+  try{
+    const sub=await subscribeMarket(DEFAULT_MARKET_URL);
+    sub.isDefault=true;
+    save();
+  }catch(e){ /* offline, or unreachable right now — try again next launch */ }
+}
 async function subscribeMarket(url){
   let manifest;
   try{ manifest=await fetchJSON(url); }
@@ -3965,6 +3995,7 @@ function removeMarketSub(sub){
   S.marketSubs=S.marketSubs.filter(s=>s.id!==sub.id);
   marketIndexCache.delete(sub.id);
   marketItemCache.delete(sub.id);
+  if(sub.isDefault||sub.url===DEFAULT_MARKET_URL) S.defaultMarketDismissed=true;
   save();
 }
 async function fetchMarketItem(sub, id){
@@ -4011,7 +4042,10 @@ function addMarketItemToInventory(raw){
     return;
   }
   const sameName=S.inventory.find(x=>x.name===incoming.name);
-  incoming.folderId=null; incoming.manualTags=(incoming.tags||[]).slice();
+  const parts=idParts(incoming.id); parts.pop();   // drop the leaf, keep the folder path
+  incoming.folderId=parts.length ? ensureItemFolderPath(parts) : null;
+  incoming.manualTags=(incoming.tags||[]).slice();
+  applyTags(incoming);
   S.inventory.push(incoming);
   save(); renderLibAll();
   libFlash(sameName ? 'Added — you also have another "'+incoming.name+'" under a different id' : 'Added to your library');
@@ -4642,24 +4676,28 @@ function exportLibraryDialog(){
     ()=>pickerMount('xLibItems'));
 }
 
-/* ------------------------- library search across every folder ------------------------- */
+/* ------------------------- search, scoped to the folder currently being browsed ------------------------- */
 function renderLibSearchResults(box){
-  const q=$('searchBox').value.trim().toLowerCase();
+  const qRaw=$('searchBox').value.trim();
+  const nq=normSearch(qRaw);
   if(nav.tab==='library'){
-    const hits=S.inventory.filter(it=>it.name.toLowerCase().includes(q) || (it.tags||[]).some(t=>t.toLowerCase().includes(q)));
-    let html=`<div class="crumbs"><button data-crumb="">Library</button><span class="sep">/</span><button>Search: "${esc($('searchBox').value.trim())}"</button></div>`;
+    const ids=itemFolderSubtreeIds(nav.libFolderId);
+    const scope=S.inventory.filter(it=>ids.has(it.folderId||null));
+    const hits=scope.filter(it=>normSearch(it.name).includes(nq) || (it.tags||[]).some(t=>normSearch(t).includes(nq)));
+    let html=crumbsHTML('library', nav.libFolderId).replace('</div>', `<span class="sep">/</span><button>Search: "${esc(qRaw)}"</button></div>`);
     html += hits.length
       ? `<div class="grid">${hits.map(itemTile).join('')}</div>`
-      : `<div class="grid"><div class="empty" style="grid-column:1/-1">Nothing matches "${esc(q)}".</div></div>`;
+      : `<div class="grid"><div class="empty" style="grid-column:1/-1">Nothing matches "${esc(qRaw)}" here.</div></div>`;
     box.innerHTML=html;
     bindCrumbs(box,'library');
     bindLibGrid(box,'library');
   } else {
-    let html=`<div class="crumbs"><button data-crumb="">Listings</button><span class="sep">/</span><button>Search: "${esc($('searchBox').value.trim())}"</button></div>`;
-    const hits=S.marketListings.filter(l=>l.name.toLowerCase().includes(q));
+    const {listings}=adhocFolderContents(nav.marketFolderId);
+    const hits=listings.filter(l=>normSearch(l.name).includes(nq));
+    let html=crumbsHTML('market', nav.marketFolderId).replace('</div>', `<span class="sep">/</span><button>Search: "${esc(qRaw)}"</button></div>`);
     html += hits.length
       ? `<div class="grid">${hits.map(listingTile).join('')}</div>`
-      : `<div class="grid"><div class="empty" style="grid-column:1/-1">Nothing matches "${esc(q)}".</div></div>`;
+      : `<div class="grid"><div class="empty" style="grid-column:1/-1">Nothing matches "${esc(qRaw)}" here.</div></div>`;
     box.innerHTML=html;
     bindCrumbs(box,'market');
     bindLibGrid(box,'market');
@@ -4792,12 +4830,14 @@ function renderMarketSub(box, sub){
     for(const p of parts){ acc=acc?acc+'/'+p:p; html+=`<span class="sep">/</span><button data-mcrumb="${esc(acc)}">${esc(p)}</button>`; }
   }
   html+='</div>';
-  const allTagsHere=[...new Set(items.flatMap(it=>it.tags))].sort();
+  // scope search/filter to the folder currently being browsed, not the whole marketplace
+  const scoped=nav.subPath ? items.filter(it=>it.id===nav.subPath||it.id.startsWith(nav.subPath+'/')) : items;
+  const allTagsHere=[...new Set(scoped.flatMap(it=>it.tags))].sort();
   if(allTagsHere.length) html+=`<div class="chips" style="padding:10px 20px 0">${allTagsHere.slice(0,20).map(t=>
     `<button type="button" class="tagchip" data-mtag="${esc(t)}" aria-pressed="${(nav.marketTagFilter===t)}">${esc(t)}</button>`).join('')}</div>`;
   let matches;
-  if(q){ matches=items.filter(it=>it.name.toLowerCase().includes(q)||it.id.toLowerCase().includes(q)||it.tags.some(t=>t.toLowerCase().includes(q))); }
-  else if(nav.marketTagFilter){ matches=items.filter(it=>it.tags.includes(nav.marketTagFilter)); }
+  if(q){ const nq=normSearch(q); matches=scoped.filter(it=>normSearch(it.name).includes(nq)||normSearch(it.id).includes(nq)||it.tags.some(t=>normSearch(t).includes(nq))); }
+  else if(nav.marketTagFilter){ matches=scoped.filter(it=>it.tags.includes(nav.marketTagFilter)); }
   if(matches){
     html+= matches.length ? `<div class="grid">${matches.map(marketItemTile).join('')}</div>`
       : `<div class="grid"><div class="empty" style="grid-column:1/-1">No matches.</div></div>`;
@@ -4819,10 +4859,15 @@ function renderMarketSub(box, sub){
   box.querySelectorAll('[data-mtag]').forEach(b=>b.addEventListener('click', ()=>{
     nav.marketTagFilter = nav.marketTagFilter===b.dataset.mtag ? null : b.dataset.mtag; renderLibContent();
   }));
-  box.querySelectorAll('[data-mitemopen]').forEach(t=>t.addEventListener('click', e=>{
-    if(e.target.closest('[data-add]')) return;
-    nav.marketSelItemId = t.dataset.mitemopen; renderLibContent();
-  }));
+  box.querySelectorAll('[data-mitemopen]').forEach(t=>{
+    t.addEventListener('click', e=>{
+      if(e.target.closest('[data-add]')) return;
+      nav.marketSelItemId = t.dataset.mitemopen; renderLibContent();
+    });
+    t.addEventListener('keydown', e=>{
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); nav.marketSelItemId = t.dataset.mitemopen; renderLibContent(); }
+    });
+  });
   box.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click', e=>{
     e.stopPropagation();
     fetchMarketItem(sub, b.dataset.add).then(it=>addMarketItemToInventory(it)).catch(err=>libFlash(err.message,true));
@@ -4830,12 +4875,14 @@ function renderMarketSub(box, sub){
   if(nav.marketSelItemId) renderMarketItemPreview(box, sub, nav.marketSelItemId);
 }
 function marketItemTile(it){
-  return `<button type="button" class="tile" data-mitemopen="${esc(it.id)}">
-    <div class="thumb"><span class="ico">\u{1F4E6}</span></div>
+  return `<div class="tile" data-mitemopen="${esc(it.id)}" role="button" tabindex="0">
+    <div class="thumb"><span class="ico">\u{1F4E6}</span>
+      <div class="addOverlay" data-add="${esc(it.id)}" title="Add to library" aria-label="Add “${esc(it.name)}” to library"><span class="plus">+</span></div>
+    </div>
     <div class="body"><div class="nm" title="${esc(it.name)}">${esc(it.name)}</div>
       <div class="dim">${it.tags.slice(0,2).map(esc).join(', ')}</div>
-      <button class="btn sm" data-add="${esc(it.id)}" style="margin-top:2px">Add to library</button></div>
-  </button>`;
+    </div>
+  </div>`;
 }
 function renderMarketItemPreview(box, sub, id){
   let host=box.querySelector('#marketPreview');
@@ -4902,9 +4949,11 @@ function renderAdhocFolder(box, folderId, standalone){
   } else {
     html+=`<div class="grid">${subs.map(adhocFolderTile).join('')}${listings.map(listingTile).join('')}</div>`;
   }
-  if(standalone) box.innerHTML=html; else box.innerHTML+=html;
-  bindCrumbs(box,'market');
-  bindLibGrid(box,'market');
+  let target=box;
+  if(standalone){ box.innerHTML=html; }
+  else { target=document.createElement('div'); target.innerHTML=html; box.appendChild(target); }
+  bindCrumbs(target,'market');
+  bindLibGrid(target,'market');
 }
 function listingMenu(id, anchor){
   const l=S.marketListings.find(x=>x.id===id); if(!l) return;
@@ -5044,14 +5093,16 @@ function renderListingDetail(box, id){
 /* ------------------------- main content router ------------------------- */
 function renderLibContent(){
   const box=$('libContent');
-  if(nav.searching){ renderLibSearchResults(box); return; }
-  if(nav.tab==='library'){ renderLibraryFolder(box, nav.libFolderId); return; }
-  if(nav.marketSelListingId){ renderListingDetail(box, nav.marketSelListingId); return; }
-  if(nav.marketSubId){
+  // a marketplace subscription owns search/filter within itself (scoped to the folder you're
+  // browsing there), so route to it before the generic search view even while nav.searching is set
+  if(nav.tab==='market' && nav.marketSubId){
     const sub=S.marketSubs.find(s=>s.id===nav.marketSubId);
     if(sub){ renderMarketSub(box, sub); return; }
     nav.marketSubId=null;
   }
+  if(nav.searching){ renderLibSearchResults(box); return; }
+  if(nav.tab==='library'){ renderLibraryFolder(box, nav.libFolderId); return; }
+  if(nav.marketSelListingId){ renderListingDetail(box, nav.marketSelListingId); return; }
   if(nav.marketFolderId!=null){ renderAdhocFolder(box, nav.marketFolderId, true); return; }
   renderMarketTop(box);
   renderAdhocFolder(box, null);
@@ -5089,6 +5140,7 @@ window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
   nav.marketFolderId = marketFolderOf(S.uiLib.marketFolderId) ? S.uiLib.marketFolderId : null;
   renderSnap(); applySections(); renderMode(); applyLayoutMode(); renderAll(); resize(); fit();
   if(!isCanvasMode(S.mode)) renderLibAll();
+  ensureDefaultMarket().then(()=>{ if(!isCanvasMode(S.mode)) renderLibAll(); });
 })();
 </script>
 </body>
