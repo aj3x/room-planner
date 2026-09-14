@@ -287,6 +287,12 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 .toast.warn{background:var(--danger);color:var(--on-accent)}
 #drawHint:not([hidden]) ~ #flash{top:64px}
+.island .btn.quiet[aria-pressed=true]{background:var(--surface-3);border-color:transparent;color:var(--ink);font-weight:600}
+#measureBar{left:12px;top:56px;flex-wrap:wrap;gap:4px 8px;max-width:min(560px,calc(100% - 24px));padding:4px 4px 4px 12px;font-size:var(--fs-sm);line-height:16px;color:var(--ink-2)}
+#measureBar b{color:var(--ink);font-weight:600}
+#measureBar .mb-msg{flex:1 1 180px;padding-block:6px}
+#measureBar .mb-acts{display:flex;gap:4px;margin-left:auto}
+canvas.measuring{cursor:crosshair}
 
 /* ---------------- modal (plain div: <dialog>/<form> are blocked in sandboxed frames) ---------------- */
 #modal{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:center;padding:16px;z-index:50;animation:fade var(--dur) var(--ease)}
@@ -475,6 +481,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
     <symbol id="i-fit" viewBox="0 0 16 16"><path d="M2.5 5.5v-3h3M10.5 2.5h3v3M13.5 10.5v3h-3M5.5 13.5h-3v-3"/></symbol>
     <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.25"/><path d="m10.25 10.25 3.25 3.25"/></symbol>
     <symbol id="i-close" viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></symbol>
+    <symbol id="i-ruler" viewBox="0 0 16 16"><path d="M1.75 10.5 10.5 1.75l3.75 3.75-8.75 8.75z"/><path d="m3.95 8.3 1.3 1.3M6.13 6.13l2 2M8.3 3.95l1.3 1.3"/></symbol>
     <symbol id="i-plan" viewBox="0 0 16 16"><path d="M2 2h12v12H2z"/><path d="M2 8h5v6M10 2v4h4"/></symbol>
   </defs>
 </svg>
@@ -565,7 +572,10 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
           <button type="button" data-mode="room" aria-pressed="false" title="Edit walls, doors and windows">Room</button>
           <button type="button" data-mode="furniture" aria-pressed="true" title="Place and move items">Furniture</button>
         </div>
+        <span class="sep" aria-hidden="true"></span>
+        <button type="button" class="btn quiet" id="btnMeasure" aria-pressed="false" title="Measure the distance between two things (M)"><svg class="i" aria-hidden="true"><use href="#i-ruler"/></svg>Measure</button>
       </div>
+      <div class="island" id="measureBar" hidden></div>
       <div class="island" id="ctlHist">
         <button class="btn quiet icon" id="btnUndo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg class="i"><use href="#i-undo"/></svg></button>
         <button class="btn quiet icon" id="btnRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg class="i"><use href="#i-redo"/></svg></button>
@@ -631,6 +641,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
           <label class="check"><input type="checkbox" id="showSwing" checked>Door clearance</label>
           <label class="check"><input type="checkbox" id="showOpen" checked>Items opened out</label>
           <label class="check"><input type="checkbox" id="showWalk">Walk paths</label>
+          <label class="check"><input type="checkbox" id="showMeasure" checked>Measurements</label>
         </section>
       </div>
     </div>
@@ -913,9 +924,9 @@ const rectPts = (w,d) => [[0,0],[w,0],[w,d],[0,d]];
 function blankLayout(name,folderId){
   return {id:uid(), name:name||'My room', folderId:folderId||null,
     room:{points:rectPts(4270,3660), wall:114, floor:'#f5f3ee', trimOn:false, trim:19, pillars:[], iwalls:[]},
-    openings:[], placed:[]};
+    openings:[], placed:[], measures:[]};
 }
-let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true, showWalk:false, mode:'furniture',
+let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true, showWalk:false, showMeasure:true, mode:'furniture',
          planMode:'furniture', // the Room/Furniture mode to go back to when returning to the Plan screen
          inventory:[], layouts:[blankLayout()], active:null,
          folders:[],          // {id, name, parentId(null=root), tags:[...]}
@@ -1013,6 +1024,7 @@ function folderDescendant(id,parentId){
    switching between rooms in the SAME folder leaves whatever filter the person set alone */
 function activateLayout(id){
   S.active=id; sel=null; roomSel=null;
+  resetMeasureState();
   seedHistFor();
   const fid = L() ? (L().folderId||null) : null;
   if(fid !== S.lastFolderId){ S.tagFilter = (folderOf(fid)?.tags||[]).slice(); S.untaggedOnly=false; }
@@ -1880,8 +1892,30 @@ function normLayout(l){
   for(const o of l.openings) o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
   l.placed = Array.isArray(l.placed) ? l.placed.filter(p=>p&&p.itemId) : [];
   for(const p of l.placed) if(!p.id) p.id=uid();
+  if(!Array.isArray(l.measures)) l.measures=[];
+  pruneMeasures(l);
   if(l.folderId===undefined) l.folderId=null;
   return l;
+}
+/* a measurement's ends point at things by id (a room wall by its index); drop any whose
+   end is malformed or no longer exists. While editing, a missing end is only skipped when
+   drawing, so undoing the removal of an item brings its measurements back with it. */
+function pruneMeasures(l){
+  const ids={item:l.placed, open:l.openings, pillar:l.room.pillars, iwall:l.room.iwalls};
+  const has={}; for(const k in ids) has[k]=new Set(ids[k].map(x=>x.id));
+  const ok = a => !!a && typeof a==='object' &&
+    (a.part==='whole' || ((a.part==='side'||a.part==='corner') && Number.isInteger(a.n) && a.n>=0)) &&
+    (a.k==='wall' ? Number.isInteger(a.id) && a.id>=0 && a.id<l.room.points.length : !!has[a.k] && has[a.k].has(a.id));
+  l.measures = l.measures.filter(m=>m && ok(m.a) && ok(m.b));
+  for(const m of l.measures) m.id = m.id||uid();
+}
+/* things in a copied or imported room get new ids; `map` is {kind: {oldId: newId}} */
+function remapMeasures(l, map){
+  for(const m of l.measures) for(const a of [m.a,m.b]){
+    const n = map[a.k] && map[a.k][a.id];
+    if(n) a.id=n;
+  }
+  pruneMeasures(l);
 }
 function normItem(it){
   it.id = it.id || uid();
@@ -1903,6 +1937,7 @@ function migrate(st){
   if(typeof st.invSearch!=='string') st.invSearch='';
   if(st.onlyAvailable==null) st.onlyAvailable=false;
   if(st.showOpen==null) st.showOpen=true;
+  if(st.showMeasure==null) st.showMeasure=true;
   if(!INV_SCOPES[st.invScope]) st.invScope='project';
   if(st.leftOpen==null) st.leftOpen=true;
   if(st.rightOpen==null) st.rightOpen=true;
@@ -2210,6 +2245,7 @@ function axisLockFrom(a,pt){
 /* ------------------------- custom room drawing (walls may cross) ------------------------- */
 let drawState=null, drawCursor=null;
 function startCustomDraw(){
+  if(measureOn) setMeasure(false);
   if(!roomMode()) setMode('room');
   drawState={pts:[]}; drawCursor=null;
   roomSel=null; renderRoomSel();
@@ -2247,6 +2283,7 @@ cv.addEventListener('mousemove', e=>{
 let wallDrawState=null, wallDrawShift=false;
 function startWallDraw(){
   if(drawState) cancelCustomDraw();
+  if(measureOn) setMeasure(false);
   if(!roomMode()) setMode('room');
   wallDrawState={a:null}; drawCursor=null;
   roomSel=null; renderRoomSel();
@@ -2341,6 +2378,7 @@ function draw(){
   drawWallLabels();
   // editing tools always sit above everything else on the plan
   if(roomMode()) drawHandles(); else drawItemTools();
+  drawMeasures();
   drawCustomOverlay();
   drawWallDrawOverlay();
   updateReadout(bad, openBad);
@@ -2645,6 +2683,297 @@ function updateReadout(bad,openBad){
   el.innerHTML=html;
 }
 
+/* ------------------------- measuring -------------------------
+   A measurement joins two anchors and shows the shortest distance between them.
+   An anchor is part of something on the plan — an item, pillar, interior wall, door or
+   window, or a room wall:
+     corner  a point;
+     side    one edge of a footprint;
+     whole   the footprint itself (solid, so anything overlapping it is 0 away), or for a
+             door, window or room wall the span of its face. Picked at its centre point.
+   Stored as l.measures = [{id, a, b}], anchor = {k, id, part, n}; k is the kind, id the
+   thing's id (a room wall's index), n which corner or side. Ends are looked up live, so a
+   measurement follows what it joins as things move. It is a note on the plan, not part of
+   the room or the furniture, so it has no undo history of its own. */
+let measureOn=false,     // the Measure tool is active: clicks pick anchors instead of editing
+    measureStart=null,   // the first anchor, once picked
+    measureHover=null,   // the anchor under the pointer
+    measureHoverId=null, // the measurement under the pointer
+    measureSel=null,     // the selected measurement's id
+    measureCursor=null,  // world point under the pointer, for the preview line
+    measureBoxes=[];     // where each measurement was last drawn, in screen px, for hit-testing
+const measuresOf = () => L().measures || (L().measures=[]);
+const anchorKey = a => a ? [a.k,a.id,a.part,a.n==null?'':a.n].join(':') : '';
+
+/* everything that can be measured, top-most first, each with the anchors it offers */
+function measureObjs(){
+  const l=L(), r=l.room, out=[];
+  const solid = (k,id,poly,center,angular) => ({k, id, center, whole:{pts:poly, area:true},
+    corners: angular ? poly : [],
+    sides: angular ? poly.map((p,i)=>[p,poly[(i+1)%poly.length]]) : []});
+  for(let pass=0;pass<2;pass++) for(let i=l.placed.length-1;i>=0;i--){
+    const p=l.placed[i], it=itemOf(p.itemId);
+    if(!it || (pass===0)===!!it.passThrough) continue;
+    out.push(solid('item', p.id, worldPoly(p,it), [p.x,p.y], it.shape.type!=='ellipse'));
+  }
+  for(const pl of r.pillars) out.push(solid('pillar', pl.id, worldPoly(pl,pl), [pl.x,pl.y], pl.shape.type!=='ellipse'));
+  for(const w of r.iwalls) out.push(solid('iwall', w.id, iwallPoly(w), iwallGeom(w).mid, true));
+  for(const o of l.openings){
+    const g=openGeom(o);
+    out.push({k:'open', id:o.id, center:g.mid, whole:{pts:[g.p0,g.p1]}, corners:[g.p0,g.p1], sides:[]});
+  }
+  for(let i=0;i<r.points.length;i++){
+    const w=wallOf(i);
+    out.push({k:'wall', id:i, center:w.mid, whole:{pts:[w.a,w.b]}, corners:[w.a,w.b], sides:[], band:r.wall});
+  }
+  return out;
+}
+const objOfAnchor = (a,objs) => objs.find(o=>o.k===a.k && o.id===a.id);
+/* an anchor's shape: {pts, area} — one point, a segment, or a solid polygon */
+function anchorGeom(a,objs){
+  const o=objOfAnchor(a,objs);
+  if(!o) return null;
+  if(a.part==='corner') return o.corners[a.n] ? {pts:[o.corners[a.n]]} : null;
+  if(a.part==='side') return o.sides[a.n] ? {pts:o.sides[a.n]} : null;
+  return o.whole;
+}
+function segCross(a,b,c,d){
+  const rx=b[0]-a[0], ry=b[1]-a[1], qx=d[0]-c[0], qy=d[1]-c[1], den=rx*qy-ry*qx;
+  if(Math.abs(den)<1e-9) return null;
+  const t=((c[0]-a[0])*qy-(c[1]-a[1])*qx)/den, u=((c[0]-a[0])*ry-(c[1]-a[1])*rx)/den;
+  return t>=0&&t<=1&&u>=0&&u<=1 ? [a[0]+rx*t, a[1]+ry*t] : null;
+}
+/* the closest pair of points between two anchor shapes: {d, p, q} */
+function closestBetween(A,B){
+  for(const [X,Y] of [[A,B],[B,A]]){
+    if(X.area) for(const p of Y.pts) if(pointInPoly(p,X.pts)) return {d:0, p, q:p};
+  }
+  const edges = g => {
+    const P=g.pts, n=P.length;
+    if(n===1) return [[P[0],P[0]]];
+    const out=[];
+    for(let i=0;i<(g.area?n:n-1);i++) out.push([P[i],P[(i+1)%n]]);
+    return out;
+  };
+  const foot = (p,a,b) => { const t=ptSegDist(p,a,b).t; return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]; };
+  let best={d:Infinity, p:A.pts[0], q:B.pts[0]};
+  const consider = (p,q) => { const d=Math.hypot(p[0]-q[0],p[1]-q[1]); if(d<best.d) best={d,p,q}; };
+  for(const [a0,a1] of edges(A)) for(const [b0,b1] of edges(B)){
+    const x = a0!==a1 && b0!==b1 && segCross(a0,a1,b0,b1);
+    if(x) return {d:0, p:x, q:x};
+    // two segments that don't cross are closest at an end of one of them
+    consider(a0,foot(a0,b0,b1)); consider(a1,foot(a1,b0,b1));
+    consider(foot(b0,a0,a1),b0); consider(foot(b1,a0,a1),b1);
+  }
+  return best;
+}
+
+/* the anchor under a screen point: a corner or centre point beats a side, which beats the
+   inside of a footprint (or the band of a wall, door or window) */
+function measurePick(px,py){
+  const pt=[wx(px),wy(py)], objs=measureObjs();
+  let best=null;
+  const offer = (tier,d,a) => { if(!best || tier<best.tier || (tier===best.tier && d<best.d)) best={tier,d,a}; };
+  for(const o of objs){
+    o.corners.forEach((c,n)=>{ const d=Math.hypot(px-sx(c[0]),py-sy(c[1])); if(d<10) offer(0,d,{k:o.k,id:o.id,part:'corner',n}); });
+    const dc=Math.hypot(px-sx(o.center[0]),py-sy(o.center[1]));
+    if(dc<9) offer(0,dc,{k:o.k,id:o.id,part:'whole'});
+    o.sides.forEach((s,n)=>{ const d=ptSegDist(pt,s[0],s[1]).d*view.scale; if(d<7) offer(1,d,{k:o.k,id:o.id,part:'side',n}); });
+  }
+  if(best) return best.a;
+  for(const o of objs){
+    const on = o.whole.area ? pointInPoly(pt,o.whole.pts)
+      : ptSegDist(pt,o.whole.pts[0],o.whole.pts[1]).d*view.scale < Math.max(8,(o.band||0)*view.scale+2);
+    if(on) return {k:o.k, id:o.id, part:'whole'};
+  }
+  return null;
+}
+/* a drawn measurement under a screen point: its label, or with `lines` its line too */
+function pickMeasure(px,py,lines){
+  for(let i=measureBoxes.length-1;i>=0;i--){
+    const b=measureBoxes[i];
+    if(px>=b.x-2 && px<=b.x+b.w+2 && py>=b.y-2 && py<=b.y+b.h+2) return b.id;
+    if(lines && ptSegDist([px,py],b.p,b.q).d<6) return b.id;
+  }
+  return null;
+}
+/* what a click would act on. A label wins over the anchors beneath it, but once the first
+   end is down every click is for the second end. */
+function measureTargetAt(px,py){
+  if(!measureStart){ const id=pickMeasure(px,py,false); if(id) return {id}; }
+  const a=measurePick(px,py);
+  if(a) return {a};
+  if(!measureStart){ const id=pickMeasure(px,py,true); if(id) return {id}; }
+  return null;
+}
+
+function drawMeasurePoint(p,on,C,square){
+  const x=sx(p[0]), y=sy(p[1]);
+  ctx.beginPath();
+  if(square) ctx.rect(x-4,y-4,8,8); else ctx.arc(x,y,4.5,0,Math.PI*2);
+  ctx.fillStyle = on?C.accent:C.surface; ctx.fill();
+  ctx.lineWidth=2; ctx.strokeStyle=C.accent; ctx.stroke();
+}
+function strokeWhole(o){
+  if(o.whole.area) pathPoly(o.whole.pts);
+  else { ctx.beginPath(); ctx.moveTo(sx(o.whole.pts[0][0]),sy(o.whole.pts[0][1])); ctx.lineTo(sx(o.whole.pts[1][0]),sy(o.whole.pts[1][1])); }
+  ctx.stroke();
+}
+/* one anchor, marked in accent */
+function drawAnchorPart(a,objs,C){
+  const o=objOfAnchor(a,objs);
+  if(!o) return;
+  ctx.save(); ctx.strokeStyle=C.accent; ctx.lineCap='round'; ctx.lineJoin='round';
+  if(a.part==='corner'){ if(o.corners[a.n]) drawMeasurePoint(o.corners[a.n],true,C,true); }
+  else if(a.part==='side'){
+    const s=o.sides[a.n];
+    if(s){ ctx.beginPath(); ctx.moveTo(sx(s[0][0]),sy(s[0][1])); ctx.lineTo(sx(s[1][0]),sy(s[1][1])); ctx.lineWidth=3.5; ctx.stroke(); }
+  } else {
+    ctx.lineWidth = o.whole.area?2:3.5; strokeWhole(o);
+    drawMeasurePoint(o.center,true,C,false);
+  }
+  ctx.restore();
+}
+/* the thing under the pointer: every anchor it offers, with the one a click would take filled in */
+function drawAnchorChoices(a,objs,C){
+  const o=objOfAnchor(a,objs);
+  if(!o) return;
+  ctx.save();
+  ctx.strokeStyle=C.accent; ctx.lineWidth=1; strokeWhole(o);
+  for(const c of o.corners) drawMeasurePoint(c,false,C,true);
+  drawMeasurePoint(o.center,false,C,false);
+  ctx.restore();
+  drawAnchorPart(a,objs,C);
+}
+/* a dimension line with end ticks and its length on a label; returns where it was drawn */
+function drawDimension(r,color,C,dashed){
+  const p=[sx(r.p[0]),sy(r.p[1])], q=[sx(r.q[0]),sy(r.q[1])];
+  const len=Math.hypot(q[0]-p[0],q[1]-p[1]);
+  const u = len>1 ? [(q[0]-p[0])/len,(q[1]-p[1])/len] : [1,0], n=[-u[1],u[0]];
+  ctx.save(); ctx.lineCap='round';
+  ctx.beginPath();
+  if(len>1){
+    ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]);
+    for(const e of [p,q]){ ctx.moveTo(e[0]-n[0]*5,e[1]-n[1]*5); ctx.lineTo(e[0]+n[0]*5,e[1]+n[1]*5); }
+  } else ctx.arc(p[0],p[1],4,0,Math.PI*2);
+  // a surface halo under the line, so it reads on the floor, on furniture and on the stage
+  ctx.lineWidth=4; ctx.strokeStyle=C.surface; ctx.stroke();
+  if(dashed) ctx.setLineDash([5,4]);
+  ctx.lineWidth=1.5; ctx.strokeStyle=color; ctx.stroke();
+  ctx.setLineDash([]);
+  const txt = r.d<0.5 ? 'Touching' : fmtLen(r.d,S.unit);
+  ctx.font='600 11px ui-sans-serif,-apple-system,system-ui,sans-serif';
+  const w=ctx.measureText(txt).width+12, h=20;
+  let cx=(p[0]+q[0])/2, cy=(p[1]+q[1])/2;
+  // a line shorter than its label would disappear under it, so the label steps off to one side
+  if(len<w+16){ const k=(n[1]>0?-1:1)*(len>1?14:18); cx+=n[0]*k; cy+=n[1]*k; }
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(cx-w/2,cy-h/2,w,h,h/2); else ctx.rect(cx-w/2,cy-h/2,w,h);
+  ctx.fillStyle=C.surface; ctx.globalAlpha=.94; ctx.fill(); ctx.globalAlpha=1;
+  ctx.fillStyle=color; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(txt,cx,cy);
+  ctx.restore();
+  return {p,q,x:cx-w/2,y:cy-h/2,w,h};
+}
+function drawMeasures(){
+  measureBoxes=[];
+  if(!S.showMeasure && !measureOn) return;
+  const C=PAL(), objs=measureObjs();
+  if(measureOn){
+    if(measureHover) drawAnchorChoices(measureHover,objs,C);
+    if(measureStart) drawAnchorPart(measureStart,objs,C);
+  }
+  for(const m of measuresOf()){
+    const A=anchorGeom(m.a,objs), B=anchorGeom(m.b,objs);
+    if(!A||!B) continue;
+    const on = measureOn && (m.id===measureSel || m.id===measureHoverId);
+    if(on){ drawAnchorPart(m.a,objs,C); drawAnchorPart(m.b,objs,C); }
+    measureBoxes.push(Object.assign({id:m.id}, drawDimension(closestBetween(A,B), on?C.accent:C.ink, C, false)));
+  }
+  if(measureOn && measureStart){
+    // the measurement being made: to the anchor under the pointer, or to the pointer itself
+    const A=anchorGeom(measureStart,objs);
+    const B = measureHover && anchorKey(measureHover)!==anchorKey(measureStart) ? anchorGeom(measureHover,objs)
+      : measureCursor ? {pts:[measureCursor]} : null;
+    if(A&&B) drawDimension(closestBetween(A,B), C.accent, C, true);
+  }
+}
+function liveMeasures(){
+  const objs=measureObjs();
+  return measuresOf().filter(m=>anchorGeom(m.a,objs)&&anchorGeom(m.b,objs));
+}
+function renderMeasureBar(){
+  const bar=$('measureBar');
+  $('btnMeasure').setAttribute('aria-pressed', String(measureOn));
+  cv.classList.toggle('measuring', measureOn);
+  bar.hidden=!measureOn;
+  if(!measureOn){ cv.style.cursor=''; return; }
+  const msg = measureStart ? 'Now pick the second one. Esc starts over.'
+    : measureSel ? 'Press Delete to remove this measurement.'
+    : 'Pick a corner, side or centre of an item, door or wall.';
+  const acts = [];
+  if(measureSel) acts.push('<button type="button" class="btn quiet sm danger" data-act="remove">Remove</button>');
+  else if(!measureStart && liveMeasures().length) acts.push('<button type="button" class="btn quiet sm" data-act="clear">Clear all…</button>');
+  acts.push('<button type="button" class="btn sm" data-act="done">Done</button>');
+  bar.innerHTML=`<span class="mb-msg"><b>Measuring.</b> ${msg}</span><span class="mb-acts">${acts.join('')}</span>`;
+}
+function setMeasure(on){
+  if(on){
+    if(!isCanvasMode(S.mode)) return;
+    if(drawState) cancelCustomDraw();
+    if(wallDrawState) cancelWallDraw();
+    // a click now measures, so nothing stays selected for editing
+    sel=null; roomSel=null; renderSel(); renderRoomSel(); renderWalls(); renderOpen();
+  }
+  measureOn=!!on;
+  resetMeasureState();
+  renderMeasureBar(); draw();
+}
+function resetMeasureState(){ measureStart=null; measureHover=null; measureHoverId=null; measureSel=null; measureCursor=null; }
+function removeMeasure(id){
+  L().measures=measuresOf().filter(m=>m.id!==id);
+  if(measureSel===id) measureSel=null;
+  measureHoverId=null;
+  renderMeasureBar(); draw(); save();
+}
+function measurePointerDown(px,py){
+  const t=measureTargetAt(px,py);
+  if(t && t.id){ measureSel=t.id; renderMeasureBar(); draw(); return; }
+  measureSel=null;
+  if(t && t.a){
+    if(!measureStart) measureStart=t.a;
+    else if(anchorKey(t.a)!==anchorKey(measureStart)){
+      measuresOf().push({id:uid(), a:measureStart, b:t.a});
+      measureStart=null; save();
+    }
+  } else drag={mode:'pan', px, py, ox:view.ox, oy:view.oy};
+  renderMeasureBar(); draw();
+}
+function measureHoverAt(px,py){
+  measureCursor=[wx(px),wy(py)];
+  const t=measureTargetAt(px,py);
+  measureHover = t&&t.a || null;
+  measureHoverId = t&&t.id || null;
+  cv.style.cursor = t ? 'pointer' : '';
+  scheduleDraw();
+}
+cv.addEventListener('pointerleave', ()=>{
+  if(!measureOn || drag) return;
+  measureHover=null; measureHoverId=null; measureCursor=null; scheduleDraw();
+});
+$('btnMeasure').addEventListener('click', ()=>setMeasure(!measureOn));
+$('measureBar').addEventListener('click', e=>{
+  const b=e.target.closest('button[data-act]'); if(!b) return;
+  if(b.dataset.act==='done') setMeasure(false);
+  else if(b.dataset.act==='remove' && measureSel) removeMeasure(measureSel);
+  else if(b.dataset.act==='clear'){
+    const n=liveMeasures().length;
+    askConfirm('Clear measurements', 'Remove '+(n===1?'the measurement':'all '+n+' measurements')+' from '+L().name+'?', 'Clear measurements', ()=>{
+      L().measures=[]; resetMeasureState(); renderMeasureBar(); draw(); save();
+    });
+  }
+});
+
 /* ------------------------- interaction ------------------------- */
 let drag=null, flashT=null;
 const ROOM_DRAGS=['corner','wall','open','pillar','iwall','iwall-end'];
@@ -2735,6 +3064,8 @@ cv.addEventListener('pointerdown', e=>{
     return;
   }
 
+  if(measureOn){ measurePointerDown(px,py); return; }
+
   if(roomMode()){
     const hit=pickRoom(px,py);
     if(hit){
@@ -2781,6 +3112,7 @@ cv.addEventListener('pointerdown', e=>{
   }
 });
 cv.addEventListener('pointermove', e=>{
+  if(measureOn && !drag){ measureHoverAt(e.offsetX,e.offsetY); return; }
   if(!drag) return;
   const px=e.offsetX, py=e.offsetY, pt=[wx(px),wy(py)];
   // nothing has moved yet: remember how things stood so Escape can put them back
@@ -2917,6 +3249,19 @@ document.addEventListener('keydown', e=>{
     if(e.key==='Escape'){ cancelWallDraw(); return; }
     return;
   }
+  if(mo.hidden && (e.key==='m'||e.key==='M') && !e.ctrlKey && !e.metaKey && !e.altKey && isCanvasMode(S.mode)){
+    setMeasure(!measureOn); return;
+  }
+  if(measureOn && mo.hidden){
+    // Escape backs out one step at a time: the first end, then the selection, then the tool
+    if(e.key==='Escape'){
+      if(measureStart) measureStart=null;
+      else if(measureSel) measureSel=null;
+      else { setMeasure(false); return; }
+      renderMeasureBar(); draw(); return;
+    }
+    if((e.key==='Delete'||e.key==='Backspace') && measureSel){ e.preventDefault(); removeMeasure(measureSel); return; }
+  }
   if(e.key==='Escape'){
     if(!mo.hidden){ closeModal(); return; }
     sel=null; roomSel=null; renderSel(); renderRoomSel(); renderWalls(); renderOpen(); draw(); return;
@@ -3011,7 +3356,7 @@ function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 function normSearch(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
 function renderAll(){
   renderTree(); renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
-  renderInv(); renderSel(); renderSnap(); renderMode(); updateHistButtons(); draw();
+  renderInv(); renderSel(); renderSnap(); renderMode(); renderMeasureBar(); updateHistButtons(); draw();
 }
 /* the mode also lives in ?mode=, so a refresh (or a shared link) lands back in the same mode */
 function paramMode(){
@@ -3029,6 +3374,7 @@ function setMode(m){
   S.mode=m;
   if(isCanvasMode(m)) S.planMode=m;
   if(m==='furniture') roomSel=null; else if(m==='room') sel=null;
+  if(!isCanvasMode(m) && measureOn){ measureOn=false; resetMeasureState(); renderMeasureBar(); }
   renderMode(); applyLayoutMode();
   if(isCanvasMode(m)){
     resize();
@@ -3337,10 +3683,13 @@ function duplicateLayout(id){
   const src=S.layouts.find(x=>x.id===id); if(!src) return;
   const c=JSON.parse(JSON.stringify(src));
   c.id=uid(); c.name=c.name+' copy';
-  c.openings.forEach(o=>o.id=uid());
-  c.placed.forEach(p=>p.id=uid());
-  c.room.pillars.forEach(p=>p.id=uid());
-  c.room.iwalls.forEach(w=>w.id=uid());
+  const map={open:{}, item:{}, pillar:{}, iwall:{}};
+  const renew = (k,x) => { const id=uid(); map[k][x.id]=id; x.id=id; };
+  c.openings.forEach(o=>renew('open',o));
+  c.placed.forEach(p=>renew('item',p));
+  c.room.pillars.forEach(p=>renew('pillar',p));
+  c.room.iwalls.forEach(w=>renew('iwall',w));
+  remapMeasures(c, map);
   S.layouts.splice(S.layouts.indexOf(src)+1, 0, c);
   activateLayout(c.id);
   renderAll(); save();
@@ -4007,6 +4356,7 @@ $('unitSel').addEventListener('change', e=>{ S.unit=e.target.value; renderSnap()
 $('snapSel').addEventListener('change', e=>{ S.snap=e.target.value; save(); });
 $('showSwing').addEventListener('change', e=>{ S.showSwing=e.target.checked; draw(); save(); });
 $('showWalk').addEventListener('change', e=>{ S.showWalk=e.target.checked; draw(); save(); });
+$('showMeasure').addEventListener('change', e=>{ S.showMeasure=e.target.checked; draw(); save(); });
 $('showDims').addEventListener('change', e=>{ S.showDims=e.target.checked; draw(); save(); });
 $('showOpen').addEventListener('change', e=>{ S.showOpen=e.target.checked; draw(); save(); });
 $('btnUndo').addEventListener('click',()=>{ roomMode()?undoRoom():undoFurn(); });
@@ -4313,7 +4663,7 @@ function ancestorFolderIds(folders, id){
 }
 
 /* ------------------------- export ------------------------- */
-const PREF_KEYS=['unit','snap','showSwing','showDims','showOpen','showWalk','invScope','onlyAvailable'];
+const PREF_KEYS=['unit','snap','showSwing','showDims','showOpen','showWalk','showMeasure','invScope','onlyAvailable'];
 function exportPayload(roomIds, itemIds, withPrefs){
   const layouts=S.layouts.filter(l=>roomIds.includes(l.id)).map(clone);
   const keep=new Set();
@@ -4407,7 +4757,7 @@ function readImport(data){
   if(prefs.unit && !['ftin','in','cm','mm','m'].includes(prefs.unit)) delete prefs.unit;
   if(prefs.invScope && !INV_SCOPES[prefs.invScope]) delete prefs.invScope;
   if(prefs.snap!==undefined) prefs.snap=String(prefs.snap);
-  for(const k of ['showSwing','showDims','showOpen','showWalk','onlyAvailable']) if(prefs[k]!==undefined) prefs[k]=!!prefs[k];
+  for(const k of ['showSwing','showDims','showOpen','showWalk','showMeasure','onlyAvailable']) if(prefs[k]!==undefined) prefs[k]=!!prefs[k];
   return {layouts, folders, inventory, active:data.active, prefs:Object.keys(prefs).length?prefs:null};
 }
 function importDialog(inc){
@@ -4477,7 +4827,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     for(const k of Object.keys(furnHist)) delete furnHist[k];
     seedHistFor();
     $('unitSel').value=S.unit;
-    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk;
+    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure;
     renderSnap(); applyPanes(); applySections(); renderAll(); fit(); save();
     flash('Replaced your project with '+plural(S.layouts.length,'room')+' and '+plural(S.inventory.length,'item'));
     return;
@@ -4515,20 +4865,22 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     if(takenLayouts.has(l.id)) l.id=uid();
     takenLayouts.add(l.id);
     l.folderId = l.folderId ? (folderMap[l.folderId]||null) : null;
+    const placedMap={};
     l.placed = l.placed.filter(p=>{
       // the thing came in with the room, or one of yours already answers to that id
       const target = itemMap[p.itemId] || (takenItems.has(p.itemId) ? p.itemId : null);
       if(!target) return false;
       p.itemId=target;
-      p.id=uid();
+      const id=uid(); placedMap[p.id]=id; p.id=id;
       return true;
     });
+    remapMeasures(l, {item:placedMap});
     S.layouts.push(l);
   }
   if(wantPrefs && inc.prefs){
     Object.assign(S, inc.prefs);
     $('unitSel').value=S.unit;
-    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk;
+    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure;
     renderSnap();
   }
   renderAll(); save();
@@ -5885,7 +6237,7 @@ window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
   if(pm) S.mode=pm;
   syncModeParam();
   $('unitSel').value=S.unit;
-  $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk;
+  $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure;
   seedHistFor();
   nav.tab = S.mode==='marketplace' ? 'market' : 'library';
   nav.libFolderId = itemFolderOf(S.uiLib.libFolderId) ? S.uiLib.libFolderId : null;
