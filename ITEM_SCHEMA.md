@@ -2,7 +2,7 @@
 
 ## What this is
 
-A field-level reference for the JSON shape of an **item** (a library/inventory entry — furniture, fixtures, anything placeable in a room), for people who want to hand-author their own items. Canonical normalization lives in `normItem()` (**[index.html](index.html)**, mirrored by hand in **[items.html](items.html)** per AGENTS.md). All lengths are stored internally in millimetres; `parseLen`/`fmtLen` convert to/from the user's display unit.
+A field-level reference for the JSON shape of an **item** (a library/inventory entry — furniture, fixtures, anything placeable in a room), for people who want to hand-author their own items. Canonical normalization lives in `normItem()` in **[index.html](index.html)**. All lengths are stored internally in millimetres; `parseLen`/`fmtLen` convert to/from the user's display unit.
 
 ## Item
 
@@ -21,16 +21,16 @@ A field-level reference for the JSON shape of an **item** (a library/inventory e
 
 - **`id`** (`string`): user-editable identifier. Must stay within the `idProblem()` charset — letters, digits, `! - _ . * ' ( )` — and may use `/` as a path separator to group related items (e.g. `ikea/kallax/4x2`), similar to an S3 key.
 - **`name`** (`string`): display name; defaults to `'Untitled'` when missing.
-- **`shape`** (`Shape`): the item's footprint. See [Shape](#shape) below. `items.html` defaults a missing shape to `{type:'rect', w:900, d:600}`.
+- **`shape`** (`Shape`): the item's footprint. See [Shape](#shape) below. A missing shape defaults to `{type:'rect', w:900, d:600}`.
 - **`color`** (`string`): hex color, normalized via `normHex()`; falls back to `PALETTE[0]` if invalid/missing.
 - **`passThrough`** (`boolean`): when `true`, other items/placements are allowed to overlap this one (e.g. rugs, floor mats).
 - **`count`** (`number`): how many of this item the user owns; defaults to `1`.
-- **`tags`** (`string[]`): defaults to `[]`. On `items.html`, this is a *derived* field — the union of `manualTags` and any tags inherited from the item's library folder.
+- **`tags`** (`string[]`): defaults to `[]`. In the Inventory tab, this is a *derived* field — the union of `manualTags` and any tags inherited from the item's library folder.
 - **`open`** (`OpenSpec | null`): describes the space this item's open state (a door, a dresser drawer) reaches past its own footprint, in the item's own unrotated frame. `null` when the item doesn't "open out" (all sides zero). See [OpenSpec](#openspec).
 
-### items.html-only fields
+### Inventory-tab-only fields
 
-These are used by the library UI (`items.html`) for folder/tag management and are not read or written by `index.html`:
+These are used by the Inventory tab for folder/tag management and are not read by Furniture-mode placement logic:
 
 - **`folderId`** (`string | null`): the library folder this item is filed under.
 - **`manualTags`** (`string[]`): the tags picked by hand for this item; the authoritative source. `tags` is recomputed from `manualTags` plus the tags inherited from the folder's ancestry (`ancestorTags`/`applyTags`/`reconcileTags`).
@@ -94,3 +94,7 @@ Every field has a sane default, so the smallest valid item is just:
 ## A note on ids
 
 If you're hand-authoring a batch of items to import, give each one an explicit `id` so imports are stable/repeatable. Ids may use letters, digits, `! - _ . * ' ( )`, and `/` as a path separator for grouping related items (e.g. `ikea/kallax/4x2`, similar to an S3 key). On import, an id that collides with an existing item is resolved automatically rather than overwriting it, so reusing the same id across re-imports of the same file is safe.
+
+## Marketplace item files
+
+A marketplace publishes items as individual files, each of them exactly this item shape plus two headers — `app: "room-planner-item"` and a `version` integer. See **[MARKET_SCHEMA.md](MARKET_SCHEMA.md)** for the full manifest/index/item-file/registry reference; `normItem()` needs no changes to read a marketplace item, since it already ignores unknown fields and defaults missing ones.
