@@ -795,9 +795,11 @@ function openLocalBox(it){
   const b=bbox(shapePoly(it.shape)), o=it.open;
   return {x0:b.x0-o.left, y0:b.y0-o.top, x1:b.x1+o.right, y1:b.y1+o.bottom};
 }
-function openPoly(inst,it){
-  const b=openLocalBox(it);
-  if(!b) return null;
+function openPoly(inst,it,inset=0){
+  const b0=openLocalBox(it);
+  if(!b0) return null;
+  const b={x0:b0.x0+inset, y0:b0.y0+inset, x1:b0.x1-inset, y1:b0.y1-inset};
+  if(b.x1<=b.x0||b.y1<=b.y0) return null;
   const r=(inst.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
   return [[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]]
     .map(([x,y])=>[inst.x+x*c-y*s, inst.y+x*s+y*c]);
@@ -1283,21 +1285,26 @@ function openThroughWall(poly){
   return false;
 }
 /* id -> why, for every placed thing that hasn't the room to open. Kept apart
-   from conflictSet() because these never make a placement illegal. */
+   from conflictSet() because these never make a placement illegal.
+   The open box is inset by a true perpendicular margin rather than shrink()'s
+   radial one: its sides run flush with the piece's own, and a neighbour pushed
+   up alongside is allowed to sit up to 2*EPS into that line, so only a real
+   overlap into the open area — not side-by-side contact — counts. */
+const OPEN_SLOP = 2*EPS+1;
 function openConflicts(){
   const ps=L().placed, out=new Map();
   const solids=ps.map(p=>{ const it=itemOf(p.itemId); return (it&&!it.passThrough)?worldPoly(p,it):null; });
   const obs=obstaclePolys();
   for(let i=0;i<ps.length;i++){
     const it=itemOf(ps[i].itemId);
-    const op=it&&openPoly(ps[i],it);
-    if(!op) continue;
-    if(openThroughWall(op)){ out.set(ps[i].id,'Opened out, it reaches past the wall'); continue; }
-    const ob=bbox(op), test=shrink(op,EPS);
+    const test=it&&openPoly(ps[i],it,OPEN_SLOP);
+    if(!test) continue;
+    if(openThroughWall(test)){ out.set(ps[i].id,'Opened out, it reaches past the wall'); continue; }
+    const ob=bbox(test);
     for(let j=0;j<ps.length;j++){
       if(j===i||!solids[j]) continue;
       if(!bbHit(ob,bbox(solids[j]))) continue;
-      if(polyHit(test,shrink(solids[j],EPS))){
+      if(polyHit(test,solids[j])){
         out.set(ps[i].id,'Opened out, it runs into '+itemOf(ps[j].itemId).name);
         break;
       }
@@ -1305,7 +1312,7 @@ function openConflicts(){
     if(out.has(ps[i].id)) continue;
     for(const o of obs){
       if(!bbHit(ob,bbox(o.poly))) continue;
-      if(polyHit(test,shrink(o.poly,EPS))){ out.set(ps[i].id,'Opened out, it runs into '+o.name); break; }
+      if(polyHit(test,o.poly)){ out.set(ps[i].id,'Opened out, it runs into '+o.name); break; }
     }
   }
   return out;
@@ -2628,6 +2635,7 @@ function updateReadout(bad,openBad){
 
 /* ------------------------- interaction ------------------------- */
 let drag=null, flashT=null;
+const ROOM_DRAGS=['corner','wall','open','pillar','iwall','iwall-end'];
 function flash(msg){
   if(!msg) return;
   const el=$('flash');
@@ -2763,6 +2771,8 @@ cv.addEventListener('pointerdown', e=>{
 cv.addEventListener('pointermove', e=>{
   if(!drag) return;
   const px=e.offsetX, py=e.offsetY, pt=[wx(px),wy(py)];
+  // nothing has moved yet: remember how things stood so Escape can put them back
+  if(drag.mode!=='pan' && !drag.snap) drag.snap = ROOM_DRAGS.includes(drag.mode) ? snapRoom() : snapFurn();
 
   if(drag.mode==='pan'){
     view.ox=drag.ox+(px-drag.px); view.oy=drag.oy+(py-drag.py);
@@ -2850,10 +2860,22 @@ cv.addEventListener('pointermove', e=>{
   }
   bumpRev(); scheduleDraw();
 });
+/* Escape mid-drag: put whatever was being dragged back exactly where it started */
+function cancelDrag(){
+  if(drag.mode==='pan'){ view.ox=drag.ox; view.oy=drag.oy; }
+  else if(drag.snap){
+    const s=JSON.parse(drag.snap);
+    if(ROOM_DRAGS.includes(drag.mode)){ L().room=s.room; L().openings=s.openings; }
+    else L().placed=s.placed;
+    bumpRev();
+  }
+  drag=null;
+  renderSel(); renderRoomSel(); renderWalls(); renderOpen(); draw();
+}
 function endDrag(e){
   if(drag&&drag.mode!=='pan'){
     save();
-    if(['corner','wall','open','pillar','iwall','iwall-end'].includes(drag.mode)) commitRoom();
+    if(ROOM_DRAGS.includes(drag.mode)) commitRoom();
     else { commitFurn(); renderSel(); }
   }
   drag=null;
@@ -2867,10 +2889,12 @@ cv.addEventListener('dblclick', e=>{
   const hit=pickRoom(e.offsetX,e.offsetY);
   if(hit&&hit.kind==='wall'){ drag=null; wallDialog(hit.i); }
 });
-cv.addEventListener('wheel', e=>{ e.preventDefault(); zoomAt(e.deltaY<0?1.11:1/1.11, e.offsetX, e.offsetY); }, {passive:false});
+const ZOOM_FACTOR = 1.02;
+cv.addEventListener('wheel', e=>{ e.preventDefault(); zoomAt(e.deltaY<0?ZOOM_FACTOR:1/ZOOM_FACTOR, e.offsetX, e.offsetY); }, {passive:false});
 
 document.addEventListener('keydown', e=>{
   const tag=(e.target.tagName||'').toLowerCase();
+  if(drag && e.key==='Escape'){ e.preventDefault(); cancelDrag(); return; }
   if(tag==='input'||tag==='textarea'||tag==='select') return;
   if(drawState){
     if(e.key==='Escape'){ cancelCustomDraw(); return; }
