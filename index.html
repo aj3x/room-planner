@@ -1900,13 +1900,20 @@ function drawItem(p,isSel,isBadPos){
   }
   if(isSel){
     const h=handlePos(p,it);
-    ctx.beginPath(); ctx.moveTo(sx((b.x0+b.x1)/2),sy(b.y0)); ctx.lineTo(h.x,h.y);
+    const lb=bbox(shapePoly(it.shape)), r=(p.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
+    const lx=(lb.x0+lb.x1)/2, ly=lb.y0;
+    const ex=p.x+lx*c-ly*s, ey=p.y+lx*s+ly*c;
+    ctx.beginPath(); ctx.moveTo(sx(ex),sy(ey)); ctx.lineTo(h.x,h.y);
     ctx.strokeStyle='#171b1a'; ctx.lineWidth=1; ctx.stroke();
     ctx.beginPath(); ctx.arc(h.x,h.y,7,0,Math.PI*2);
     ctx.fillStyle='#fbfbf8'; ctx.fill(); ctx.strokeStyle='#2e6b57'; ctx.lineWidth=2; ctx.stroke();
   }
 }
-const handlePos = (p,it) => { const b=bbox(worldPoly(p,it)); return {x:sx((b.x0+b.x1)/2), y:sy(b.y0)-26}; };
+const handlePos = (p,it) => {
+  const lb=bbox(shapePoly(it.shape)), r=(p.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
+  const lx=(lb.x0+lb.x1)/2, ly=lb.y0-26/Math.max(view.scale,1e-6);
+  return {x:sx(p.x+lx*c-ly*s), y:sy(p.y+lx*s+ly*c)};
+};
 function sizeLabel(it){
   const s=it.shape;
   if(s.type==='rect'||s.type==='ellipse'||s.type==='lshape') return fmtLen(s.w,S.unit)+' × '+fmtLen(s.d,S.unit);
