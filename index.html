@@ -2339,7 +2339,8 @@ function draw(){
   ctx.globalAlpha = 1;
 
   drawWallLabels();
-  if(roomMode()) drawHandles();
+  // editing tools always sit above everything else on the plan
+  if(roomMode()) drawHandles(); else drawItemTools();
   drawCustomOverlay();
   drawWallDrawOverlay();
   updateReadout(bad, openBad);
@@ -2390,26 +2391,18 @@ function drawWalls(){
 }
 function drawIWalls(){
   for(const w of L().room.iwalls){
-    const poly=iwallPoly(w), isSel=roomMode()&&roomSel&&roomSel.kind==='iwall'&&roomSel.id===w.id, C=PAL();
-    pathPoly(poly);
+    const C=PAL();
+    pathPoly(iwallPoly(w));
     ctx.fillStyle=C.wall; ctx.fill();
-    ctx.lineWidth = isSel?2.5:1;
-    ctx.strokeStyle = isSel?C.accent:C.wallEdge;
-    ctx.stroke();
-    if(isSel) for(const p of [w.a,w.b]){
-      ctx.beginPath(); ctx.rect(sx(p[0])-5,sy(p[1])-5,10,10);
-      ctx.fillStyle=C.surface; ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
-    }
+    ctx.lineWidth=1; ctx.strokeStyle=C.wallEdge; ctx.stroke();
   }
 }
 function drawPillars(){
   for(const pl of L().room.pillars){
-    const poly=worldPoly(pl,pl), isSel=roomMode()&&roomSel&&roomSel.kind==='pillar'&&roomSel.id===pl.id, C=PAL();
-    pathPoly(poly);
+    const C=PAL();
+    pathPoly(worldPoly(pl,pl));
     ctx.fillStyle=C.pillar; ctx.fill();
-    ctx.lineWidth = isSel?2.5:1.25;
-    ctx.strokeStyle = isSel?C.accent:C.wall;
-    ctx.stroke();
+    ctx.lineWidth=1.25; ctx.strokeStyle=C.wall; ctx.stroke();
   }
 }
 function drawWallDrawOverlay(){
@@ -2430,7 +2423,7 @@ function drawWallDrawOverlay(){
 }
 function drawOpening(o,blocked){
   const r=L().room, g=openGeom(o), t=Math.max(2,r.wall*view.scale);
-  const isSel = roomSel && roomSel.kind==='opening' && roomSel.id===o.id, C=PAL();
+  const C=PAL();
   // jambs
   ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(1.5,t*.35);
   for(const p of [g.p0,g.p1]){
@@ -2470,11 +2463,6 @@ function drawOpening(o,blocked){
     ctx.moveTo(sx(g.mid[0]-off[0]*.5),sy(g.mid[1]-off[1]*.5));
     ctx.lineTo(sx(g.p1[0]-off[0]*.5),sy(g.p1[1]-off[1]*.5)); ctx.stroke();
   }
-  if(roomMode()){
-    ctx.beginPath(); ctx.arc(sx(g.mid[0]),sy(g.mid[1]),7,0,Math.PI*2);
-    ctx.fillStyle = isSel ? C.accent : C.surface; ctx.fill();
-    ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
-  }
 }
 /* the open footprint is always drawn for whatever you have hold of, so you can
    see where it will reach as you place it, toggle on or off */
@@ -2509,13 +2497,7 @@ function drawItem(p,isSel,isBadPos){
     ctx.stroke(); ctx.restore();
     pathPoly(poly);
   }
-  if(isSel){
-    // selection: a surface halo under a crisp accent line, so it reads on any furniture colour
-    ctx.lineJoin='round';
-    ctx.lineWidth=5; ctx.strokeStyle=C.surface; ctx.stroke();
-    ctx.lineWidth=2; ctx.strokeStyle=isBadPos?C.danger:C.accent; ctx.stroke();
-    ctx.lineJoin='miter';
-  } else {
+  if(!isSel){
     ctx.lineWidth = isBadPos?2:1.25;
     ctx.strokeStyle = isBadPos?C.danger:hexA(it.color,1);
     if(it.passThrough) ctx.setLineDash([6,4]);
@@ -2545,16 +2527,26 @@ function drawItem(p,isSel,isBadPos){
     if(two) line(clip(sizeLabel(it),wpx+20), cyp+8, '11px ui-sans-serif,system-ui,sans-serif', .85);
     ctx.lineJoin='miter';
   }
-  if(isSel){
-    const h=handlePos(p,it);
-    const lb=bbox(shapePoly(it.shape)), r=(p.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
-    const lx=(lb.x0+lb.x1)/2, ly=lb.y0;
-    const ex=p.x+lx*c-ly*s, ey=p.y+lx*s+ly*c;
-    ctx.beginPath(); ctx.moveTo(sx(ex),sy(ey)); ctx.lineTo(h.x,h.y);
-    ctx.strokeStyle=C.accent; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.beginPath(); ctx.arc(h.x,h.y,7,0,Math.PI*2);
-    ctx.fillStyle=C.surface; ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
-  }
+}
+/* the selected item's outline and rotate handle, drawn after everything else so nothing covers them */
+function drawItemTools(){
+  const p=sel&&L().placed.find(q=>q.id===sel), it=p&&itemOf(p.itemId);
+  if(!it) return;
+  const C=PAL(), isBadPos=getConflicts().bad.has(p.id);
+  // selection: a surface halo under a crisp accent line, so it reads on any furniture colour
+  pathPoly(worldPoly(p,it));
+  ctx.lineJoin='round';
+  ctx.lineWidth=5; ctx.strokeStyle=C.surface; ctx.stroke();
+  ctx.lineWidth=2; ctx.strokeStyle=isBadPos?C.danger:C.accent; ctx.stroke();
+  ctx.lineJoin='miter';
+  const h=handlePos(p,it);
+  const lb=bbox(shapePoly(it.shape)), r=(p.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
+  const lx=(lb.x0+lb.x1)/2, ly=lb.y0;
+  const ex=p.x+lx*c-ly*s, ey=p.y+lx*s+ly*c;
+  ctx.beginPath(); ctx.moveTo(sx(ex),sy(ey)); ctx.lineTo(h.x,h.y);
+  ctx.strokeStyle=C.accent; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(h.x,h.y,7,0,Math.PI*2);
+  ctx.fillStyle=C.surface; ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
 }
 const handlePos = (p,it) => {
   const lb=bbox(shapePoly(it.shape)), r=(p.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
@@ -2599,7 +2591,21 @@ function drawWallLabels(){
   }
 }
 function drawHandles(){
-  const P=RP(), C=PAL();
+  const P=RP(), C=PAL(), r=L().room;
+  const pl=roomSel&&roomSel.kind==='pillar'&&r.pillars.find(q=>q.id===roomSel.id);
+  if(pl){
+    pathPoly(worldPoly(pl,pl));
+    ctx.lineWidth=2.5; ctx.strokeStyle=C.accent; ctx.stroke();
+  }
+  const iw=roomSel&&roomSel.kind==='iwall'&&r.iwalls.find(q=>q.id===roomSel.id);
+  if(iw){
+    pathPoly(iwallPoly(iw));
+    ctx.lineWidth=2.5; ctx.strokeStyle=C.accent; ctx.stroke();
+    for(const p of [iw.a,iw.b]){
+      ctx.beginPath(); ctx.rect(sx(p[0])-5,sy(p[1])-5,10,10);
+      ctx.fillStyle=C.surface; ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
+    }
+  }
   if(roomSel&&roomSel.kind==='wall'){
     const w=wallOf(roomSel.i);
     ctx.beginPath(); ctx.moveTo(sx(w.a[0]),sy(w.a[1])); ctx.lineTo(sx(w.b[0]),sy(w.b[1]));
@@ -2608,6 +2614,12 @@ function drawHandles(){
   for(let i=0;i<P.length;i++){
     const on = roomSel&&roomSel.kind==='corner'&&roomSel.i===i;
     ctx.beginPath(); ctx.rect(sx(P[i][0])-5,sy(P[i][1])-5,10,10);
+    ctx.fillStyle = on?C.accent:C.surface; ctx.fill();
+    ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
+  }
+  for(const o of L().openings){
+    const g=openGeom(o), on=roomSel&&roomSel.kind==='opening'&&roomSel.id===o.id;
+    ctx.beginPath(); ctx.arc(sx(g.mid[0]),sy(g.mid[1]),7,0,Math.PI*2);
     ctx.fillStyle = on?C.accent:C.surface; ctx.fill();
     ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
   }
