@@ -5,456 +5,641 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Room Planner</title>
 <style>
+/* ======================================================================
+   Tokens — see DESIGN.md §3. Every colour, size, radius, shadow and
+   duration in this file comes from here.
+   ====================================================================== */
 :root{
-  --ink:#171b1a; --ink2:#525b58; --ink3:#818b87;
-  --line:#d3d8cf; --line2:#e2e6dd;
-  --paper:#fbfbf8; --panel:#eef0ea; --panel2:#e5e8df;
-  --accent:#2e6b57; --accent-soft:#d7e4dd;
-  --warn:#b04a32; --warn-soft:#f2dcd5;
-  --radius:5px; --shadow:0 1px 0 rgba(23,27,26,.06), 0 8px 24px -14px rgba(23,27,26,.4);
+  color-scheme:light dark;
+  --surface:#fcfcfb; --surface-2:#f4f4f2; --surface-3:#eaeae7; --stage:#e6e6e2;
+  --line:#e0e0dc; --line-strong:#8f8f89;
+  --ink:#1d1d1b; --ink-2:#585853; --ink-3:#6f6f69;
+  --accent:#2a5bd7; --accent-soft:#e9effc; --on-accent:#ffffff;
+  --danger:#c0392b; --danger-soft:#fbeae8;
+
+  --shadow-1:0 1px 2px rgba(20,20,18,.06), 0 1px 1px rgba(20,20,18,.04);
+  --shadow-2:0 2px 6px rgba(20,20,18,.06), 0 12px 32px -8px rgba(20,20,18,.18);
+  --shadow-3:0 4px 12px rgba(20,20,18,.08), 0 32px 64px -16px rgba(20,20,18,.32);
+  --scrim:rgba(20,20,18,.36);
+
+  --fs-xs:11px; --fs-sm:12px; --fs-md:13px; --fs-lg:15px; --fs-xl:20px;
+  --r-sm:4px; --r-md:6px; --r-lg:10px; --r-full:999px;
+  --h-ctl:32px; --h-sm:28px; --h-row:24px;
+  --dur-fast:120ms; --dur:180ms; --ease:cubic-bezier(.2,.8,.2,1);
+  --font:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
+@media (prefers-color-scheme:dark){
+  :root{
+    --surface:#1c1c1b; --surface-2:#252524; --surface-3:#2f2f2d; --stage:#141413;
+    --line:#34342f; --line-strong:#707069;
+    --ink:#ececea; --ink-2:#adada7; --ink-3:#8e8e88;
+    --accent:#7aa2f7; --accent-soft:#1f2a45; --on-accent:#1c1c1b;
+    --danger:#f2786a; --danger-soft:#3b2320;
+    --shadow-1:0 1px 2px rgba(0,0,0,.4);
+    --shadow-2:0 2px 6px rgba(0,0,0,.3), 0 12px 32px -8px rgba(0,0,0,.6);
+    --shadow-3:0 4px 12px rgba(0,0,0,.35), 0 32px 64px -16px rgba(0,0,0,.7);
+    --scrim:rgba(0,0,0,.55);
+  }
+}
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{transition:none!important;animation:none!important} }
+
+/* ---------------- base ---------------- */
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;max-width:100%;overflow-x:hidden}
 body{
-  font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  font-size:13.5px;line-height:1.45;color:var(--ink);background:var(--panel);
+  font-family:var(--font);font-size:var(--fs-md);line-height:20px;color:var(--ink);background:var(--surface);
   font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;overscroll-behavior:none;
 }
-button,input,select,textarea{font:inherit;color:inherit}
+button,input,select,textarea{font:inherit;color:inherit;line-height:inherit}
 button{cursor:pointer}
+[hidden]{display:none!important}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code{font-family:var(--mono);font-size:.92em}
+svg.i{width:16px;height:16px;flex:none;display:block;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 
-#app{display:grid;grid-template-rows:auto 1fr;height:100%}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 14px;background:var(--paper);border-bottom:1px solid var(--line)}
-header h1{font-size:14.5px;font-weight:650;margin:0;letter-spacing:-.01em;white-space:nowrap}
-header h1 span{color:var(--ink3);font-weight:450}
+/* ---------------- header: places ---------------- */
+#app{display:grid;grid-template-rows:48px minmax(0,1fr);height:100%}
+header{display:flex;align-items:stretch;gap:24px;padding-inline:16px;background:var(--surface);border-bottom:1px solid var(--line);min-width:0}
+.brand{display:flex;align-items:center;gap:8px;margin:0;font-size:var(--fs-md);font-weight:600;white-space:nowrap}
+.brand svg{width:18px;height:18px;stroke-width:1.6}
+.nav{display:flex;align-items:stretch;gap:4px;min-width:0}
+.nav button{position:relative;display:flex;align-items:center;padding:0 8px;border:0;background:none;color:var(--ink-2);font-weight:500;white-space:nowrap;transition:color var(--dur-fast) var(--ease)}
+.nav button:hover{color:var(--ink)}
+.nav button[aria-current=page]{color:var(--ink);font-weight:600}
+.nav button[aria-current=page]::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2px;background:var(--ink);border-radius:2px 2px 0 0}
+.nav button:focus-visible{outline-offset:-4px}
 .spacer{flex:1}
-.hgroup{display:flex;align-items:center;gap:6px}
+.hgroup{display:flex;align-items:center;gap:8px}
+#unitSel{width:auto;min-width:132px}
 
-main{--lw:288px;--rw:276px;display:grid;grid-template-columns:var(--lw) minmax(0,1fr) var(--rw);min-height:0;min-width:0}
-main.lc{--lw:34px} main.rc{--rw:34px}
-.pane{background:var(--paper);overflow-y:auto;min-width:0;display:flex;flex-direction:column}
+/* ---------------- buttons ---------------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--h-ctl);padding:0 12px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);color:var(--ink);font-weight:500;white-space:nowrap;text-decoration:none;
+  transition:background var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.btn:hover{background:var(--surface-2);border-color:var(--line-strong)}
+.btn:active{background:var(--surface-3)}
+.btn:disabled,.btn[aria-disabled=true]{opacity:.4;cursor:default;pointer-events:none}
+.btn.sm{height:var(--h-sm);padding:0 10px;font-size:var(--fs-sm)}
+.btn.icon{width:var(--h-ctl);padding:0}
+.btn.sm.icon{width:var(--h-sm)}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--surface);font-weight:600}
+.btn.primary:hover{background:var(--ink-2);border-color:var(--ink-2)}
+.btn.danger{color:var(--danger)}
+.btn.danger:hover{background:var(--danger-soft);border-color:var(--danger)}
+.btn.primary.danger{background:var(--danger);border-color:var(--danger);color:var(--on-accent)}
+.btn.primary.danger:hover{filter:brightness(.92);background:var(--danger)}
+.btn.quiet{background:transparent;border-color:transparent;color:var(--ink-2)}
+.btn.quiet:hover{background:var(--surface-3);border-color:transparent;color:var(--ink)}
+.btn.quiet.danger{color:var(--danger)}
+.btn.quiet.danger:hover{background:var(--danger-soft)}
+.btn.link{height:auto;padding:0;border:0;background:none;color:var(--accent);font-weight:500}
+.btn.link:hover{text-decoration:underline;background:none}
+.btn[aria-pressed=true]{background:var(--surface-3);border-color:var(--line-strong)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+.row.actions{margin-top:12px}
+.field.mt{margin-top:12px}
+.sub{margin-top:8px}
+
+/* ---------------- inputs ---------------- */
+input[type=text],input[type=number],input[type=url],select,textarea{
+  width:100%;min-width:0;height:var(--h-ctl);padding:0 8px;background:var(--surface);
+  border:1px solid var(--line-strong);border-radius:var(--r-md);
+  transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+input[type=text]:hover,input[type=number]:hover,input[type=url]:hover,select:hover,textarea:hover{border-color:var(--ink-3)}
+input[type=text]:focus,input[type=number]:focus,input[type=url]:focus,select:focus,textarea:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+input:disabled,select:disabled{opacity:.5;cursor:default}
+input::placeholder,textarea::placeholder{color:var(--ink-3);opacity:1}
+input.bad,input.bad:focus{border-color:var(--danger);box-shadow:0 0 0 3px var(--danger-soft)}
+textarea{height:auto;min-height:88px;padding:8px;resize:vertical;font-family:var(--mono);font-size:var(--fs-sm);line-height:16px}
+select{appearance:none;padding-right:28px;background-repeat:no-repeat;background-position:right 8px center;background-size:12px 12px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238f8f89' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:16px;height:16px;margin:0;flex:none}
+input[type=color]{width:32px;height:var(--h-ctl);flex:none;padding:3px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);cursor:pointer}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+input[type=color]::-webkit-color-swatch{border:0;border-radius:3px}
+input[type=text].hex,input[type=text].id{font-family:var(--mono);font-size:var(--fs-sm)}
+input[type=text].hex{flex:1;min-width:64px;text-transform:lowercase}
+
+.field{display:flex;align-items:center;gap:8px;margin-bottom:8px;min-width:0}
+.field:last-child{margin-bottom:0}
+.field > label:first-child{width:96px;flex:none;color:var(--ink-2)}
+.field .unit{color:var(--ink-3);flex:none}
+.field.top{align-items:flex-start}
+.field.top > label:first-child{padding-top:6px}
+.check{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;color:var(--ink)}
+.check:last-child{margin-bottom:0}
+.check input{cursor:pointer}
+.stack-label{display:block;color:var(--ink-2);margin:0 0 4px}
+.stack-label.mt{margin-top:12px}
+.hint{font-size:var(--fs-sm);line-height:16px;color:var(--ink-3);margin:8px 0 0}
+.hint:first-child{margin-top:0}
+.hint.warn{color:var(--danger)}
+.dim{font-size:var(--fs-sm);color:var(--ink-3);white-space:nowrap}
+.nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw{width:14px;height:14px;flex:none;border-radius:var(--r-sm);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+
+/* segmented control — position, not colour, shows which is on */
+.seg{display:inline-flex;gap:2px;padding:2px;background:var(--surface-3);border-radius:var(--r-md);flex:none}
+.seg button{height:var(--h-sm);padding:0 12px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink-2);font-weight:500;white-space:nowrap;transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:var(--shadow-1)}
+.seg.full{display:flex}
+.seg.full button{flex:1}
+
+/* ---------------- plan screen ---------------- */
+main{--lw:280px;--rw:288px;display:grid;grid-template-columns:var(--lw) minmax(0,1fr) var(--rw);min-height:0;min-width:0}
+main.lc{--lw:36px} main.rc{--rw:36px}
+.pane{background:var(--surface);overflow-y:auto;min-width:0;display:flex;flex-direction:column}
 .pane.left{border-right:1px solid var(--line)}
 .pane.right{border-left:1px solid var(--line)}
-.pane-head{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:6px;padding:7px 9px;background:var(--paper);border-bottom:1px solid var(--line2);cursor:pointer;user-select:none}
-.pane-head:hover{background:var(--panel)}
-.pane-head:hover .pane-toggle,.pane-head:hover .pane-name{color:var(--ink)}
-.pane.right .pane-head{flex-direction:row-reverse}
-.pane-name{flex:1;min-width:0;font-size:11.5px;font-weight:650;letter-spacing:.02em;text-transform:uppercase;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pane-toggle{flex:none;width:22px;height:22px;display:grid;place-items:center;border-radius:4px;color:var(--ink3);font-size:12px;line-height:1}
-.pane-body{padding:13px 14px 40px;min-width:0;display:flex;flex-direction:column;gap:16px}
+.pane-head{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:8px;height:36px;padding:0 8px 0 16px;background:var(--surface);cursor:pointer;user-select:none;flex:none}
+.pane.right .pane-head{flex-direction:row-reverse;padding:0 16px 0 8px}
+.pane-name{flex:1;min-width:0;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pane-toggle{flex:none;width:24px;height:24px;display:grid;place-items:center;border-radius:var(--r-sm);color:var(--ink-3);transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.pane-head:hover .pane-toggle{background:var(--surface-3);color:var(--ink)}
+.pane-head:hover .pane-name{color:var(--ink-2)}
+.pane-body{min-width:0;display:flex;flex-direction:column;padding-bottom:40px}
 .pane.collapsed{overflow:hidden}
 .pane.collapsed .pane-body{display:none}
-.pane.collapsed .pane-head{flex-direction:column;gap:9px;padding:7px 4px;border-bottom:0}
+.pane.collapsed .pane-head,.pane.right.collapsed .pane-head{flex-direction:column;gap:12px;height:auto;padding:8px 0}
 .pane.collapsed .pane-name{flex:0 0 auto;writing-mode:vertical-rl}
-#stage{position:relative;background:var(--panel2);min-width:0}
-canvas{display:block;width:100%;height:100%;touch-action:none}
 
-section h2{font-size:12px;font-weight:650;margin:0 0 8px;display:flex;align-items:center;gap:8px}
-section h2::after{content:"";flex:1;height:1px;background:var(--line2)}
-.field{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-.field label{width:88px;flex:none;color:var(--ink2);font-size:12.5px}
-.field.wide label{width:auto}
-.field[hidden]{display:none}
-input[type=text],input[type=number],select,textarea{width:100%;min-width:0;padding:5px 7px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius)}
-input[type=text].len,input.deg{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
-input[type=color]{width:30px;height:26px;flex:none;padding:1px;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper)}
-input[type=text].hex{flex:1;min-width:58px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:lowercase}
-input.bad{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
-textarea{resize:vertical;min-height:74px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
-select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink2) 50%),linear-gradient(135deg,var(--ink2) 50%,transparent 50%);background-position:calc(100% - 13px) 12px,calc(100% - 9px) 12px;background-size:4px 4px;background-repeat:no-repeat;padding-right:24px}
-#unitSel{min-width:120px}
-.btn{padding:5px 10px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);white-space:nowrap}
-.btn:hover{background:var(--panel)}
-.btn:disabled{opacity:.4;cursor:default;pointer-events:none}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover{filter:brightness(1.08)}
-.btn.danger:hover{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
-.btn.sm{padding:3px 7px;font-size:12px}
-a.btn,a.btn:visited{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
-.row{display:flex;gap:6px;flex-wrap:wrap}
-.hint{font-size:11.5px;color:var(--ink3);margin:6px 0 0}
-.hint code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;background:var(--panel);border:1px solid var(--line2);border-radius:3px;padding:0 3px}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;flex:none}
-.seg button{padding:4px 11px;background:var(--paper);border:0;border-right:1px solid var(--line);font-size:12px;white-space:nowrap}
-.seg button:last-child{border-right:0}
-.seg button[aria-pressed=true]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+/* sections: divided by a line, grouped by space */
+.pane-body section{padding:12px 16px 16px;border-top:1px solid var(--line)}
+.sec-head{display:flex;align-items:center;gap:4px;min-height:var(--h-sm);margin-bottom:8px}
+.sec-head h2{flex:1;min-width:0;display:flex;align-items:center;gap:6px;margin:0;font-size:var(--fs-md);font-weight:600;color:var(--ink);cursor:pointer;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:var(--r-sm)}
+.sec-head h2::before{content:"";flex:none;width:6px;height:6px;margin:0 4px 0 2px;border-right:1.5px solid var(--ink-3);border-bottom:1.5px solid var(--ink-3);transform:translateY(-2px) rotate(45deg);transition:transform var(--dur-fast) var(--ease)}
+.sec-head h2:hover::before{border-color:var(--ink)}
+.sec-act{display:flex;align-items:center;gap:2px;flex:none}
+section.collapsed .sec-head{margin-bottom:0}
+section.collapsed .sec-head h2::before{transform:translateX(-1px) rotate(-45deg)}
+section.collapsed > :not(.sec-head){display:none!important}
+body[data-mode=room] .for-furn,body[data-mode=furniture] .for-room{display:none!important}
 
-ul.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
-ul.list li{display:flex;flex-direction:column;gap:5px;padding:6px 7px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--paper)}
-ul.list li.on{border-color:var(--accent);background:var(--accent-soft)}
-li .r1,li .r2{display:flex;align-items:center;gap:7px;min-width:0}
-li .r2{gap:5px;justify-content:flex-end}
-li > .dim{display:block;margin:-2px 0 1px 21px;font-size:11.5px;color:var(--ink3);white-space:normal}
-.sw{width:14px;height:14px;flex:none;border-radius:3px;border:1px solid rgba(0,0,0,.18)}
-.nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dim{font-size:11.5px;color:var(--ink3);white-space:nowrap}
-.count{font-size:11px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:600}
-.empty{border:1px dashed var(--line);border-radius:var(--radius);padding:14px 12px;color:var(--ink3);font-size:12.5px;text-align:center}
+/* lists: one line per row, quiet until you point at it */
+ul.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+ul.list li{position:relative;display:flex;align-items:center;gap:8px;min-height:var(--h-ctl);padding:4px 4px 4px 8px;border-radius:var(--r-md);cursor:pointer;min-width:0;transition:background var(--dur-fast) var(--ease)}
+ul.list li:hover{background:var(--surface-2)}
+ul.list li.on{background:var(--accent-soft)}
+ul.list li.on::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--accent)}
+ul.list li.off .nm{color:var(--ink-3)}
+.lmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.lmain .nm{font-weight:500}
+.lmain .meta{font-size:var(--fs-sm);line-height:16px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lmeta{flex:none;font-size:var(--fs-sm);color:var(--ink-3);white-space:nowrap}
+.lact{display:flex;align-items:center;gap:2px;flex:none}
+.lact .btn{height:var(--h-row);min-width:var(--h-row);padding:0 6px;font-size:var(--fs-sm)}
+.lact .btn.icon{width:var(--h-row);padding:0}
+.count{flex:none;font-size:var(--fs-xs);line-height:16px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-full);background:var(--surface-3);color:var(--ink-2);display:grid;place-items:center;font-weight:600}
+.empty{padding:16px 8px;color:var(--ink-3);font-size:var(--fs-sm);line-height:16px;text-align:center}
+.empty .row{justify-content:center;margin-top:8px}
+.list-empty{list-style:none}
+.search{position:relative;margin-bottom:8px}
+.search svg{position:absolute;left:9px;top:8px;color:var(--ink-3);pointer-events:none}
+.search input{padding-left:30px}
+
+/* tree (rooms + library folders) */
+#layoutTree,#tree{display:flex;flex-direction:column;gap:2px;min-height:32px}
+.tree-row{position:relative;display:flex;align-items:center;gap:6px;min-height:var(--h-ctl);padding:0 4px;border-radius:var(--r-md);cursor:pointer;min-width:0;transition:background var(--dur-fast) var(--ease)}
+.tree-row:hover{background:var(--surface-2)}
+.tree-row.active{background:var(--surface-3)}
+.tree-row.active .nm{font-weight:600}
+.tree-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-row .ico{flex:none;color:var(--ink-3);display:grid;place-items:center}
+.tree-row.active .ico{color:var(--ink-2)}
+.tree-row .ico.sw{width:10px;height:10px;margin:0 3px}
+.tree-row .caret,.tree-row .caret-zone{flex:none;display:inline-flex;align-items:center;justify-content:flex-end;width:16px;height:24px;padding:0;background:none;border:0;color:var(--ink-3);cursor:pointer}
+.tree-row .caret svg,.tree-row .caret-zone svg{width:12px;height:12px}
+.tree-row .tree-more{flex:none;color:var(--ink-3)}
+.tree-row:hover .tree-more{color:var(--ink-2)}
+.tree-row.root-row .nm{font-weight:600}
+.tree-empty{font-size:var(--fs-sm);color:var(--ink-3);min-height:24px;display:flex;align-items:center}
+
+/* chips */
 .chips{display:flex;flex-wrap:wrap;gap:4px}
-#layoutTree{display:flex;flex-direction:column;gap:1px}
-.tree-row{display:flex;align-items:center;gap:5px;padding:5px 4px;border-radius:var(--radius);cursor:pointer;min-width:0}
-.tree-row:hover{background:var(--panel)}
-.tree-row.layout-row.active{background:var(--accent-soft)}
-.tree-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
-.tree-row .ico{flex:none;font-size:12px}
-.tree-row .caret{flex:none;width:16px;background:none;border:0;padding:0;color:var(--ink3);font-size:10px;cursor:pointer}
-.tree-row .tree-more{flex:none;background:none;border:0;padding:2px 5px;color:var(--ink3);font-size:14px;border-radius:4px;line-height:1}
-.tree-row .tree-more:hover{background:var(--panel2);color:var(--ink)}
-.tree-row.folder-row .chips{margin-left:2px}
-.chips button{padding:3px 8px;font-size:11.5px;border:1px solid var(--line);background:var(--paper);border-radius:20px}
-.chips button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.chips button,.chip-toggle{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 10px;font-size:var(--fs-sm);border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:var(--r-full);cursor:pointer;white-space:nowrap;transition:background var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.chips button:hover,.chip-toggle:hover{border-color:var(--line-strong);color:var(--ink)}
+.chips button[aria-pressed=true],.chip-toggle:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.chip-toggle input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.chip-toggle:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 .chips button.untagged{font-style:italic}
-.chips button.clear{display:inline-flex;align-items:center;gap:4px;border-style:dashed;color:var(--ink2)}
-.chips button.clear:hover{color:var(--warn);border-color:var(--warn)}
-.chips button.clear b{font-size:13px;line-height:1;font-weight:600}
+.chips button.clear{border-color:transparent;background:none;color:var(--ink-3)}
+.chips button.clear:hover{color:var(--ink)}
+.tagchip{display:inline-flex;align-items:center;height:20px;padding:0 8px;font-size:var(--fs-xs);border:1px solid var(--line);border-radius:var(--r-full);color:var(--ink-2);background:var(--surface);white-space:nowrap}
+.tagchip.inherit{border-style:dashed;color:var(--ink-3)}
+button.tagchip{cursor:pointer}
+button.tagchip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.filters{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.filters .chips{display:contents}
+.field .check{margin:0}
 
+/* tag input */
 .tagfield{position:relative}
-.taginput{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:3px 4px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);cursor:text}
-.taginput.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.taginput .tag{display:inline-flex;align-items:center;gap:2px;padding:1px 3px 1px 8px;font-size:11.5px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);border-radius:20px;white-space:nowrap;max-width:100%}
+.taginput{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:var(--h-ctl);padding:3px 4px;background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-md);cursor:text;transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+.taginput:hover{border-color:var(--ink-3)}
+.taginput.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.taginput .tag{display:inline-flex;align-items:center;gap:2px;height:22px;padding:0 2px 0 8px;font-size:var(--fs-sm);background:var(--surface-3);color:var(--ink);border-radius:var(--r-full);white-space:nowrap;max-width:100%}
 .taginput .tag span{overflow:hidden;text-overflow:ellipsis}
-.taginput .tag button{flex:none;background:none;border:0;padding:0 3px;color:inherit;font-size:12px;line-height:1;opacity:.65;border-radius:50%}
-.taginput .tag button:hover{opacity:1;color:var(--warn)}
-.taginput input[type=text]{flex:1 1 70px;width:auto;min-width:70px;border:0;padding:2px 3px;background:transparent}
-.taginput input[type=text]:focus-visible{outline:0}
-.tagsuggest{margin-top:4px;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper);box-shadow:var(--shadow);max-height:132px;overflow:auto;padding:3px}
-.tagsuggest[hidden]{display:none}
-.tagsuggest button{display:block;width:100%;text-align:left;padding:4px 7px;border:0;background:none;border-radius:4px;font-size:12.5px}
-.tagsuggest button:hover{background:var(--panel)}
-.tagsuggest button[aria-selected=true]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.taginput .tag button{flex:none;display:grid;place-items:center;width:18px;height:18px;background:none;border:0;padding:0;color:var(--ink-3);border-radius:50%}
+.taginput .tag button:hover{background:var(--line);color:var(--ink)}
+.taginput input[type=text]{flex:1 1 72px;width:auto;min-width:72px;height:22px;border:0;padding:0 4px;background:transparent;box-shadow:none}
+.taginput input[type=text]:focus{outline:0;box-shadow:none}
+.tagsuggest{position:absolute;left:0;right:0;z-index:5;margin-top:4px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow-2);max-height:180px;overflow:auto;padding:4px}
+.tagsuggest button{display:block;width:100%;height:var(--h-sm);text-align:left;padding:0 8px;border:0;background:none;border-radius:var(--r-sm)}
+.tagsuggest button:hover{background:var(--surface-2)}
+.tagsuggest button[aria-selected=true]{background:var(--accent-soft);color:var(--ink);font-weight:600}
 
-#toolbar{position:absolute;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap;background:rgba(251,251,248,.94);padding:5px;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-#readout{position:absolute;right:12px;bottom:12px;background:rgba(251,251,248,.94);border:1px solid var(--line);border-radius:var(--radius);padding:5px 9px;font-size:12px;color:var(--ink2);box-shadow:var(--shadow)}
-#modeTag{position:absolute;left:12px;bottom:12px;background:var(--accent);color:#fff;padding:5px 10px;border-radius:var(--radius);font-size:12px;box-shadow:var(--shadow)}
-#modeTag.locked{background:var(--paper);color:var(--ink2);border:1px solid var(--line)}
-#flash{position:absolute;left:50%;transform:translateX(-50%);top:12px;background:var(--warn);color:#fff;padding:5px 11px;border-radius:var(--radius);font-size:12.5px;opacity:0;pointer-events:none;transition:opacity .18s;z-index:5}
-#flash.on{opacity:1}
+/* properties */
+.selhead{display:flex;align-items:center;gap:8px;min-height:var(--h-ctl);margin-bottom:8px}
+.selhead .nm{font-weight:600}
+.inline-ctl{display:flex;align-items:center;gap:4px;flex:1;min-width:0}
+.statgrid{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}
+.statgrid dt{color:var(--ink-2)}
+.statgrid dd{margin:0;text-align:right;font-weight:500}
+.statgrid dd.bad{color:var(--danger)}
+.kbd{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:var(--fs-sm);color:var(--ink-2);margin:12px 0 0}
+.kbd dt{align-self:center}
+.kbd dd{margin:0;text-align:right}
+kbd{display:inline-block;min-width:20px;height:20px;padding:0 5px;font:500 var(--fs-xs)/18px var(--font);text-align:center;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-bottom-width:2px;border-radius:var(--r-sm)}
 
-/* plain-div modal: no <dialog>, no <form> — both are blocked in sandboxed frames */
-#modal{position:fixed;inset:0;background:rgba(23,27,26,.34);display:grid;place-items:center;padding:14px;z-index:50}
-#modal[hidden]{display:none}
-#modalCard{background:var(--paper);border:1px solid var(--line);border-radius:8px;width:min(440px,100%);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px -28px rgba(23,27,26,.6)}
-#moTitle{padding:13px 16px;border-bottom:1px solid var(--line2);font-weight:650}
-#moBody{padding:14px 16px;overflow:auto}
-#moFoot{padding:11px 16px;border-top:1px solid var(--line2);display:flex;gap:8px;align-items:center}
-#moErr{flex:1;color:var(--warn);font-size:12px;min-height:1em}
-.swatches{display:flex;gap:5px;flex-wrap:wrap}
-.swatches button{width:21px;height:21px;border-radius:4px;border:1px solid rgba(0,0,0,.2)}
-.swatches button[aria-pressed=true]{box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--accent)}
+/* ---------------- canvas + its floating controls ---------------- */
+#stage{position:relative;background:var(--stage);min-width:0;overflow:hidden}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.island{position:absolute;z-index:4;display:flex;align-items:center;gap:2px;padding:3px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-1)}
+.island .seg{background:transparent;padding:0}
+.island .seg button[aria-pressed=true]{background:var(--surface-3);box-shadow:none}
+.island .btn.quiet{height:var(--h-sm);min-width:var(--h-sm)}
+.island .btn.quiet.icon{width:var(--h-sm)}
+.island .sep{width:1px;align-self:stretch;margin:4px 2px;background:var(--line)}
+#ctlMode{left:12px;top:12px}
+#ctlHist{right:12px;top:12px}
+#ctlZoom{left:12px;bottom:12px}
+#zoomPct{min-width:52px;font-size:var(--fs-sm)}
+#readout{right:12px;bottom:12px;gap:8px;height:36px;padding:0 12px;font-size:var(--fs-sm);color:var(--ink-2);white-space:nowrap}
+#readout .bad{color:var(--danger);font-weight:600;display:inline-flex;align-items:center;gap:6px}
+#readout .bad::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+#drawHint{left:50%;top:12px;transform:translateX(-50%);max-width:min(520px,calc(100% - 24px));padding:8px 12px;font-size:var(--fs-sm);line-height:16px;color:var(--ink-2);display:block}
+#drawHint b{color:var(--ink);font-weight:600}
+.toast{position:absolute;left:50%;top:12px;z-index:6;max-width:min(480px,calc(100% - 24px));padding:8px 14px;border-radius:var(--r-full);background:var(--ink);color:var(--surface);font-size:var(--fs-sm);line-height:16px;font-weight:500;box-shadow:var(--shadow-2);text-align:center;
+  opacity:0;transform:translate(-50%,-4px);pointer-events:none;transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast.warn{background:var(--danger);color:var(--on-accent)}
+#drawHint:not([hidden]) ~ #flash{top:64px}
 
-/* a folded-away block inside a modal — <details> is fine in a sandboxed frame, <dialog>/<form> are not */
-details.adv{margin-top:11px;border-top:1px solid var(--line2);padding-top:9px}
-details.adv > summary{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;list-style:none;font-size:12px;font-weight:650;color:var(--ink2)}
+/* ---------------- modal (plain div: <dialog>/<form> are blocked in sandboxed frames) ---------------- */
+#modal{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:center;padding:16px;z-index:50;animation:fade var(--dur) var(--ease)}
+#modalCard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);width:min(480px,100%);max-height:min(88vh,760px);display:flex;flex-direction:column;box-shadow:var(--shadow-3);animation:rise var(--dur) var(--ease)}
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(4px) scale(.99)}}
+#moTitle{padding:16px 20px 4px;font-size:var(--fs-lg);font-weight:600;line-height:20px}
+#moBody{padding:12px 20px 16px;overflow:auto}
+#moBody > p:first-child{margin-top:0}
+#moBody p{margin:0 0 8px}
+#moFoot{padding:12px 20px 16px;display:flex;gap:8px;align-items:center;border-top:1px solid var(--line)}
+#moErr{flex:1;color:var(--danger);font-size:var(--fs-sm);line-height:16px;min-height:16px}
+.group{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.group-title{margin:0 0 8px;font-size:var(--fs-sm);font-weight:600;color:var(--ink-2)}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.swatches button{width:22px;height:22px;padding:0;border:0;border-radius:var(--r-sm);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+.swatches button:hover{transform:scale(1.08)}
+.swatches button[aria-pressed=true]{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
+details.adv{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+details.adv > summary{display:flex;align-items:center;gap:8px;height:var(--h-sm);cursor:pointer;user-select:none;list-style:none;font-weight:600;color:var(--ink-2);border-radius:var(--r-sm)}
 details.adv > summary::-webkit-details-marker{display:none}
-details.adv > summary::before{content:"\25b8";flex:none;width:9px;font-size:9px;color:var(--ink3)}
-details.adv[open] > summary::before{content:"\25be"}
-details.adv > summary:hover,details.adv > summary:hover::before{color:var(--ink)}
-details.adv .advbody{padding-top:10px}
-input[type=text].id{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
-
-/* tick-box lists — export picks what leaves, import picks what comes in */
-.picker{border:1px solid var(--line);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
-.picker-head{display:flex;align-items:center;gap:6px;padding:5px 7px;background:var(--panel);border-bottom:1px solid var(--line2);font-size:12px;font-weight:650}
+details.adv > summary::before{content:"";width:6px;height:6px;margin:0 2px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform var(--dur-fast) var(--ease)}
+details.adv[open] > summary::before{transform:translateY(-2px) rotate(45deg)}
+details.adv > summary:hover{color:var(--ink)}
+details.adv .advbody{padding-top:8px}
+.picker{border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:12px;overflow:hidden}
+.picker-head{display:flex;align-items:center;gap:4px;height:36px;padding:0 4px 0 12px;background:var(--surface-2);border-bottom:1px solid var(--line);font-weight:600}
 .picker-head .grow{flex:1;min-width:0}
-.picker-body{max-height:172px;overflow:auto;padding:3px}
-.pick{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:4px;cursor:pointer;min-width:0}
-.pick:hover{background:var(--panel)}
-.pick input{flex:none;width:auto;margin:0}
-.pick.locked{cursor:default;color:var(--ink2)}
-.pick .nm{font-size:12.5px}
-.picker .empty{margin:5px;padding:11px}
+.picker-body{max-height:176px;overflow:auto;padding:4px}
+.pick{display:flex;align-items:center;gap:8px;min-height:var(--h-sm);padding:0 8px;border-radius:var(--r-sm);cursor:pointer;min-width:0}
+.pick:hover{background:var(--surface-2)}
+.pick.locked{cursor:default;color:var(--ink-2)}
+.pick .dim{max-width:45%;overflow:hidden;text-overflow:ellipsis}
+.picker .empty{padding:12px}
+.export-img{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:16px;border:1px solid var(--line);border-radius:var(--r-md)}
+.export-img .grow{flex:1;min-width:0}
+.export-img .ico{color:var(--ink-3)}
+.export-img .nm{font-weight:500}
 
-.pane-body section > h2{cursor:pointer;user-select:none}
-.pane-body section > h2::before{content:"\25BE";flex:none;width:9px;font-size:9px;color:var(--ink3)}
-.pane-body section.collapsed > h2::before{content:"\25B8"}
-.pane-body section.collapsed > h2{margin-bottom:0}
-.pane-body section.collapsed > *:not(h2){display:none}
-.pane-body section > h2:hover::before{color:var(--ink)}
+/* ---------------- menus ---------------- */
+.menu{position:fixed;z-index:60;min-width:188px;max-width:280px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-2);display:flex;flex-direction:column;animation:rise var(--dur) var(--ease)}
+.menu .mtitle{padding:6px 8px 4px;font-size:var(--fs-xs);font-weight:600;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu button{display:flex;align-items:center;gap:8px;width:100%;height:var(--h-ctl);text-align:left;padding:0 8px;border:0;background:none;border-radius:var(--r-sm);white-space:nowrap}
+.menu button:hover,.menu button:focus-visible{background:var(--surface-2);outline:0}
+.menu button.danger{color:var(--danger)}
+.menu button.danger:hover{background:var(--danger-soft)}
+.menu .sep{height:1px;margin:4px 0;background:var(--line)}
 
-/* anchored dropdown menu — the ⋯ buttons open this, not the modal */
-.menu{position:fixed;z-index:60;min-width:184px;max-width:268px;padding:4px;background:var(--paper);border:1px solid var(--line);border-radius:7px;box-shadow:var(--shadow);display:flex;flex-direction:column}
-.menu .mtitle{padding:4px 9px 6px;font-size:11px;font-weight:650;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.menu button{display:block;width:100%;text-align:left;padding:5px 9px;border:0;background:none;border-radius:4px;font-size:12.5px;white-space:nowrap}
-.menu button:hover{background:var(--panel)}
-.menu button.danger{color:var(--warn)}
-.menu button.danger:hover{background:var(--warn-soft)}
-.menu .sep{height:1px;margin:4px 3px;background:var(--line2)}
-
-/* drag to move / reorder */
+/* ---------------- drag to move / reorder ---------------- */
 .tree-row[draggable=true],ul.list li[draggable=true]{cursor:grab}
-.tree-row.dragging,ul.list li.dragging{opacity:.42}
-.tree-row.drop-into{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.tree-row.dragging,ul.list li.dragging,.tile.dragging{opacity:.4}
+.tree-row.drop-into{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .tree-row.drop-before,ul.list li.drop-before{box-shadow:inset 0 2px 0 var(--accent)}
 .tree-row.drop-after,ul.list li.drop-after{box-shadow:inset 0 -2px 0 var(--accent)}
-#layoutTree{min-height:26px}
-#layoutTree.drop-root{background:var(--accent-soft);border-radius:var(--radius)}
+#layoutTree.drop-root,#tree.drop-root{background:var(--accent-soft);border-radius:var(--r-md)}
+.inline-edit{flex:1;min-width:0;width:100%;height:24px!important;padding:0 6px!important;border-color:var(--accent)!important}
 
-/* rename in place */
-.inline-edit{flex:1;min-width:0;width:100%;padding:1px 4px;font-size:12.5px;background:var(--paper);border:1px solid var(--accent);border-radius:4px}
-
-#tabs{display:none}
-
-/* ---- Inventory / Marketplace tabs: a full-width pane that swaps in for <main> ---- */
-#app{grid-template-rows:auto 1fr}
+/* ---------------- library + marketplace ---------------- */
 main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
-#paneLibrary{display:none;grid-template-columns:290px minmax(0,1fr);min-width:0;overflow:hidden}
+#paneLibrary{display:none;grid-template-columns:280px minmax(0,1fr);min-width:0;overflow:hidden}
 #paneLibrary.on{display:grid}
-#paneLibrary .lib-left{background:var(--paper);border-right:1px solid var(--line);overflow-y:auto;min-width:0;display:flex;flex-direction:column}
-#libContent{overflow-y:auto;min-width:0;background:var(--panel2)}
-.libtabs{display:flex;border-bottom:1px solid var(--line2);flex:none}
-.libtabs button{flex:1;padding:9px 4px;background:var(--paper);border:0;border-bottom:2px solid transparent;font-size:12.5px;font-weight:600;color:var(--ink2)}
-.libtabs button:hover{background:var(--panel)}
-.libtabs button[aria-pressed=true]{color:var(--accent);border-bottom-color:var(--accent)}
-.expl-top{padding:9px 10px 0;flex:none}
-.expl-tools{display:flex;gap:6px;padding:9px 10px;flex-wrap:wrap}
-#tree{padding:2px 6px 16px;display:flex;flex-direction:column;gap:1px;flex:1;min-height:26px}
-#tree.drop-root{background:var(--accent-soft);border-radius:var(--radius)}
+#paneLibrary .lib-left{background:var(--surface);border-right:1px solid var(--line);overflow-y:auto;min-width:0;display:flex;flex-direction:column}
+#libContent{overflow-y:auto;min-width:0;background:var(--surface-2)}
+.lib-title{margin:0;padding:16px 16px 8px;font-size:var(--fs-lg);font-weight:600}
+.expl-top{padding:0 16px;flex:none}
+.expl-tools{display:flex;gap:8px;padding:0 16px 12px;flex-wrap:wrap}
+#tree{padding:8px 8px 24px;border-top:1px solid var(--line);flex:1}
 #tree .tree-row{cursor:grab}
-.tree-row .caret-zone{flex:none;display:inline-flex;justify-content:flex-end;align-items:center;padding-right:2px;color:var(--ink3);font-size:10px;cursor:pointer}
-.tree-row .ico.sw{width:9px;height:9px;border-radius:3px;margin:0 1px}
-.tree-row.root-row{font-weight:650}
-.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:16px 20px 0}
-.crumbs button{background:none;border:0;padding:3px 5px;color:var(--ink2);border-radius:4px;font-size:12.5px}
-.crumbs button:hover{background:var(--panel)}
-.crumbs button:last-child{color:var(--ink);font-weight:650}
-.crumbs .sep{color:var(--ink3);font-size:11px}
-.viewhead{display:flex;align-items:center;gap:8px;padding:10px 20px 0;flex-wrap:wrap}
+#tree .tree-row.root-row{cursor:pointer}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:16px 24px 0}
+.crumbs button{height:var(--h-sm);background:none;border:0;padding:0 6px;color:var(--ink-2);border-radius:var(--r-sm)}
+.crumbs button:hover{background:var(--surface-3);color:var(--ink)}
+.crumbs button:last-child{color:var(--ink);font-weight:600;font-size:var(--fs-lg)}
+.crumbs .sep{color:var(--ink-3)}
+.viewhead{display:flex;align-items:center;gap:8px;padding:8px 24px 0;flex-wrap:wrap;min-height:40px}
 .viewhead .grow{flex:1}
-.foldertagbar{margin:12px 20px 0;padding:10px 12px;background:var(--paper);border:1px solid var(--line2);border-radius:7px}
-.foldertagbar .lbl{font-size:11px;font-weight:650;color:var(--ink3);text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:11px;padding:14px 20px 50px}
-.tile{border:1px solid var(--line2);border-radius:8px;background:var(--paper);padding:0;cursor:pointer;display:flex;flex-direction:column;min-width:0;text-align:left;overflow:hidden;position:relative}
-.tile:hover{border-color:var(--accent);box-shadow:var(--shadow)}
-.tile .thumb{height:66px;background:var(--panel2);display:grid;place-items:center;overflow:hidden;position:relative}
-.tile .thumb .ico{font-size:28px}
-.tile .addOverlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(20,20,20,.55);opacity:0;transition:opacity .15s;pointer-events:none}
-.tile:hover .addOverlay,.tile:focus-within .addOverlay{opacity:1;pointer-events:auto}
-.tile .addOverlay:hover{background:rgba(20,20,20,.75)}
-.tile .addOverlay .plus{color:#fff;font-size:24px;font-weight:700;line-height:1;pointer-events:none}
-.tile .body{padding:8px 9px 9px;display:flex;flex-direction:column;gap:4px;min-width:0}
-.tile .nm{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tile .more{position:absolute;top:4px;right:4px;background:rgba(251,251,248,.9);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;line-height:1.4;color:var(--ink2)}
-.tile .more:hover{background:var(--paper);color:var(--ink)}
-.tile.dragover{outline:2px solid var(--accent);outline-offset:-2px}
+.viewhead .hint,.viewhead .check{margin:0}
+.foldertagbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 24px 0}
+.foldertagbar .lbl{font-size:var(--fs-sm);color:var(--ink-3)}
+.lib-section{margin:24px 24px 0;font-size:var(--fs-sm);font-weight:600;color:var(--ink-2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px;padding:12px 24px 48px}
+.grid > .empty{grid-column:1/-1;padding:32px 16px}
+.tile{position:relative;display:flex;flex-direction:column;min-width:0;padding:0;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);text-align:left;overflow:hidden;cursor:pointer;transition:border-color var(--dur-fast) var(--ease)}
+.tile:hover{border-color:var(--line-strong)}
+.tile.dragover{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
 .tile[draggable=true]{cursor:grab}
-.tile.dragging{opacity:.42}
-.chips .tagchip{padding:1px 8px;font-size:11px;border:1px solid var(--line);background:var(--paper);border-radius:20px;color:var(--ink2)}
-.chips .tagchip.inherit{border-style:dashed;color:var(--ink3);font-style:italic}
-.detail{padding:18px 22px 60px;max-width:680px}
-.dhead{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
+.tile.static{cursor:default}
+.tile .thumb{position:relative;height:88px;display:grid;place-items:center;background:var(--surface-2);border-bottom:1px solid var(--line);color:var(--ink-3)}
+.tile .thumb canvas,.preview canvas{position:absolute;inset:0;width:100%;height:100%}
+.tile .thumb svg.i{width:28px;height:28px;stroke-width:1.25}
+.tile .body{padding:8px 10px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile .nm{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .dim{overflow:hidden;text-overflow:ellipsis}
+.tile .chips{margin-top:4px}
+.tile .more{position:absolute;top:4px;right:4px;z-index:1;display:grid;place-items:center;width:24px;height:24px;border-radius:var(--r-sm);color:var(--ink-3);background:transparent;cursor:pointer;transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.tile .more:hover,.tile .more:focus-visible{color:var(--ink);background:var(--surface-3)}
+.tile .tile-foot{display:flex;align-items:center;gap:8px;margin-top:6px}
+.tile .tile-foot .dim{flex:1;min-width:0}
+/* text tiles: marketplace entries have no picture, so the name is the content —
+   give it line length (wider columns) and room to wrap instead of truncating. At 264px nearly
+   every name fits in two lines; the 3-line clamp is a safety net, and rows only grow when needed */
+.grid.text{grid-template-columns:repeat(auto-fill,minmax(264px,1fr));gap:8px}
+.ttile{display:flex;align-items:center;gap:12px;min-width:0;padding:10px 10px 10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);text-align:left;cursor:pointer;transition:border-color var(--dur-fast) var(--ease)}
+.ttile:hover{border-color:var(--line-strong)}
+.ttile .ico{flex:none;color:var(--ink-3)}
+.ttile .tmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.ttile .tname{font-weight:500;line-height:20px;overflow-wrap:break-word;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
+.ttile .dim{line-height:16px}
+.ttile .btn{flex:none}
+.detail{padding:16px 24px 48px;max-width:720px}
+.detail.wide{max-width:none}
+.grid.flush{padding:0}
+.dhead{display:flex;align-items:flex-start;gap:16px;margin-bottom:16px}
 .dhead .grow{flex:1;min-width:0}
-#dName{font-size:19px;font-weight:650;padding:5px 7px;border:1px solid transparent;border-radius:6px;width:100%}
-#dName:hover,#dName:focus{border-color:var(--line);background:var(--paper)}
-.preview{width:100%;height:150px;background:var(--paper);border:1px solid var(--line2);border-radius:8px;display:grid;place-items:center;margin-bottom:14px}
-.section-h{font-size:11px;font-weight:650;color:var(--ink3);text-transform:uppercase;letter-spacing:.02em;margin:18px 0 8px;display:flex;align-items:center;gap:8px}
-.section-h::after{content:"";flex:1;height:1px;background:var(--line2)}
-.statline{font-size:12.5px;color:var(--ink2);background:var(--paper);border:1px solid var(--line2);border-radius:6px;padding:8px 10px}
-.crumbline{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.marketnote{margin:12px 20px 0;padding:9px 12px;background:var(--accent-soft);color:var(--accent);border-radius:7px;font-size:12px}
-.addmode-tabs{display:flex;gap:6px;margin-bottom:10px}
-.addmode-tabs button{flex:1}
-.dropzone{border:1.5px dashed var(--line);border-radius:8px;padding:18px;text-align:center;color:var(--ink3);font-size:12.5px}
-.dropzone.over{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
-.listing-status{font-size:12px;color:var(--ink3);padding:2px 0}
-.subtile .sub{font-size:11px;color:var(--ink3)}
-#libFlash{position:fixed;left:50%;transform:translateX(-50%);top:12px;background:var(--accent);color:#fff;padding:5px 11px;border-radius:var(--radius);font-size:12.5px;opacity:0;pointer-events:none;transition:opacity .18s;z-index:70}
-#libFlash.warn{background:var(--warn)}
-#libFlash.on{opacity:1}
+.dhead h1{margin:0 0 4px;font-size:var(--fs-xl);line-height:28px;font-weight:600}
+.dhead .title{font-size:var(--fs-lg);font-weight:600;margin-bottom:2px}
+.preview{position:relative;width:100%;height:180px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);display:grid;place-items:center;margin-bottom:16px}
+.addmode-tabs{margin:4px 0 12px}
+.dropzone{border:1.5px dashed var(--line-strong);border-radius:var(--r-md);padding:24px 16px;text-align:center;color:var(--ink-3);transition:border-color var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.dropzone .btn{margin-top:8px}
+.dropzone.over{border-color:var(--accent);color:var(--ink);background:var(--accent-soft)}
+.listing-status{font-size:var(--fs-sm);color:var(--ink-3);padding:4px 0}
+.registry{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+#libFlash{position:fixed;top:60px}
 
+/* ---------------- touch ---------------- */
+@media (pointer:coarse){
+  :root{--h-ctl:40px;--h-sm:36px;--h-row:32px}
+  .kbd{display:none}
+  .island .btn.quiet{height:36px;min-width:36px}
+  .island .btn.quiet.icon{width:36px}
+}
+
+/* ---------------- narrow screens: canvas on top, one column of panels below ---------------- */
 @media (max-width:900px){
-  header{flex-wrap:wrap;gap:8px;padding:8px 10px}
-  header h1{font-size:13.5px}
-  header h1 span{display:none}
-  header .hgroup{flex:1;justify-content:flex-end;min-width:0}
-  header .hgroup label{display:none}
-  #modeSeg{display:none}
-  main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(230px,1fr) auto auto}
-  #stage{order:1}
-  #tabs{order:2;display:flex;background:var(--paper);border-top:1px solid var(--line)}
-  #tabs button{flex:1;padding:9px 4px;background:transparent;border:0;border-bottom:2px solid transparent;font-size:12.5px}
-  #tabs button[aria-pressed=true]{border-bottom-color:var(--accent);color:var(--accent);font-weight:600}
-  .pane{order:3;max-height:44vh;border:0!important;border-top:1px solid var(--line)!important}
-  .pane[hidden]{display:none}
+  #app{grid-template-rows:auto minmax(0,1fr)}
+  header{flex-wrap:wrap;gap:0 12px;padding:0 12px}
+  .brand{height:44px}
+  .brand span{display:none}
+  .nav{order:3;flex:1 0 100%;height:40px;margin:0 -8px;border-top:1px solid var(--line)}
+  .hgroup{height:44px;margin-left:auto}
+  #unitSel{min-width:0;width:auto}
+  header .btn{height:var(--h-sm);padding:0 10px}
+  section.is-empty{display:none}
+  main{display:flex;flex-direction:column;overflow-y:auto}
+  #stage{position:sticky;top:0;z-index:8;flex:none;height:52vh;min-height:240px;border-bottom:1px solid var(--line)}
+  .pane,.pane-body{display:contents}
   .pane-head{display:none}
-  .pane.collapsed .pane-body{display:flex}
-  #paneLibrary.on{grid-template-columns:minmax(0,1fr)}
-  #paneLibrary .lib-left{border-right:0;border-bottom:1px solid var(--line);max-height:38vh}
+  .pane-body section{background:var(--surface)}
+  .pane-body section:first-child{border-top:1px solid var(--line);padding-top:12px}
+  section[data-sec=sel],section[data-sec=roomsel]{order:1}
+  section[data-sec=layout]{order:2}
+  section[data-sec=walls],section[data-sec=openings],section[data-sec=structure],section[data-sec=things]{order:3}
+  section[data-sec=shape],section[data-sec=stock]{order:4}
+  section[data-sec=drawing]{order:5;padding-bottom:40px}
+  #readout{display:none}
+  #paneLibrary.on{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  #paneLibrary .lib-left{border-right:0;border-bottom:1px solid var(--line);max-height:40vh}
+  .crumbs,.viewhead{padding-inline:16px}
+  .foldertagbar,.lib-section{margin-inline:16px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));padding:12px 16px 40px}
+  .detail{padding-inline:16px}
 }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-undo" viewBox="0 0 16 16"><path d="M5.5 3.5 2.5 6.5l3 3"/><path d="M2.5 6.5h7a4 4 0 0 1 0 8h-2"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 16 16"><path d="m10.5 3.5 3 3-3 3"/><path d="M13.5 6.5h-7a4 4 0 0 0 0 8h2"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 16 16"><path d="M3 8h10"/></symbol>
+    <symbol id="i-more" viewBox="0 0 16 16"><circle cx="3.5" cy="8" r=".9" fill="currentColor"/><circle cx="8" cy="8" r=".9" fill="currentColor"/><circle cx="12.5" cy="8" r=".9" fill="currentColor"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 16 16"><path d="m6 3.5 4.5 4.5L6 12.5"/></symbol>
+    <symbol id="i-chev-l" viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></symbol>
+    <symbol id="i-chev-d" viewBox="0 0 16 16"><path d="M3.5 6 8 10.5 12.5 6"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 16 16"><path d="M1.75 4.25a1 1 0 0 1 1-1h3.1l1.5 1.5h5.9a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H2.75a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-folder-plus" viewBox="0 0 16 16"><path d="M7.25 12.75h-4.5a1 1 0 0 1-1-1v-7.5a1 1 0 0 1 1-1h3.1l1.5 1.5h5.9a1 1 0 0 1 1 1v2.5"/><path d="M12 9.5v5M9.5 12h5"/></symbol>
+    <symbol id="i-room" viewBox="0 0 16 16"><path d="M2.5 2.5h11v11h-11z"/><path d="M2.5 9h4M9.5 2.5v4"/></symbol>
+    <symbol id="i-library" viewBox="0 0 16 16"><path d="M2.5 2.5h3v11h-3zM6.5 2.5h3v11h-3z"/><path d="m10.4 3.2 2.9-.8 2.2 10.6-2.9.7z"/></symbol>
+    <symbol id="i-store" viewBox="0 0 16 16"><path d="M2 6.5 3 2.5h10l1 4"/><path d="M2 6.5a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0"/><path d="M3 8.5v5h10v-5M6.5 13.5v-3h3v3"/></symbol>
+    <symbol id="i-box" viewBox="0 0 16 16"><path d="M8 1.75 14 5v6L8 14.25 2 11V5z"/><path d="M2 5l6 3.25L14 5M8 8.25v6"/></symbol>
+    <symbol id="i-link" viewBox="0 0 16 16"><path d="M6.75 9.25a3 3 0 0 0 4.24 0l2-2a3 3 0 0 0-4.24-4.24l-.75.75"/><path d="M9.25 6.75a3 3 0 0 0-4.24 0l-2 2a3 3 0 0 0 4.24 4.24l.75-.75"/></symbol>
+    <symbol id="i-rot-l" viewBox="0 0 16 16"><path d="M2.75 2.75v3.5h3.5"/><path d="M3.1 6.25A5.25 5.25 0 1 1 3.4 10.5"/></symbol>
+    <symbol id="i-rot-r" viewBox="0 0 16 16"><path d="M13.25 2.75v3.5h-3.5"/><path d="M12.9 6.25A5.25 5.25 0 1 0 12.6 10.5"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 16 16"><path d="M2.5 5.5v-3h3M10.5 2.5h3v3M13.5 10.5v3h-3M5.5 13.5h-3v-3"/></symbol>
+    <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.25"/><path d="m10.25 10.25 3.25 3.25"/></symbol>
+    <symbol id="i-close" viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></symbol>
+    <symbol id="i-plan" viewBox="0 0 16 16"><path d="M2 2h12v12H2z"/><path d="M2 8h5v6M10 2v4h4"/></symbol>
+  </defs>
+</svg>
 <div id="app">
   <header>
+    <h1 class="brand"><svg class="i" aria-hidden="true"><use href="#i-plan"/></svg><span>Room Planner</span></h1>
+    <nav class="nav" id="navSeg" aria-label="Sections">
+      <button type="button" data-nav="plan">Plan</button>
+      <button type="button" data-nav="inventory">Library</button>
+      <button type="button" data-nav="marketplace">Marketplace</button>
+    </nav>
+    <div class="spacer"></div>
     <div class="hgroup">
-      <h1>Room Planner <span>· 2D floor plan</span></h1>
-      <div class="seg" id="modeSeg">
-        <button data-mode="room" aria-pressed="false">Room</button>
-        <button data-mode="furniture" aria-pressed="true">Furniture</button>
-        <button data-mode="inventory" aria-pressed="false">Inventory</button>
-        <button data-mode="marketplace" aria-pressed="false">Marketplace</button>
-      </div>
-    </div>
-    <div class="hgroup">
-      <label for="unitSel" style="color:var(--ink2);font-size:12.5px">Units</label>
-      <select id="unitSel">
-        <option value="ftin">feet &amp; inches</option>
-        <option value="in">inches</option>
-        <option value="cm">centimetres</option>
-        <option value="mm">millimetres</option>
-        <option value="m">metres</option>
+      <select id="unitSel" aria-label="Units" title="Units">
+        <option value="ftin">Feet &amp; inches</option>
+        <option value="in">Inches</option>
+        <option value="cm">Centimetres</option>
+        <option value="mm">Millimetres</option>
+        <option value="m">Metres</option>
       </select>
-      <button class="btn" id="btnExport">Export</button>
-      <button class="btn" id="btnImport">Import</button>
+      <button class="btn" id="btnImport">Import…</button>
+      <button class="btn" id="btnExport">Export…</button>
       <input type="file" id="fileIn" accept="application/json,.json" hidden>
     </div>
   </header>
 
   <main>
     <div class="pane left" id="paneRoom">
-      <div class="pane-head" id="headLeft" role="button" tabindex="0" title="Hide the room panel" aria-label="Hide the room panel" aria-expanded="true" aria-controls="paneRoom">
-        <span class="pane-toggle" id="tglLeft" aria-hidden="true">⟨</span>
-        <span class="pane-name">Room</span>
+      <div class="pane-head" id="headLeft" role="button" tabindex="0" aria-expanded="true" aria-controls="paneRoom">
+        <span class="pane-name">Plan</span>
+        <span class="pane-toggle" id="tglLeft" aria-hidden="true"></span>
       </div>
       <div class="pane-body">
-      <section data-sec="layout">
-        <h2>Layout</h2>
-        <div class="row" style="margin-bottom:8px">
-          <button class="btn sm" id="btnNewFolder">New folder</button>
-          <button class="btn sm primary" id="btnNewLayout">New room</button>
-        </div>
-        <div id="layoutTree"></div>
-      </section>
+        <section data-sec="layout">
+          <div class="sec-head"><h2>Rooms</h2>
+            <div class="sec-act">
+              <button class="btn quiet sm icon" id="btnNewFolder" title="New folder" aria-label="New folder"><svg class="i"><use href="#i-folder-plus"/></svg></button>
+              <button class="btn quiet sm icon" id="btnNewLayout" title="New room" aria-label="New room"><svg class="i"><use href="#i-plus"/></svg></button>
+            </div>
+          </div>
+          <div id="layoutTree"></div>
+        </section>
 
-      <section data-sec="shape">
-        <h2>Room shape</h2>
-        <div id="rectDims"></div>
-        <div class="field"><label for="wallT">Wall</label><input type="text" class="len" id="wallT"></div>
-        <div class="field"><label for="floorCol">Floor</label><input type="color" id="floorCol"><input type="text" class="hex" id="floorHex" maxlength="7" spellcheck="false" aria-label="Floor colour hex code"><span class="dim" id="areaOut"></span></div>
-        <div class="field wide">
-          <input type="checkbox" id="trimOn" style="width:auto">
-          <label for="trimOn" style="width:auto">Baseboard</label>
-          <input type="text" class="len" id="trimD" style="flex:1">
-        </div>
-        <div class="row" style="margin-top:4px">
-          <button class="btn sm" id="btnPreRect">Rectangle…</button>
-          <button class="btn sm" id="btnPreL">L-shape…</button>
-          <button class="btn sm" id="btnDrawCustom">Draw custom shape</button>
-        </div>
-        <p class="hint" id="drawHint" hidden>Click to place each corner. Click the first corner again (or press Enter) to close the shape. Walls are allowed to cross. Shift = square/straight snap. Esc cancels.</p>
-      </section>
+        <section data-sec="things" class="for-furn">
+          <div class="sec-head"><h2>Items</h2>
+            <div class="sec-act">
+              <button class="btn quiet sm icon" id="btnAddItem" title="New item" aria-label="New item"><svg class="i"><use href="#i-plus"/></svg></button>
+            </div>
+          </div>
+          <div class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input type="text" id="invSearch" placeholder="Search items" aria-label="Search items"></div>
+          <div class="filters">
+            <label class="chip-toggle" title="Hide items you've already placed every one of"><input type="checkbox" id="onlyAvail">In stock</label>
+            <div class="chips" id="tagChips"></div>
+          </div>
+          <ul class="list" id="invList"></ul>
+          <div class="empty" id="invEmpty" hidden>
+            No items yet. Add your own, or start with a few common pieces.
+            <div class="row"><button class="btn sm" id="btnSamples">Load samples</button><button class="btn sm primary" id="btnAddItem2">Add item</button></div>
+          </div>
+        </section>
 
-      <section data-sec="walls">
-        <h2>Walls</h2>
-        <ul class="list" id="wallList"></ul>
-        <p class="hint" id="wallHint"></p>
-      </section>
+        <section data-sec="walls" class="for-room">
+          <div class="sec-head"><h2>Walls</h2></div>
+          <ul class="list" id="wallList"></ul>
+          <p class="hint" id="wallHint">Drag a corner or wall in the plan. Double-click a wall to type its length.</p>
+        </section>
 
-      <section data-sec="structure">
-        <h2>Pillars &amp; interior walls</h2>
-        <ul class="list" id="structList"></ul>
-        <div class="row" style="margin-top:7px">
-          <button class="btn sm" id="btnAddPillar">Add pillar</button>
-          <button class="btn sm" id="btnDrawWall">Draw wall</button>
-        </div>
-        <p class="hint" id="structHint">These stand inside the room and block furniture, same as the walls around it. Drag a wall's end near another wall or corner to join them up.</p>
-      </section>
+        <section data-sec="openings" class="for-room">
+          <div class="sec-head"><h2>Doors &amp; windows</h2>
+            <div class="sec-act"><button class="btn quiet sm icon" id="btnAddOpening" title="Add door or window" aria-label="Add door or window"><svg class="i"><use href="#i-plus"/></svg></button></div>
+          </div>
+          <ul class="list" id="openList"></ul>
+        </section>
 
-      <section data-sec="roomsel">
-        <h2 id="roomSelTitle">Selected</h2>
-        <div id="roomSelBox"></div>
-      </section>
-
-      <section data-sec="openings">
-        <h2>Doors &amp; windows</h2>
-        <ul class="list" id="openList"></ul>
-        <div class="row" style="margin-top:7px">
-          <button class="btn sm" id="btnAddDoor">Add door</button>
-          <button class="btn sm" id="btnAddWindow">Add window</button>
-        </div>
-      </section>
-
-      <section data-sec="drawing">
-        <h2>Drawing</h2>
-        <div class="field"><label for="snapSel">Snap</label><select id="snapSel"></select></div>
-        <div class="field wide"><input type="checkbox" id="showSwing" style="width:auto" checked><label for="showSwing" style="width:auto">Show door clearance</label></div>
-        <div class="field wide"><input type="checkbox" id="showDims" style="width:auto" checked><label for="showDims" style="width:auto">Show sizes on shapes</label></div>
-        <div class="field wide"><input type="checkbox" id="showOpen" style="width:auto" checked><label for="showOpen" style="width:auto">Show things opened out</label></div>
-      </section>
+        <section data-sec="structure" class="for-room">
+          <div class="sec-head"><h2>Pillars &amp; interior walls</h2>
+            <div class="sec-act"><button class="btn quiet sm icon" id="btnAddStruct" title="Add pillar or interior wall" aria-label="Add pillar or interior wall"><svg class="i"><use href="#i-plus"/></svg></button></div>
+          </div>
+          <ul class="list" id="structList"></ul>
+        </section>
       </div>
     </div>
 
     <div id="stage">
-      <canvas id="cv"></canvas>
-      <div id="toolbar">
-        <button class="btn sm" id="btnUndo" title="Undo (Ctrl+Z)">↶ Undo</button>
-        <button class="btn sm" id="btnRedo" title="Redo (Ctrl+Shift+Z)">↷ Redo</button>
-        <button class="btn sm" id="btnZoomIn" title="Zoom in">+</button>
-        <button class="btn sm" id="btnZoomOut" title="Zoom out">−</button>
-        <button class="btn sm" id="btnFit">Fit</button>
-        <button class="btn sm" id="btnRotL" title="Rotate left (Shift+R)">⟲</button>
-        <button class="btn sm" id="btnRotR" title="Rotate right (R)">⟳</button>
-        <button class="btn sm danger" id="btnDel" title="Delete (Del)">Remove</button>
-        <button class="btn sm" id="btnPng">Save image</button>
+      <canvas id="cv" aria-label="Floor plan"></canvas>
+      <div class="island" id="ctlMode">
+        <div class="seg" id="modeSeg" role="group" aria-label="Editing mode">
+          <button type="button" data-mode="room" aria-pressed="false" title="Edit walls, doors and windows">Room</button>
+          <button type="button" data-mode="furniture" aria-pressed="true" title="Place and move items">Furniture</button>
+        </div>
       </div>
-      <div id="modeTag"></div>
-      <div id="readout"></div>
-      <div id="flash"></div>
-    </div>
-
-    <div id="tabs">
-      <button data-pane="paneRoom" data-mode="room" aria-pressed="false">Room</button>
-      <button data-pane="paneStuff" data-mode="furniture" aria-pressed="true">Things</button>
-      <button data-pane="paneLibrary" data-mode="inventory" aria-pressed="false">Inventory</button>
-      <button data-pane="paneLibrary" data-mode="marketplace" aria-pressed="false">Market</button>
+      <div class="island" id="ctlHist">
+        <button class="btn quiet icon" id="btnUndo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg class="i"><use href="#i-undo"/></svg></button>
+        <button class="btn quiet icon" id="btnRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg class="i"><use href="#i-redo"/></svg></button>
+      </div>
+      <div class="island" id="ctlZoom">
+        <button class="btn quiet icon" id="btnZoomOut" title="Zoom out" aria-label="Zoom out"><svg class="i"><use href="#i-minus"/></svg></button>
+        <button class="btn quiet" id="btnFit" title="Fit the room to the view"><span id="zoomPct">Fit</span></button>
+        <button class="btn quiet icon" id="btnZoomIn" title="Zoom in" aria-label="Zoom in"><svg class="i"><use href="#i-plus"/></svg></button>
+      </div>
+      <div class="island" id="readout" aria-live="polite"></div>
+      <div class="island" id="drawHint" hidden><b>Drawing the room.</b> Click to place each corner, then click the first corner (or press Enter) to close. Shift keeps lines straight. Esc cancels.</div>
+      <div class="toast" id="flash" role="status" aria-live="polite"></div>
     </div>
 
     <div class="pane right" id="paneStuff">
-      <div class="pane-head" id="headRight" role="button" tabindex="0" title="Hide the things panel" aria-label="Hide the things panel" aria-expanded="true" aria-controls="paneStuff">
-        <span class="pane-toggle" id="tglRight" aria-hidden="true">⟩</span>
-        <span class="pane-name">Things</span>
+      <div class="pane-head" id="headRight" role="button" tabindex="0" aria-expanded="true" aria-controls="paneStuff">
+        <span class="pane-name">Properties</span>
+        <span class="pane-toggle" id="tglRight" aria-hidden="true"></span>
       </div>
       <div class="pane-body">
-      <section data-sec="sel">
-        <h2>Selected</h2>
-        <div id="selBox"></div>
-      </section>
-      <section data-sec="things">
-        <h2>Your things</h2>
-        <input type="text" id="invSearch" placeholder="Search your things&hellip;" class="field wide" style="margin-bottom:7px">
-        <div class="chips" id="tagChips"></div>
-        <div class="field wide" style="margin-top:7px">
-          <input type="checkbox" id="onlyAvail" style="width:auto">
-          <label for="onlyAvail" style="width:auto">Only things I still have stock of</label>
-        </div>
-        <div class="field wide">
-          <label for="invScope">Stock is</label>
-          <select id="invScope">
-            <option value="project">shared across every room</option>
-            <option value="folder">shared within a folder</option>
-            <option value="room">counted per room</option>
-          </select>
-        </div>
-        <p class="hint" id="invScopeHint" style="margin-top:0"></p>
-        <ul class="list" id="invList" style="margin-top:8px"></ul>
-        <div class="row" style="margin-top:7px">
-          <button class="btn sm primary" id="btnAddItem">Add a thing</button>
-          <button class="btn sm" id="btnSamples">Add samples</button>
-        </div>
-        <p class="hint">Things live in your inventory, so the same sofa can be tried in any layout. Drag a row to reorder it; double-click its name to rename it.</p>
-      </section>
+        <section data-sec="sel" class="for-furn">
+          <div class="sec-head"><h2>Selection</h2></div>
+          <div id="selBox"></div>
+        </section>
+        <section data-sec="roomsel" class="for-room">
+          <div class="sec-head"><h2 id="roomSelTitle">Selection</h2></div>
+          <div id="roomSelBox"></div>
+        </section>
+
+        <section data-sec="shape" class="for-room">
+          <div class="sec-head"><h2>Room</h2></div>
+          <div id="rectDims"></div>
+          <div class="field"><label for="wallT">Wall thickness</label><input type="text" class="len" id="wallT"></div>
+          <div class="field"><label for="floorCol">Floor</label><input type="color" id="floorCol" aria-label="Floor colour"><input type="text" class="hex" id="floorHex" maxlength="7" spellcheck="false" aria-label="Floor colour hex code"></div>
+          <div class="field"><label class="check"><input type="checkbox" id="trimOn">Baseboard</label><input type="text" class="len" id="trimD" aria-label="Baseboard depth"></div>
+          <div class="field"><label>Area</label><span id="areaOut"></span></div>
+          <div class="group">
+            <p class="group-title">Replace the outline</p>
+            <div class="row">
+              <button class="btn sm" id="btnPreRect">Rectangle…</button>
+              <button class="btn sm" id="btnPreL">L-shape…</button>
+              <button class="btn sm" id="btnDrawCustom">Draw…</button>
+            </div>
+          </div>
+        </section>
+
+        <section data-sec="stock" class="for-furn">
+          <div class="sec-head"><h2>Stock</h2></div>
+          <div class="field"><label for="invScope">Count</label>
+            <select id="invScope">
+              <option value="project">Across all rooms</option>
+              <option value="folder">Within each folder</option>
+              <option value="room">Per room</option>
+            </select>
+          </div>
+          <p class="hint" id="invScopeHint"></p>
+        </section>
+
+        <section data-sec="drawing">
+          <div class="sec-head"><h2>View</h2></div>
+          <div class="field"><label for="snapSel">Snap to</label><select id="snapSel"></select></div>
+          <label class="check"><input type="checkbox" id="showDims" checked>Sizes on shapes</label>
+          <label class="check"><input type="checkbox" id="showSwing" checked>Door clearance</label>
+          <label class="check"><input type="checkbox" id="showOpen" checked>Items opened out</label>
+        </section>
       </div>
     </div>
   </main>
 
   <div id="paneLibrary">
     <div class="lib-left">
-      <div class="libtabs">
-        <button data-tab="library" aria-pressed="true">My Library</button>
-        <button data-tab="market" aria-pressed="false">Marketplace</button>
-      </div>
+      <h2 class="lib-title" id="libTitle">Library</h2>
       <div class="expl-top">
-        <input type="text" id="searchBox" placeholder="Search your items&hellip;">
+        <div class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input type="text" id="searchBox" placeholder="Search" aria-label="Search"></div>
       </div>
       <div class="expl-tools" id="explTools"></div>
       <div id="tree"></div>
@@ -463,14 +648,14 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
   </div>
 </div>
 
-<div id="libFlash"></div>
+<div class="toast" id="libFlash" role="status" aria-live="polite"></div>
 
 <div id="modal" hidden>
   <div id="modalCard" role="dialog" aria-modal="true" aria-labelledby="moTitle">
     <div id="moTitle">Title</div>
     <div id="moBody"></div>
     <div id="moFoot">
-      <span id="moErr"></span>
+      <span id="moErr" role="alert"></span>
       <button type="button" class="btn" id="moCancel">Cancel</button>
       <button type="button" class="btn primary" id="moOk">Save</button>
     </div>
@@ -728,6 +913,7 @@ function blankLayout(name,folderId){
     openings:[], placed:[]};
 }
 let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true, mode:'furniture',
+         planMode:'furniture', // the Room/Furniture mode to go back to when returning to the Plan screen
          inventory:[], layouts:[blankLayout()], active:null,
          folders:[],          // {id, name, parentId(null=root), tags:[...]}
          tagFilter:[],        // active tag chips in the Things pane
@@ -766,11 +952,11 @@ const childLayouts = pid => S.layouts.filter(l=>(l.folderId||null)===(pid||null)
    'room'   : every room starts with the full stock of every thing. */
 const INV_SCOPES = {
   project:{suffix:'across your rooms',
-           hint:'One pool for the whole project: placing a thing in any room takes it out of stock everywhere.'},
+           hint:'One pool for every room: placing an item anywhere takes it out of stock everywhere.'},
   folder :{suffix:'in this folder',
-           hint:'Rooms sitting directly in the same folder share a pool. A subfolder keeps its own stock — it never draws on the folder above it.'},
+           hint:'Rooms directly in the same folder share a pool. A subfolder keeps its own stock.'},
   room   :{suffix:'in this room',
-           hint:'Every room starts with the full stock. Only what you have placed in the room you are looking at is subtracted.'}
+           hint:'Every room starts with full stock. Only this room’s placements count.'}
 };
 /* the rooms whose placements count against stock right now */
 function scopeLayouts(){
@@ -1296,6 +1482,7 @@ function migrate(st){
   if(st.rightOpen==null) st.rightOpen=true;
   if(!Array.isArray(st.secClosed)) st.secClosed=[];
   if(!['room','furniture','inventory','marketplace'].includes(st.mode)) st.mode='furniture';
+  if(!isCanvasMode(st.planMode)) st.planMode = isCanvasMode(st.mode) ? st.mode : 'furniture';
   if(!st.layouts.some(l=>l.id===st.active)) st.active=st.layouts[0].id;
   const fl=st.layouts.find(l=>l.id===st.active);
   st.lastFolderId = fl ? (fl.folderId||null) : null;
@@ -1322,7 +1509,8 @@ function migrate(st){
 const $ = id => document.getElementById(id);
 const mo=$('modal');
 let moOkFn=null;
-function openModal(title, bodyHTML, okLabel, onOk, onMount){
+/* opts.danger styles the action as destructive, so a delete never wears the encouraging primary look */
+function openModal(title, bodyHTML, okLabel, onOk, onMount, opts){
   $('moTitle').textContent=title;
   tagInputs.clear();
   $('moBody').innerHTML=bodyHTML;
@@ -1330,6 +1518,8 @@ function openModal(title, bodyHTML, okLabel, onOk, onMount){
   $('moOk').textContent=okLabel||'Save';
   $('moOk').hidden = !onOk;
   $('moOk').disabled = false;
+  $('moOk').classList.toggle('danger', !!(opts&&opts.danger));
+  $('moCancel').textContent = onOk ? 'Cancel' : 'Close';
   moOkFn=onOk||null;
   mo.hidden=false;
   if(onMount) onMount();
@@ -1346,13 +1536,18 @@ mo.addEventListener('keydown', e=>{
 });
 function askText(title,label,value,onOk){
   openModal(title,
-    `<div class="field wide"><label for="moText" style="width:auto">${esc(label)}</label></div>
+    `<label class="stack-label" for="moText">${esc(label)}</label>
      <input type="text" id="moText" value="${esc(value||'')}">`, 'Save',
     ()=>{ const v=$('moText').value.trim(); if(!v){ moError('Enter a name'); return false; } onOk(v); });
 }
+/* every confirmation in the app guards something destructive */
 function askConfirm(title,msg,okLabel,onOk){
-  openModal(title, `<p style="margin:0">${esc(msg)}</p>`, okLabel||'Delete', ()=>onOk());
+  openModal(title, `<p>${esc(msg)}</p>`, okLabel||'Delete', ()=>onOk(), null, {danger:true});
 }
+/* icons come from the <symbol> sprite at the top of <body> */
+const svgI = name => `<svg class="i" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+/* long enough to read: ~60ms a character, never under 1.6s or over 5s */
+const readTime = msg => Math.max(1600, Math.min(5000, String(msg).length*60));
 
 /* ------------------------- dropdown menus -------------------------
    The ⋯ buttons open a small menu pinned to the button itself. Anything that
@@ -1560,7 +1755,7 @@ function resize(){
   scheduleDraw();
 }
 function fit(){
-  const b=bbox(RP()), pad=64;
+  const b=bbox(RP()), pad=72;
   const s=Math.min((W-pad*2)/Math.max(b.w,1),(H-pad*2)/Math.max(b.h,1));
   view.scale = s>0 ? s : .05;
   view.ox = (W-b.w*view.scale)/2 - b.x0*view.scale;
@@ -1640,11 +1835,27 @@ function finishWallDraw(a,b){
   roomSel={kind:'iwall', id:w.id};
   renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
 }
+/* canvas colours mirror the CSS tokens (DESIGN.md §3.10); saved images always use `light`.
+   Only what sits on the stage (background, walls, wall labels) changes in dark mode — selection,
+   handles and warnings are drawn over the floor, which is the user's own (usually light) colour. */
+const CANVAS={
+  light:{stage:'#e6e6e2', stageAccent:'#2a5bd7', wall:'#2b2b29', wallEdge:'rgba(29,29,27,.5)', pillar:'#585853', ink:'#1d1d1b', ink2:'#585853',
+         surface:'#fcfcfb', accent:'#2a5bd7', accentSoft:'#e9effc', danger:'#c0392b', dangerRGB:'192,57,43',
+         grid:'rgba(29,29,27,.075)', trim:'rgba(29,29,27,.10)', glass:'#cfd8e2', glassLine:'#5c7a99', swing:'rgba(29,29,27,.05)', swingLine:'rgba(29,29,27,.3)'},
+  dark: {stage:'#141413', stageAccent:'#7aa2f7', wall:'#8a8a84', wallEdge:'rgba(236,236,234,.35)', pillar:'#6f6f69', ink:'#1d1d1b', ink2:'#adada7',
+         surface:'#fcfcfb', accent:'#2a5bd7', accentSoft:'#e9effc', danger:'#c0392b', dangerRGB:'192,57,43',
+         grid:'rgba(29,29,27,.075)', trim:'rgba(29,29,27,.10)', glass:'#9fb3c8', glassLine:'#5c7a99', swing:'rgba(29,29,27,.06)', swingLine:'rgba(29,29,27,.35)'}
+};
+const darkMQ=window.matchMedia('(prefers-color-scheme: dark)');
+let forceLightCanvas=false;
+const PAL = () => (!forceLightCanvas && darkMQ.matches) ? CANVAS.dark : CANVAS.light;
+darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>scheduleDraw());
+
 function drawCustomOverlay(){
   if(!drawState) return;
-  const pts=drawState.pts;
+  const pts=drawState.pts, C=PAL();
   ctx.save();
-  ctx.strokeStyle='#2e6b57'; ctx.lineWidth=2; ctx.setLineDash([5,4]);
+  ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.setLineDash([5,4]);
   ctx.beginPath();
   if(pts.length){
     ctx.moveTo(sx(pts[0][0]),sy(pts[0][1]));
@@ -1655,8 +1866,8 @@ function drawCustomOverlay(){
   for(let i=0;i<pts.length;i++){
     const near0 = i===0 && pts.length>=3 && drawCursor && Math.hypot(sx(pts[0][0])-sx(drawCursor[0]),sy(pts[0][1])-sy(drawCursor[1]))<12;
     ctx.beginPath(); ctx.arc(sx(pts[i][0]),sy(pts[i][1]), (i===0?7:5), 0, Math.PI*2);
-    ctx.fillStyle = near0 ? '#2e6b57' : (i===0?'#d7e4dd':'#fbfbf8');
-    ctx.fill(); ctx.strokeStyle='#2e6b57'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle = near0 ? C.accent : (i===0?C.accentSoft:C.surface);
+    ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
   }
   ctx.restore();
 }
@@ -1670,9 +1881,9 @@ function addPoly(p){
 function pathPoly(p){ ctx.beginPath(); addPoly(p); }
 
 function draw(){
-  const r=L().room, P=RP();
+  const r=L().room, P=RP(), C=PAL();
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#e5e8df'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=C.stage; ctx.fillRect(0,0,W,H);
 
   pathPoly(P); ctx.fillStyle=r.floor; ctx.fill('evenodd');
   drawGrid(P);
@@ -1680,7 +1891,7 @@ function draw(){
     ctx.save(); pathPoly(P); ctx.clip();
     pathPoly(P);
     ctx.lineWidth=Math.max(1,r.trim*2*view.scale);
-    ctx.strokeStyle='rgba(23,27,26,.10)'; ctx.stroke();
+    ctx.strokeStyle=C.trim; ctx.stroke();
     ctx.restore();
   }
   drawWalls();
@@ -1690,7 +1901,7 @@ function draw(){
   for(const o of L().openings) drawOpening(o, blocked);
 
   const {bad,openBad}=getConflicts();
-  ctx.globalAlpha = roomMode() ? .42 : 1;
+  ctx.globalAlpha = roomMode() ? .4 : 1;
   for(const p of L().placed) if(showOpenFor(p)) drawOpenRegion(p, openBad.has(p.id));
   const drawOrder = L().placed.map((p,i)=>({p,i})).sort((a,b)=>{
     const pa = itemOf(a.p.itemId), pb = itemOf(b.p.itemId);
@@ -1724,7 +1935,7 @@ function drawGrid(P){
   if(step*view.scale<7) return;
   const b=bbox(P);
   ctx.save(); pathPoly(P); ctx.clip();
-  ctx.strokeStyle='rgba(23,27,26,.075)'; ctx.lineWidth=1;
+  ctx.strokeStyle=PAL().grid; ctx.lineWidth=1;
   ctx.beginPath();
   for(let x=Math.ceil(b.x0/step)*step;x<=b.x1;x+=step){ ctx.moveTo(Math.round(sx(x))+.5,sy(b.y0)); ctx.lineTo(Math.round(sx(x))+.5,sy(b.y1)); }
   for(let y=Math.ceil(b.y0/step)*step;y<=b.y1;y+=step){ ctx.moveTo(sx(b.x0),Math.round(sy(y))+.5); ctx.lineTo(sx(b.x1),Math.round(sy(y))+.5); }
@@ -1740,11 +1951,11 @@ function drawWalls(){
   ctx.clip('evenodd');
   pathPoly(P);
   ctx.lineWidth=t*2; ctx.lineJoin='miter'; ctx.miterLimit=10;
-  ctx.strokeStyle='#171b1a'; ctx.stroke();
+  ctx.strokeStyle=PAL().wall; ctx.stroke();
   ctx.lineCap='butt';
   for(const o of L().openings){
     const g=openGeom(o);
-    ctx.strokeStyle = o.kind==='window' ? '#cfd8e2' : r.floor;
+    ctx.strokeStyle = o.kind==='window' ? PAL().glass : r.floor;
     ctx.lineWidth=t*2+2;
     ctx.beginPath(); ctx.moveTo(sx(g.p0[0]),sy(g.p0[1])); ctx.lineTo(sx(g.p1[0]),sy(g.p1[1])); ctx.stroke();
   }
@@ -1752,25 +1963,25 @@ function drawWalls(){
 }
 function drawIWalls(){
   for(const w of L().room.iwalls){
-    const poly=iwallPoly(w), isSel=roomMode()&&roomSel&&roomSel.kind==='iwall'&&roomSel.id===w.id;
+    const poly=iwallPoly(w), isSel=roomMode()&&roomSel&&roomSel.kind==='iwall'&&roomSel.id===w.id, C=PAL();
     pathPoly(poly);
-    ctx.fillStyle='#171b1a'; ctx.fill();
+    ctx.fillStyle=C.wall; ctx.fill();
     ctx.lineWidth = isSel?2.5:1;
-    ctx.strokeStyle = isSel?'#2e6b57':'rgba(23,27,26,.5)';
+    ctx.strokeStyle = isSel?C.accent:C.wallEdge;
     ctx.stroke();
     if(isSel) for(const p of [w.a,w.b]){
       ctx.beginPath(); ctx.rect(sx(p[0])-5,sy(p[1])-5,10,10);
-      ctx.fillStyle='#fbfbf8'; ctx.fill(); ctx.strokeStyle='#2e6b57'; ctx.lineWidth=2; ctx.stroke();
+      ctx.fillStyle=C.surface; ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
     }
   }
 }
 function drawPillars(){
   for(const pl of L().room.pillars){
-    const poly=worldPoly(pl,pl), isSel=roomMode()&&roomSel&&roomSel.kind==='pillar'&&roomSel.id===pl.id;
+    const poly=worldPoly(pl,pl), isSel=roomMode()&&roomSel&&roomSel.kind==='pillar'&&roomSel.id===pl.id, C=PAL();
     pathPoly(poly);
-    ctx.fillStyle='#525b58'; ctx.fill();
+    ctx.fillStyle=C.pillar; ctx.fill();
     ctx.lineWidth = isSel?2.5:1.25;
-    ctx.strokeStyle = isSel?'#2e6b57':'#171b1a';
+    ctx.strokeStyle = isSel?C.accent:C.wall;
     ctx.stroke();
   }
 }
@@ -1780,21 +1991,21 @@ function drawWallDrawOverlay(){
   if(wallDrawState.a && drawCursor){
     const raw=wallDrawShift?axisLockFrom(wallDrawState.a,drawCursor):drawCursor;
     const b=snapWallPoint(raw, null, true);
-    ctx.setLineDash([5,4]); ctx.lineWidth=2; ctx.strokeStyle='#2e6b57';
+    ctx.setLineDash([5,4]); ctx.lineWidth=2; ctx.strokeStyle=PAL().accent;
     ctx.beginPath(); ctx.moveTo(sx(wallDrawState.a[0]),sy(wallDrawState.a[1])); ctx.lineTo(sx(b[0]),sy(b[1])); ctx.stroke();
     ctx.setLineDash([]);
   }
   if(wallDrawState.a){
     ctx.beginPath(); ctx.arc(sx(wallDrawState.a[0]),sy(wallDrawState.a[1]),6,0,Math.PI*2);
-    ctx.fillStyle='#2e6b57'; ctx.fill();
+    ctx.fillStyle=PAL().accent; ctx.fill();
   }
   ctx.restore();
 }
 function drawOpening(o,blocked){
   const r=L().room, g=openGeom(o), t=Math.max(2,r.wall*view.scale);
-  const isSel = roomSel && roomSel.kind==='opening' && roomSel.id===o.id;
+  const isSel = roomSel && roomSel.kind==='opening' && roomSel.id===o.id, C=PAL();
   // jambs
-  ctx.strokeStyle='#171b1a'; ctx.lineWidth=Math.max(1.5,t*.35);
+  ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(1.5,t*.35);
   for(const p of [g.p0,g.p1]){
     ctx.beginPath();
     ctx.moveTo(sx(p[0]),sy(p[1]));
@@ -1802,7 +2013,7 @@ function drawOpening(o,blocked){
     ctx.stroke();
   }
   if(o.kind==='window'){
-    ctx.strokeStyle='#5c7a99'; ctx.lineWidth=Math.max(1.2,t*.16);
+    ctx.strokeStyle=C.glassLine; ctx.lineWidth=Math.max(1.2,t*.16);
     for(const k of [-0.34,0.34]){
       ctx.beginPath();
       ctx.moveTo(sx(g.p0[0]-g.nrm[0]*r.wall*k), sy(g.p0[1]-g.nrm[1]*r.wall*k));
@@ -1813,29 +2024,29 @@ function drawOpening(o,blocked){
     if(S.showSwing){
       const sp=swingPoly(o), bad=blocked.includes(o.id);
       pathPoly(sp);
-      ctx.fillStyle = bad?'rgba(176,74,50,.16)':'rgba(23,27,26,.05)'; ctx.fill();
-      ctx.strokeStyle = bad?'rgba(176,74,50,.6)':'rgba(23,27,26,.3)';
-      ctx.setLineDash([4,4]); ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = bad?'rgba('+C.dangerRGB+',.16)':C.swing; ctx.fill();
+      ctx.strokeStyle = bad?'rgba('+C.dangerRGB+',.7)':C.swingLine;
+      ctx.setLineDash([4,4]); ctx.lineWidth=bad?1.5:1; ctx.stroke(); ctx.setLineDash([]);
     }
-    ctx.strokeStyle='#171b1a'; ctx.lineWidth=Math.max(2,t*.45); ctx.lineCap='round';
+    ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(2,t*.45); ctx.lineCap='round';
     ctx.beginPath(); ctx.moveTo(sx(g.hinge[0]),sy(g.hinge[1])); ctx.lineTo(sx(g.open[0]),sy(g.open[1])); ctx.stroke();
     ctx.lineCap='butt';
   } else if(o.dtype==='slide'){
     const off=[-g.nrm[0]*r.wall*.5, -g.nrm[1]*r.wall*.5];
     ctx.lineWidth=Math.max(2,t*.4);
-    ctx.strokeStyle='#171b1a';
+    ctx.strokeStyle=C.ink;
     ctx.beginPath();
     ctx.moveTo(sx(g.p0[0]+off[0]),sy(g.p0[1]+off[1]));
     ctx.lineTo(sx(g.mid[0]+off[0]),sy(g.mid[1]+off[1])); ctx.stroke();
-    ctx.strokeStyle='rgba(23,27,26,.45)';
+    ctx.strokeStyle=C.swingLine;
     ctx.beginPath();
     ctx.moveTo(sx(g.mid[0]-off[0]*.5),sy(g.mid[1]-off[1]*.5));
     ctx.lineTo(sx(g.p1[0]-off[0]*.5),sy(g.p1[1]-off[1]*.5)); ctx.stroke();
   }
   if(roomMode()){
     ctx.beginPath(); ctx.arc(sx(g.mid[0]),sy(g.mid[1]),7,0,Math.PI*2);
-    ctx.fillStyle = isSel ? '#2e6b57' : '#fbfbf8'; ctx.fill();
-    ctx.strokeStyle='#2e6b57'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle = isSel ? C.accent : C.surface; ctx.fill();
+    ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
   }
 }
 /* the open footprint is always drawn for whatever you have hold of, so you can
@@ -1845,23 +2056,24 @@ function drawOpenRegion(p,bad){
   const it=itemOf(p.itemId);
   const poly=it&&openPoly(p,it);
   if(!poly) return;
+  const C=PAL();
   pathPoly(poly);
-  ctx.fillStyle = bad ? 'rgba(176,74,50,.12)' : hexA(it.color,.15);
+  ctx.fillStyle = bad ? 'rgba('+C.dangerRGB+',.12)' : hexA(it.color,.15);
   ctx.fill();
-  ctx.setLineDash([5,4]); ctx.lineWidth=1.25;
-  ctx.strokeStyle = bad ? 'rgba(176,74,50,.7)' : hexA(it.color,.55);
+  ctx.setLineDash([5,4]); ctx.lineWidth=bad?1.5:1.25;
+  ctx.strokeStyle = bad ? 'rgba('+C.dangerRGB+',.75)' : hexA(it.color,.55);
   ctx.stroke(); ctx.setLineDash([]);
 }
 function drawItem(p,isSel,isBadPos){
   const it=itemOf(p.itemId);
   if(!it) return;
-  const poly=worldPoly(p,it);
+  const poly=worldPoly(p,it), C=PAL();
   pathPoly(poly);
   ctx.fillStyle = it.passThrough ? hexA(it.color,.34) : hexA(it.color,.93);
   ctx.fill();
   if(isBadPos){
     ctx.save(); ctx.clip();
-    ctx.strokeStyle='rgba(176,74,50,.75)'; ctx.lineWidth=2;
+    ctx.strokeStyle='rgba('+C.dangerRGB+',.8)'; ctx.lineWidth=2;
     const b0=bbox(poly);
     ctx.beginPath();
     for(let d=b0.x0-(b0.y1-b0.y0)*2; d<b0.x1; d+=220/Math.max(view.scale,1e-4)){
@@ -1870,10 +2082,18 @@ function drawItem(p,isSel,isBadPos){
     ctx.stroke(); ctx.restore();
     pathPoly(poly);
   }
-  ctx.lineWidth = isSel?2.5:(isBadPos?2:1.25);
-  ctx.strokeStyle = isBadPos?'#b04a32':(isSel?'#171b1a':hexA(it.color,1));
-  if(it.passThrough) ctx.setLineDash([6,4]);
-  ctx.stroke(); ctx.setLineDash([]);
+  if(isSel){
+    // selection: a surface halo under a crisp accent line, so it reads on any furniture colour
+    ctx.lineJoin='round';
+    ctx.lineWidth=5; ctx.strokeStyle=C.surface; ctx.stroke();
+    ctx.lineWidth=2; ctx.strokeStyle=isBadPos?C.danger:C.accent; ctx.stroke();
+    ctx.lineJoin='miter';
+  } else {
+    ctx.lineWidth = isBadPos?2:1.25;
+    ctx.strokeStyle = isBadPos?C.danger:hexA(it.color,1);
+    if(it.passThrough) ctx.setLineDash([6,4]);
+    ctx.stroke(); ctx.setLineDash([]);
+  }
 
   const b=bbox(poly);
   let anchor=centroid(poly);
@@ -1904,9 +2124,9 @@ function drawItem(p,isSel,isBadPos){
     const lx=(lb.x0+lb.x1)/2, ly=lb.y0;
     const ex=p.x+lx*c-ly*s, ey=p.y+lx*s+ly*c;
     ctx.beginPath(); ctx.moveTo(sx(ex),sy(ey)); ctx.lineTo(h.x,h.y);
-    ctx.strokeStyle='#171b1a'; ctx.lineWidth=1; ctx.stroke();
+    ctx.strokeStyle=C.accent; ctx.lineWidth=1.5; ctx.stroke();
     ctx.beginPath(); ctx.arc(h.x,h.y,7,0,Math.PI*2);
-    ctx.fillStyle='#fbfbf8'; ctx.fill(); ctx.strokeStyle='#2e6b57'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle=C.surface; ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
   }
 }
 const handlePos = (p,it) => {
@@ -1931,11 +2151,11 @@ function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return 'rgba('+((n>>16)
 function pickText(hex,light){
   const n=parseInt(hex.slice(1),16);
   const lum=(0.299*((n>>16)&255)+0.587*((n>>8)&255)+0.114*(n&255))/255;
-  return (light||lum>.62)?'#171b1a':'#ffffff';
+  return (light||lum>.62)?'#1d1d1b':'#ffffff';
 }
 function drawWallLabels(){
-  const P=RP();
-  ctx.font='11.5px ui-sans-serif,system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  const P=RP(), C=PAL();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
   for(let i=0;i<P.length;i++){
     const w=wallOf(i);
     if(w.len*view.scale<26) continue;
@@ -1945,40 +2165,45 @@ function drawWallLabels(){
     if(a>Math.PI/2||a<-Math.PI/2) a+=Math.PI;
     ctx.save(); ctx.translate(x,y); ctx.rotate(a);
     const on = roomSel&&roomSel.kind==='wall'&&roomSel.i===i;
-    ctx.fillStyle = on?'#2e6b57':'#525b58';
-    ctx.font = on ? '600 11.5px ui-sans-serif,system-ui,sans-serif' : '11.5px ui-sans-serif,system-ui,sans-serif';
+    ctx.fillStyle = on?C.stageAccent:C.ink2;
+    ctx.font = (on?'600 ':'500 ')+'11.5px ui-sans-serif,-apple-system,system-ui,sans-serif';
     ctx.fillText(fmtLen(w.len,S.unit),0,0);
     ctx.restore();
   }
 }
 function drawHandles(){
-  const P=RP();
+  const P=RP(), C=PAL();
   if(roomSel&&roomSel.kind==='wall'){
     const w=wallOf(roomSel.i);
     ctx.beginPath(); ctx.moveTo(sx(w.a[0]),sy(w.a[1])); ctx.lineTo(sx(w.b[0]),sy(w.b[1]));
-    ctx.strokeStyle='#2e6b57'; ctx.lineWidth=4; ctx.lineCap='round'; ctx.stroke(); ctx.lineCap='butt';
+    ctx.strokeStyle=C.accent; ctx.lineWidth=4; ctx.lineCap='round'; ctx.stroke(); ctx.lineCap='butt';
   }
   for(let i=0;i<P.length;i++){
     const on = roomSel&&roomSel.kind==='corner'&&roomSel.i===i;
     ctx.beginPath(); ctx.rect(sx(P[i][0])-5,sy(P[i][1])-5,10,10);
-    ctx.fillStyle = on?'#2e6b57':'#fbfbf8'; ctx.fill();
-    ctx.strokeStyle='#2e6b57'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle = on?C.accent:C.surface; ctx.fill();
+    ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
   }
 }
+/* the status corner: what is true of this room right now, and what's wrong with it */
 function updateReadout(bad,openBad){
-  let used=0;
-  for(const p of L().placed){
-    const it=itemOf(p.itemId);
-    if(it&&!it.passThrough) used+=polyArea(shapePoly(it.shape));
+  const el=$('readout'), n=bad?bad.size:0, no=openBad?openBad.size:0;
+  const bits=[];
+  if(roomMode()){
+    bits.push(esc(fmtArea(polyArea(RP()),S.unit)), plural(RP().length,'wall'));
+  } else {
+    let used=0;
+    for(const p of L().placed){
+      const it=itemOf(p.itemId);
+      if(it&&!it.passThrough) used+=polyArea(shapePoly(it.shape));
+    }
+    const total=polyArea(RP())||1;
+    bits.push(L().placed.length+' placed', Math.round(used/total*100)+'% covered');
   }
-  const total=polyArea(RP())||1, n=bad?bad.size:0, no=openBad?openBad.size:0;
-  const el=$('readout');
-  el.textContent = L().placed.length+' placed · '+Math.round(used/total*100)+'% of floor covered'
-    +(n?' · '+n+" don't fit":'')+(no?' · '+no+" can't open":'');
-  el.style.color = (n||no)?'#b04a32':'';
-  const tag=$('modeTag');
-  tag.textContent = roomMode() ? 'Editing the room' : 'Room locked';
-  tag.className = roomMode() ? '' : 'locked';
+  let html=bits.join(' · ');
+  if(n) html+=`<span class="bad">${n} ${n===1?"doesn't":"don't"} fit</span>`;
+  if(no) html+=`<span class="bad">${no} can't open</span>`;
+  el.innerHTML=html;
 }
 
 /* ------------------------- interaction ------------------------- */
@@ -1987,7 +2212,7 @@ function flash(msg){
   if(!msg) return;
   const el=$('flash');
   el.textContent=msg; el.classList.add('on');
-  clearTimeout(flashT); flashT=setTimeout(()=>el.classList.remove('on'),1100);
+  clearTimeout(flashT); flashT=setTimeout(()=>el.classList.remove('on'),readTime(msg));
 }
 /* shift-drag a corner: align it with the X or Y coordinate of a neighbour */
 function snapCornerAxis(i,raw){
@@ -2349,6 +2574,7 @@ const isCanvasMode = m => m==='room'||m==='furniture';
 let pendingFit=false;
 function setMode(m){
   S.mode=m;
+  if(isCanvasMode(m)) S.planMode=m;
   if(m==='furniture') roomSel=null; else if(m==='room') sel=null;
   renderMode(); applyLayoutMode();
   if(isCanvasMode(m)){
@@ -2360,20 +2586,21 @@ function setMode(m){
   save();
   syncModeParam();
 }
+/* places (Plan / Library / Marketplace) live in the header; the Room/Furniture mode lives on the canvas it changes */
 function renderMode(){
-  for(const b of document.querySelectorAll('#modeSeg button')) b.setAttribute('aria-pressed', String(b.dataset.mode===S.mode));
-  for(const b of document.querySelectorAll('#tabs button')){
-    const on = b.dataset.mode===S.mode;
-    b.setAttribute('aria-pressed', String(on));
-    if(window.matchMedia('(max-width:900px)').matches) $(b.dataset.pane).hidden = !on;
+  const place = isCanvasMode(S.mode) ? 'plan' : S.mode;
+  for(const b of document.querySelectorAll('#navSeg button')){
+    if(b.dataset.nav===place) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
   }
+  for(const b of document.querySelectorAll('#modeSeg button')) b.setAttribute('aria-pressed', String(b.dataset.mode===S.mode));
+  document.body.dataset.mode = S.mode;
 }
 $('modeSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setMode(b.dataset.mode); });
-$('tabs').addEventListener('click', e=>{
-  const b=e.target.closest('button');
-  if(!b) return;
-  setMode(b.dataset.mode);
-  setTimeout(resize,0);
+$('navSeg').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const n=b.dataset.nav;
+  if(n==='plan'){ if(!isCanvasMode(S.mode)) setMode(S.planMode||'furniture'); }
+  else if(n!==S.mode) setMode(n);
 });
 
 /* ------------------------- collapsing the side panels -------------------------
@@ -2390,12 +2617,12 @@ function applyPanes(){
   // the head is the button; its chevron always points the way the panel would move
   const set=(headId,chevId,shut,isLeft,name)=>{
     const h=$(headId), label=(shut?'Show ':'Hide ')+name;
-    $(chevId).textContent = (shut===isLeft) ? '\u27e9' : '\u27e8';
+    $(chevId).innerHTML = svgI((shut===isLeft) ? 'chev-r' : 'chev-l');
     h.title=label; h.setAttribute('aria-label',label);
     h.setAttribute('aria-expanded', String(!shut));
   };
-  set('headLeft', 'tglLeft', lShut, true, 'the room panel');
-  set('headRight', 'tglRight', rShut, false, 'the things panel');
+  set('headLeft', 'tglLeft', lShut, true, 'the plan panel');
+  set('headRight', 'tglRight', rShut, false, 'the properties panel');
 }
 function togglePane(side){
   if(!wideLayout()) return;
@@ -2415,49 +2642,50 @@ function applySections(){
   for(const sec of document.querySelectorAll('.pane-body section[data-sec]')){
     const shut=S.secClosed.includes(sec.dataset.sec);
     sec.classList.toggle('collapsed', shut);
-    const h=sec.querySelector('h2');
+    const h=sec.querySelector('.sec-head h2');
     if(h){ h.tabIndex=0; h.setAttribute('role','button'); h.setAttribute('aria-expanded', String(!shut)); }
   }
 }
 function toggleSection(h){
-  const k=h.parentElement.dataset.sec;
+  const k=h.closest('section[data-sec]').dataset.sec;
   S.secClosed = S.secClosed.includes(k) ? S.secClosed.filter(x=>x!==k) : S.secClosed.concat(k);
   applySections(); save();
 }
 document.addEventListener('click', e=>{
-  const h=e.target.closest('.pane-body section[data-sec] > h2');
+  const h=e.target.closest('.pane-body section[data-sec] > .sec-head > h2');
   if(h) toggleSection(h);
 });
 document.addEventListener('keydown', e=>{
   if(e.key!=='Enter' && e.key!==' ') return;
-  const h=e.target.closest && e.target.closest('.pane-body section[data-sec] > h2');
+  const h=e.target.closest && e.target.closest('.pane-body section[data-sec] > .sec-head > h2');
   if(h){ e.preventDefault(); toggleSection(h); }
 });
 
 /* ------------------------- layout tree (folders + rooms) ------------------------- */
 function folderLabel(f){
-  const tags=(f.tags&&f.tags.length) ? `<span class="chips">${f.tags.map(t=>`<span class="dim" style="border:1px solid var(--line);border-radius:20px;padding:0 6px">${esc(t)}</span>`).join('')}</span>` : '';
+  const tags=(f.tags&&f.tags.length) ? `<span class="tagchip" title="Tag filter: ${esc(f.tags.join(', '))}">${esc(f.tags[0])}${f.tags.length>1?' +'+(f.tags.length-1):''}</span>` : '';
   return `<span class="nm">${esc(f.name)}</span>${tags}`;
 }
+const moreBtn = (cls,label) => `<button type="button" class="btn quiet sm icon ${cls}" data-act="more" title="${label||'More actions'}" aria-label="${label||'More actions'}">${svgI('more')}</button>`;
 function renderTreeLevel(parentId,depth){
   let html='';
   for(const f of childFolders(parentId)){
     const open=treeOpen.has(f.id);
-    html+=`<div class="tree-row folder-row" draggable="true" data-folder="${f.id}" style="padding-left:${depth*14}px">
-      <button type="button" class="caret" data-act="toggle">${open?'\u25be':'\u25b8'}</button>
-      <span class="ico">\ud83d\udcc1</span>${folderLabel(f)}
-      <button type="button" class="tree-more" data-act="more" title="More\u2026" aria-label="More\u2026">\u22ef</button>
+    html+=`<div class="tree-row folder-row" draggable="true" data-folder="${f.id}" style="padding-left:${depth*12+4}px" aria-expanded="${open}">
+      <button type="button" class="caret" data-act="toggle" aria-label="${open?'Collapse':'Expand'}">${svgI(open?'chev-d':'chev-r')}</button>
+      <span class="ico">${svgI('folder')}</span>${folderLabel(f)}
+      ${moreBtn('tree-more')}
     </div>`;
     if(open) html+=renderTreeLevel(f.id,depth+1);
   }
   for(const l of childLayouts(parentId)){
-    html+=`<div class="tree-row layout-row ${l.id===S.active?'active':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*14+18}px">
-      <span class="ico">\ud83d\udcc4</span><span class="nm">${esc(l.name)}</span>
-      <button type="button" class="tree-more" data-act="more" title="More\u2026" aria-label="More\u2026">\u22ef</button>
+    html+=`<div class="tree-row layout-row ${l.id===S.active?'active':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*12+26}px" ${l.id===S.active?'aria-current="true"':''}>
+      <span class="ico">${svgI('room')}</span><span class="nm">${esc(l.name)}</span>
+      ${moreBtn('tree-more')}
     </div>`;
   }
   if(depth>0 && !childFolders(parentId).length && !childLayouts(parentId).length){
-    html+=`<div class="hint" style="padding-left:${depth*14+18}px;margin:2px 0">Empty</div>`;
+    html+=`<div class="tree-empty" style="padding-left:${depth*12+26}px">Empty</div>`;
   }
   return html;
 }
@@ -2600,10 +2828,10 @@ function layoutMenu(id, anchor){
 function folderTagsDialog(id){
   const f=folderOf(id);
   openModal('Tag filter for '+f.name, `
-    <div class="field wide"><label for="fTagsInput" style="width:auto">Tags</label></div>
+    <label class="stack-label" for="fTagsInput">Tags</label>
     ${tagFieldHTML('fTags','living room, seating')}
     <p class="hint">Type to pick from tags you already use. Tab or comma adds one, backspace removes the last.</p>
-    <p class="hint">When you switch into a room in this folder from a room in a different folder, the Things tab's tag filter is set to this automatically. Switching between rooms inside this same folder leaves your filter as you left it.</p>`,
+    <p class="hint">When you switch into a room in this folder from a room in a different folder, the item list's tag filter is set to this automatically. Switching between rooms inside this same folder leaves your filter as you left it.</p>`,
     'Save', ()=>{
       f.tags=tagFieldValue('fTags');
       renderTree(); save();
@@ -2647,13 +2875,10 @@ function deleteFolder(id){
   if(layouts.length) bits.push(layouts.length+' room'+(layouts.length>1?'s':''));
   if(folders.length) bits.push(folders.length+' folder'+(folders.length>1?'s':''));
   openModal('Delete \u201c'+f.name+'\u201d?', `
-    <p style="margin:0 0 10px">It holds ${esc(bits.join(' and '))}. Deleting the folder deletes all of that too.</p>
-    <div class="field wide">
-      <input type="checkbox" id="keepKids" style="width:auto">
-      <label for="keepKids" style="width:auto">Keep everything inside \u2014 move it up to ${esc(up)}</label>
-    </div>
-    <p class="hint">Your inventory is never touched, only the rooms themselves.</p>`,
-    'Delete folder', ()=>drop($('keepKids').checked));
+    <p>It holds ${esc(bits.join(' and '))}. Deleting the folder deletes all of that too.</p>
+    <label class="check"><input type="checkbox" id="keepKids">Keep everything inside \u2014 move it up to ${esc(up)}</label>
+    <p class="hint">Your library is never touched, only the rooms themselves.</p>`,
+    'Delete folder', ()=>drop($('keepKids').checked), null, {danger:true});
 }
 function duplicateLayout(id){
   const src=S.layouts.find(x=>x.id===id); if(!src) return;
@@ -2670,7 +2895,7 @@ function duplicateLayout(id){
 function deleteLayout(id){
   if(S.layouts.length===1){ flash('You need at least one room'); return; }
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
-  askConfirm('Delete this room?', '\u201c'+l.name+'\u201d will be removed. Your inventory stays.', 'Delete', ()=>{
+  askConfirm('Delete this room?', '\u201c'+l.name+'\u201d will be removed. Your library stays.', 'Delete', ()=>{
     S.layouts=S.layouts.filter(x=>x.id!==id);
     if(S.active===id) activateLayout(S.layouts[0].id);
     renderAll(); fit(); save();
@@ -2690,7 +2915,7 @@ function moveDialog(kind,id){
     }
   })(null,0);
   openModal('Move \u201c'+obj.name+'\u201d', `
-    <div class="field wide"><label for="moFolder" style="width:auto">Folder</label></div>
+    <label class="stack-label" for="moFolder">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
       if(kind==='folder') obj.parentId=v; else obj.folderId=v;
@@ -2724,7 +2949,7 @@ function renderRoom(){
     $('roomD').addEventListener('change',go);
   } else {
     const b=bbox(RP());
-    box.innerHTML=`<p class="hint" style="margin:0 0 8px">${RP().length} walls · fits in ${esc(fmtLen(b.w,S.unit))} × ${esc(fmtLen(b.h,S.unit))}. Edit each wall below.</p>`;
+    box.innerHTML=`<div class="field"><label>Bounds</label><span>${esc(fmtLen(b.w,S.unit))} × ${esc(fmtLen(b.h,S.unit))}</span></div>`;
   }
   $('wallT').value=fmtLen(r.wall,S.unit);
   $('floorCol').value=r.floor;
@@ -2746,38 +2971,56 @@ function renderWalls(){
   ul.innerHTML=P.map((_,i)=>{
     const w=wallOf(i);
     const on=roomSel&&roomSel.kind==='wall'&&roomSel.i===i;
-    return `<li data-i="${i}" class="${on?'on':''}" style="flex-direction:row;align-items:center;cursor:pointer">
+    return `<li data-i="${i}" class="${on?'on':''}">
       <span class="nm">Wall ${i+1}</span>
-      <span class="dim">${esc(fmtLen(w.len,S.unit))} · ${Math.round(wallAngle(i))}°</span></li>`;
+      <span class="lmeta">${esc(fmtLen(w.len,S.unit))} · ${Math.round(wallAngle(i))}°</span></li>`;
   }).join('');
-  $('wallHint').textContent = roomMode()
-    ? 'Drag a corner to move it — both walls that meet there follow. Drag a wall to slide it sideways.'
-    : 'Switch to Room mode to drag corners and walls.';
   renderObstacles();
 }
 const sizeLabelShape = sh => fmtLen(sh.w,S.unit)+' × '+fmtLen(sh.d,S.unit);
+const emptyRow = msg => `<li class="list-empty"><div class="empty">${msg}</div></li>`;
 function renderObstacles(){
   const ul=$('structList'), room=L().room;
+  let pn=0, wn=0;
   const rows=[
-    ...room.pillars.map(pl=>({kind:'pillar', id:pl.id, label:'Pillar', dim:sizeLabelShape(pl.shape)})),
-    ...room.iwalls.map(w=>({kind:'iwall', id:w.id, label:'Wall', dim:fmtLen(iwallLen(w),S.unit)}))
+    ...room.pillars.map(pl=>({kind:'pillar', id:pl.id, label:'Pillar '+(++pn), dim:sizeLabelShape(pl.shape)})),
+    ...room.iwalls.map(w=>({kind:'iwall', id:w.id, label:'Interior wall '+(++wn), dim:fmtLen(iwallLen(w),S.unit)}))
   ];
-  if(!rows.length){ ul.innerHTML='<li style="border:0;padding:0"><div class="empty">No pillars or interior walls yet</div></li>'; return; }
+  if(!rows.length){ ul.innerHTML=emptyRow('None yet'); return; }
   ul.innerHTML=rows.map(r=>{
     const on=roomSel&&roomSel.kind===r.kind&&roomSel.id===r.id;
     return `<li data-kind="${r.kind}" data-id="${r.id}" class="${on?'on':''}">
-      <div class="r1"><span class="nm">${esc(r.label)}</span></div>
-      <div class="dim">${esc(r.dim)}</div>
-      <div class="r2"><button class="btn sm danger" data-act="del">Delete</button></div></li>`;
+      <span class="nm">${esc(r.label)}</span><span class="lmeta">${esc(r.dim)}</span>
+      <span class="lact">${moreBtn('')}</span></li>`;
   }).join('');
 }
 $('structList').addEventListener('click', e=>{
   const li=e.target.closest('li[data-id]'); if(!li) return;
   const kind=li.dataset.kind, id=li.dataset.id, btn=e.target.closest('button');
-  if(btn&&btn.dataset.act==='del'){ kind==='pillar'?deletePillar(id):deleteIWall(id); return; }
+  if(btn&&btn.dataset.act==='more'){
+    openMenu(btn, [
+      {label:'Select', fn:()=>{ if(!roomMode()) setMode('room'); roomSel={kind,id}; renderRoomSel(); renderObstacles(); draw(); }},
+      {sep:true},
+      {label:'Delete', danger:true, fn:()=>kind==='pillar'?deletePillar(id):deleteIWall(id)},
+    ], li.querySelector('.nm').textContent);
+    return;
+  }
   if(!roomMode()) setMode('room');
   roomSel={kind, id};
   renderRoomSel(); renderObstacles(); draw();
+});
+$('btnAddStruct').addEventListener('click', e=>{
+  openMenu(e.currentTarget, [
+    {label:'Pillar', fn:addPillar},
+    {label:'Interior wall', fn:()=>{ wallDrawState?cancelWallDraw():startWallDraw(); }},
+  ]);
+});
+$('btnAddOpening').addEventListener('click', e=>{
+  const wi = roomSel&&roomSel.kind==='wall' ? roomSel.i : 0;
+  openMenu(e.currentTarget, [
+    {label:'Door…', fn:()=>openingDialog(null,'door',wi)},
+    {label:'Window…', fn:()=>openingDialog(null,'window',wi)},
+  ]);
 });
 function addPillar(){
   if(wallDrawState) cancelWallDraw();
@@ -2789,8 +3032,6 @@ function addPillar(){
   roomSel={kind:'pillar', id:pl.id};
   renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
 }
-$('btnAddPillar').addEventListener('click', addPillar);
-$('btnDrawWall').addEventListener('click', ()=>{ wallDrawState?cancelWallDraw():startWallDraw(); });
 function deletePillar(id){
   L().room.pillars=L().room.pillars.filter(p=>p.id!==id);
   if(roomSel&&roomSel.kind==='pillar'&&roomSel.id===id) roomSel=null;
@@ -2822,9 +3063,8 @@ function wallDialog(i){
   renderWalls(); renderRoomSel(); draw();
   openModal('Wall '+(i+1), `
     <div class="field"><label for="wdLen">Length</label><input type="text" class="len" id="wdLen" value="${esc(fmtLen(w.len,S.unit))}"></div>
-    <div class="field"><label for="wdAng">Direction</label><input type="number" class="deg" id="wdAng" step="1" value="${Math.round(wallAngle(i))}"><span class="dim">°</span></div>
-    <p class="hint">The far corner moves, so the wall after this one follows along. 0° points right, 90° points up.</p>
-    <p class="hint">Plain numbers are read as ${unitWord()}. You can also type 6'2", 30in, 75cm, 1.2m.</p>`,
+    <div class="field"><label for="wdAng">Direction</label><input type="number" class="deg" id="wdAng" step="1" value="${Math.round(wallAngle(i))}"><span class="unit">°</span></div>
+    <p class="hint">The far corner moves, and the next wall follows. 0° points right, 90° up. Plain numbers are ${unitWord()}; 6'2", 75cm and 1.2m also work.</p>`,
     'Save',
     ()=>{
       const len=parseLen($('wdLen').value,S.unit);
@@ -2840,14 +3080,10 @@ function wallDialog(i){
 
 function renderRoomSel(){
   const box=$('roomSelBox'), t=$('roomSelTitle');
-  if(!roomMode()){
-    t.textContent='Selected';
-    box.innerHTML='<div class="empty">The room is locked. Switch to Room mode to edit walls, doors and windows.</div>';
-    return;
-  }
-  if(!roomSel){
-    t.textContent='Selected';
-    box.innerHTML='<div class="empty">Click a wall, a corner, or a door in the plan.</div>';
+  box.closest('section').classList.toggle('is-empty', !(roomMode()&&roomSel));
+  if(!roomMode() || !roomSel){
+    t.textContent='Selection';
+    box.innerHTML='<p class="hint">Click a wall, corner, door or pillar in the plan to change it here.</p>';
     return;
   }
   if(roomSel.kind==='wall') return renderWallProps();
@@ -2861,13 +3097,13 @@ function renderWallProps(){
   $('roomSelTitle').textContent='Wall '+(i+1);
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="wLen">Length</label><input type="text" class="len" id="wLen" value="${esc(fmtLen(w.len,S.unit))}"></div>
-    <div class="field"><label for="wAng">Direction</label><input type="number" class="deg" id="wAng" step="1" value="${Math.round(wallAngle(i))}"><span class="dim">°</span></div>
-    <div class="row">
-      <button class="btn sm" id="wDoor">Add door</button>
-      <button class="btn sm" id="wWin">Add window</button>
-      <button class="btn sm" id="wSplit">Split wall</button>
-    </div>
-    <p class="hint">0° points right, 90° points up. Changing either value moves the far corner, so the next wall follows along.</p>`;
+    <div class="field"><label for="wAng">Direction</label><input type="number" class="deg" id="wAng" step="1" value="${Math.round(wallAngle(i))}"><span class="unit">°</span></div>
+    <p class="hint">0° points right, 90° up. Changing either moves the far corner.</p>
+    <div class="row actions">
+      <button class="btn sm" id="wDoor">Add door…</button>
+      <button class="btn sm" id="wWin">Add window…</button>
+      <button class="btn sm" id="wSplit">Split</button>
+    </div>`;
   $('wLen').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
     if(isFinite(v)&&v>=100) setWallLen(i,v); else flash('Give the wall a length');
@@ -2888,8 +3124,8 @@ function renderCornerProps(){
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="cX">From left</label><input type="text" class="len" id="cX" value="${esc(fmtLen(p[0]-b.x0,S.unit))}"></div>
     <div class="field"><label for="cY">From top</label><input type="text" class="len" id="cY" value="${esc(fmtLen(p[1]-b.y0,S.unit))}"></div>
-    <div class="row"><button class="btn sm danger" id="cDel" ${P.length<=3?'disabled':''}>Remove corner</button></div>
-    <p class="hint">Both walls meeting here move with the corner.</p>`;
+    <p class="hint">Both walls meeting here move with the corner.</p>
+    <div class="row actions"><button class="btn sm danger" id="cDel" ${P.length<=3?'disabled title="A room needs at least three corners"':''}>Remove corner</button></div>`;
   const go=()=>{
     const x=parseLen($('cX').value,S.unit), y=parseLen($('cY').value,S.unit);
     if(isFinite(x)&&isFinite(y)) tryRoomEdit(()=>{ P[i]=[b.x0+x, b.y0+y]; });
@@ -2924,9 +3160,9 @@ function renderPillarProps(){
       <option value="ellipse" ${pl.shape.type==='ellipse'?'selected':''}>Round</option></select></div>
     <div class="field"><label for="plW">Width</label><input type="text" class="len" id="plW" value="${esc(fmtLen(pl.shape.w,S.unit))}"></div>
     <div class="field"><label for="plD">Depth</label><input type="text" class="len" id="plD" value="${esc(fmtLen(pl.shape.d,S.unit))}"></div>
-    <div class="field"><label for="plRot">Rotation</label><input type="number" class="deg" id="plRot" step="1" value="${Math.round(pl.rot||0)}"><span class="dim">°</span></div>
-    <div class="row"><button class="btn sm danger" id="plDel">Remove pillar</button></div>
-    <p class="hint">Drag it in the plan to move it.</p>`;
+    <div class="field"><label for="plRot">Rotation</label><input type="number" class="deg" id="plRot" step="1" value="${Math.round(pl.rot||0)}"><span class="unit">°</span></div>
+    <p class="hint">Drag it in the plan to move it.</p>
+    <div class="row actions"><button class="btn sm danger" id="plDel">Remove pillar</button></div>`;
   const go=()=>{
     pl.shape.type=$('plShape').value;
     const w=parseLen($('plW').value,S.unit), d=parseLen($('plD').value,S.unit);
@@ -2946,15 +3182,15 @@ function renderIWallProps(){
   const w=iwallOf(roomSel.id);
   if(!w){ roomSel=null; return renderRoomSel(); }
   const na=nearestOnWalls(w.a), nb=nearestOnWalls(w.b);
-  $('roomSelTitle').textContent='Wall';
+  $('roomSelTitle').textContent='Interior wall';
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="iwLen">Length</label><input type="text" class="len" id="iwLen" value="${esc(fmtLen(iwallLen(w),S.unit))}"></div>
-    <div class="field"><label for="iwAng">Direction</label><input type="number" class="deg" id="iwAng" step="1" value="${Math.round(iwallAngle(w))}"><span class="dim">°</span></div>
+    <div class="field"><label for="iwAng">Direction</label><input type="number" class="deg" id="iwAng" step="1" value="${Math.round(iwallAngle(w))}"><span class="unit">°</span></div>
     <div class="field"><label for="iwT">Thickness</label><input type="text" class="len" id="iwT" value="${esc(fmtLen(w.t,S.unit))}"></div>
-    <div class="field"><label for="iwDA">Gap to Wall ${na?na.i+1:'-'} (end A)</label><input type="text" class="len" id="iwDA" value="${esc(fmtLen(na?na.d:0,S.unit))}" ${na?'':'disabled'}></div>
-    <div class="field"><label for="iwDB">Gap to Wall ${nb?nb.i+1:'-'} (end B)</label><input type="text" class="len" id="iwDB" value="${esc(fmtLen(nb?nb.d:0,S.unit))}" ${nb?'':'disabled'}></div>
-    <div class="row"><button class="btn sm danger" id="iwDel">Remove wall</button></div>
-    <p class="hint">Drag either end to resize it or snap it onto another wall or corner. Drag the middle to move the whole wall. Hold Shift while drawing or dragging an end to lock it horizontal/vertical.</p>`;
+    <div class="field"><label for="iwDA" title="Gap from end A to wall ${na?na.i+1:'-'}">End A gap</label><input type="text" class="len" id="iwDA" value="${esc(fmtLen(na?na.d:0,S.unit))}" ${na?'':'disabled'}></div>
+    <div class="field"><label for="iwDB" title="Gap from end B to wall ${nb?nb.i+1:'-'}">End B gap</label><input type="text" class="len" id="iwDB" value="${esc(fmtLen(nb?nb.d:0,S.unit))}" ${nb?'':'disabled'}></div>
+    <p class="hint">Gaps are measured to wall ${na?na.i+1:'-'} and wall ${nb?nb.i+1:'-'}. Drag an end to resize or snap it; drag the middle to move it. Shift keeps it straight.</p>
+    <div class="row actions"><button class="btn sm danger" id="iwDel">Remove wall</button></div>`;
   $('iwLen').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
     if(isFinite(v)&&v>=50) setIWallLen(w,v); else flash('Give the wall a length');
@@ -2986,23 +3222,25 @@ function renderIWallProps(){
 const KIND = o => o.kind==='window' ? 'Window' : (o.dtype==='slide'?'Sliding door':o.dtype==='open'?'Doorway':'Hinged door');
 function renderOpen(){
   const ul=$('openList'), os=L().openings;
-  if(!os.length){ ul.innerHTML='<li style="border:0;padding:0"><div class="empty">No doors or windows yet</div></li>'; return; }
+  if(!os.length){ ul.innerHTML=emptyRow('None yet'); return; }
   ul.innerHTML=os.map(o=>{
     const on=roomSel&&roomSel.kind==='opening'&&roomSel.id===o.id;
     return `<li data-id="${o.id}" class="${on?'on':''}">
-      <div class="r1"><span class="nm">${KIND(o)} · wall ${o.wall+1}</span></div>
-      <div class="dim">${esc(fmtLen(o.width,S.unit))} wide</div>
-      <div class="r2">
-        <button class="btn sm" data-act="edit">Edit</button>
-        <button class="btn sm danger" data-act="del">Delete</button>
-      </div></li>`;
+      <span class="lmain"><span class="nm">${KIND(o)}</span><span class="meta">Wall ${o.wall+1} · ${esc(fmtLen(o.width,S.unit))} wide</span></span>
+      <span class="lact">${moreBtn('')}</span></li>`;
   }).join('');
 }
 $('openList').addEventListener('click', e=>{
   const li=e.target.closest('li[data-id]'); if(!li) return;
   const id=li.dataset.id, btn=e.target.closest('button');
-  if(btn&&btn.dataset.act==='del') return deleteOpening(id);
-  if(btn&&btn.dataset.act==='edit') return openingDialog(id);
+  if(btn&&btn.dataset.act==='more'){
+    const o=openOf(id);
+    return openMenu(btn, [
+      {label:'Edit…', fn:()=>openingDialog(id)},
+      {sep:true},
+      {label:'Delete', danger:true, fn:()=>deleteOpening(id)},
+    ], o?KIND(o):'');
+  }
   if(!roomMode()) setMode('room');
   roomSel={kind:'opening', id};
   renderRoomSel(); renderOpen(); draw();
@@ -3021,12 +3259,12 @@ function renderOpeningProps(){
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="oWall">Wall</label><select id="oWall">${RP().map((_,i)=>`<option value="${i}" ${i===o.wall?'selected':''}>Wall ${i+1}</option>`).join('')}</select></div>
     <div class="field"><label for="oW">Width</label><input type="text" class="len" id="oW" value="${esc(fmtLen(o.width,S.unit))}"></div>
-    <div class="field"><label for="oCorner">Measure from</label><select id="oCorner">
-      <option value="cw" ${o.corner==='cw'?'selected':''}>Near corner (clockwise)</option>
-      <option value="ccw" ${o.corner==='ccw'?'selected':''}>Far corner (counter-clockwise)</option></select></div>
-    <div class="field"><label for="oOff">Distance from corner</label><input type="text" class="len" id="oOff" value="${esc(fmtLen(openingDispOffset(o,len),S.unit))}"></div>
-    <div class="row"><button class="btn sm" id="oEdit">More options</button><button class="btn sm danger" id="oDel">Delete</button></div>
-    <p class="hint">Wall ${o.wall+1} is ${esc(fmtLen(len,S.unit))} long. Drag the circle in the plan to slide it, or onto another wall.</p>`;
+    <div class="field"><label for="oCorner">From</label><select id="oCorner">
+      <option value="cw" ${o.corner==='cw'?'selected':''}>Near corner</option>
+      <option value="ccw" ${o.corner==='ccw'?'selected':''}>Far corner</option></select></div>
+    <div class="field"><label for="oOff">Offset</label><input type="text" class="len" id="oOff" value="${esc(fmtLen(openingDispOffset(o,len),S.unit))}"></div>
+    <p class="hint">Wall ${o.wall+1} is ${esc(fmtLen(len,S.unit))} long. Drag the circle in the plan to slide it along, or onto another wall.</p>
+    <div class="row actions"><button class="btn sm" id="oEdit">More options…</button><button class="btn sm danger" id="oDel">Delete</button></div>`;
   const go=()=>{
     const wv=parseLen($('oW').value,S.unit);
     o.wall=+$('oWall').value;
@@ -3055,7 +3293,7 @@ function renderTagChips(){
   box.hidden=false;
   let html = tags.map(t=>`<button type="button" data-t="${esc(t)}" aria-pressed="${S.tagFilter.includes(t)}">${esc(t)}</button>`).join('');
   if(showUntagged) html += `<button type="button" class="untagged" data-untagged="1" aria-pressed="${S.untaggedOnly}">Untagged</button>`;
-  if(S.tagFilter.length || S.untaggedOnly) html += `<button type="button" class="clear" data-clear="1" title="Clear the tag filter"><b>\u00d7</b>Clear</button>`;
+  if(S.tagFilter.length || S.untaggedOnly) html += `<button type="button" class="clear" data-clear="1" title="Clear the tag filter">Clear</button>`;
   box.innerHTML=html;
 }
 $('tagChips').addEventListener('click', e=>{
@@ -3078,30 +3316,31 @@ function renderInv(){
   $('invScope').value = S.invScope;
   $('invScopeHint').textContent = sc.hint;
   renderTagChips();
-  const ul=$('invList');
-  if(!S.inventory.length){
-    ul.innerHTML='<li style="border:0;padding:0"><div class="empty">Nothing here yet. Add a thing, or load a few samples.</div></li>';
-    return;
-  }
+  const ul=$('invList'), empty=!S.inventory.length;
+  $('invEmpty').hidden=!empty;
+  $('invSearch').closest('.search').hidden=empty;
+  $('onlyAvail').closest('.filters').hidden=empty;
+  if(empty){ ul.innerHTML=''; return; }
   const shown = S.inventory.filter(itemMatchesFilter);
-  if(!shown.length){
-    ul.innerHTML='<li style="border:0;padding:0"><div class="empty">Nothing matches this filter.</div></li>';
-    return;
-  }
+  if(!shown.length){ ul.innerHTML=emptyRow('Nothing matches this filter.'); return; }
   const counts={};
   for(const p of L().placed) counts[p.itemId]=(counts[p.itemId]||0)+1;
   ul.innerHTML=shown.map(i=>{
     const avail=availableCount(i), total=i.count==null?1:i.count;
-    return `<li data-id="${i.id}" draggable="true">
-    <div class="r1"><span class="sw" style="background:${i.color}"></span>
-      <span class="nm" title="${esc(i.name)}">${esc(i.name)}</span>
-      ${counts[i.id]?`<span class="count" title="in this room">${counts[i.id]}</span>`:''}</div>
-    <div class="dim">${esc(sizeLabel(i))}${hasOpen(i)?' \u00b7 opens to '+esc(openSizeLabel(i)):''}${i.passThrough?' \u00b7 things can sit on it':''} \u00b7 ${avail} of ${total} free ${esc(sc.suffix)}</div>
-    ${(i.tags&&i.tags.length)?`<div class="chips">${i.tags.map(t=>`<span class="dim" style="border:1px solid var(--line);border-radius:20px;padding:1px 7px">${esc(t)}</span>`).join('')}</div>`:''}
-    <div class="r2">
-      <button class="btn sm" data-act="place" ${avail<=0?'disabled title="None left to place"':''}>Place</button>
-      <button class="btn sm" data-act="more" title="More\u2026" aria-label="More\u2026">\u22ef</button>
-    </div></li>`;
+    const meta=[sizeLabel(i)];
+    if(total>1||avail<total) meta.push(avail+' of '+total+' free');
+    const tip=[sizeLabel(i), avail+' of '+total+' free '+sc.suffix];
+    if(hasOpen(i)) tip.push('opens to '+openSizeLabel(i));
+    if(i.passThrough) tip.push('others can overlap it');
+    if(i.tags&&i.tags.length) tip.push('tags: '+i.tags.join(', '));
+    return `<li data-id="${i.id}" draggable="true" class="${avail<=0?'off':''}" title="${esc(i.name+'\n'+tip.join('\n'))}">
+      <span class="sw" style="background:${i.color}"></span>
+      <span class="lmain"><span class="nm">${esc(i.name)}</span><span class="meta">${esc(meta.join(' \u00b7 '))}</span></span>
+      ${counts[i.id]?`<span class="count" title="${counts[i.id]} in this room">${counts[i.id]}</span>`:''}
+      <span class="lact">
+        <button class="btn quiet" data-act="place" ${avail<=0?'disabled':''} title="${avail<=0?'None left to place':'Place in this room'}">Place</button>
+        ${moreBtn('')}
+      </span></li>`;
   }).join('');
 }
 $('invScope').addEventListener('change', e=>{ S.invScope=e.target.value; renderInv(); save(); });
@@ -3122,7 +3361,7 @@ invBox.addEventListener('dblclick', e=>{
 });
 function placeItem(id){
   const it=itemOf(id); if(!it) return;
-  if(availableCount(it)<=0){ flash("You're out of stock for this \u2014 edit it to own more"); return; }
+  if(availableCount(it)<=0){ flash("None left to place \u2014 edit the item to own more"); return; }
   place(id);
 }
 function renameItem(id){
@@ -3155,7 +3394,7 @@ function deleteItem(id){
     for(const l of S.layouts) l.placed=l.placed.filter(p=>p.itemId!==id);
     sel=null; renderInv(); renderSel(); draw(); save();
   };
-  if(n) askConfirm('Delete this thing?', 'It is placed in '+n+' spot'+(n>1?'s':'')+'. Those will be removed too.', 'Delete', kill);
+  if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+'. Those will be removed too.', 'Delete', kill);
   else kill();
 }
 
@@ -3197,27 +3436,38 @@ invBox.addEventListener('drop', e=>{
 
 function renderSel(){
   const box=$('selBox');
-  if(roomMode()){
-    box.innerHTML='<div class="empty">Furniture is locked while you edit the room. Switch to Furniture mode to move things.</div>';
+  const inst=!roomMode()&&sel&&instOf(sel), it=inst&&itemOf(inst.itemId);
+  box.closest('section').classList.toggle('is-empty', !(inst&&it));
+  if(!inst||!it){
+    box.innerHTML=`<p class="hint">Click an item in the plan to move, turn or remove it.</p>
+      <dl class="kbd">
+        <dt>Nudge</dt><dd><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dd>
+        <dt>Turn 90°</dt><dd><kbd>R</kbd></dd>
+        <dt>Remove</dt><dd><kbd>Del</kbd></dd>
+        <dt>Drag without snap</dt><dd><kbd>Alt</kbd></dd>
+      </dl>`;
     return;
   }
-  const inst=sel&&instOf(sel), it=inst&&itemOf(inst.itemId);
-  if(!inst||!it){ box.innerHTML='<div class="empty">Nothing selected. Click a shape in the room.</div>'; return; }
   const b=bbox(worldPoly(inst,it)), rb=bbox(RP());
   const openWhy = hasOpen(it) ? getConflicts().openBad.get(inst.id) : null;
+  const badWhy = isBad(inst) ? validate(inst,worldPoly(inst,it)).why : null;
   box.innerHTML=`
-    <div class="field"><span class="sw" style="background:${it.color}"></span><strong class="nm">${esc(it.name)}</strong></div>
-    ${hasOpen(it)?`<div class="dim">Opens out to ${esc(openSizeLabel(it))}</div>`:''}
-    ${openWhy?`<div class="dim" style="color:var(--warn)">${esc(openWhy)}</div>`:''}
+    <div class="selhead"><span class="sw" style="background:${it.color}"></span><span class="nm" title="${esc(it.name)}">${esc(it.name)}</span>
+      <button class="btn quiet sm" id="sEdit" title="Change this item's size, shape or colour everywhere">Edit item…</button></div>
+    ${badWhy?`<p class="hint warn">${esc(badWhy)}</p>`:''}
+    ${openWhy?`<p class="hint warn">${esc(openWhy)}</p>`:''}
     <div class="field"><label for="sX">From left</label><input type="text" class="len" id="sX" value="${esc(fmtLen(b.x0-rb.x0,S.unit))}"></div>
     <div class="field"><label for="sY">From top</label><input type="text" class="len" id="sY" value="${esc(fmtLen(b.y0-rb.y0,S.unit))}"></div>
-    <div class="field"><label for="sR">Angle</label><input type="number" class="deg" id="sR" step="15" value="${Math.round(inst.rot||0)}"><span class="dim">°</span></div>
-    <div class="row" style="margin-top:6px">
-      <button class="btn sm" id="sRotL">⟲ 90°</button>
-      <button class="btn sm" id="sRotR">⟳ 90°</button>
+    <div class="field"><label for="sR">Angle</label>
+      <span class="inline-ctl"><input type="number" class="deg" id="sR" step="15" value="${Math.round(inst.rot||0)}">
+      <button class="btn icon" id="sRotL" title="Turn 90° left (Shift+R)" aria-label="Turn 90° left">${svgI('rot-l')}</button>
+      <button class="btn icon" id="sRotR" title="Turn 90° right (R)" aria-label="Turn 90° right">${svgI('rot-r')}</button></span></div>
+    ${hasOpen(it)?`<p class="hint">Opens out to ${esc(openSizeLabel(it))}.</p>`:''}
+    <div class="row actions">
       <button class="btn sm" id="sDup">Duplicate</button>
       <button class="btn sm danger" id="sDel">Remove</button>
     </div>`;
+  $('sEdit').addEventListener('click',()=>itemDialog(it.id));
   const move=(which,val)=>{
     const mm=parseLen(val,S.unit);
     if(!isFinite(mm)){ renderSel(); return; }
@@ -3310,23 +3560,16 @@ $('btnRedo').addEventListener('click',()=>{ roomMode()?redoRoom():redoFurn(); })
 $('btnZoomIn').addEventListener('click',()=>zoomAt(1.25,W/2,H/2));
 $('btnZoomOut').addEventListener('click',()=>zoomAt(1/1.25,W/2,H/2));
 $('btnFit').addEventListener('click',fit);
-$('btnRotL').addEventListener('click',()=>rotate(-90));
-$('btnRotR').addEventListener('click',()=>rotate(90));
-$('btnDel').addEventListener('click', ()=>{
-  if(roomMode()&&roomSel){
-    if(roomSel.kind==='opening') deleteOpening(roomSel.id);
-    else if(roomSel.kind==='corner') deleteCorner(roomSel.i);
-    else if(roomSel.kind==='pillar') deletePillar(roomSel.id);
-    else if(roomSel.kind==='iwall') deleteIWall(roomSel.id);
-    else flash('Select a corner, pillar, wall or door to remove');
-  } else if(sel) removeSel();
-});
-$('btnPng').addEventListener('click', ()=>{
+/* a saved image is for printing and sharing, so it is always drawn in the light palette */
+function savePlanImage(){
+  forceLightCanvas=true; draw();
+  const url=cv.toDataURL('image/png');
+  forceLightCanvas=false; draw();
   const a=document.createElement('a');
-  a.download=L().name.replace(/[^\w-]+/g,'-').toLowerCase()+'.png';
-  a.href=cv.toDataURL('image/png');
+  a.download=fileSlug(L().name)+'.png';
+  a.href=url;
   a.click();
-});
+}
 
 /* ------------------------- item dialog ------------------------- */
 let dlgColor=PALETTE[0];
@@ -3337,7 +3580,7 @@ function shapeFieldHTML(type,sh){
     const pts = sh&&sh.type==='poly'
       ? sh.points.map(p=>fmtLen(p[0],S.unit)+', '+fmtLen(p[1],S.unit)).join('\n')
       : '0, 0\n36", 0\n36", 20"\n0, 20"';
-    return `<div class="field wide" style="align-items:flex-start"><label style="width:88px">Corners</label>
+    return `<div class="field top"><label for="pPts">Corners</label>
       <textarea id="pPts" spellcheck="false">${esc(pts)}</textarea></div>
       <p class="hint">One corner per line as <code>across, down</code>, in order around the outline.</p>`;
   }
@@ -3373,33 +3616,41 @@ function itemDialog(id){
   dlgColor = (it&&normHex(it.color)) || PALETTE[S.inventory.length%PALETTE.length];
   const dlgId = it ? it.id : uid();
   const type0 = it?it.shape.type:'rect';
-  openModal(it?'Edit '+it.name:'Add a thing', `
+  openModal(it?'Edit “'+it.name+'”':'New item', `
     <div class="field"><label for="iName">Name</label><input type="text" id="iName" value="${esc(it?it.name:'')}" placeholder="Sofa"></div>
-    <div class="field"><label for="iId">Id</label><input type="text" class="id" id="iId" spellcheck="false" autocapitalize="off" autocorrect="off" value="${esc(dlgId)}"></div>
-    <p class="hint" id="iIdNote"></p>
-    <p class="hint">Letters, digits and ! - _ . * ' ( ) . Use / to file it away like a folder — <code>ikea/kallax/4x2</code> and <code>ikea/kallax/2x4</code> then sit together. Rooms that already use this thing follow the rename.</p>
     <div class="field"><label for="iShape">Shape</label><select id="iShape">
       <option value="rect">Rectangle</option><option value="ellipse">Circle / oval</option>
       <option value="lshape">L-shape</option><option value="poly">Custom outline</option></select></div>
     <div id="shapeFields"></div>
-    <div class="field"><label>Colour</label><div class="swatches" id="iSwatches"></div></div>
-    <div class="field"><label for="iHex">Custom</label><input type="color" id="iColPick"><input type="text" class="hex" id="iHex" maxlength="7" spellcheck="false" placeholder="#6e8b7a"></div>
-    <div class="field wide"><input type="checkbox" id="iPass" style="width:auto" ${it&&it.passThrough?'checked':''}>
-      <label for="iPass" style="width:auto">Others can overlap this (rugs, mats)</label></div>
-    <div class="field wide"><input type="checkbox" id="iOpenOn" style="width:auto" ${hasOpen(it)?'checked':''}>
-      <label for="iOpenOn" style="width:auto">It opens out further (drawers, leaves, recliners)</label></div>
-    <div id="openFields" ${hasOpen(it)?'':'hidden'}>
-      <div class="field"><label for="oTop">Opens up</label><input type="text" class="len" id="oTop" value="${esc(openV(it,'top'))}"></div>
-      <div class="field"><label for="oBottom">Opens down</label><input type="text" class="len" id="oBottom" value="${esc(openV(it,'bottom'))}"></div>
-      <div class="field"><label for="oLeft">Opens left</label><input type="text" class="len" id="oLeft" value="${esc(openV(it,'left'))}"></div>
-      <div class="field"><label for="oRight">Opens right</label><input type="text" class="len" id="oRight" value="${esc(openV(it,'right'))}"></div>
-      <p class="hint">How far it reaches out past its own footprint when it is in use, as the shape sits here before you turn it — a dresser with 20" of drawer opens down. The open footprint never stops you putting something somewhere, it only warns when there is not room for it.</p>
-    </div>
-    <div class="field"><label for="iCount">How many you own</label><input type="number" id="iCount" min="1" step="1" value="${it&&it.count!=null?it.count:1}"></div>
-    <div class="field wide"><label for="iTagsInput" style="width:auto">Tags</label></div>
+    <p class="hint">Plain numbers are ${unitWord()}; 6'2", 30in, 75cm and 1.2m also work.</p>
+    <div class="field mt"><label>Colour</label><div class="swatches" id="iSwatches"></div></div>
+    <div class="field"><label for="iHex">Custom</label><input type="color" id="iColPick" aria-label="Pick a colour"><input type="text" class="hex" id="iHex" maxlength="7" spellcheck="false" placeholder="#6e8b7a"></div>
+    <div class="field"><label for="iCount">Owned</label><input type="number" id="iCount" min="1" step="1" value="${it&&it.count!=null?it.count:1}"></div>
+    <label class="stack-label mt" for="iTagsInput">Tags</label>
     ${tagFieldHTML('iTags','living room, seating, IKEA')}
-    <p class="hint">Type to pick from tags you already use. Tab or comma adds one, backspace removes the last. Used to filter your inventory and to set a folder's default filter.</p>
-    <p class="hint">Plain numbers are read as ${unitWord()}. You can also type 6'2", 30in, 75cm, 1.2m.</p>
+    <p class="hint">Tab or comma adds a tag. Tags filter the item list.</p>
+
+    <div class="group">
+      <p class="group-title">Behaviour</p>
+      <label class="check"><input type="checkbox" id="iPass" ${it&&it.passThrough?'checked':''}>Other items can sit on it (rugs, mats)</label>
+      <label class="check"><input type="checkbox" id="iOpenOn" ${hasOpen(it)?'checked':''}>Opens out when in use (drawers, leaves, recliners)</label>
+      <div id="openFields" class="sub" ${hasOpen(it)?'':'hidden'}>
+        <div class="field"><label for="oTop">Up</label><input type="text" class="len" id="oTop" value="${esc(openV(it,'top'))}"></div>
+        <div class="field"><label for="oBottom">Down</label><input type="text" class="len" id="oBottom" value="${esc(openV(it,'bottom'))}"></div>
+        <div class="field"><label for="oLeft">Left</label><input type="text" class="len" id="oLeft" value="${esc(openV(it,'left'))}"></div>
+        <div class="field"><label for="oRight">Right</label><input type="text" class="len" id="oRight" value="${esc(openV(it,'right'))}"></div>
+        <p class="hint">How far it reaches past its footprint, before turning — a dresser with 20" drawers opens down 20". This only warns; it never blocks a placement.</p>
+      </div>
+    </div>
+
+    <details class="adv"${idProblem(dlgId)?' open':''}>
+      <summary>Advanced</summary>
+      <div class="advbody">
+        <div class="field"><label for="iId">Id</label><input type="text" class="id" id="iId" spellcheck="false" autocapitalize="off" autocorrect="off" value="${esc(dlgId)}"></div>
+        <p class="hint" id="iIdNote"></p>
+        <p class="hint">Letters, digits and <code>! - _ . * ' ( )</code>. A <code>/</code> files it like a folder, so <code>ikea/kallax/4x2</code> and <code>ikea/kallax/2x4</code> sit together. Rooms using it follow a rename.</p>
+      </div>
+    </details>
 `,
     'Save',
     ()=>{
@@ -3431,8 +3682,8 @@ function itemDialog(id){
       }) : null;
       const newId=($('iId').value||'').trim();
       const bad=idProblem(newId);
-      if(bad){ moError(bad); return false; }
-      if(S.inventory.some(x=>x.id===newId && x.id!==id)){ moError('Another thing already uses that id'); return false; }
+      if(bad){ $('iId').closest('details').open=true; moError(bad); return false; }
+      if(S.inventory.some(x=>x.id===newId && x.id!==id)){ $('iId').closest('details').open=true; moError('Another item already uses that id'); return false; }
       if(id){
         const cur=itemOf(id);
         Object.assign(cur,{name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,open});
@@ -3440,9 +3691,11 @@ function itemDialog(id){
         retagItem(id,newId);
       }
       else {
-        const nit={id:newId,name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,folderId:nav.libFolderId||null,open};
+        const nit={id:newId,name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,folderId:(isCanvasMode(S.mode)?null:nav.libFolderId)||null,open};
         applyTags(nit);
         S.inventory.push(nit);
+        // an untouched id is filed under the folder it was created in, same as moving it there
+        if(nit.folderId && newId===dlgId) rehomeItemId(nit, nit.folderId);
       }
       renderInv(); renderSel(); draw(); save(); renderLibAll();
     },
@@ -3485,6 +3738,7 @@ function itemDialog(id){
     });
 }
 $('btnAddItem').addEventListener('click',()=>itemDialog(null));
+$('btnAddItem2').addEventListener('click',()=>itemDialog(null));
 
 /* ------------------------- opening dialog ------------------------- */
 function openingDialog(id, kind, wallIdx){
@@ -3496,10 +3750,10 @@ function openingDialog(id, kind, wallIdx){
   openModal(o?('Edit '+KIND(o).toLowerCase()):(k==='window'?'Add window':'Add door'), `
     <div class="field"><label for="dWall">Wall</label><select id="dWall">${RP().map((_,i)=>`<option value="${i}" ${i===wi?'selected':''}>Wall ${i+1} (${esc(fmtLen(wallOf(i).len,S.unit))})</option>`).join('')}</select></div>
     <div class="field"><label for="dWidth">Width</label><input type="text" class="len" id="dWidth" value="${esc(fmtLen(o?o.width:(k==='window'?1200:813),S.unit))}"></div>
-    <div class="field"><label for="dCorner">Measure from</label><select id="dCorner">
+    <div class="field"><label for="dCorner">From</label><select id="dCorner">
       <option value="cw" ${corner==='cw'?'selected':''}>Near corner (clockwise)</option>
       <option value="ccw" ${corner==='ccw'?'selected':''}>Far corner (counter-clockwise)</option></select></div>
-    <div class="field"><label for="dOffset">Distance from corner</label><input type="text" class="len" id="dOffset" value="${esc(fmtLen(dispOff,S.unit))}"></div>
+    <div class="field"><label for="dOffset">Offset</label><input type="text" class="len" id="dOffset" value="${esc(fmtLen(dispOff,S.unit))}"></div>
     ${k==='door' ? `
       <div class="field"><label for="dType">Type</label><select id="dType">
         <option value="hinge">Hinged</option><option value="slide">Sliding</option><option value="open">Open doorway</option></select></div>
@@ -3510,8 +3764,8 @@ function openingDialog(id, kind, wallIdx){
           <option value="in">Into room</option><option value="out">Out of room</option></select></div>
       </div>` : `
       <div class="field"><label for="dSill">Sill height</label><input type="text" class="len" id="dSill" value="${esc(fmtLen(o&&o.sill?o.sill:900,S.unit))}"></div>
-      <p class="hint">Sill height is only a note for you — it doesn't change the plan.</p>`}
-    <p class="hint">Measured from the wall's near corner (clockwise) by default — switch to the far corner above. You can also drag it in the plan.</p>`,
+      <p class="hint">Sill height is a note for you; it doesn't change the plan.</p>`}
+    <p class="hint">The offset is measured along the wall from the corner you pick. You can also drag it in the plan.</p>`,
     'Save',
     ()=>{
       const wall=+$('dWall').value, len=wallOf(wall).len;
@@ -3544,8 +3798,6 @@ function openingDialog(id, kind, wallIdx){
       t();
     });
 }
-$('btnAddDoor').addEventListener('click',()=>openingDialog(null,'door', roomSel&&roomSel.kind==='wall'?roomSel.i:0));
-$('btnAddWindow').addEventListener('click',()=>openingDialog(null,'window', roomSel&&roomSel.kind==='wall'?roomSel.i:0));
 
 /* ------------------------- samples / io ------------------------- */
 $('btnSamples').addEventListener('click', ()=>{
@@ -3574,8 +3826,8 @@ function pickerHTML(id, title, rows, emptyMsg){
     : `<div class="empty">${esc(emptyMsg||'Nothing here')}</div>`;
   return `<div class="picker" id="${id}">
     <div class="picker-head"><span class="grow">${esc(title)}</span>
-      <button type="button" class="btn sm" data-all="1">All</button>
-      <button type="button" class="btn sm" data-all="0">None</button></div>
+      <button type="button" class="btn quiet sm" data-all="1">All</button>
+      <button type="button" class="btn quiet sm" data-all="0">None</button></div>
     <div class="picker-body">${body}</div></div>`;
 }
 function pickerMount(id, onChange){
@@ -3623,7 +3875,7 @@ function exportPayload(roomIds, itemIds, withPrefs){
   return out;
 }
 function exportName(layouts, itemIds){
-  if(!layouts.length) return 'room-planner-things.json';
+  if(!layouts.length) return 'room-planner-items.json';
   if(layouts.length===1) return 'room-planner-'+fileSlug(layouts[0].name)+'.json';
   if(!itemIds.length) return 'room-planner-rooms.json';
   return 'room-planner.json';
@@ -3639,17 +3891,22 @@ function downloadJSON(obj, name){
 function exportDialog(){
   const rooms=S.layouts.map(l=>({value:l.id, label:l.name, sub:folderLine(l), checked:true}));
   const things=S.inventory.map(i=>({value:i.id, label:i.name, sub:i.id, checked:true}));
+  const img = isCanvasMode(S.mode) ? `<div class="export-img">
+      <span class="ico">${svgI('room')}</span>
+      <div class="grow"><div class="nm">Image of “${esc(L().name)}”</div><div class="dim">PNG of the plan as it's framed now</div></div>
+      <button type="button" class="btn sm" id="xPng">Save image</button></div>
+    <p class="group-title">Project file</p>` : '';
   openModal('Export', `
-    <p class="hint" style="margin-top:0">Tick what should go in the file.</p>
+    ${img}
+    <p class="hint">Tick what goes in the file. It can be imported here or on another device.</p>
     ${pickerHTML('xRooms','Rooms',rooms,'You have no rooms to export')}
-    ${pickerHTML('xThings','Things',things,'Your inventory is empty')}
-    <div class="field wide"><input type="checkbox" id="xPrefs" style="width:auto" checked>
-      <label for="xPrefs" style="width:auto">Settings — units, snap, stock, and what the plan shows</label></div>
+    ${pickerHTML('xThings','Items',things,'Your library is empty')}
+    <label class="check"><input type="checkbox" id="xPrefs" checked>Settings — units, snap, stock and view</label>
     <p class="hint" id="xNote"></p>`,
-    'Export',
+    'Export file',
     ()=>{
       const roomIds=pickValues('xRooms'), itemIds=pickValues('xThings');
-      if(!roomIds.length && !itemIds.length){ moError('Tick at least one room or thing'); return false; }
+      if(!roomIds.length && !itemIds.length){ moError('Tick at least one room or item'); return false; }
       const picked=S.layouts.filter(l=>roomIds.includes(l.id));
       downloadJSON(exportPayload(roomIds,itemIds,$('xPrefs').checked), exportName(picked,itemIds));
     },
@@ -3665,9 +3922,10 @@ function exportDialog(){
           c.closest('.pick').classList.toggle('locked',must);
         }
         $('xNote').textContent = need.size
-          ? 'Things standing in the rooms you picked come along whether or not they are ticked, so the plan still holds together at the other end.'
+          ? 'Items placed in the rooms you picked always come along, so the plan still works at the other end.'
           : '';
       };
+      if($('xPng')) $('xPng').addEventListener('click', ()=>{ closeModal(); savePlanImage(); });
       pickerMount('xRooms', syncUsed);
       pickerMount('xThings');
       syncUsed();
@@ -3702,22 +3960,21 @@ function importDialog(inc){
   const rooms=inc.layouts.map(l=>({value:l.id, label:l.name, sub:folderLine(l,inc.folders), checked:true}));
   const things=inc.inventory.map(i=>({value:i.id, label:i.name, sub:i.id, checked:true}));
   openModal('Import', `
-    <div class="field"><label for="imHow">Bring it in</label><select id="imHow">
-      <option value="add">alongside what I have</option>
-      <option value="replace">instead of what I have</option></select></div>
-    <p class="hint" id="imHowNote" style="margin-top:0"></p>
+    <div class="field"><label for="imHow">Mode</label><select id="imHow">
+      <option value="add">Add to my project</option>
+      <option value="replace">Replace my project</option></select></div>
+    <p class="hint" id="imHowNote"></p>
     ${pickerHTML('imRooms','Rooms in this file',rooms,'No rooms in this file')}
-    ${pickerHTML('imThings','Things in this file',things,'No things in this file')}
-    ${inc.prefs?`<div class="field wide"><input type="checkbox" id="imPrefs" style="width:auto">
-      <label for="imPrefs" style="width:auto">Settings — units, snap, stock, and what the plan shows</label></div>`:''}
+    ${pickerHTML('imThings','Items in this file',things,'No items in this file')}
+    ${inc.prefs?`<label class="check"><input type="checkbox" id="imPrefs">Settings — units, snap, stock, and what the plan shows</label>`:''}
     <div class="field" id="imDupeRow"><label for="imDupe">Same id</label><select id="imDupe">
-      <option value="mine">keep the one I have</option>
-      <option value="copy">add the file's as a copy</option></select></div>
-    <p class="hint" id="imDupeNote">Two things can share an id — <code>ikea/kallax/4x2</code> in your inventory and in this file. That reads as the same product, so by default yours is kept and the rooms coming in point at it.</p>`,
+      <option value="mine">Keep mine</option>
+      <option value="copy">Add theirs as a copy</option></select></div>
+    <p class="hint" id="imDupeNote">An id already in your library, like <code>ikea/kallax/4x2</code>, means the same product — by default yours is kept and incoming rooms use it.</p>`,
     'Import',
     ()=>{
       const roomIds=pickValues('imRooms'), itemIds=pickValues('imThings');
-      if(!roomIds.length && !itemIds.length){ moError('Tick at least one room or thing'); return false; }
+      if(!roomIds.length && !itemIds.length){ moError('Tick at least one room or item'); return false; }
       const replace=$('imHow').value==='replace';
       if(replace && !roomIds.length){ moError('Replacing needs at least one room — a project has to have somewhere to stand'); return false; }
       applyImport(inc, roomIds, itemIds, !!($('imPrefs')&&$('imPrefs').checked), replace, $('imDupe').value);
@@ -3728,10 +3985,12 @@ function importDialog(inc){
       const sayHow=()=>{
         const rep=how.value==='replace';
         $('imHowNote').textContent = rep
-          ? 'Everything you have now — rooms, things and all — is swapped for what you tick below. This one cannot be undone.'
+          ? 'Everything you have now — rooms, items and all — is replaced by what you tick below. This can’t be undone.'
           : 'What you tick is added to your project. Nothing you already have is touched.';
         $('imDupeRow').hidden=rep;
         $('imDupeNote').hidden=rep;
+        $('moOk').classList.toggle('danger', rep);
+        $('moOk').textContent = rep ? 'Replace project' : 'Import';
       };
       how.addEventListener('change',sayHow);
       sayHow();
@@ -3766,7 +4025,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     $('unitSel').value=S.unit;
     $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen;
     renderSnap(); applyPanes(); applySections(); renderAll(); fit(); save();
-    flash('Replaced your project with '+plural(S.layouts.length,'room')+' and '+plural(S.inventory.length,'thing'));
+    flash('Replaced your project with '+plural(S.layouts.length,'room')+' and '+plural(S.inventory.length,'item'));
     return;
   }
 
@@ -3819,7 +4078,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     renderSnap();
   }
   renderAll(); save();
-  flash('Added '+plural(layouts.length,'room')+' and '+plural(addedItems,'thing'));
+  flash('Added '+plural(layouts.length,'room')+' and '+plural(addedItems,'item'));
 }
 $('btnImport').addEventListener('click',()=>$('fileIn').click());
 $('fileIn').addEventListener('change', e=>{
@@ -3841,7 +4100,7 @@ function libFlash(msg,warn){
   if(!msg) return;
   const el=$('libFlash');
   el.textContent=msg; el.classList.toggle('warn',!!warn); el.classList.add('on');
-  clearTimeout(libFlashT); libFlashT=setTimeout(()=>el.classList.remove('on'),1300);
+  clearTimeout(libFlashT); libFlashT=setTimeout(()=>el.classList.remove('on'),readTime(msg));
 }
 
 /* ------------------------- item folders: the Inventory tab's tree, tags inherited onto everything inside ------------------------- */
@@ -4061,8 +4320,8 @@ function addMarketItemToInventory(raw){
   if(existing){
     if(itemsDeepEqual(existing, incoming)){ libFlash('You already have this'); return; }
     openModal('Already in your library', `
-      <p style="margin:0 0 10px">You already have <code>${esc(incoming.id)}</code>, but this copy is different.</p>
-      <p class="hint" style="margin:0">Taking theirs replaces your copy's shape, colour and other fields, but keeps the same id — anywhere you've placed it keeps its spot, now with the new geometry.</p>`,
+      <p>You already have <code>${esc(incoming.id)}</code>, but this copy is different.</p>
+      <p class="hint">Taking theirs replaces your copy's shape, colour and other fields, but keeps the same id — anywhere you've placed it keeps its spot, now with the new geometry.</p>`,
       'Take theirs', ()=>{
         const folderId=existing.folderId, manualTags=existing.manualTags;
         Object.assign(existing, incoming, {id:existing.id, folderId, manualTags});
@@ -4097,8 +4356,9 @@ function goLibFolder(kind,id){
 function renderLibAll(){
   if(isCanvasMode(S.mode)) return;
   nav.tab = S.mode==='marketplace' ? 'market' : 'library';
-  for(const b of document.querySelectorAll('.libtabs button')) b.setAttribute('aria-pressed', String(b.dataset.tab===nav.tab));
-  $('searchBox').placeholder = nav.tab==='library' ? 'Search your items…' : 'Search the marketplace…';
+  $('libTitle').textContent = nav.tab==='library' ? 'Library' : 'Marketplace';
+  $('searchBox').placeholder = nav.tab==='library' ? 'Search items and tags' : 'Search the marketplace';
+  $('searchBox').setAttribute('aria-label', $('searchBox').placeholder);
   renderLibTools();
   renderLibTree();
   renderLibContent();
@@ -4106,9 +4366,8 @@ function renderLibAll(){
 function renderLibTools(){
   const box=$('explTools');
   if(nav.tab==='library'){
-    box.innerHTML=`<button class="btn sm" id="btnNewLibFolder">New folder</button>
-      <button class="btn sm primary" id="btnNewLibItem">New item</button>
-      <button class="btn sm" id="btnExportLib">Export…</button>`;
+    box.innerHTML=`<button class="btn sm primary" id="btnNewLibItem">${svgI('plus')}New item</button>
+      <button class="btn sm" id="btnNewLibFolder">${svgI('folder-plus')}New folder</button>`;
     $('btnNewLibFolder').addEventListener('click', ()=>{
       askNewLibFolder('New folder', (n,tags)=>{
         S.itemFolders.push({id:uid(),name:n,parentId:nav.libFolderId,tags});
@@ -4117,14 +4376,11 @@ function renderLibTools(){
       });
     });
     $('btnNewLibItem').addEventListener('click', createLibItem);
-    $('btnExportLib').addEventListener('click', exportLibraryDialog);
   } else {
-    box.innerHTML=`<button class="btn sm" id="btnAddMarket">Add marketplace</button>
-      <button class="btn sm" id="btnToggleContents" aria-pressed="${nav.showMarketContents}">Show contents</button>
-      <button class="btn sm" id="btnNewMFolder">New folder</button>
-      <button class="btn sm" id="btnAddListing">Add a listing</button>`;
+    box.innerHTML=`<button class="btn sm primary" id="btnAddMarket">${svgI('plus')}Add marketplace…</button>
+      <button class="btn sm" id="btnAddListing">Add listing…</button>
+      <button class="btn sm icon" id="btnNewMFolder" title="New folder for listings" aria-label="New folder for listings">${svgI('folder-plus')}</button>`;
     $('btnAddMarket').addEventListener('click', addMarketDialog);
-    $('btnToggleContents').addEventListener('click', ()=>{ nav.showMarketContents=!nav.showMarketContents; renderLibContent(); });
     $('btnNewMFolder').addEventListener('click', ()=>{
       askText('New folder','Name','Folder', n=>{
         S.marketFolders.push({id:uid(),name:n,parentId:nav.marketFolderId});
@@ -4135,9 +4391,6 @@ function renderLibTools(){
     $('btnAddListing').addEventListener('click', addListingDialog);
   }
 }
-document.querySelectorAll('.libtabs button').forEach(b=>{
-  b.addEventListener('click', ()=>{ setMode(b.dataset.tab==='market' ? 'marketplace' : 'inventory'); });
-});
 let libSearchT=null;
 $('searchBox').addEventListener('input', e=>{
   clearTimeout(libSearchT);
@@ -4148,18 +4401,18 @@ $('searchBox').addEventListener('input', e=>{
 /* ------------------------- library tree: folders only ------------------------- */
 function folderTagsInline(f){
   if(!f.tags||!f.tags.length) return '';
-  return `<span class="chips">${f.tags.map(t=>`<span class="tagchip">${esc(t)}</span>`).join('')}</span>`;
+  return `<span class="tagchip inherit" title="Everything inside is tagged: ${esc(f.tags.join(', '))}">${esc(f.tags[0])}${f.tags.length>1?' +'+(f.tags.length-1):''}</span>`;
 }
 function renderLibTreeLevel(parentId,depth){
   let html='';
   for(const f of childItemFolders(parentId)){
     const open=libTreeOpen.has(f.id);
     const n=itemCountInSubtree(f.id);
-    html+=`<div class="tree-row" draggable="true" data-folder="${f.id}">
-      <span class="caret-zone" data-act="toggle" style="width:${depth*14+16}px">${open?'▾':'▸'}</span>
-      <span class="ico">\u{1F4C1}</span><span class="nm">${esc(f.name)}</span>${folderTagsInline(f)}
-      ${n?`<span class="count" title="${n} thing${n>1?'s':''} in this folder">${n}</span>`:''}
-      <button type="button" class="tree-more" data-act="more" title="More…" aria-label="More…">⋯</button>
+    html+=`<div class="tree-row" draggable="true" data-folder="${f.id}" aria-expanded="${open}">
+      <span class="caret-zone" data-act="toggle" style="width:${depth*12+16}px">${svgI(open?'chev-d':'chev-r')}</span>
+      <span class="ico">${svgI('folder')}</span><span class="nm">${esc(f.name)}</span>${folderTagsInline(f)}
+      ${n?`<span class="count" title="${plural(n,'item')} in this folder">${n}</span>`:''}
+      ${moreBtn('tree-more')}
     </div>`;
     if(open) html+=renderLibTreeLevel(f.id,depth+1);
   }
@@ -4169,19 +4422,18 @@ function renderMarketTreeLevel(parentId,depth){
   let html='';
   for(const f of childMarketFolders(parentId)){
     const key='m:'+f.id, open=libTreeOpen.has(key);
-    html+=`<div class="tree-row" draggable="true" data-mfolder="${f.id}">
-      <span class="caret-zone" data-act="toggle" style="width:${depth*14+16}px">${open?'▾':'▸'}</span>
-      <span class="ico">\u{1F4C1}</span><span class="nm">${esc(f.name)}</span>
-      <button type="button" class="tree-more" data-act="more" title="More…" aria-label="More…">⋯</button>
+    html+=`<div class="tree-row" draggable="true" data-mfolder="${f.id}" aria-expanded="${open}">
+      <span class="caret-zone" data-act="toggle" style="width:${depth*12+16}px">${svgI(open?'chev-d':'chev-r')}</span>
+      <span class="ico">${svgI('folder')}</span><span class="nm">${esc(f.name)}</span>
+      ${moreBtn('tree-more')}
     </div>`;
     if(open) html+=renderMarketTreeLevel(f.id,depth+1);
   }
   for(const l of listingsInFolder(parentId)){
-    const icon = l.kind==='link' ? '\u{1F517}' : '\u{1F4E6}';
-    html+=`<div class="tree-row" draggable="false" data-listing="${l.id}">
-      <span class="caret-zone" style="width:${depth*14+16}px"></span>
-      <span class="ico">${icon}</span><span class="nm">${esc(l.name)}</span>
-      <button type="button" class="tree-more" data-act="more" title="More…" aria-label="More…">⋯</button>
+    html+=`<div class="tree-row ${nav.marketSelListingId===l.id?'active':''}" draggable="false" data-listing="${l.id}">
+      <span class="caret-zone" style="width:${depth*12+16}px"></span>
+      <span class="ico">${svgI(l.kind==='link'?'link':'box')}</span><span class="nm">${esc(l.name)}</span>
+      ${moreBtn('tree-more')}
     </div>`;
   }
   return html;
@@ -4191,11 +4443,11 @@ function renderLibTree(){
   if(nav.tab==='library'){
     const n0=S.inventory.length;
     box.innerHTML=`<div class="tree-row root-row ${nav.libFolderId===null&&!nav.searching?'active':''}" data-root="1">
-        <span class="ico">\u{1F4DA}</span><span class="nm">Library</span>${n0?`<span class="count" title="${n0} thing${n0>1?'s':''}">${n0}</span>`:''}</div>`
+        <span class="caret-zone"></span><span class="ico">${svgI('library')}</span><span class="nm">All items</span>${n0?`<span class="count" title="${plural(n0,'item')}">${n0}</span>`:''}</div>`
       + renderLibTreeLevel(null,1);
   } else {
-    box.innerHTML=`<div class="tree-row root-row ${nav.marketFolderId===null&&!nav.searching?'active':''}" data-root="1">
-        <span class="ico">\u{1F3EA}</span><span class="nm">Listings</span></div>`
+    box.innerHTML=`<div class="tree-row root-row ${nav.marketFolderId===null&&!nav.searching&&!nav.marketSelListingId?'active':''}" data-root="1">
+        <span class="caret-zone"></span><span class="ico">${svgI('store')}</span><span class="nm">Marketplaces &amp; listings</span></div>`
       + renderMarketTreeLevel(null,1);
   }
   markActiveTreeRow();
@@ -4342,9 +4594,9 @@ libTreeBox.addEventListener('drop', e=>{
 /* ------------------------- folder menus & dialogs ------------------------- */
 function askNewLibFolder(title,onOk){
   openModal(title, `
-    <div class="field wide"><label style="width:auto">Name</label></div>
+    <label class="stack-label">Name</label>
     <input type="text" id="moText" value="Folder">
-    <div class="field wide" style="margin-top:10px"><label style="width:auto">Tags</label></div>
+    <label class="stack-label mt">Tags</label>
     ${tagFieldHTML('fNewTags','living room, seating, IKEA')}
     <p class="hint">Every item filed in this folder — or in any subfolder underneath it — carries these tags automatically.</p>`,
     'Save',
@@ -4383,7 +4635,7 @@ function adhocFolderMenu(id, anchor){
 function libFolderTagsDialog(id){
   const f=itemFolderOf(id); if(!f) return;
   openModal('Tag everything in “'+f.name+'”', `
-    <div class="field wide"><label style="width:auto">Tags</label></div>
+    <label class="stack-label">Tags</label>
     ${tagFieldHTML('fTags','living room, seating, IKEA')}
     <p class="hint">Every item filed in this folder — or any subfolder underneath it — carries these tags automatically, alongside whatever tags you put on the item itself. They show up in Furniture mode's own tag filter too.</p>`,
     'Save', ()=>{
@@ -4432,10 +4684,9 @@ function deleteLibFolder(id){
   if(items.length) bits.push(items.length+' item'+(items.length>1?'s':''));
   if(folders.length) bits.push(folders.length+' folder'+(folders.length>1?'s':''));
   openModal('Delete “'+f.name+'”?', `
-    <p style="margin:0 0 10px">It holds ${esc(bits.join(' and '))}. Deleting the folder deletes all of that too, including any of those things placed in a room.</p>
-    <div class="field wide"><input type="checkbox" id="keepKids" style="width:auto">
-      <label for="keepKids" style="width:auto">Keep everything inside — move it up to ${esc(up)}</label></div>`,
-    'Delete folder', ()=>drop($('keepKids').checked));
+    <p>It holds ${esc(bits.join(' and '))}. Deleting the folder deletes all of that too, including anywhere those items are placed.</p>
+    <label class="check"><input type="checkbox" id="keepKids">Keep everything inside — move it up to ${esc(up)}</label>`,
+    'Delete folder', ()=>drop($('keepKids').checked), null, {danger:true});
 }
 function adhocFolderContents(id){
   const folders=[], listings=[];
@@ -4472,10 +4723,9 @@ function deleteAdhocFolder(id){
   if(listings.length) bits.push(listings.length+' listing'+(listings.length>1?'s':''));
   if(folders.length) bits.push(folders.length+' folder'+(folders.length>1?'s':''));
   openModal('Delete “'+f.name+'”?', `
-    <p style="margin:0 0 10px">It holds ${esc(bits.join(' and '))}.</p>
-    <div class="field wide"><input type="checkbox" id="keepKids" style="width:auto">
-      <label for="keepKids" style="width:auto">Keep everything inside — move it up to ${esc(up)}</label></div>`,
-    'Delete folder', ()=>drop($('keepKids').checked));
+    <p>It holds ${esc(bits.join(' and '))}.</p>
+    <label class="check"><input type="checkbox" id="keepKids">Keep everything inside — move it up to ${esc(up)}</label>`,
+    'Delete folder', ()=>drop($('keepKids').checked), null, {danger:true});
 }
 function moveLibFolderDialog(id){
   const obj=itemFolderOf(id); if(!obj) return;
@@ -4488,7 +4738,7 @@ function moveLibFolderDialog(id){
       walk(f.id,depth+1);
     }
   })(null,0);
-  openModal('Move “'+obj.name+'”', `<div class="field wide"><label style="width:auto">Folder</label></div>
+  openModal('Move “'+obj.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
       obj.parentId=v;
@@ -4508,7 +4758,7 @@ function moveAdhocFolderDialog(id){
       walk(f.id,depth+1);
     }
   })(null,0);
-  openModal('Move “'+obj.name+'”', `<div class="field wide"><label style="width:auto">Folder</label></div>
+  openModal('Move “'+obj.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
       obj.parentId=v;
@@ -4525,7 +4775,7 @@ function moveLibItemDialog(item){
       walk(f.id,depth+1);
     }
   })(null,0);
-  openModal('Move “'+item.name+'”', `<div class="field wide"><label style="width:auto">Folder</label></div>
+  openModal('Move “'+item.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
       moveItemToFolder(item, v);
@@ -4535,15 +4785,8 @@ function moveLibItemDialog(item){
 }
 
 /* ------------------------- library: item/folder tiles + grid ------------------------- */
-function createLibItem(){
-  const it={id:uid(), name:'Untitled', shape:{type:'rect',w:900,d:600}, color:PALETTE[S.inventory.length%PALETTE.length],
-    folderId:nav.libFolderId, manualTags:[]};
-  normItem(it); applyTags(it);
-  S.inventory.push(it);
-  rehomeItemId(it, it.folderId);
-  save(); renderLibAll();
-  itemDialog(it.id);
-}
+/* nothing is created until Save, so cancelling a new item leaves no "Untitled" behind */
+function createLibItem(){ itemDialog(null); }
 function duplicateLibItem(id){
   const it=S.inventory.find(x=>x.id===id); if(!it) return;
   const c=clone(it);
@@ -4579,16 +4822,16 @@ function itemTile(it){
       const inherited = !it.manualTags || !it.manualTags.includes(t);
       return `<span class="tagchip${inherited?' inherit':''}">${esc(t)}</span>`;
     }).join('')}${it.tags.length>3?`<span class="tagchip">+${it.tags.length-3}</span>`:''}</div>` : '';
-  return `<button type="button" class="tile" draggable="true" data-item="${it.id}">
-    <span class="more" data-act="more" title="More…" aria-label="More…">⋯</span>
-    <div class="thumb" style="background:${hexA(it.color,.18)}"><span class="sw" style="width:28px;height:28px;border-radius:6px;background:${it.color}"></span></div>
+  return `<div class="tile" role="button" tabindex="0" draggable="true" data-item="${it.id}" aria-label="Edit ${esc(it.name)}">
+    <span class="more" role="button" tabindex="0" data-act="more" title="More actions" aria-label="More actions">${svgI('more')}</span>
+    <div class="thumb"><canvas data-prev="${esc(it.id)}"></canvas></div>
     <div class="body"><div class="nm" title="${esc(it.name)}">${esc(it.name)}</div>
       <div class="dim">${esc(sizeLabel(it))}</div>${chips}</div>
-  </button>`;
+  </div>`;
 }
 function folderTile(f){
   return `<button type="button" class="tile folder" data-openfolder="${f.id}">
-    <div class="thumb"><span class="ico">\u{1F4C1}</span></div>
+    <div class="thumb">${svgI('folder')}</div>
     <div class="body"><div class="nm" title="${esc(f.name)}">${esc(f.name)}</div>
       <div class="dim">${esc(folderCountLabel(f.id))}</div></div>
   </button>`;
@@ -4604,23 +4847,26 @@ function renderLibraryFolder(box, folderId){
   const f=itemFolderOf(folderId);
   const subs=childItemFolders(folderId), items=itemsInFolder(folderId);
   let html=crumbsHTML('library', folderId);
-  html+=`<div class="viewhead"><span class="grow"></span>
-    ${(subs.length||items.length)?'<button class="btn sm" id="btnFolderExport">Export…</button>':''}
-    ${f?'<button class="btn sm" id="btnFolderTags">Edit folder tags…</button>':''}</div>`;
+  const bits=[]; if(subs.length) bits.push(plural(subs.length,'folder')); if(items.length) bits.push(plural(items.length,'item'));
+  html+=`<div class="viewhead"><span class="hint grow">${bits.join(', ')}</span>
+    ${f?'<button class="btn sm" id="btnFolderTags">Folder tags…</button>':''}
+    ${(subs.length||items.length)?`<button class="btn sm" id="btnFolderExport">${f?'Export folder':'Export…'}</button>`:''}</div>`;
   const inherited = f ? ancestorTags(folderId) : [];
   if(f && inherited.length){
-    html+=`<div class="foldertagbar"><div class="lbl">Everything here is tagged</div>
-      <div class="chips">${inherited.map(t=>`<span class="tagchip">${esc(t)}</span>`).join('')}</div></div>`;
+    html+=`<div class="foldertagbar"><span class="lbl">Everything here is tagged</span>
+      ${inherited.map(t=>`<span class="tagchip">${esc(t)}</span>`).join('')}</div>`;
   }
   if(!subs.length && !items.length){
-    html+=`<div class="grid"><div class="empty" style="grid-column:1/-1">Nothing here yet. Add a new item, or drag one in from the tree.</div></div>`;
+    html+=`<div class="grid"><div class="empty">${f?'This folder is empty. Drag items onto it in the tree, or':'Your library is empty.'}
+      <div class="row"><button class="btn sm primary" data-newitem>${svgI('plus')}New item</button></div></div></div>`;
   } else {
     html+=`<div class="grid">${subs.map(folderTile).join('')}${items.map(itemTile).join('')}</div>`;
   }
   box.innerHTML=html;
   bindCrumbs(box,'library');
   if(f) $('btnFolderTags').addEventListener('click', ()=>libFolderTagsDialog(f.id));
-  if($('btnFolderExport')) $('btnFolderExport').addEventListener('click', ()=>exportLibFolder(folderId));
+  if($('btnFolderExport')) $('btnFolderExport').addEventListener('click', ()=> f ? exportLibFolder(folderId) : exportLibraryDialog());
+  const ni=box.querySelector('[data-newitem]'); if(ni) ni.addEventListener('click', createLibItem);
   bindLibGrid(box,'library');
 }
 function bindLibGrid(box, kind){
@@ -4629,11 +4875,19 @@ function bindLibGrid(box, kind){
   });
   if(kind==='library'){
     box.querySelectorAll('[data-item]').forEach(t=>{
+      const it=S.inventory.find(x=>x.id===t.dataset.item);
+      const cvp=t.querySelector('canvas[data-prev]'); if(cvp&&it) drawPreview(cvp,it);
       t.addEventListener('click', e=>{
         if(e.target.closest('[data-act=more]')) return;
         itemDialog(t.dataset.item);
       });
-      t.querySelector('[data-act=more]').addEventListener('click', e=>{ e.stopPropagation(); libItemMenu(t.dataset.item, e.currentTarget); });
+      t.addEventListener('keydown', e=>{
+        if(e.target!==t || (e.key!=='Enter'&&e.key!==' ')) return;
+        e.preventDefault(); itemDialog(t.dataset.item);
+      });
+      const more=t.querySelector('[data-act=more]');
+      more.addEventListener('click', e=>{ e.stopPropagation(); libItemMenu(t.dataset.item, e.currentTarget); });
+      more.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); libItemMenu(t.dataset.item, more); } });
       t.addEventListener('dragstart', e=>{
         gridDragItem=t.dataset.item; t.classList.add('dragging');
         e.dataTransfer.effectAllowed='move';
@@ -4667,7 +4921,7 @@ function bindLibGrid(box, kind){
 function crumbsHTML(kind, folderId){
   const isLib=kind==='library';
   const path = isLib ? itemFolderPath(folderId) : marketFolderPath(folderId);
-  const rootLabel = isLib ? 'Library' : 'Listings';
+  const rootLabel = isLib ? 'All items' : 'Listings';
   let html=`<div class="crumbs"><button data-crumb="">${esc(rootLabel)}</button>`;
   for(const f of path) html+=`<span class="sep">/</span><button data-crumb="${f.id}">${esc(f.name)}</button>`;
   html+='</div>';
@@ -4697,7 +4951,7 @@ function exportLibFolder(folderId){
 function exportLibraryDialog(){
   const rows=S.inventory.map(i=>({value:i.id, label:i.name, sub:i.folderId?itemFolderPath(i.folderId).map(f=>f.name).join(' / '):'Top level', checked:true}));
   openModal('Export items', `
-    <p class="hint" style="margin-top:0">Tick what should go in the file. See <code>ITEM_SCHEMA.md</code> for the format.</p>
+    <p class="hint">Tick what should go in the file. See <code>ITEM_SCHEMA.md</code> for the format.</p>
     ${pickerHTML('xLibItems','Items',rows,'Your library is empty')}`,
     'Export',
     ()=>{
@@ -4720,7 +4974,7 @@ function renderLibSearchResults(box){
     let html=crumbsHTML('library', nav.libFolderId).replace('</div>', `<span class="sep">/</span><button>Search: "${esc(qRaw)}"</button></div>`);
     html += hits.length
       ? `<div class="grid">${hits.map(itemTile).join('')}</div>`
-      : `<div class="grid"><div class="empty" style="grid-column:1/-1">Nothing matches "${esc(qRaw)}" here.</div></div>`;
+      : `<div class="grid"><div class="empty">Nothing matches “${esc(qRaw)}” here.</div></div>`;
     box.innerHTML=html;
     bindCrumbs(box,'library');
     bindLibGrid(box,'library');
@@ -4730,7 +4984,7 @@ function renderLibSearchResults(box){
     let html=crumbsHTML('market', nav.marketFolderId).replace('</div>', `<span class="sep">/</span><button>Search: "${esc(qRaw)}"</button></div>`);
     html += hits.length
       ? `<div class="grid">${hits.map(listingTile).join('')}</div>`
-      : `<div class="grid"><div class="empty" style="grid-column:1/-1">Nothing matches "${esc(qRaw)}" here.</div></div>`;
+      : `<div class="grid"><div class="empty">Nothing matches “${esc(qRaw)}” here.</div></div>`;
     box.innerHTML=html;
     bindCrumbs(box,'market');
     bindLibGrid(box,'market');
@@ -4741,9 +4995,9 @@ function renderLibSearchResults(box){
 function selectListing(id){ nav.marketSelListingId=id; renderLibContent(); }
 function addMarketDialog(){
   openModal('Add a marketplace', `
-    <p class="hint" style="margin-top:0">Paste a <code>market.json</code> URL, or pick one from the registry below. See <code>MARKET_SCHEMA.md</code> for the format — anyone can publish one as a plain git repo.</p>
+    <p class="hint">Paste a <code>market.json</code> URL, or pick one from the registry below. See <code>MARKET_SCHEMA.md</code> for the format — anyone can publish one as a plain git repo.</p>
     <input type="url" id="mUrl" placeholder="https://…/market.json">
-    <div id="mRegistry" style="margin-top:10px"></div>`,
+    <div id="mRegistry"></div>`,
     'Subscribe',
     ()=>{
       const url=($('mUrl').value||'').trim();
@@ -4758,8 +5012,8 @@ function addMarketDialog(){
       loadRegistry('registry.json').then(list=>{
         const box=$('mRegistry'); if(!box) return;
         if(!list.length){ box.innerHTML='<p class="hint">The default registry is empty right now — paste a URL above, or see <code>CONTRIBUTING.md</code> to add one.</p>'; return; }
-        box.innerHTML='<p class="hint" style="margin:0 0 6px">Or pick one:</p>'+list.map(m=>
-          `<button type="button" class="btn sm" data-pick="${esc(m.url)}" style="margin:0 4px 4px 0">${esc(m.name||m.url)}</button>`).join('');
+        box.innerHTML='<p class="hint">Or pick one:</p><div class="registry">'+list.map(m=>
+          `<button type="button" class="btn sm" data-pick="${esc(m.url)}">${esc(m.name||m.url)}</button>`).join('')+'</div>';
         box.querySelectorAll('[data-pick]').forEach(b=>b.addEventListener('click', ()=>{ $('mUrl').value=b.dataset.pick; }));
       }).catch(()=>{ const box=$('mRegistry'); if(box) box.innerHTML=''; });
     });
@@ -4777,17 +5031,17 @@ function marketSubTile(sub){
         if(!groups.has(key)) groups.set(key,{folder:seg, name:seg||it.name, id:it.id, n:0});
         groups.get(key).n++;
       }
-      inner='<div class="chips" style="margin-top:6px">'+[...groups.values()].slice(0,8).map(g=>
-        g.folder ? `<span class="tagchip" data-openmsub="${sub.id}" data-mfolder2="${esc(g.folder)}">\u{1F4C1} ${esc(g.folder)}</span>`
+      inner='<div class="chips">'+[...groups.values()].slice(0,8).map(g=>
+        g.folder ? `<span class="tagchip" data-openmsub="${sub.id}" data-mfolder2="${esc(g.folder)}">${esc(g.folder)}/</span>`
                  : `<span class="tagchip" data-openmsub="${sub.id}" data-mitem="${esc(g.id)}">${esc(g.name)}</span>`
       ).join('')+'</div>';
     }
   }
   return `<button type="button" class="tile subtile" data-opensub="${sub.id}">
-    <span class="more" data-act="more" title="More…" aria-label="More…">⋯</span>
-    <div class="thumb"><span class="ico">\u{1F3EA}</span></div>
+    <span class="more" data-act="more" title="More actions" aria-label="More actions">${svgI('more')}</span>
+    <div class="thumb">${svgI('store')}</div>
     <div class="body"><div class="nm" title="${esc(sub.name)}">${esc(sub.name)}</div>
-      <div class="dim">${items?items.length+' item'+(items.length===1?'':'s'):sub.url}</div>${inner}</div>
+      <div class="dim" title="${esc(sub.url)}">${items?plural(items.length,'item'):esc(sub.url)}</div>${inner}</div>
   </button>`;
 }
 function subMenu(sub, anchor){
@@ -4795,21 +5049,25 @@ function subMenu(sub, anchor){
     {label:'Open', fn:()=>{ nav.marketSubId=sub.id; nav.subPath=null; renderLibContent(); }},
     {label:'Reload', fn:()=>{ reloadMarketSub(sub).then(()=>{ libFlash('Reloaded'); renderLibAll(); }).catch(e=>libFlash(e.message,true)); }},
     {sep:true},
-    {label:'Remove…', danger:true, fn:()=>askConfirm('Remove this marketplace?', '“'+sub.name+'” and its cached index will be forgotten. Nothing in your inventory is affected.', 'Remove', ()=>{
+    {label:'Remove…', danger:true, fn:()=>askConfirm('Remove this marketplace?', '“'+sub.name+'” and its cached index will be forgotten. Your library isn’t affected.', 'Remove', ()=>{
       removeMarketSub(sub); renderLibAll();
     })},
   ], sub.name);
 }
 function renderMarketTop(box){
-  let html=`<div class="crumbs"><button data-crumb="">Marketplace</button></div>`;
-  html+=`<div class="marketnote">Nothing here joins your inventory until you click "Add to library" on an item. Each row above is a marketplace you subscribe to by URL.</div>`;
+  let html=`<div class="crumbs"><button data-crumb="">Marketplaces</button></div>`;
+  html+=`<div class="viewhead"><span class="hint grow">Browse a marketplace and add what you want to your library. Nothing is added until you choose it.</span>
+    ${S.marketSubs.length?`<label class="check"><input type="checkbox" id="chkContents" ${nav.showMarketContents?'checked':''}>Preview contents</label>`:''}</div>`;
   if(!S.marketSubs.length){
-    html+=`<div class="grid"><div class="empty" style="grid-column:1/-1">No marketplaces yet — click "Add marketplace" to subscribe to one by URL.</div></div>`;
+    html+=`<div class="grid"><div class="empty">You haven't added a marketplace yet.
+      <div class="row"><button class="btn sm primary" data-addmarket>${svgI('plus')}Add marketplace…</button></div></div></div>`;
   } else {
     html+=`<div class="grid">${S.marketSubs.map(marketSubTile).join('')}</div>`;
   }
   box.innerHTML=html;
   bindCrumbs(box,'market');
+  const chk=box.querySelector('#chkContents'); if(chk) chk.addEventListener('change', ()=>{ nav.showMarketContents=chk.checked; renderLibContent(); });
+  const am=box.querySelector('[data-addmarket]'); if(am) am.addEventListener('click', addMarketDialog);
   box.querySelectorAll('[data-opensub]').forEach(t=>{
     t.addEventListener('click', e=>{
       if(e.target.closest('[data-act=more],[data-loadsub],[data-openmsub]')) return;
@@ -4850,12 +5108,12 @@ function renderMarketSub(box, sub){
   const q=nav.searching ? $('searchBox').value.trim().toLowerCase() : '';
   const backToTop=()=>{ nav.marketSubId=null; nav.subPath=null; nav.marketTagFilter=null; renderLibContent(); };
   if(!items){
-    box.innerHTML=`<div class="crumbs"><button data-back>Marketplace</button><span class="sep">/</span><button>${esc(sub.name)}</button></div><div class="empty" style="margin:20px">Loading…</div>`;
+    box.innerHTML=`<div class="crumbs"><button data-back>Marketplaces</button><span class="sep">/</span><button>${esc(sub.name)}</button></div><div class="grid"><div class="empty">Loading…</div></div>`;
     box.querySelector('[data-back]').addEventListener('click', backToTop);
     reloadMarketSub(sub).then(()=>renderLibContent()).catch(e=>{ box.querySelector('.empty').textContent=e.message; });
     return;
   }
-  let html=`<div class="crumbs"><button data-back>Marketplace</button><span class="sep">/</span>`;
+  let html=`<div class="crumbs"><button data-back>Marketplaces</button><span class="sep">/</span>`;
   html+=nav.subPath ? `<button data-toroot>${esc(sub.name)}</button>` : `<button>${esc(sub.name)}</button>`;
   if(nav.subPath){
     const parts=idParts(nav.subPath);
@@ -4866,22 +5124,22 @@ function renderMarketSub(box, sub){
   // scope search/filter to the folder currently being browsed, not the whole marketplace
   const scoped=nav.subPath ? items.filter(it=>it.id===nav.subPath||it.id.startsWith(nav.subPath+'/')) : items;
   const allTagsHere=[...new Set(scoped.flatMap(it=>it.tags))].sort();
-  if(allTagsHere.length) html+=`<div class="chips" style="padding:10px 20px 0">${allTagsHere.slice(0,20).map(t=>
-    `<button type="button" class="tagchip" data-mtag="${esc(t)}" aria-pressed="${(nav.marketTagFilter===t)}">${esc(t)}</button>`).join('')}</div>`;
+  if(allTagsHere.length) html+=`<div class="viewhead"><div class="chips">${allTagsHere.slice(0,20).map(t=>
+    `<button type="button" data-mtag="${esc(t)}" aria-pressed="${(nav.marketTagFilter===t)}">${esc(t)}</button>`).join('')}</div></div>`;
   let matches;
   if(q){ const nq=normSearch(q); matches=scoped.filter(it=>normSearch(it.name).includes(nq)||normSearch(it.id).includes(nq)||it.tags.some(t=>normSearch(t).includes(nq))); }
   else if(nav.marketTagFilter){ matches=scoped.filter(it=>it.tags.includes(nav.marketTagFilter)); }
   if(matches){
-    html+= matches.length ? `<div class="grid">${matches.map(marketItemTile).join('')}</div>`
-      : `<div class="grid"><div class="empty" style="grid-column:1/-1">No matches.</div></div>`;
+    html+= matches.length ? `<div class="grid text">${matches.map(marketItemTile).join('')}</div>`
+      : `<div class="grid"><div class="empty">No matches.</div></div>`;
   } else {
     const {folders,leaves}=marketPathChildren(items, nav.subPath);
     html+= (folders.length||leaves.length)
-      ? `<div class="grid">${folders.map(f=>{
+      ? `<div class="grid text">${folders.map(f=>{
           const full=nav.subPath?nav.subPath+'/'+f.name:f.name;
-          return `<button type="button" class="tile folder" data-mopenfolder="${esc(full)}"><div class="thumb"><span class="ico">\u{1F4C1}</span></div><div class="body"><div class="nm">${esc(f.name)}</div><div class="dim">${f.n} item${f.n===1?'':'s'}</div></div></button>`;
+          return `<button type="button" class="ttile" data-mopenfolder="${esc(full)}"><span class="ico">${svgI('folder')}</span><span class="tmain"><span class="tname">${esc(f.name)}</span><span class="dim">${plural(f.n,'item')}</span></span></button>`;
         }).join('')}${leaves.map(marketItemTile).join('')}</div>`
-      : `<div class="grid"><div class="empty" style="grid-column:1/-1">Empty.</div></div>`;
+      : `<div class="grid"><div class="empty">Nothing in here.</div></div>`;
   }
   box.innerHTML=html;
   box.querySelector('[data-back]').addEventListener('click', backToTop);
@@ -4908,27 +5166,36 @@ function renderMarketSub(box, sub){
   if(nav.marketSelItemId) renderMarketItemPreview(box, sub, nav.marketSelItemId);
 }
 function marketItemTile(it){
-  return `<div class="tile" data-mitemopen="${esc(it.id)}" role="button" tabindex="0">
-    <div class="thumb"><span class="ico">\u{1F4E6}</span>
-      <div class="addOverlay" data-add="${esc(it.id)}" title="Add to library" aria-label="Add “${esc(it.name)}” to library"><span class="plus">+</span></div>
-    </div>
-    <div class="body"><div class="nm" title="${esc(it.name)}">${esc(it.name)}</div>
-      <div class="dim">${it.tags.slice(0,2).map(esc).join(', ')}</div>
-    </div>
+  const have=S.inventory.some(x=>x.id===it.id);
+  return `<div class="ttile" data-mitemopen="${esc(it.id)}" role="button" tabindex="0" aria-label="Preview ${esc(it.name)}">
+    <div class="tmain"><div class="tname" title="${esc(it.name)}">${esc(it.name)}</div></div>
+    <button type="button" class="btn sm${have?' quiet':''}" data-add="${esc(it.id)}" title="Add “${esc(it.name)}” to your library">${have?'Added':'Add'}</button>
   </div>`;
 }
+/* a preview opens where you're looking (a dialog), not appended below hundreds of tiles */
 function renderMarketItemPreview(box, sub, id){
-  let host=box.querySelector('#marketPreview');
-  if(!host){ host=document.createElement('div'); host.id='marketPreview'; host.className='detail'; box.appendChild(host); }
-  host.innerHTML='<div class="preview"><canvas id="mPrevCv" style="width:100%;height:100%"></canvas></div><div class="listing-status">Loading…</div>';
-  fetchMarketItem(sub, id).then(it=>{
-    host.querySelector('.listing-status').outerHTML = `
-      <div class="dhead"><div class="grow"><div class="nm" style="font-size:16px;font-weight:650">${esc(it.name)}</div>
-        <div class="dim">${esc(sizeLabel(it))} · ${(it.tags||[]).map(esc).join(', ')}</div></div>
-      <button class="btn sm primary" data-add="${esc(it.id)}">Add to library</button></div>`;
-    drawPreview($('mPrevCv'), it);
-    host.querySelector('[data-add]').addEventListener('click', ()=>addMarketItemToInventory(it));
-  }).catch(e=>{ const st=host.querySelector('.listing-status'); if(st) st.textContent=e.message; });
+  nav.marketSelItemId=null;
+  const entry=(marketIndexCache.get(sub.id)||[]).find(x=>x.id===id);
+  let loaded=null;
+  openModal(entry?entry.name:'Item', `
+    <div class="preview"><canvas id="mPrevCv"></canvas></div>
+    <div class="listing-status" id="mPrevInfo">Loading…</div>`,
+    'Add to library',
+    ()=>{
+      if(!loaded){ moError('Still loading — try again in a moment'); return false; }
+      setTimeout(()=>addMarketItemToInventory(loaded));   // after this dialog closes, in case it opens its own
+    },
+    ()=>{
+      $('moOk').disabled=true;
+      fetchMarketItem(sub, id).then(it=>{
+        if(!$('mPrevInfo')) return;
+        loaded=it;
+        $('moTitle').textContent=it.name;
+        $('mPrevInfo').innerHTML=`${esc(sizeLabel(it))}${(it.tags||[]).length?' · '+(it.tags||[]).map(esc).join(', '):''}<br><code>${esc(it.id)}</code>`;
+        drawPreview($('mPrevCv'), it);
+        $('moOk').disabled=false;
+      }).catch(e=>{ const st=$('mPrevInfo'); if(st){ st.className='hint warn'; st.textContent=e.message; } });
+    });
 }
 function drawPreview(cv,it){
   const ctx=cv.getContext('2d');
@@ -4958,11 +5225,10 @@ function drawPreview(cv,it){
 
 /* ---- ad hoc listings: upload a file, paste JSON, or fetch a plain {inventory:[...]} link ---- */
 function listingTile(l){
-  const icon = l.kind==='link' ? '\u{1F517}' : '\u{1F4E6}';
-  const sub = l.kind==='link' ? 'Link' : (l.content&&Array.isArray(l.content.inventory) ? l.content.inventory.length+' item'+(l.content.inventory.length===1?'':'s') : 'File');
+  const sub = l.kind==='link' ? 'Link' : (l.content&&Array.isArray(l.content.inventory) ? plural(l.content.inventory.length,'item') : 'File');
   return `<button type="button" class="tile" data-listing="${l.id}">
-    <span class="more" data-act="more" title="More…" aria-label="More…">⋯</span>
-    <div class="thumb"><span class="ico">${icon}</span></div>
+    <span class="more" data-act="more" title="More actions" aria-label="More actions">${svgI('more')}</span>
+    <div class="thumb">${svgI(l.kind==='link'?'link':'box')}</div>
     <div class="body"><div class="nm" title="${esc(l.name)}">${esc(l.name)}</div><div class="dim">${esc(sub)}</div></div>
   </button>`;
 }
@@ -4970,15 +5236,16 @@ function adhocFolderTile(f){
   const n=childMarketFolders(f.id).length, m=listingsInFolder(f.id).length;
   const bits=[]; if(n) bits.push(n+' folder'+(n>1?'s':'')); if(m) bits.push(m+' listing'+(m>1?'s':''));
   return `<button type="button" class="tile folder" data-openfolder="${f.id}">
-    <div class="thumb"><span class="ico">\u{1F4C1}</span></div>
+    <div class="thumb">${svgI('folder')}</div>
     <div class="body"><div class="nm">${esc(f.name)}</div><div class="dim">${bits.length?esc(bits.join(', ')):'Empty'}</div></div>
   </button>`;
 }
 function renderAdhocFolder(box, folderId, standalone){
   const subs=childMarketFolders(folderId), listings=listingsInFolder(folderId);
-  let html=(standalone?'':`<div class="section-h" style="margin:16px 20px 0">One-off listings</div>`)+crumbsHTML('market', folderId);
+  let html=standalone ? crumbsHTML('market', folderId) : `<div class="lib-section">Listings — one-off bundles from a file, link or pasted JSON</div>`;
   if(!subs.length && !listings.length){
-    html+=`<div class="grid"><div class="empty" style="grid-column:1/-1">No listings yet. Add one from a file, a link, or pasted JSON.</div></div>`;
+    html+=`<div class="grid"><div class="empty">No listings yet.
+      <div class="row"><button class="btn sm" data-addlisting-empty>Add listing…</button></div></div></div>`;
   } else {
     html+=`<div class="grid">${subs.map(adhocFolderTile).join('')}${listings.map(listingTile).join('')}</div>`;
   }
@@ -4987,6 +5254,7 @@ function renderAdhocFolder(box, folderId, standalone){
   else { target=document.createElement('div'); target.innerHTML=html; box.appendChild(target); }
   bindCrumbs(target,'market');
   bindLibGrid(target,'market');
+  const al=target.querySelector('[data-addlisting-empty]'); if(al) al.addEventListener('click', addListingDialog);
 }
 function listingMenu(id, anchor){
   const l=S.marketListings.find(x=>x.id===id); if(!l) return;
@@ -4994,7 +5262,7 @@ function listingMenu(id, anchor){
     {label:'Open', fn:()=>selectListing(id)},
     {label:'Move to folder…', fn:()=>moveListingDialog(l)},
     {sep:true},
-    {label:'Delete…', danger:true, fn:()=>askConfirm('Delete this listing?', '“'+l.name+'” will be removed. Nothing in your inventory is affected.', 'Delete', ()=>{
+    {label:'Delete…', danger:true, fn:()=>askConfirm('Delete this listing?', '“'+l.name+'” will be removed. Your library isn’t affected.', 'Delete', ()=>{
       S.marketListings=S.marketListings.filter(x=>x.id!==id);
       adhocCache.delete(id);
       if(nav.marketSelListingId===id) nav.marketSelListingId=null;
@@ -5011,7 +5279,7 @@ function moveListingDialog(l){
       walk(f.id,depth+1);
     }
   })(null,0);
-  openModal('Move “'+l.name+'”', `<div class="field wide"><label style="width:auto">Folder</label></div>
+  openModal('Move “'+l.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       l.parentId=$('moFolder').value||null;
       save(); renderLibAll();
@@ -5022,17 +5290,17 @@ function addListingDialog(){
   pendingFile=null;
   openModal('Add a listing', `
     <div class="field"><label for="lName">Name</label><input type="text" id="lName" placeholder="A one-off bundle"></div>
-    <div class="addmode-tabs">
-      <button type="button" class="btn sm" data-lmode="file" aria-pressed="true">Upload file</button>
-      <button type="button" class="btn sm" data-lmode="link" aria-pressed="false">Paste a link</button>
-      <button type="button" class="btn sm" data-lmode="paste" aria-pressed="false">Paste JSON</button>
+    <div class="seg full addmode-tabs" role="group" aria-label="Source">
+      <button type="button" data-lmode="file" aria-pressed="true">File</button>
+      <button type="button" data-lmode="link" aria-pressed="false">Link</button>
+      <button type="button" data-lmode="paste" aria-pressed="false">Paste JSON</button>
     </div>
-    <div id="modeFile"><div class="dropzone" id="dropZone">Drop a Room Planner export here, or
-      <label class="btn sm" style="display:inline-block;margin-top:6px;cursor:pointer">Choose file<input type="file" id="lFile" accept="application/json,.json" hidden></label></div>
+    <div id="modeFile"><div class="dropzone" id="dropZone">Drop a Room Planner export here<br>
+      <label class="btn sm">Choose file…<input type="file" id="lFile" accept="application/json,.json" hidden></label></div>
       <p class="hint" id="lFileNote"></p></div>
     <div id="modeLink" hidden><input type="url" id="lUrl" placeholder="https://…/items.json">
       <p class="hint">Fetched fresh each time you open this listing. This is a flat <code>{"inventory":[...]}</code> file, not a full marketplace — for a browsable catalog, use "Add marketplace" instead.</p></div>
-    <div id="modePaste" hidden><textarea id="lPaste" placeholder='{"inventory":[ ... ]}' style="min-height:120px"></textarea></div>
+    <div id="modePaste" hidden><textarea id="lPaste" placeholder='{"inventory":[ ... ]}' rows="6"></textarea></div>
     <p class="hint">Any of these can be a full Room Planner export, or just <code>{"inventory":[…]}</code>. Adding it here doesn't touch your inventory — you grab items from it one at a time, or all at once, from inside the listing.</p>`,
     'Add', ()=>{
       const name=($('lName').value||'').trim()||'Untitled listing';
@@ -5081,12 +5349,12 @@ function renderListingDetail(box, id){
   const l=S.marketListings.find(x=>x.id===id);
   if(!l){ nav.marketSelListingId=null; return; }
   box.innerHTML = crumbsHTML('market', l.parentId) + `
-    <div class="detail" style="max-width:900px">
-      <div class="dhead"><div class="grow"><h1 style="font-size:19px;margin:2px 0 4px">${esc(l.name)}</h1>
+    <div class="detail wide">
+      <div class="dhead"><div class="grow"><h1>${esc(l.name)}</h1>
         <div class="dim">${l.kind==='link'?esc(l.url):'Uploaded file'}</div></div>
         <div class="row">
-          <button class="btn sm" id="btnAddAllListing">Add all to library</button>
-          <button class="btn sm danger" id="btnDelListing">Delete listing</button>
+          <button class="btn sm danger" id="btnDelListing">Delete listing…</button>
+          <button class="btn sm primary" id="btnAddAllListing">Add all to library</button>
         </div></div>
       <div id="listingBody"><div class="listing-status">Loading…</div></div>
     </div>`;
@@ -5100,19 +5368,21 @@ function renderListingDetail(box, id){
   loadListing(l).then(res=>{
     if(nav.marketSelListingId!==id) return;
     const body=$('listingBody'); if(!body) return;
-    if(res.error){ body.innerHTML=`<div class="empty">${esc(res.error)}</div>`; return; }
+    if(res.error){ body.innerHTML=`<p class="hint warn">${esc(res.error)}</p>`; return; }
     if(!res.items.length){ body.innerHTML=`<div class="empty">This listing has no items.</div>`; return; }
-    body.innerHTML=`<div class="grid">${res.items.map(it=>`
-      <div class="tile" style="cursor:default">
-        <div class="thumb" style="background:${hexA(it.color,.18)}"><span class="sw" style="width:28px;height:28px;border-radius:6px;background:${it.color}"></span></div>
-        <div class="body"><div class="nm">${esc(it.name)}</div><div class="dim">${esc(sizeLabel(it))}</div>
-          <button class="btn sm" data-addlisting="${esc(it.id)}" style="margin-top:2px">Add to library</button></div>
+    body.innerHTML=`<div class="grid flush">${res.items.map(it=>`
+      <div class="tile static">
+        <div class="thumb"><canvas data-lprev="${esc(it.id)}"></canvas></div>
+        <div class="body"><div class="nm" title="${esc(it.name)}">${esc(it.name)}</div>
+          <div class="tile-foot"><span class="dim">${esc(sizeLabel(it))}</span>
+          <button class="btn sm" data-addlisting="${esc(it.id)}">Add</button></div></div>
       </div>`).join('')}</div>`;
+    body.querySelectorAll('canvas[data-lprev]').forEach(c=>{ const it=res.items.find(x=>x.id===c.dataset.lprev); if(it) drawPreview(c,it); });
     body.querySelectorAll('[data-addlisting]').forEach(b=>{
       b.addEventListener('click', ()=>{
         const it=res.items.find(x=>x.id===b.dataset.addlisting);
         addMarketItemToInventory(it);
-        b.textContent='Added'; b.disabled=true;
+        b.textContent='Added'; b.classList.add('quiet'); b.disabled=true;
       });
     });
     $('btnAddAllListing').addEventListener('click', ()=>{
@@ -5146,12 +5416,7 @@ function applyLayoutMode(){
   const lib = !isCanvasMode(S.mode);
   document.querySelector('main').style.display = lib ? 'none' : '';
   $('paneLibrary').classList.toggle('on', lib);
-  if(!lib){
-    if(window.matchMedia('(max-width:900px)').matches){
-      for(const b of document.querySelectorAll('#tabs button')) if(isCanvasMode(b.dataset.mode)) $(b.dataset.pane).hidden = b.dataset.mode!==S.mode;
-    } else { $('paneRoom').hidden=false; $('paneStuff').hidden=false; }
-    applyPanes();
-  }
+  if(!lib) applyPanes();
 }
 window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
 (async function boot(){
