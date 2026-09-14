@@ -207,7 +207,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
 .libtabs button:hover{background:var(--panel)}
 .libtabs button[aria-pressed=true]{color:var(--accent);border-bottom-color:var(--accent)}
 .expl-top{padding:9px 10px 0;flex:none}
-.expl-tools{display:flex;gap:6px;padding:9px 10px}
+.expl-tools{display:flex;gap:6px;padding:9px 10px;flex-wrap:wrap}
 #tree{padding:2px 6px 16px;display:flex;flex-direction:column;gap:1px;flex:1;min-height:26px}
 #tree.drop-root{background:var(--accent-soft);border-radius:var(--radius)}
 #tree .tree-row{cursor:grab}
@@ -688,11 +688,11 @@ const uid = () => Math.random().toString(36).slice(2,10);
 
 /* ---- ids ----
    A thing's id is visible and editable (Advanced, in the edit dialog), so it is held to a
-   character set that survives a URL and an S3-style key: letters, digits and ! - _ . * ' ( ).
+   character set that survives a URL and an S3-style key: letters, digits and - _ .
    A forward slash groups ids into folders the way an S3 key does — "ikea/kallax/4x2" and
    "ikea/kallax/2x4" sit in the same folder — which is what a future marketplace browses by.
    Slashes can't lead, trail, or double up, so every part of the path is a real name. */
-const ID_SAFE = /^[A-Za-z0-9!\-_.*'()]+$/;
+const ID_SAFE = /^[A-Za-z0-9\-_.]+$/;
 const idParts  = s => String(s).split('/');
 const idFolder = s => idParts(s).slice(0,-1).join('/');
 const idLeaf   = s => idParts(s).slice(-1)[0];
@@ -704,7 +704,7 @@ function idProblem(raw){
   const parts=idParts(v);
   if(parts.some(x=>!x)) return "An id can't have an empty part between two slashes";
   if(parts.some(x=>x==='..')) return "An id can't have .. as a part";
-  if(parts.some(x=>!ID_SAFE.test(x))) return "Ids can use a–z A–Z 0–9 and ! - _ . * ' ( ) , with / between folders";
+  if(parts.some(x=>!ID_SAFE.test(x))) return "Ids can use a–z A–Z 0–9 and - _ . with / between folders";
   return null;
 }
 /* keep an id unique against ids already spoken for, by adding -2, -3 … */
