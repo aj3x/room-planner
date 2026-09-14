@@ -421,6 +421,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
       </section>
       <section data-sec="things">
         <h2>Your things</h2>
+        <input type="text" id="invSearch" placeholder="Search your things&hellip;" class="field wide" style="margin-bottom:7px">
         <div class="chips" id="tagChips"></div>
         <div class="field wide" style="margin-top:7px">
           <input type="checkbox" id="onlyAvail" style="width:auto">
@@ -731,6 +732,7 @@ let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true,
          folders:[],          // {id, name, parentId(null=root), tags:[...]}
          tagFilter:[],        // active tag chips in the Things pane
          untaggedOnly:false,  // the "Untagged" chip in the Things pane
+         invSearch:'',        // search text in the Things pane
          onlyAvailable:false, // "only show things I still have stock of"
          invScope:'project',  // how far a thing's stock reaches: 'project' | 'folder' | 'room'
          leftOpen:true, rightOpen:true,  // side panels open on wide screens
@@ -798,6 +800,11 @@ function itemMatchesFilter(it){
   if(S.tagFilter.length || S.untaggedOnly){
     // the chips read as "any of these": a tag chip, or the Untagged chip
     if(!(tags.some(t=>S.tagFilter.includes(t)) || (S.untaggedOnly && !tags.length))) return false;
+  }
+  const q=(S.invSearch||'').trim().toLowerCase();
+  if(q){
+    const hay=[it.name, ...(it.tags||[])].join(' ').toLowerCase();
+    if(!hay.includes(q)) return false;
   }
   return true;
 }
@@ -1281,6 +1288,7 @@ function migrate(st){
   if(!Array.isArray(st.folders)) st.folders=[];
   if(!Array.isArray(st.tagFilter)) st.tagFilter=[];
   if(st.untaggedOnly==null) st.untaggedOnly=false;
+  if(typeof st.invSearch!=='string') st.invSearch='';
   if(st.onlyAvailable==null) st.onlyAvailable=false;
   if(st.showOpen==null) st.showOpen=true;
   if(!INV_SCOPES[st.invScope]) st.invScope='project';
@@ -1684,7 +1692,12 @@ function draw(){
   const {bad,openBad}=getConflicts();
   ctx.globalAlpha = roomMode() ? .42 : 1;
   for(const p of L().placed) if(showOpenFor(p)) drawOpenRegion(p, openBad.has(p.id));
-  for(const p of L().placed) drawItem(p, !roomMode()&&p.id===sel, bad.has(p.id));
+  const drawOrder = L().placed.map((p,i)=>({p,i})).sort((a,b)=>{
+    const pa = itemOf(a.p.itemId), pb = itemOf(b.p.itemId);
+    const oa = pa&&pa.passThrough ? 0 : 1, ob = pb&&pb.passThrough ? 0 : 1;
+    return oa-ob || a.i-b.i;
+  });
+  for(const {p} of drawOrder) drawItem(p, !roomMode()&&p.id===sel, bad.has(p.id));
   ctx.globalAlpha = 1;
 
   drawWallLabels();
@@ -2319,11 +2332,16 @@ function syncModeParam(){
   history.replaceState(null,'',location.pathname+'?'+usp.toString()+location.hash);
 }
 const isCanvasMode = m => m==='room'||m==='furniture';
+let pendingFit=false;
 function setMode(m){
   S.mode=m;
   if(m==='furniture') roomSel=null; else if(m==='room') sel=null;
   renderMode(); applyLayoutMode();
-  if(isCanvasMode(m)){ renderRoomSel(); renderWalls(); renderOpen(); renderSel(); updateHistButtons(); draw(); }
+  if(isCanvasMode(m)){
+    resize();
+    if(pendingFit){ pendingFit=false; fit(); }
+    renderRoomSel(); renderWalls(); renderOpen(); renderSel(); updateHistButtons(); draw();
+  }
   else renderLibAll();
   save();
   syncModeParam();
@@ -3037,9 +3055,11 @@ $('tagChips').addEventListener('click', e=>{
   renderTagChips(); renderInv(); save();
 });
 $('onlyAvail').addEventListener('change', e=>{ S.onlyAvailable=e.target.checked; renderInv(); save(); });
+$('invSearch').addEventListener('input', e=>{ S.invSearch=e.target.value; renderInv(); save(); });
 
 function renderInv(){
   $('onlyAvail').checked = S.onlyAvailable;
+  if($('invSearch').value !== (S.invSearch||'')) $('invSearch').value = S.invSearch||'';
   const sc = INV_SCOPES[S.invScope] || INV_SCOPES.project;
   $('invScope').value = S.invScope;
   $('invScopeHint').textContent = sc.hint;
@@ -5137,7 +5157,8 @@ window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
   nav.tab = S.mode==='marketplace' ? 'market' : 'library';
   nav.libFolderId = itemFolderOf(S.uiLib.libFolderId) ? S.uiLib.libFolderId : null;
   nav.marketFolderId = marketFolderOf(S.uiLib.marketFolderId) ? S.uiLib.marketFolderId : null;
-  renderSnap(); applySections(); renderMode(); applyLayoutMode(); renderAll(); resize(); fit();
+  renderSnap(); applySections(); renderMode(); applyLayoutMode(); renderAll();
+  if(isCanvasMode(S.mode)){ resize(); fit(); } else { pendingFit=true; }
   if(!isCanvasMode(S.mode)) renderLibAll();
   ensureDefaultMarket().then(()=>{ if(!isCanvasMode(S.mode)) renderLibAll(); });
 })();
