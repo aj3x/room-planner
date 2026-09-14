@@ -273,7 +273,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .island .btn.quiet{height:var(--h-sm);min-width:var(--h-sm)}
 .island .btn.quiet.icon{width:var(--h-sm)}
 .island .sep{width:1px;align-self:stretch;margin:4px 2px;background:var(--line)}
-#ctlMode{left:12px;top:12px}
+#ctlMode{left:12px;top:12px;flex-wrap:wrap;max-width:calc(100% - 120px)}
 #ctlHist{right:12px;top:12px}
 #ctlZoom{left:12px;bottom:12px}
 #zoomPct{min-width:52px;font-size:var(--fs-sm)}
@@ -288,10 +288,8 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .toast.warn{background:var(--danger);color:var(--on-accent)}
 #drawHint:not([hidden]) ~ #flash{top:64px}
 .island .btn.quiet[aria-pressed=true]{background:var(--surface-3);border-color:transparent;color:var(--ink);font-weight:600}
-#measureBar{left:12px;top:56px;flex-wrap:wrap;gap:4px 8px;max-width:min(560px,calc(100% - 24px));padding:4px 4px 4px 12px;font-size:var(--fs-sm);line-height:16px;color:var(--ink-2)}
-#measureBar b{color:var(--ink);font-weight:600}
-#measureBar .mb-msg{flex:1 1 180px;padding-block:6px}
-#measureBar .mb-acts{display:flex;gap:4px;margin-left:auto}
+#measureBar{display:flex;align-items:center;gap:4px;min-width:0}
+#measureBar .mb-msg{padding:0 4px 0 8px;font-size:var(--fs-sm);color:var(--ink-2);white-space:nowrap}
 canvas.measuring{cursor:crosshair}
 
 /* ---------------- modal (plain div: <dialog>/<form> are blocked in sandboxed frames) ---------------- */
@@ -574,8 +572,8 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
         </div>
         <span class="sep" aria-hidden="true"></span>
         <button type="button" class="btn quiet" id="btnMeasure" aria-pressed="false" title="Measure the distance between two things (M)"><svg class="i" aria-hidden="true"><use href="#i-ruler"/></svg>Measure</button>
+        <span id="measureBar" aria-live="polite" hidden></span>
       </div>
-      <div class="island" id="measureBar" hidden></div>
       <div class="island" id="ctlHist">
         <button class="btn quiet icon" id="btnUndo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg class="i"><use href="#i-undo"/></svg></button>
         <button class="btn quiet icon" id="btnRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg class="i"><use href="#i-redo"/></svg></button>
@@ -637,7 +635,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
         <section data-sec="drawing">
           <div class="sec-head"><h2>View</h2></div>
           <div class="field"><label for="snapSel">Snap to</label><select id="snapSel"></select></div>
-          <label class="check"><input type="checkbox" id="showDims" checked>Sizes on shapes</label>
+          <label class="check"><input type="checkbox" id="showDims" checked>Size of the selected item</label>
           <label class="check"><input type="checkbox" id="showSwing" checked>Door clearance</label>
           <label class="check"><input type="checkbox" id="showOpen" checked>Items opened out</label>
           <label class="check"><input type="checkbox" id="showWalk">Walk paths</label>
@@ -1904,7 +1902,7 @@ function pruneMeasures(l){
   const ids={item:l.placed, open:l.openings, pillar:l.room.pillars, iwall:l.room.iwalls};
   const has={}; for(const k in ids) has[k]=new Set(ids[k].map(x=>x.id));
   const ok = a => !!a && typeof a==='object' &&
-    (a.part==='whole' || ((a.part==='side'||a.part==='corner') && Number.isInteger(a.n) && a.n>=0)) &&
+    (a.part==='whole' || (a.part==='swing' && a.k==='open') || ((a.part==='side'||a.part==='corner') && Number.isInteger(a.n) && a.n>=0)) &&
     (a.k==='wall' ? Number.isInteger(a.id) && a.id>=0 && a.id<l.room.points.length : !!has[a.k] && has[a.k].has(a.id));
   l.measures = l.measures.filter(m=>m && ok(m.a) && ok(m.b));
   for(const m of l.measures) m.id = m.id||uid();
@@ -2560,9 +2558,8 @@ function drawItem(p,isSel,isBadPos){
       ctx.fillStyle=fg; ctx.fillText(txt,cxp,y);
       ctx.globalAlpha/=alpha;
     };
-    const two = S.showDims && hpx>34;
-    line(clip(it.name,wpx), two?cyp-7:cyp, '600 12px ui-sans-serif,system-ui,sans-serif', 1);
-    if(two) line(clip(sizeLabel(it),wpx+20), cyp+8, '11px ui-sans-serif,system-ui,sans-serif', .85);
+    // just the name: the size is drawn around the item once it's selected (drawItemDims)
+    line(clip(it.name,wpx), cyp, '600 12px ui-sans-serif,system-ui,sans-serif', 1);
     ctx.lineJoin='miter';
   }
 }
@@ -2585,6 +2582,33 @@ function drawItemTools(){
   ctx.strokeStyle=C.accent; ctx.lineWidth=1.5; ctx.stroke();
   ctx.beginPath(); ctx.arc(h.x,h.y,7,0,Math.PI*2);
   ctx.fillStyle=C.surface; ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
+  if(S.showDims) drawItemDims(p,it,C);
+}
+/* the selected item's width and depth as dimension lines just outside it, turning with it.
+   Width runs along the edge opposite the rotate handle, depth along whichever end sits
+   further right on screen. */
+function drawItemDims(p,it,C){
+  const lb=bbox(shapePoly(it.shape)), r=(p.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
+  const W = (x,y) => [p.x+x*c-y*s, p.y+x*s+y*c];
+  const px=1/Math.max(view.scale,1e-6), gap=6*px, off=18*px;
+  const endX = sx(W(lb.x1,0)[0]) >= sx(W(lb.x0,0)[0]) ? lb.x1 : lb.x0, out = endX===lb.x1 ? 1 : -1;
+  const dims=[
+    // [from corner, to corner, outward direction in the item's frame]
+    [[lb.x0,lb.y1], [lb.x1,lb.y1], [0,1]],
+    [[endX,lb.y0], [endX,lb.y1], [out,0]]
+  ];
+  for(const [a,b,[nx,ny]] of dims){
+    const at = (q,k) => W(q[0]+nx*k, q[1]+ny*k);
+    // extension lines from the item out past the dimension line
+    ctx.save();
+    ctx.beginPath();
+    for(const q of [a,b]){ const e0=at(q,gap), e1=at(q,off+4*px); ctx.moveTo(sx(e0[0]),sy(e0[1])); ctx.lineTo(sx(e1[0]),sy(e1[1])); }
+    ctx.lineWidth=3; ctx.strokeStyle=C.surface; ctx.stroke();
+    ctx.lineWidth=1; ctx.strokeStyle=C.ink; ctx.stroke();
+    ctx.restore();
+    const pa=at(a,off), pb=at(b,off);
+    drawDimension({d:Math.hypot(b[0]-a[0],b[1]-a[1]), p:pa, q:pb}, C.ink, C, false);
+  }
 }
 const handlePos = (p,it) => {
   const lb=bbox(shapePoly(it.shape)), r=(p.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
@@ -2691,6 +2715,7 @@ function updateReadout(bad,openBad){
      side    one edge of a footprint;
      whole   the footprint itself (solid, so anything overlapping it is 0 away), or for a
              door, window or room wall the span of its face. Picked at its centre point.
+     swing   a hinged door's swing: the area the door sweeps as it opens.
    Stored as l.measures = [{id, a, b}], anchor = {k, id, part, n}; k is the kind, id the
    thing's id (a room wall's index), n which corner or side. Ends are looked up live, so a
    measurement follows what it joins as things move. It is a note on the plan, not part of
@@ -2720,7 +2745,9 @@ function measureObjs(){
   for(const w of r.iwalls) out.push(solid('iwall', w.id, iwallPoly(w), iwallGeom(w).mid, true));
   for(const o of l.openings){
     const g=openGeom(o);
-    out.push({k:'open', id:o.id, center:g.mid, whole:{pts:[g.p0,g.p1]}, corners:[g.p0,g.p1], sides:[]});
+    const sp=swingPoly(o);
+    out.push({k:'open', id:o.id, center:g.mid, whole:{pts:[g.p0,g.p1]}, corners:[g.p0,g.p1], sides:[],
+      swing: sp ? {pts:sp, area:true} : null});
   }
   for(let i=0;i<r.points.length;i++){
     const w=wallOf(i);
@@ -2735,6 +2762,7 @@ function anchorGeom(a,objs){
   if(!o) return null;
   if(a.part==='corner') return o.corners[a.n] ? {pts:[o.corners[a.n]]} : null;
   if(a.part==='side') return o.sides[a.n] ? {pts:o.sides[a.n]} : null;
+  if(a.part==='swing') return o.swing||null;
   return o.whole;
 }
 function segCross(a,b,c,d){
@@ -2762,14 +2790,19 @@ function closestBetween(A,B){
     const x = a0!==a1 && b0!==b1 && segCross(a0,a1,b0,b1);
     if(x) return {d:0, p:x, q:x};
     // two segments that don't cross are closest at an end of one of them
-    consider(a0,foot(a0,b0,b1)); consider(a1,foot(a1,b0,b1));
-    consider(foot(b0,a0,a1),b0); consider(foot(b1,a0,a1),b1);
+    const pairs=[[a0,foot(a0,b0,b1)], [a1,foot(a1,b0,b1)], [foot(b0,a0,a1),b0], [foot(b1,a0,a1),b1]];
+    const dist = pr => Math.hypot(pr[0][0]-pr[1][0], pr[0][1]-pr[1][1]);
+    const min=Math.min(...pairs.map(dist)), tied=pairs.filter(pr=>dist(pr)<min+0.5);
+    // parallel sides are equally close all along their overlap, so measure across its middle
+    const avg = i => [tied.reduce((s,pr)=>s+pr[i][0],0)/tied.length, tied.reduce((s,pr)=>s+pr[i][1],0)/tied.length];
+    const mid=[avg(0), avg(1)];
+    consider(...(dist(mid)<min+0.5 ? mid : tied[0]));
   }
   return best;
 }
 
 /* the anchor under a screen point: a corner or centre point beats a side, which beats the
-   inside of a footprint (or the band of a wall, door or window) */
+   inside of a footprint (or the band of a wall, door or window), then a door's swing */
 function measurePick(px,py){
   const pt=[wx(px),wy(py)], objs=measureObjs();
   let best=null;
@@ -2785,6 +2818,8 @@ function measurePick(px,py){
     const on = o.whole.area ? pointInPoly(pt,o.whole.pts)
       : ptSegDist(pt,o.whole.pts[0],o.whole.pts[1]).d*view.scale < Math.max(8,(o.band||0)*view.scale+2);
     if(on) return {k:o.k, id:o.id, part:'whole'};
+    // only while door swings are shown, so there's never an invisible target
+    if(o.swing && S.showSwing && pointInPoly(pt,o.swing.pts)) return {k:o.k, id:o.id, part:'swing'};
   }
   return null;
 }
@@ -2828,6 +2863,8 @@ function drawAnchorPart(a,objs,C){
   else if(a.part==='side'){
     const s=o.sides[a.n];
     if(s){ ctx.beginPath(); ctx.moveTo(sx(s[0][0]),sy(s[0][1])); ctx.lineTo(sx(s[1][0]),sy(s[1][1])); ctx.lineWidth=3.5; ctx.stroke(); }
+  } else if(a.part==='swing'){
+    if(o.swing){ pathPoly(o.swing.pts); ctx.fillStyle=C.accentSoft; ctx.globalAlpha=.5; ctx.fill(); ctx.globalAlpha=1; ctx.lineWidth=2; ctx.stroke(); }
   } else {
     ctx.lineWidth = o.whole.area?2:3.5; strokeWhole(o);
     drawMeasurePoint(o.center,true,C,false);
@@ -2840,6 +2877,7 @@ function drawAnchorChoices(a,objs,C){
   if(!o) return;
   ctx.save();
   ctx.strokeStyle=C.accent; ctx.lineWidth=1; strokeWhole(o);
+  if(o.swing && S.showSwing){ ctx.setLineDash([4,3]); pathPoly(o.swing.pts); ctx.stroke(); ctx.setLineDash([]); }
   for(const c of o.corners) drawMeasurePoint(c,false,C,true);
   drawMeasurePoint(o.center,false,C,false);
   ctx.restore();
@@ -2908,14 +2946,14 @@ function renderMeasureBar(){
   cv.classList.toggle('measuring', measureOn);
   bar.hidden=!measureOn;
   if(!measureOn){ cv.style.cursor=''; return; }
-  const msg = measureStart ? 'Now pick the second one. Esc starts over.'
-    : measureSel ? 'Press Delete to remove this measurement.'
-    : 'Pick a corner, side or centre of an item, door or wall.';
+  const msg = measureStart ? 'Now pick the second one'
+    : measureSel ? 'Measurement selected'
+    : 'Pick a corner, side, centre or door swing';
   const acts = [];
   if(measureSel) acts.push('<button type="button" class="btn quiet sm danger" data-act="remove">Remove</button>');
   else if(!measureStart && liveMeasures().length) acts.push('<button type="button" class="btn quiet sm" data-act="clear">Clear all…</button>');
   acts.push('<button type="button" class="btn sm" data-act="done">Done</button>');
-  bar.innerHTML=`<span class="mb-msg"><b>Measuring.</b> ${msg}</span><span class="mb-acts">${acts.join('')}</span>`;
+  bar.innerHTML=`<span class="mb-msg">${msg}</span>${acts.join('')}`;
 }
 function setMeasure(on){
   if(on){

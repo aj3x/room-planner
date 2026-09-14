@@ -376,7 +376,7 @@ reason.
   `currentColor`.
 - The set: `undo, redo, plus, minus, fit, more, chevron-left/right/down,
   folder, folder-plus, room, library, store, box, link, rotate-l, rotate-r,
-  close, search`.
+  close, search, ruler`.
 - Icons pair with text unless universal (§2.6). Icon colour follows the text
   colour of its control.
 
@@ -500,6 +500,16 @@ padding, quiet icon buttons inside.
   openings. Surface fill with accent stroke; solid accent when selected.
 - **Dimension labels:** ink-2 in the UI font at 11–12px, and accent weight 600
   when their wall is selected.
+- **Measurements:** a 1.5px ink dimension line with end ticks over a 4px
+  surface halo, and the length on a surface pill. While the Measure tool is
+  on, the thing under the pointer shows its anchors (corner squares and a
+  centre dot). The anchor a click would take, and both ends of a selected
+  measurement, are filled in accent. The line being drawn is a dashed accent
+  line.
+- **Item labels** show only the name. The selected item's width and depth are
+  drawn around it as dimension lines, in the same style as measurements:
+  width along the edge opposite the rotate handle, depth along the end
+  further right on screen. "Size of the selected item" under View turns them off.
 - **Furniture in Room mode** fades to 40% opacity. It's locked, and the fading
   shows that.
 
