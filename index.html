@@ -4401,7 +4401,7 @@ function deleteLibFolder(id){
   openModal('Delete “'+f.name+'”?', `
     <p style="margin:0 0 10px">It holds ${esc(bits.join(' and '))}. Deleting the folder deletes all of that too, including any of those things placed in a room.</p>
     <div class="field wide"><input type="checkbox" id="keepKids" style="width:auto">
-      <label style="width:auto">Keep everything inside — move it up to ${esc(up)}</label></div>`,
+      <label for="keepKids" style="width:auto">Keep everything inside — move it up to ${esc(up)}</label></div>`,
     'Delete folder', ()=>drop($('keepKids').checked));
 }
 function adhocFolderContents(id){
@@ -4441,7 +4441,7 @@ function deleteAdhocFolder(id){
   openModal('Delete “'+f.name+'”?', `
     <p style="margin:0 0 10px">It holds ${esc(bits.join(' and '))}.</p>
     <div class="field wide"><input type="checkbox" id="keepKids" style="width:auto">
-      <label style="width:auto">Keep everything inside — move it up to ${esc(up)}</label></div>`,
+      <label for="keepKids" style="width:auto">Keep everything inside — move it up to ${esc(up)}</label></div>`,
     'Delete folder', ()=>drop($('keepKids').checked));
 }
 function moveLibFolderDialog(id){
