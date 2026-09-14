@@ -15,5 +15,10 @@
   ],
   "count": 1,
   "passThrough": false,
-  "open": null
+  "open": {
+    "top": 0,
+    "bottom": 381,
+    "left": 0,
+    "right": 0
+  }
 }
