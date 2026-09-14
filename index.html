@@ -1454,8 +1454,15 @@ function buildWalkGrid(){
   return {res,cols,rows,x0:b.x0,y0:b.y0,cells,obEdges};
 }
 let walkGridCache=null;
+/* every door's geometry that can change the shape of its leaf-barrier —
+   hashed into the cache key so editing, moving, or re-swinging a door (with
+   no change in wall/pillar/furniture counts) still invalidates the grid;
+   this is what made the door "not always" read as a barrier before */
+function openingsKey(l){
+  return l.openings.map(o=>[o.id,o.kind,o.wall,o.offset,o.width,o.dtype,o.hinge,o.swing].join(':')).join(',');
+}
 function walkGrid(){
-  const l=L(), key=l.id+':'+(l._rev||0)+':'+l.room.points.length+':'+l.placed.length+':'+l.room.pillars.length+':'+l.room.iwalls.length;
+  const l=L(), key=l.id+':'+(l._rev||0)+':'+l.room.points.length+':'+l.placed.length+':'+l.room.pillars.length+':'+l.room.iwalls.length+':'+openingsKey(l);
   if(walkGridCache && walkGridCache.key===key) return walkGridCache;
   walkGridCache={key, ...buildWalkGrid()};
   return walkGridCache;
@@ -1537,73 +1544,128 @@ function walkTrace(grid, solved, targetPt){
     return {pt:[grid.x0+(ix2+.5)*res, grid.y0+(iy2+.5)*res], clear:grid.cells[i]}; });
 }
 const doorEntry = o => { const g=openGeom(o), inset=Math.max(150,(walkGrid().res||150)/2); return [g.mid[0]+g.nrm[0]*inset, g.mid[1]+g.nrm[1]*inset]; };
-/* Collapse the grid's stair-stepped route into straight runs that only bend
-   where the room actually forces a turn — the way a person cuts corners
-   rather than tracing every cell. A shortcut is only taken while it stays at
-   least as clear as the tightest point it's bridging, so straightening never
-   pulls the line closer to a wall or piece of furniture than the routed path
-   already was — the buffer the search found is preserved, not traded away
-   for a straighter look. */
-function straightenPath(path, grid){
-  if(path.length<=2) return path;
-  const {res,cols,rows,x0,y0,cells}=grid;
-  const clearAt=pt=>{
-    const ix=Math.round((pt[0]-x0)/res-.5), iy=Math.round((pt[1]-y0)/res-.5);
-    if(ix<0||iy<0||ix>=cols||iy>=rows) return null;
-    return cells[iy*cols+ix];
-  };
-  const segOk=(a,b,minClear)=>{
-    const d=Math.hypot(b.pt[0]-a.pt[0], b.pt[1]-a.pt[1]);
-    const steps=Math.max(1,Math.ceil(d/(res*.5)));
-    for(let s=0;s<=steps;s++){
-      const t=s/steps;
-      const pt=[a.pt[0]+(b.pt[0]-a.pt[0])*t, a.pt[1]+(b.pt[1]-a.pt[1])*t];
-      const c=clearAt(pt);
-      if(c==null || c<minClear) return false;
-      // a straight shortcut can't shave a corner past an object's own buffer,
-      // even where the surrounding floor is otherwise wide open
-      for(const [ea,eb] of grid.obEdges) if(ptSegDist(pt,ea,eb).d<WALK_OBJ_BUFFER) return false;
-    }
-    return true;
-  };
-  const out=[path[0]];
-  let i=0;
-  while(i<path.length-1){
-    let j=path.length-1, found=i+1, minClear=Infinity;
-    const clears=new Array(path.length);
-    for(let k=i;k<path.length;k++){ minClear=Math.min(minClear, path[k].clear); clears[k]=minClear; }
-    while(j>i+1){
-      if(segOk(path[i], path[j], clears[j]-1e-6)){ found=j; break; }
-      j--;
-    }
-    out.push(path[found]);
-    i=found;
+/* signed area (shoelace) — sign gives the polygon's winding, which is all
+   the outward-normal math below needs, convex or not */
+function polySignedArea(poly){ let s=0; for(let i=0;i<poly.length;i++){ const a=poly[i], b=poly[(i+1)%poly.length]; s+=a[0]*b[1]-b[0]*a[1]; } return s/2; }
+function edgeOutward(a,b,ccw){ const dx=b[0]-a[0], dy=b[1]-a[1], len=Math.hypot(dx,dy)||1; return ccw ? [dy/len,-dx/len] : [-dy/len,dx/len]; }
+/* one offset point per vertex, pushed `buffer` along the outward miter
+   bisector (sign +1) to clear an obstacle's corner, or inward (sign -1) to
+   pull a room corner back off the wall — the corner nodes a raycast route
+   bends around */
+function offsetCorners(poly, buffer, sign){
+  const n=poly.length, ccw=polySignedArea(poly)>0, out=[];
+  for(let i=0;i<n;i++){
+    const prev=poly[(i-1+n)%n], cur=poly[i], next=poly[(i+1)%n];
+    const n1=edgeOutward(prev,cur,ccw), n2=edgeOutward(cur,next,ccw);
+    let ux=n1[0]+n2[0], uy=n1[1]+n2[1]; const bl=Math.hypot(ux,uy);
+    if(bl<1e-6){ ux=n1[0]; uy=n1[1]; } else { ux/=bl; uy/=bl; }
+    const dot=Math.max(ux*n1[0]+uy*n1[1], .35);
+    const dist=Math.min(buffer/dot, buffer*3);
+    out.push([cur[0]+ux*dist*sign, cur[1]+uy*dist*sign]);
   }
   return out;
 }
-function walkPaths(){
-  const grid=walkGrid();
-  if(!grid.cols) return [];
-  const doors=L().openings.filter(o=>o.kind==='door');
-  if(!doors.length) return [];
-  const out=[];
-  if(doors.length>=2){
-    for(let i=0;i<doors.length;i++){
-      const solved=walkSolve(grid, doorEntry(doors[i]));
-      for(let j=i+1;j<doors.length;j++){
-        const p=walkTrace(grid, solved, doorEntry(doors[j]));
-        if(p&&p.length>1) out.push(straightenPath(p, grid));
+/* raycast shortest path: try the direct line from `from` to `to` first: no
+   object in the way, that's the route, full stop. When something blocks it,
+   route through a graph of every obstacle's (buffer-offset) corners plus the
+   room's own corners, and take the shortest sequence of straight, mutually
+   visible hops that gets around — Dijkstra over that small graph, not a
+   grid, so the result is only ever a raycast that goes as straight as the
+   room lets it. */
+function walkRoute(from, to, room, obstacles, buffer){
+  const roomEdges=[]; for(let i=0;i<room.length;i++) roomEdges.push([room[i],room[(i+1)%room.length]]);
+  const obs=obstacles.map(poly=>{ const edges=[]; for(let i=0;i<poly.length;i++) edges.push([poly[i],poly[(i+1)%poly.length]]); return {poly,edges}; });
+  const nodes=[{pt:from},{pt:to}];
+  obs.forEach((od,oi)=>{ offsetCorners(od.poly,buffer,1).forEach((pt,ci)=>{
+    if(!pointInPoly(pt,room)) return;
+    for(const o2 of obs) if(pointInPoly(pt,o2.poly)) return;
+    nodes.push({pt,oi,ei:[(ci-1+od.poly.length)%od.poly.length,ci]});
+  }); });
+  offsetCorners(room,buffer,-1).forEach((pt,ci)=>{
+    if(!pointInPoly(pt,room)) return;
+    for(const o2 of obs) if(pointInPoly(pt,o2.poly)) return;
+    nodes.push({pt,room:1,ei:[(ci-1+room.length)%room.length,ci]});
+  });
+  const visible=(p,q)=>{
+    for(const [a,c] of roomEdges) if(segHit(p.pt,q.pt,a,c)) return false;
+    if(!pointInPoly(p.pt,room) || !pointInPoly(midpt(p.pt,q.pt),room)) return false;
+    for(let oi=0;oi<obs.length;oi++){
+      const {edges}=obs[oi];
+      for(let ei=0;ei<edges.length;ei++){
+        const skip=(p.oi===oi&&(p.ei[0]===ei||p.ei[1]===ei)) || (q.oi===oi&&(q.ei[0]===ei||q.ei[1]===ei));
+        const [a,c]=edges[ei];
+        if(segHit(p.pt,q.pt,a,c)) return false;
+        if(!skip && segDist(p.pt,q.pt,a,c)<buffer-1e-6) return false;
       }
     }
+    return true;
+  };
+  const N=nodes.length, adj=Array.from({length:N},()=>[]);
+  for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
+    if(!visible(nodes[i],nodes[j])) continue;
+    const d=Math.hypot(nodes[i].pt[0]-nodes[j].pt[0], nodes[i].pt[1]-nodes[j].pt[1]);
+    adj[i].push([j,d]); adj[j].push([i,d]);
+  }
+  const dist=new Array(N).fill(Infinity), prev=new Array(N).fill(-1), done=new Array(N).fill(false);
+  dist[0]=0;
+  for(let iter=0;iter<N;iter++){
+    let u=-1, ud=Infinity;
+    for(let i=0;i<N;i++) if(!done[i] && dist[i]<ud){ ud=dist[i]; u=i; }
+    if(u===-1) break;
+    done[u]=true;
+    for(const [v,w] of adj[u]) if(dist[u]+w<dist[v]){ dist[v]=dist[u]+w; prev[v]=u; }
+  }
+  if(dist[1]===Infinity) return null;
+  const idx=[]; let cur=1; while(cur!==-1){ idx.push(cur); cur=prev[cur]; } idx.reverse();
+  return idx.map(i=>nodes[i].pt);
+}
+function midpt(a,b){ return [(a[0]+b[0])/2,(a[1]+b[1])/2]; }
+/* local corridor width at an arbitrary point (not grid-snapped) — same
+   near+far estimate buildWalkGrid uses, for annotating a raycast route */
+function clearAtPoint(pt, edges, far){
+  let dNear=Infinity, nearest=null;
+  for(const [a,c] of edges){ const r=ptSegDist(pt,a,c); if(r.d<dNear){ dNear=r.d; nearest=[a[0]+(c[0]-a[0])*r.t, a[1]+(c[1]-a[1])*r.t]; } }
+  let dFar=far;
+  if(nearest){
+    const vx=pt[0]-nearest[0], vy=pt[1]-nearest[1], vl=Math.hypot(vx,vy)||1, dir=[vx/vl,vy/vl];
+    for(const [a,c] of edges) dFar=Math.min(dFar, rayHitSeg(pt,dir,a,c));
+  }
+  return dNear+Math.min(dFar,far);
+}
+function walkPaths(){
+  const l=L(), R=RP(), b=bbox(R);
+  if(!R.length) return [];
+  const doors=l.openings.filter(o=>o.kind==='door');
+  if(!doors.length) return [];
+  const obstacles=[];
+  for(const o of obstaclePolys()) obstacles.push(o.poly);
+  for(const p of l.placed){ const it=itemOf(p.itemId); if(it&&!it.passThrough) obstacles.push(worldPoly(p,it)); }
+  for(const o of l.openings){ const lp=doorLeafPoly(o); if(lp) obstacles.push(lp); }
+  const edges=[]; for(let i=0;i<R.length;i++) edges.push([R[i],R[(i+1)%R.length]]);
+  for(const op of obstacles) for(let i=0;i<op.length;i++) edges.push([op[i],op[(i+1)%op.length]]);
+  const far=Math.max(b.w,b.h)*2+1000;
+  const annotate=pts=>pts.map(pt=>({pt,clear:clearAtPoint(pt,edges,far)}));
+  const out=[];
+  const route=(from,to)=>{ const pts=walkRoute(from,to,R,obstacles,WALK_OBJ_BUFFER); return pts&&pts.length>1 ? annotate(pts) : null; };
+  if(doors.length>=2){
+    for(let i=0;i<doors.length;i++) for(let j=i+1;j<doors.length;j++){
+      const p=route(doorEntry(doors[i]), doorEntry(doors[j]));
+      if(p) out.push(p);
+    }
   } else {
-    const from=doorEntry(doors[0]), solved=walkSolve(grid, from);
-    if(solved){
-      let far=-1, fd=-1;
-      for(let i=0;i<solved.dist.length;i++) if(solved.dist[i]!==Infinity && solved.dist[i]>fd){ fd=solved.dist[i]; far=i; }
-      if(far!==-1){
-        const ix=far%grid.cols, iy=(far-ix)/grid.cols;
-        const p=walkTrace(grid, solved, [grid.x0+(ix+.5)*grid.res, grid.y0+(iy+.5)*grid.res]);
-        if(p&&p.length>1) out.push(straightenPath(p, grid));
+    // farthest point to route to: reuse the shading grid's Dijkstra purely to
+    // pick a target — the route itself is still the raycast graph above
+    const grid=walkGrid(), from=doorEntry(doors[0]);
+    if(grid.cols){
+      const solved=walkSolve(grid, from);
+      if(solved){
+        let farI=-1, fd=-1;
+        for(let i=0;i<solved.dist.length;i++) if(solved.dist[i]!==Infinity && solved.dist[i]>fd){ fd=solved.dist[i]; farI=i; }
+        if(farI!==-1){
+          const ix=farI%grid.cols, iy=(farI-ix)/grid.cols;
+          const p=route(from, [grid.x0+(ix+.5)*grid.res, grid.y0+(iy+.5)*grid.res]);
+          if(p) out.push(p);
+        }
       }
     }
   }
