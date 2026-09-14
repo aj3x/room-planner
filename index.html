@@ -2010,9 +2010,16 @@ function snapCornerAxis(i,raw){
 }
 function pickAt(x,y){
   const ps=L().placed;
-  for(let i=ps.length-1;i>=0;i--){
-    const it=itemOf(ps[i].itemId);
-    if(it&&pointInPoly([x,y],worldPoly(ps[i],it))) return ps[i];
+  // Match visual stacking: non-pass-through items (drawn on top) win clicks
+  // over pass-through items like rugs (drawn underneath), regardless of
+  // placement order in the array.
+  for(let pass=0;pass<2;pass++){
+    for(let i=ps.length-1;i>=0;i--){
+      const it=itemOf(ps[i].itemId);
+      if(!it) continue;
+      if((pass===0)===!!it.passThrough) continue;
+      if(pointInPoly([x,y],worldPoly(ps[i],it))) return ps[i];
+    }
   }
   return null;
 }
