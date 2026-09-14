@@ -1334,14 +1334,38 @@ function centreInside(inst){
    stopping at the furthest reachable valid position along that line */
 function bisectToValid(inst,it,from,to){
   const at=t=>[from[0]+(to[0]-from[0])*t, from[1]+(to[1]-from[1])*t];
+  const len=Math.hypot(to[0]-from[0], to[1]-from[1]);
   let lo=0, hi=1;
-  for(let i=0;i<24;i++){
+  inst.x=to[0]; inst.y=to[1];
+  if(validate(inst,worldPoly(inst,it)).ok) return 1;
+  // stop once the bracket is under a hundredth of a millimetre
+  for(let i=0;i<32 && (hi-lo)*len>0.01;i++){
     const t=(lo+hi)/2, p=at(t);
     inst.x=p[0]; inst.y=p[1];
     if(validate(inst,worldPoly(inst,it)).ok) lo=t; else hi=t;
   }
   const p=at(lo); inst.x=p[0]; inst.y=p[1];
   return lo;
+}
+/* move inst from a known-valid point as close to `to` as it can get: straight
+   there if it fits, otherwise the furthest it can go along each axis (so a
+   piece pushed past a wall ends up flush with it, and slides along it). Tries
+   x-then-y, y-then-x and the straight line, and keeps whichever lands nearest. */
+function slideToValid(inst,it,from,to){
+  inst.x=to[0]; inst.y=to[1];
+  if(validate(inst,worldPoly(inst,it)).ok) return [to[0],to[1]];
+  const axisFirst=ax=>{
+    bisectToValid(inst,it,from, ax===0 ? [to[0],from[1]] : [from[0],to[1]]);
+    const p=[inst.x,inst.y];
+    bisectToValid(inst,it,p, ax===0 ? [p[0],to[1]] : [to[0],p[1]]);
+    return [inst.x,inst.y];
+  };
+  const cands=[axisFirst(0), axisFirst(1)];
+  bisectToValid(inst,it,from,to); cands.push([inst.x,inst.y]);
+  const d=p=>Math.hypot(to[0]-p[0], to[1]-p[1]);
+  const best=cands.reduce((a,b)=>d(b)<d(a)?b:a);
+  inst.x=best[0]; inst.y=best[1];
+  return best;
 }
 
 /* ------------------------- walk paths -------------------------
@@ -2730,24 +2754,16 @@ cv.addEventListener('pointermove', e=>{
     ny=Math.round((ny+b.y0)/g)*g-b.y0;
   }
   const px0=inst.x, py0=inst.y;
-  let moved=false, why='';
-  for(const [tx,ty] of [[nx,ny],[nx,py0],[px0,ny]]){
-    inst.x=tx; inst.y=ty;
-    const v=validate(inst,worldPoly(inst,it));
-    if(v.ok){ moved=true; drag.loose=false; break; }
-    why=v.why;
-  }
-  if(!moved){
-    if(drag.loose){
-      inst.x=nx; inst.y=ny;
-      if(!centreInside(inst)){ inst.x=px0; inst.y=py0; }
-    } else {
-      // grid-snap can round the target past a wall; slide smoothly to the closest
-      // reachable point instead of stopping a whole grid step short of it
-      inst.x=px0; inst.y=py0;
-      const t=bisectToValid(inst,it,[px0,py0],[nx,ny]);
-      if(t<1e-4){ inst.x=px0; inst.y=py0; flash(why); }
-    }
+  inst.x=nx; inst.y=ny;
+  const v=validate(inst,worldPoly(inst,it));
+  if(v.ok) drag.loose=false;
+  else if(drag.loose){
+    if(!centreInside(inst)){ inst.x=px0; inst.y=py0; }
+  } else {
+    // go as far toward the pointer as fits, per axis, so the piece meets the
+    // wall flush rather than stopping wherever the last pointer event left it
+    const p=slideToValid(inst,it,[px0,py0],[nx,ny]);
+    if(Math.hypot(p[0]-px0,p[1]-py0)<0.01){ inst.x=px0; inst.y=py0; flash(v.why); }
   }
   bumpRev(); scheduleDraw();
 });
@@ -2820,7 +2836,12 @@ document.addEventListener('keydown', e=>{
     inst.x+=d[0]; inst.y+=d[1];
     if(!validate(inst,worldPoly(inst,it)).ok){
       if(loose){ if(!centreInside(inst)){ inst.x=ox; inst.y=oy; } }
-      else { inst.x=ox; inst.y=oy; flash('No room that way'); }
+      else {
+        // take as much of the step as fits
+        inst.x=ox; inst.y=oy;
+        bisectToValid(inst,it,[ox,oy],[ox+d[0],oy+d[1]]);
+        if(Math.hypot(inst.x-ox,inst.y-oy)<0.01){ inst.x=ox; inst.y=oy; flash('No room that way'); }
+      }
     }
     draw(); renderSel(); save(); commitFurn();
   }
