@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/hew-side-table-shape-d",
+  "name": "Hew Side Table - Shape D",
+  "shape": {
+    "type": "rect",
+    "w": 362,
+    "d": 318
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

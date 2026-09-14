@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/tinsman-cabby-jewelry-armoire",
+  "name": "Tinsman Cabby Jewelry Armoire",
+  "shape": {
+    "type": "rect",
+    "w": 480,
+    "d": 350
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

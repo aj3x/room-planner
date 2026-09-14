@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/hamo-reclining-chair",
+  "name": "IKEA H\u00e5m\u00f6 Reclining Chair",
+  "shape": {
+    "type": "rect",
+    "w": 600,
+    "d": 660
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

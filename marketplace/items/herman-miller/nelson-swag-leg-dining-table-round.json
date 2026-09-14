@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/nelson-swag-leg-dining-table-round",
+  "name": "Nelson Swag Leg Dining Table - Round",
+  "shape": {
+    "type": "rect",
+    "w": 1219,
+    "d": 1219
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

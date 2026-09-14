@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/tuffing-loft-bed",
+  "name": "IKEA Tuffing Loft Bed",
+  "shape": {
+    "type": "rect",
+    "w": 970,
+    "d": 2080
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

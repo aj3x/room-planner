@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/poang-armchair",
+  "name": "IKEA Po\u00e4ng Armchair",
+  "shape": {
+    "type": "rect",
+    "w": 680,
+    "d": 820
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

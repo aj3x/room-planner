@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/sundvik-childrens-rocking-chair",
+  "name": "IKEA Sundvik Children\u2019s Rocking Chair",
+  "shape": {
+    "type": "rect",
+    "w": 370,
+    "d": 690
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

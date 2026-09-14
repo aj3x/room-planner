@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/eames-segmented-table-oval",
+  "name": "Eames Segmented Table - Oval",
+  "shape": {
+    "type": "ellipse",
+    "w": 1676,
+    "d": 1676
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

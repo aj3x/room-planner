@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/nordli-bed-frame",
+  "name": "IKEA Nordli Bed Frame",
+  "shape": {
+    "type": "rect",
+    "w": 1600,
+    "d": 2020
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

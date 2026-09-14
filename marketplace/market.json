@@ -1,0 +1,13 @@
+{
+  "app": "room-planner-marketplace",
+  "version": 1,
+  "name": "Room Planner Defaults",
+  "index": {
+    "shards": [
+      "index/ikea.json",
+      "index/herman-miller.json",
+      "index/wayfair.json"
+    ]
+  },
+  "itemURL": "items/{id}.json"
+}

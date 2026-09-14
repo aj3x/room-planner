@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/morbylanga-table-round",
+  "name": "IKEA M\u00f6rbyl\u00e5nga Table - Round",
+  "shape": {
+    "type": "rect",
+    "w": 1450,
+    "d": 1450
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

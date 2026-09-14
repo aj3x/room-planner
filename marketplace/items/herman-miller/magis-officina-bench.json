@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/magis-officina-bench",
+  "name": "Magis Officina Bench",
+  "shape": {
+    "type": "rect",
+    "w": 572,
+    "d": 572
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

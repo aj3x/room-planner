@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/segeron-outdoor-coffee-table",
+  "name": "IKEA Seger\u00f6n Outdoor Coffee Table",
+  "shape": {
+    "type": "rect",
+    "w": 730,
+    "d": 730
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

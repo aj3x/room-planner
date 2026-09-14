@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/havsta-storage-combination-2-wide-mix",
+  "name": "IKEA Havsta Storage Combo - 2 Wide (Mix)",
+  "shape": {
+    "type": "rect",
+    "w": 1620,
+    "d": 370
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

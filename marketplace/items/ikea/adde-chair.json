@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/adde-chair",
+  "name": "IKEA Adde Chair",
+  "shape": {
+    "type": "rect",
+    "w": 391,
+    "d": 470
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

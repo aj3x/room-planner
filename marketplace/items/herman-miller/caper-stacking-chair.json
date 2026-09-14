@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/caper-stacking-chair",
+  "name": "Caper Stacking Chair",
+  "shape": {
+    "type": "rect",
+    "w": 620,
+    "d": 610
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

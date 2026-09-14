@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/klippan-loveseat",
+  "name": "IKEA Klippan Loveseat",
+  "shape": {
+    "type": "rect",
+    "w": 880,
+    "d": 880
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

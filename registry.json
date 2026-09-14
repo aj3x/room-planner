@@ -1,5 +1,7 @@
 {
   "app": "room-planner-registry",
   "version": 1,
-  "marketplaces": []
+  "marketplaces": [
+    { "name": "Room Planner Defaults", "url": "https://raw.githubusercontent.com/aj3x/room-planner/main/marketplace/market.json" }
+  ]
 }

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/varmanso-outdoor-table-medium",
+  "name": "IKEA V\u00e4rmans\u00f6 Outdoor Table (Medium)",
+  "shape": {
+    "type": "rect",
+    "w": 1610,
+    "d": 930
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

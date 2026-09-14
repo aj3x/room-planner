@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/ibbarbo-stool",
+  "name": "IKEA Ibbarbo Stool",
+  "shape": {
+    "type": "rect",
+    "w": 370,
+    "d": 370
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

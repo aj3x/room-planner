@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/symbol-bench-curve-back",
+  "name": "Symbol Bench - Curve - Back",
+  "shape": {
+    "type": "rect",
+    "w": 864,
+    "d": 864
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

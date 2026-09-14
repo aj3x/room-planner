@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/landskrona-armchair",
+  "name": "IKEA Landskrona Armchair",
+  "shape": {
+    "type": "rect",
+    "w": 890,
+    "d": 890
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

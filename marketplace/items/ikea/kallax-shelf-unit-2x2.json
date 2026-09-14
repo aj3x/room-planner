@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/kallax-shelf-unit-2x2",
+  "name": "IKEA Kallax Shelf Unit - 2x2",
+  "shape": {
+    "type": "rect",
+    "w": 772,
+    "d": 391
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

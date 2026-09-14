@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/besta-eket-tv-storage-overhead-stepping",
+  "name": "IKEA Best\u00e5 | Eket TV Storage - Overhead Stepping",
+  "shape": {
+    "type": "rect",
+    "w": 3000,
+    "d": 420
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

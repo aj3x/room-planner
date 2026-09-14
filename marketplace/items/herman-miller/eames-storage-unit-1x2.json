@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/eames-storage-unit-1x2",
+  "name": "Eames Storage Unit 1x2",
+  "shape": {
+    "type": "rect",
+    "w": 1190,
+    "d": 410
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

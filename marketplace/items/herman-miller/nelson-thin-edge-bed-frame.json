@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/nelson-thin-edge-bed-frame",
+  "name": "Nelson Thin Edge Bed",
+  "shape": {
+    "type": "rect",
+    "w": 1600,
+    "d": 2270
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

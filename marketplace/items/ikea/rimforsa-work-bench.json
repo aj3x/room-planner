@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/rimforsa-work-bench",
+  "name": "IKEA Rimforsa Work Bench",
+  "shape": {
+    "type": "rect",
+    "w": 650,
+    "d": 1200
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/mydal-bunk-bed",
+  "name": "IKEA Mydal Bunk Bed",
+  "shape": {
+    "type": "rect",
+    "w": 1040,
+    "d": 1960
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

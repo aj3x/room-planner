@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/stora-loft-bed",
+  "name": "IKEA Stor\u00e5 Loft Bed",
+  "shape": {
+    "type": "rect",
+    "w": 1480,
+    "d": 2030
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

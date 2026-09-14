@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/mackapar-shoe-rack",
+  "name": "IKEA Mackap\u00e4r Shoe Rack",
+  "shape": {
+    "type": "rect",
+    "w": 780,
+    "d": 320
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

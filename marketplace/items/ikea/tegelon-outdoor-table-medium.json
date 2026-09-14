@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/tegelon-outdoor-table-medium",
+  "name": "IKEA Tegel\u00f6n Outdoor Table (Medium)",
+  "shape": {
+    "type": "rect",
+    "w": 1400,
+    "d": 860
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

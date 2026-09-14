@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/morbylanga-table-rectangular",
+  "name": "IKEA M\u00f6rbyl\u00e5nga Table - Rectangular",
+  "shape": {
+    "type": "rect",
+    "w": 1400,
+    "d": 850
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

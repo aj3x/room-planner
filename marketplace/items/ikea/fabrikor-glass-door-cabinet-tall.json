@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/fabrikor-glass-door-cabinet-tall",
+  "name": "IKEA Fabrik\u00f6r Glass Door Cabinet - Tall",
+  "shape": {
+    "type": "rect",
+    "w": 570,
+    "d": 470
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

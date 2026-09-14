@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/askholmen-trellis",
+  "name": "IKEA Askholmen Trellis",
+  "shape": {
+    "type": "rect",
+    "w": 770,
+    "d": 30
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

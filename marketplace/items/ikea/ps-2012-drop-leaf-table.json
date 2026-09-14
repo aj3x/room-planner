@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/ps-2012-drop-leaf-table",
+  "name": "IKEA PS 2012 Drop-leaf Table",
+  "shape": {
+    "type": "rect",
+    "w": 740,
+    "d": 800
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/doshie-twin-over-twin-bed",
+  "name": "Doshie Twin Over Twin Bed",
+  "shape": {
+    "type": "rect",
+    "w": 1060,
+    "d": 1970
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

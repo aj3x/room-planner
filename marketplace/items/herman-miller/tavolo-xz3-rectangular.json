@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/tavolo-xz3-rectangular",
+  "name": "Tavolo XZ3 - Rectangular",
+  "shape": {
+    "type": "rect",
+    "w": 2000,
+    "d": 900
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

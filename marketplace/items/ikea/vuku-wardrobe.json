@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/vuku-wardrobe",
+  "name": "IKEA Vuku Wardrobe",
+  "shape": {
+    "type": "rect",
+    "w": 740,
+    "d": 510
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

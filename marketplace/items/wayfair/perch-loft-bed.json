@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/perch-loft-bed",
+  "name": "Perch Loft Bed",
+  "shape": {
+    "type": "rect",
+    "w": 1450,
+    "d": 1980
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

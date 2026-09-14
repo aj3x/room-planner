@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/everywhere-conference-table",
+  "name": "Everywhere Conference Table",
+  "shape": {
+    "type": "rect",
+    "w": 2130,
+    "d": 1070
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

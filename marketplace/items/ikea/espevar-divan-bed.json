@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/espevar-divan-bed",
+  "name": "IKEA Espev\u00e4r Divan Bed",
+  "shape": {
+    "type": "rect",
+    "w": 1890,
+    "d": 970
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

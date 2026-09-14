@@ -1,0 +1,926 @@
+{
+  "app": "room-planner-marketplace-index",
+  "version": 1,
+  "items": [
+    {
+      "id": "herman-miller/aeron-chair-b-size",
+      "name": "Aeron Chair - B Size",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/baguette-table",
+      "name": "Baguette Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/baguette-table-large",
+      "name": "Baguette Table - Large",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/bounce-chair",
+      "name": "Bounce Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/brava-platform-bench-1-seat",
+      "name": "Brava Platform Bench - 1-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/brava-platform-bench-2-seat",
+      "name": "Brava Platform Bench - 2-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/brava-platform-bench-3-seat",
+      "name": "Brava Platform Bench - 3-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/burdick-group-tables-oval",
+      "name": "Burdick Group Tables - Oval",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/capelli-stool",
+      "name": "Capelli Stool",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/caper-stacking-chair",
+      "name": "Caper Stacking Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/cosm-chair-high-back",
+      "name": "Cosm Chair - High-Back",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/cosm-chair-low-back",
+      "name": "Cosm Chair - Low-Back",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/cosm-chair-mid-back",
+      "name": "Cosm Chair - Mid-Back",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/crosshatch-ottoman",
+      "name": "Crosshatch Ottoman",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/crosshatch-settee",
+      "name": "Crosshatch Settee",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/distil-desk",
+      "name": "Distil Desk",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/dont-leave-me-side-table",
+      "name": "Don't Leave Me Side Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/dont-leave-me-side-table-xl",
+      "name": "Don't Leave Me Side Table - XL",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/dot-stool",
+      "name": "Dot Stool",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-aluminum-group-management-chair",
+      "name": "Eames Aluminum Group Management Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-aluminum-group-ottoman",
+      "name": "Eames Aluminum Group Ottoman",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-coffee-table",
+      "name": "Eames Coffee Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-desk-unit-edu",
+      "name": "Eames Desk Unit",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-dowel-base-side-chair",
+      "name": "Eames Dowel Base Side Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-elliptical-table",
+      "name": "Eames Elliptical Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-executive-chair",
+      "name": "Eames Executive Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-lounge-chair-ottoman",
+      "name": "Eames Lounge Chair & Ottoman",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-molded-plastic-rocker",
+      "name": "Eames Molded Plastic Rocker",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-molded-plywood-coffee-table",
+      "name": "Eames Molded Plywood Coffee Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-molded-plywood-dining-chair",
+      "name": "Eames Molded Plywood Dining Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-molded-plywood-coffee-table-metal-base",
+      "name": "Eames Plywood Coffee Table - Metal Base",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-rectangular-coffee-table",
+      "name": "Eames Rectangular Coffee Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-segmented-table-oval",
+      "name": "Eames Segmented Table - Oval",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-segmented-table-round",
+      "name": "Eames Segmented Table - Round",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-sofa-compact",
+      "name": "Eames Sofa Compact",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-soft-pad-executive-chair",
+      "name": "Eames Soft Pad Executive Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-soft-pad-management-chair",
+      "name": "Eames Soft Pad Management Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-storage-unit-1x2",
+      "name": "Eames Storage Unit 1x2",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-task-chair",
+      "name": "Eames Task Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-turned-stool",
+      "name": "Eames Turned Stool",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-wire-base-low-table",
+      "name": "Eames Wire Base Low Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-wire-base-side-chair",
+      "name": "Eames Wire Base Side Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/eames-wire-chair",
+      "name": "Eames Wire Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/everywhere-conference-table",
+      "name": "Everywhere Conference Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/everywhere-rectangular-desk",
+      "name": "Everywhere Rectangular Desk",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/everywhere-table-classroom-curve-t-leg",
+      "name": "Everywhere Table - Classroom Curve - T-Leg",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/everywhere-table-concave-rectangular-c-leg",
+      "name": "Everywhere Table - Concave Rectangular - C-Leg",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/everywhere-table-rectangular-c-leg",
+      "name": "Everywhere Table - Rectangular - C-Leg",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/everywhere-table-rectangular-post-leg",
+      "name": "Everywhere Table - Rectangular - Post Leg",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/everywhere-table-rectangular-t-leg",
+      "name": "Everywhere Table - Rectangular - T-Leg",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/everywhere-table-round-post-leg",
+      "name": "Everywhere Table - Round - Post Leg",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/everywhere-table-soft-square-post-leg",
+      "name": "Everywhere Table - Soft Square - Post Leg",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/everywhere-table-soft-square-single-column",
+      "name": "Everywhere Table - Soft Square - Single Column",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/everywhere-table-video-oval",
+      "name": "Everywhere Table - Video Oval",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/girard-color-wheel-ottoman",
+      "name": "Girard Color Wheel Ottoman",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/hatch-bench-1-seat",
+      "name": "Hatch Bench - 1-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/hatch-bench-2-seat",
+      "name": "Hatch Bench - 2-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/hatch-bench-3-seat",
+      "name": "Hatch Bench - 3-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/hew-side-table-shape-a",
+      "name": "Hew Side Table - Shape A",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/hew-side-table-shape-b",
+      "name": "Hew Side Table - Shape B",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/hew-side-table-shape-c",
+      "name": "Hew Side Table - Shape C",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/hew-side-table-shape-d",
+      "name": "Hew Side Table - Shape D",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/hew-side-table-shape-e",
+      "name": "Hew Side Table - Shape E",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/i-beam-coffee-table",
+      "name": "I Beam Coffee Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/i-beam-side-table",
+      "name": "I Beam Side Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/lino-chair",
+      "name": "Lino Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/magis-folly-bench",
+      "name": "Magis Folly Bench",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/magis-officina-bench",
+      "name": "Magis Officina Bench",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/magis-spun-chair",
+      "name": "Magis Spun Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/magis-traffic-bench-1-seat",
+      "name": "Magis Traffic Bench - 1-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/magis-traffic-bench-2-seat",
+      "name": "Magis Traffic Bench - 2-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/mantis-bs1-b-floor-lamp",
+      "name": "Mantis BS1 B Floor Lamp",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-ball-pendant-lamps",
+      "name": "Nelson Ball Pendant Lamps",
+      "tags": [
+        "fixtures",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-thin-edge-bedside-table",
+      "name": "Nelson Bedside Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-platform-bench-metal-legs",
+      "name": "Nelson Bench - Metal Legs",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-cigar-floor-lamps",
+      "name": "Nelson Cigar Floor Lamps",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-daybed",
+      "name": "Nelson Daybed",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-daybed-back-bolsters",
+      "name": "Nelson Daybed - Back Bolsters",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-daybed-side-bolster",
+      "name": "Nelson Daybed - Side Bolster",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-pedestal-coffee-table",
+      "name": "Nelson Pedestal Coffee Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-pedestal-side-table",
+      "name": "Nelson Pedestal Side Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-pedestal-stool",
+      "name": "Nelson Pedestal Stool",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-platform-bench",
+      "name": "Nelson Platform Bench",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-saucer-pendant-lamps",
+      "name": "Nelson Saucer Pendant Lamps",
+      "tags": [
+        "fixtures",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-swag-leg-dining-table-round",
+      "name": "Nelson Swag Leg Dining Table - Round",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-swag-leg-rectangular-work-table",
+      "name": "Nelson Swag Leg Work Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-thin-edge-bed-frame",
+      "name": "Nelson Thin Edge Bed",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-thin-edge-three-drawer-chest",
+      "name": "Nelson Three-Drawer Chest",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/nelson-x-leg-table",
+      "name": "Nelson X-Leg Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/noguchi-rudder-table",
+      "name": "Noguchi Rudder Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/noguchi-table",
+      "name": "Noguchi Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/polygon-wire-table-large",
+      "name": "Polygon Wire Table - Large",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/polygon-wire-table-medium",
+      "name": "Polygon Wire Table - Medium",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/polygon-wire-table-small",
+      "name": "Polygon Wire Table - Small",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/portion-bench-1-seat",
+      "name": "Portion Bench - 1-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/portion-bench-3-seat",
+      "name": "Portion Bench - 3-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/result-chair",
+      "name": "Result Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/risom-desk",
+      "name": "Risom Desk",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/riva-bench-rectangular",
+      "name": "Riva Bench - Rectangular",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/riva-bench-square-large",
+      "name": "Riva Bench - Square - Large",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/riva-bench-square-small",
+      "name": "Riva Bench - Square - Small",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/sayl-task-chair",
+      "name": "Sayl Task Chair",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/slit-table-hexagon",
+      "name": "Slit Table - Hexagon",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/slit-table-high",
+      "name": "Slit Table - High",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/slit-table-oblong",
+      "name": "Slit Table - Oblong",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/slit-table-side",
+      "name": "Slit Table - Side",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/story-bookcase",
+      "name": "Story Bookcase",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/story-bookcase-tall",
+      "name": "Story Bookcase - Tall",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/symbol-bench-1-seat",
+      "name": "Symbol Bench - 1-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/symbol-bench-2-seat",
+      "name": "Symbol Bench - 2-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/symbol-bench-3-seat",
+      "name": "Symbol Bench - 3-Seat",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/symbol-bench-curve",
+      "name": "Symbol Bench - Curve",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/symbol-bench-curve-back",
+      "name": "Symbol Bench - Curve - Back",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/tavolo-xz3-rectangular",
+      "name": "Tavolo XZ3 - Rectangular",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    },
+    {
+      "id": "herman-miller/tavolo-xz3-table",
+      "name": "Tavolo XZ3 Table",
+      "tags": [
+        "furniture",
+        "herman-miller"
+      ]
+    }
+  ]
+}

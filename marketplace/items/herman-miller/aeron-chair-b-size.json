@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/aeron-chair-b-size",
+  "name": "Aeron Chair - B Size",
+  "shape": {
+    "type": "rect",
+    "w": 690,
+    "d": 690
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

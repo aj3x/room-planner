@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/vadholma-kitchen-island-rack",
+  "name": "IKEA Vadholma Kitchen Island - Rack",
+  "shape": {
+    "type": "rect",
+    "w": 790,
+    "d": 1260
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

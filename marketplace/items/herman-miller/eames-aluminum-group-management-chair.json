@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/eames-aluminum-group-management-chair",
+  "name": "Eames Aluminum Group Management Chair",
+  "shape": {
+    "type": "rect",
+    "w": 580,
+    "d": 580
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/eames-wire-base-side-chair",
+  "name": "Eames Wire Base Side Chair",
+  "shape": {
+    "type": "rect",
+    "w": 460,
+    "d": 550
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

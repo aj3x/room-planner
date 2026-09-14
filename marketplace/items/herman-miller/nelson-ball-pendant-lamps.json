@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/nelson-ball-pendant-lamps",
+  "name": "Nelson Ball Pendant Lamps",
+  "shape": {
+    "type": "rect",
+    "w": 320,
+    "d": 320
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "fixtures",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

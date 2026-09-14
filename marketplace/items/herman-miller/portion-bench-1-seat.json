@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/portion-bench-1-seat",
+  "name": "Portion Bench - 1-Seat",
+  "shape": {
+    "type": "rect",
+    "w": 635,
+    "d": 635
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

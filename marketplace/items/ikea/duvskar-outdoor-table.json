@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/duvskar-outdoor-table",
+  "name": "IKEA Duvsk\u00e4r Outdoor Table",
+  "shape": {
+    "type": "rect",
+    "w": 760,
+    "d": 630
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

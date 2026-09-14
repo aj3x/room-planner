@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/ivar-chair",
+  "name": "IKEA Ivar Chair",
+  "shape": {
+    "type": "rect",
+    "w": 410,
+    "d": 498
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

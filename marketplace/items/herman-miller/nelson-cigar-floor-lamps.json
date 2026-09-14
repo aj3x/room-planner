@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/nelson-cigar-floor-lamps",
+  "name": "Nelson Cigar Floor Lamps",
+  "shape": {
+    "type": "ellipse",
+    "w": 270,
+    "d": 270
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

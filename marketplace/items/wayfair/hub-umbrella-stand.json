@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/hub-umbrella-stand",
+  "name": "Hub Umbrella Stand",
+  "shape": {
+    "type": "rect",
+    "w": 220,
+    "d": 220
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

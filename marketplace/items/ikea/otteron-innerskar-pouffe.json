@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/otteron-innerskar-pouffe",
+  "name": "IKEA Otter\u00f6n | Innersk\u00e4r Pouffe",
+  "shape": {
+    "type": "rect",
+    "w": 480,
+    "d": 480
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

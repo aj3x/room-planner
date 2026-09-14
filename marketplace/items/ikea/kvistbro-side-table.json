@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/kvistbro-side-table",
+  "name": "IKEA Kvistbro Side Table",
+  "shape": {
+    "type": "rect",
+    "w": 440,
+    "d": 440
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

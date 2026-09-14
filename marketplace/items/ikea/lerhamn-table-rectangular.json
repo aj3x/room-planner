@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/lerhamn-table-rectangular",
+  "name": "IKEA Lerhamn Table - Rectangular",
+  "shape": {
+    "type": "rect",
+    "w": 1180,
+    "d": 740
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/oval-umbrella-stand",
+  "name": "Oval Umbrella Stand",
+  "shape": {
+    "type": "rect",
+    "w": 210,
+    "d": 80
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/besta-tv-storage-overhead-t-shape",
+  "name": "IKEA Best\u00e5 TV Storage - Overhead T Shape",
+  "shape": {
+    "type": "rect",
+    "w": 3000,
+    "d": 200
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/trogen-childs-step-stool",
+  "name": "IKEA Trogen Child\u2019s Step Stool",
+  "shape": {
+    "type": "rect",
+    "w": 400,
+    "d": 380
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

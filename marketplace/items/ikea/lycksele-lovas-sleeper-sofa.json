@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/lycksele-lovas-sleeper-sofa",
+  "name": "IKEA Lycksele L\u00f6v\u00e5s Sleeper Sofa",
+  "shape": {
+    "type": "rect",
+    "w": 1420,
+    "d": 1000
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

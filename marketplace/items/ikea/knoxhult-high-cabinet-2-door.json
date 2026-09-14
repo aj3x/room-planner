@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/knoxhult-high-cabinet-2-door",
+  "name": "IKEA Knoxhult High Cabinet (2-Door)",
+  "shape": {
+    "type": "rect",
+    "w": 600,
+    "d": 310
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

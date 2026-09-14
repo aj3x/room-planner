@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/trofast-storage-combination-vertical",
+  "name": "IKEA Trofast Storage Combination (Vertical)",
+  "shape": {
+    "type": "rect",
+    "w": 440,
+    "d": 300
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

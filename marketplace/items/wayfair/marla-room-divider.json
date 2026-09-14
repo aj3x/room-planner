@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/marla-room-divider",
+  "name": "Marla Room Divider",
+  "shape": {
+    "type": "rect",
+    "w": 2590,
+    "d": 20
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

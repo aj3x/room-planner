@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/olivblad-plant-stand-wide",
+  "name": "IKEA Olivblad Plant Stand (Wide)",
+  "shape": {
+    "type": "rect",
+    "w": 550,
+    "d": 250
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

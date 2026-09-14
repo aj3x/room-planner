@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/mammut-childrens-table-rectangle",
+  "name": "IKEA Mammut Children\u2019s Table (Rectangle)",
+  "shape": {
+    "type": "rect",
+    "w": 770,
+    "d": 550
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

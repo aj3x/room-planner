@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/idasen-cabinet-glass-sliding-doors",
+  "name": "IKEA Id\u00e5sen Cabinet - Glass Sliding Doors",
+  "shape": {
+    "type": "rect",
+    "w": 1200,
+    "d": 450
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

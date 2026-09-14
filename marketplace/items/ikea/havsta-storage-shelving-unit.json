@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/havsta-storage-shelving-unit",
+  "name": "IKEA Havsta Storage - Shelving Unit",
+  "shape": {
+    "type": "rect",
+    "w": 610,
+    "d": 370
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

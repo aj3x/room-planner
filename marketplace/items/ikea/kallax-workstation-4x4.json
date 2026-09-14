@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/kallax-workstation-4x4",
+  "name": "IKEA Kallax Workstation - 4x4",
+  "shape": {
+    "type": "rect",
+    "w": 1470,
+    "d": 1591
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

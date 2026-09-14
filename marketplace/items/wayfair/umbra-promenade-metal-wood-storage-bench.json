@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/umbra-promenade-metal-wood-storage-bench",
+  "name": "Umbra Promenade Storage Bench",
+  "shape": {
+    "type": "rect",
+    "w": 990,
+    "d": 380
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

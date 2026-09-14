@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/kvikne-two-sliding-door-wardrobe",
+  "name": "IKEA Kvikne Two Sliding Door Wardrobe",
+  "shape": {
+    "type": "rect",
+    "w": 1200,
+    "d": 570
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

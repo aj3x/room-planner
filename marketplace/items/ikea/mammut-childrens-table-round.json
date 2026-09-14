@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/mammut-childrens-table-round",
+  "name": "IKEA Mammut Children\u2019s Table (Round)",
+  "shape": {
+    "type": "rect",
+    "w": 850,
+    "d": 850
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

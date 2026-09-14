@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/polygon-wire-table-medium",
+  "name": "Polygon Wire Table - Medium",
+  "shape": {
+    "type": "rect",
+    "w": 813,
+    "d": 813
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

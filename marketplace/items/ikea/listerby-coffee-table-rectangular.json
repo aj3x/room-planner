@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/listerby-coffee-table-rectangular",
+  "name": "IKEA Listerby Coffee Table - Rectangular",
+  "shape": {
+    "type": "rect",
+    "w": 1400,
+    "d": 600
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

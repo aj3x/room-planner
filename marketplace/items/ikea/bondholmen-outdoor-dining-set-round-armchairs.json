@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/bondholmen-outdoor-dining-set-round-armchairs",
+  "name": "IKEA Bondholmen Outdoor Dining Set (Round, Armchairs)",
+  "shape": {
+    "type": "rect",
+    "w": 2300,
+    "d": 2300
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "ikea",
+    "layouts"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

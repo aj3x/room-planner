@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/galant-storage-combination-tall-2-wide",
+  "name": "IKEA Galant Storage Combo - Tall (2-Wide)",
+  "shape": {
+    "type": "rect",
+    "w": 1020,
+    "d": 450
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

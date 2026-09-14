@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/waiting-umbrella-stand",
+  "name": "Waiting Umbrella Stand",
+  "shape": {
+    "type": "rect",
+    "w": 450,
+    "d": 290
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

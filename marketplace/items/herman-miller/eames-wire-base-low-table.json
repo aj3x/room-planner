@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/eames-wire-base-low-table",
+  "name": "Eames Wire Base Low Table",
+  "shape": {
+    "type": "rect",
+    "w": 394,
+    "d": 337
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

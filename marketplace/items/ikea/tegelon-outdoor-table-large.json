@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/tegelon-outdoor-table-large",
+  "name": "IKEA Tegel\u00f6n Outdoor Table (Large)",
+  "shape": {
+    "type": "rect",
+    "w": 2160,
+    "d": 860
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

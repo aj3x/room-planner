@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/lack-side-table",
+  "name": "IKEA Lack Side Table",
+  "shape": {
+    "type": "rect",
+    "w": 550,
+    "d": 550
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

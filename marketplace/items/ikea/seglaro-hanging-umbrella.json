@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/seglaro-hanging-umbrella",
+  "name": "IKEA Seglar\u00f6 Hanging Umbrella",
+  "shape": {
+    "type": "rect",
+    "w": 3300,
+    "d": 2980
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/melltorp-table-square",
+  "name": "IKEA Melltorp Table - Square",
+  "shape": {
+    "type": "rect",
+    "w": 750,
+    "d": 750
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

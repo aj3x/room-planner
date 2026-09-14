@@ -1,0 +1,646 @@
+{
+  "app": "room-planner-marketplace-index",
+  "version": 1,
+  "items": [
+    {
+      "id": "wayfair/alina-free-standing-jewelry-armoire",
+      "name": "Alina Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/arverne-hall-tree",
+      "name": "Arverne Hall Tree",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/askern-vanity-set-with-mirror",
+      "name": "Askern Vanity Set",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/audra-umbrella-stand",
+      "name": "Audra Umbrella Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/berges-free-standing-jewelry-armoire",
+      "name": "Berges Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/berglund-hall-tree",
+      "name": "Berglund Hall Tree",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/bozeman-room-divider",
+      "name": "Bozeman Room Divider",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/brooklyn-island-crib",
+      "name": "Brooklyn Island Crib",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/camille-zen-room-divider",
+      "name": "Camille Zen Room Divider",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/carnbore-jewelry-armoire",
+      "name": "Carnbore Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/casa-umbrella-stand",
+      "name": "Casa Umbrella Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/casteel-coat-stand",
+      "name": "Casteel Coat Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/chilmark-jewelry-armoire",
+      "name": "Chilmark Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/chisdock-jewelry-armoire",
+      "name": "Chisdock Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/chisley-crib",
+      "name": "Chisley Crib",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/christchurch-faux-leather-storage-bench",
+      "name": "Christchurch Storage Bench",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/clara-shoji-room-divider",
+      "name": "Clara Shoji Room Divider",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/clarke-shoji-room-divider",
+      "name": "Clarke Shoji Room Divider",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/coalmont-vanity-with-mirror",
+      "name": "Coalmont Vanity",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/collier-hall-tree",
+      "name": "Collier Hall Tree",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/connally-open-frame-headboard",
+      "name": "Connally Headboard",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/coven-hall-tree",
+      "name": "Coven Hall Tree",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/cyrus-divan",
+      "name": "Cyrus Divan",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/darcella-coat-rack",
+      "name": "Darcella Coat Rack",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/decker-rocking-chair",
+      "name": "Decker Rocking Chair",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/doshie-twin-over-twin-bed",
+      "name": "Doshie Twin Over Twin Bed",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/edmiston-cactus-coat-rack",
+      "name": "Edmiston Cactus Coat Rack",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/elkland-hall-tree",
+      "name": "Elkland Hall Tree",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/epworth-coat-hanger",
+      "name": "Epworth Coat Hanger",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/ermont-coat-rack",
+      "name": "Ermont Coat Rack",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/ermont-wood-storage-bench",
+      "name": "Ermont Wood Storage Bench",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/fawn-crib",
+      "name": "Fawn Crib",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/glouster-jewelry-armoire",
+      "name": "Glouster Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/heitz-vanity-set-with-mirror",
+      "name": "Heitz Vanity Set",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/howze-umbrella-stand",
+      "name": "Howze Umbrella Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/hub-umbrella-stand",
+      "name": "Hub Umbrella Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/julian-hall-tree",
+      "name": "Julian Hall Tree",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/kalea-settee",
+      "name": "Kalea Settee",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/kartell-umbrella-stand",
+      "name": "Kartell Umbrella Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/kenzie-vanity-with-mirror",
+      "name": "Kenzie Vanity",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/kiara-jewelry-armoire",
+      "name": "Kiara Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/kolten-entryway-upholstered-storage-bench",
+      "name": "Kolten Entryway Storage Bench",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/lewis-layer-umbrella-stand",
+      "name": "Lewis Layer Umbrella Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/lieberman-hall-tree",
+      "name": "Lieberman Hall Tree",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/maegan-industrial-coat-rack",
+      "name": "Maegan Industrial Coat Rack",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/marla-room-divider",
+      "name": "Marla Room Divider",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/melanie-vanity-set-with-mirror",
+      "name": "Melanie Vanity Set",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/mellinger-rocking-chair",
+      "name": "Mellinger Rocking Chair",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/menotto-umbrella-stand",
+      "name": "Menotto Umbrella Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/nichols-panel-headboard",
+      "name": "Nichols Panel Headboard",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/nola-rocking-chair",
+      "name": "Nola Rocking Chair",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/oval-umbrella-stand",
+      "name": "Oval Umbrella Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/perch-bunk-bed",
+      "name": "Perch Bunk Bed",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/perch-loft-bed",
+      "name": "Perch Loft Bed",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/pillar-coat-rack",
+      "name": "Pillar Coat Rack",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/plain-pole-hanger",
+      "name": "Plain Pole Hanger",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/portillo-free-standing-jewelry-armoire",
+      "name": "Portillo Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/rafael-twin-over-full-bunk-bed",
+      "name": "Rafael Twin Over Full Bunk Bed",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/rhythm-makeup-vanity-with-mirror",
+      "name": "Rhythm Makeup Vanity",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/rosellini-settee",
+      "name": "Rosellini Settee",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/rosita-hall-tree",
+      "name": "Rosita Hall Tree",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/sheryl-open-frame-headboard",
+      "name": "Sheryl Headboard",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/slice-umbrella-stand",
+      "name": "Slice Umbrella Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/splash-coat-rack",
+      "name": "Splash Coat Rack",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/streeter-jewelry-armoire-with-mirror",
+      "name": "Streeter Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/stromsburg-panel-headboard",
+      "name": "Stromsburg Panel Headboard",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/stroudsburg-jewelry-armoire",
+      "name": "Stroudsburg Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/symbolo-umbrella-stand",
+      "name": "Symbolo Umbrella Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/tangier-settee",
+      "name": "Tangier Settee",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/teddy-hall-tree",
+      "name": "Teddy Hall Tree",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/thetford-hall-tree",
+      "name": "Thetford Hall Tree",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/tinsman-cabby-jewelry-armoire",
+      "name": "Tinsman Cabby Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/tiptoe-bunk-bed",
+      "name": "TipToe Bunk Bed",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/torrey-retro-crib",
+      "name": "Torrey Retro Crib",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/tracy-shoe-storage-bench",
+      "name": "Tracy Shoe Storage Bench",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/umbra-promenade-metal-wood-storage-bench",
+      "name": "Umbra Promenade Storage Bench",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/waiting-umbrella-stand",
+      "name": "Waiting Umbrella Stand",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/zanna-upholstered-panel-headboard",
+      "name": "Zanna Headboard",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/zaragoza-coat-rack",
+      "name": "Zaragoza Coat Rack",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    },
+    {
+      "id": "wayfair/zariah-white-jewelry-armoire",
+      "name": "Zariah White Jewelry Armoire",
+      "tags": [
+        "furniture",
+        "wayfair"
+      ]
+    }
+  ]
+}

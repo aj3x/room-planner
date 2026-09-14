@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/nelson-pedestal-stool",
+  "name": "Nelson Pedestal Stool",
+  "shape": {
+    "type": "rect",
+    "w": 495,
+    "d": 495
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

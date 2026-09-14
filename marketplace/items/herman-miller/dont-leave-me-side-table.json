@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/dont-leave-me-side-table",
+  "name": "Don't Leave Me Side Table",
+  "shape": {
+    "type": "rect",
+    "w": 381,
+    "d": 381
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

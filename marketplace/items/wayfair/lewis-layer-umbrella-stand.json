@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/lewis-layer-umbrella-stand",
+  "name": "Lewis Layer Umbrella Stand",
+  "shape": {
+    "type": "rect",
+    "w": 230,
+    "d": 100
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

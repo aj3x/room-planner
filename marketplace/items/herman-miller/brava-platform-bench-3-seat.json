@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/brava-platform-bench-3-seat",
+  "name": "Brava Platform Bench - 3-Seat",
+  "shape": {
+    "type": "rect",
+    "w": 686,
+    "d": 686
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

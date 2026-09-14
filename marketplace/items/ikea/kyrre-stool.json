@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/kyrre-stool",
+  "name": "IKEA Kyrre Stool",
+  "shape": {
+    "type": "rect",
+    "w": 420,
+    "d": 480
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/tjusig-shoe-storage-bench",
+  "name": "IKEA Tjusig Shoe Storage Bench",
+  "shape": {
+    "type": "rect",
+    "w": 1080,
+    "d": 340
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

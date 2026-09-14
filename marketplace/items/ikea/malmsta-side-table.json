@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/malmsta-side-table",
+  "name": "IKEA Malmsta Side Table",
+  "shape": {
+    "type": "rect",
+    "w": 540,
+    "d": 540
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/everywhere-table-concave-rectangular-c-leg",
+  "name": "Everywhere Table - Concave Rectangular - C-Leg",
+  "shape": {
+    "type": "rect",
+    "w": 762,
+    "d": 762
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

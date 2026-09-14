@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/hemnes-2-drawer-chest",
+  "name": "IKEA Hemnes 2-Drawer Chest",
+  "shape": {
+    "type": "rect",
+    "w": 540,
+    "d": 380
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/thetford-hall-tree",
+  "name": "Thetford Hall Tree",
+  "shape": {
+    "type": "rect",
+    "w": 660,
+    "d": 340
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

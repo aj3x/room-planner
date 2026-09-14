@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/malm-bed-frame",
+  "name": "IKEA Malm Bed Frame",
+  "shape": {
+    "type": "rect",
+    "w": 1680,
+    "d": 2110
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

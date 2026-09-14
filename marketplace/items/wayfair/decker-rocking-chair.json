@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/decker-rocking-chair",
+  "name": "Decker Rocking Chair",
+  "shape": {
+    "type": "rect",
+    "w": 660,
+    "d": 900
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

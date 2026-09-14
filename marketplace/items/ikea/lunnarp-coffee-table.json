@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/lunnarp-coffee-table",
+  "name": "IKEA Lunnarp Coffee Table",
+  "shape": {
+    "type": "rect",
+    "w": 900,
+    "d": 550
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

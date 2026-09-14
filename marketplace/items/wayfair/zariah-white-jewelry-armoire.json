@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/zariah-white-jewelry-armoire",
+  "name": "Zariah White Jewelry Armoire",
+  "shape": {
+    "type": "rect",
+    "w": 330,
+    "d": 240
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

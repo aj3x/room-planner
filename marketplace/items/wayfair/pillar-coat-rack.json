@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/pillar-coat-rack",
+  "name": "Pillar Coat Rack",
+  "shape": {
+    "type": "ellipse",
+    "w": 400,
+    "d": 400
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

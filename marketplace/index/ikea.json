@@ -1,0 +1,4550 @@
+{
+  "app": "room-planner-marketplace-index",
+  "version": 1,
+  "items": [
+    {
+      "id": "ikea/adde-chair",
+      "name": "IKEA Adde Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/alex-drawer-unit",
+      "name": "IKEA Alex Drawer Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/alex-drawer-unit-tall",
+      "name": "IKEA Alex Drawer Unit - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/alex-drawer-unit-wide",
+      "name": "IKEA Alex Drawer Unit - Wide",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/applaro-bench",
+      "name": "IKEA \u00c4pplar\u00f6 Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/applaro-bench-backrest",
+      "name": "IKEA \u00c4pplar\u00f6 Bench - Backrest",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/applaro-reclining-chair",
+      "name": "IKEA \u00c4pplar\u00f6 Reclining Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/arkelstorp-coffee-table",
+      "name": "IKEA Arkelstorp Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/arod-floor-lamp",
+      "name": "IKEA Ar\u00f6d Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/askholmen-flower-box",
+      "name": "IKEA Askholmen Flower Box",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/askholmen-outdoor-armchair",
+      "name": "IKEA Askholmen Outdoor Armchair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/askholmen-outdoor-folding-chair",
+      "name": "IKEA Askholmen Outdoor Folding Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/askholmen-outdoor-gateleg-table",
+      "name": "IKEA Askholmen Outdoor Gateleg Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/askholmen-outdoor-table-rectangle",
+      "name": "IKEA Askholmen Outdoor Table (Rectangle)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/askholmen-outdoor-table-square",
+      "name": "IKEA Askholmen Outdoor Table (Square)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/askholmen-outdoor-wall-table",
+      "name": "IKEA Askholmen Outdoor Wall Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/askholmen-plant-stand",
+      "name": "IKEA Askholmen Plant Stand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/askholmen-trellis",
+      "name": "IKEA Askholmen Trellis",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/askvoll-2-drawer-chest",
+      "name": "IKEA Askvoll 2-Drawer Chest",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/balkarp-sleeper-sofa",
+      "name": "IKEA Balkarp Sleeper Sofa",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/barkarby-extendable-table",
+      "name": "IKEA Barkarby Extendable Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/batskar-outdoor-bar-table",
+      "name": "IKEA B\u00e5tsk\u00e4r Outdoor Bar Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bekant-conference-table-3-piece",
+      "name": "IKEA Bekant Conference Table - 3-Piece",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bekant-conference-table-4-piece",
+      "name": "IKEA Bekant Conference Table - 4-Piece",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bekant-conference-table-round-2-piece",
+      "name": "IKEA Bekant Conference Table - Round 2-Piece",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bekant-conference-table-round-end",
+      "name": "IKEA Bekant Conference Table - Round End",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bekant-conference-table-square",
+      "name": "IKEA Bekant Conference Table - Square",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bekvam-kitchen-cart",
+      "name": "IKEA Bekv\u00e4m Kitchen Cart",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bergmund-barstool",
+      "name": "IKEA Bergmund Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bernhard-chair",
+      "name": "IKEA Bernhard Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-eket-tv-storage-overhead",
+      "name": "IKEA Best\u00e5 | Eket TV Storage - Overhead",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-eket-tv-storage-overhead-l-shape",
+      "name": "IKEA Best\u00e5 | Eket TV Storage - Overhead L Shape",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-eket-tv-storage-overhead-stepping",
+      "name": "IKEA Best\u00e5 | Eket TV Storage - Overhead Stepping",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-burs-desk",
+      "name": "IKEA Best\u00e5 Burs Desk",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-burs-tv-unit",
+      "name": "IKEA Best\u00e5 Burs TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-storage-combination-6-door-glass",
+      "name": "IKEA Best\u00e5 Storage Combo - (6 Door, Glass)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-storage-combination-low-2-door",
+      "name": "IKEA Best\u00e5 Storage Combo - Low (2 Door)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-storage-combination-tall-3-door-glass-upper",
+      "name": "IKEA Best\u00e5 Storage Combo - Tall (3 Door, Glass Upper)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-storage-combination-tall-3-door-glass",
+      "name": "IKEA Best\u00e5 Storage Combo - Tall (3 Door, Glass)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-storage-combination-tall-6-door-glass-middle",
+      "name": "IKEA Best\u00e5 Storage Combo - Tall (6 Door, Glass Middle)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-storage-combination-tall-6-door",
+      "name": "IKEA Best\u00e5 Storage Combo - Tall (6 Door)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-storage-combination-tall-half-shelves",
+      "name": "IKEA Best\u00e5 Storage Combo - Tall (Half Shelves)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-storage-combination-wall-cabinet",
+      "name": "IKEA Best\u00e5 Storage Combo - Wall Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-storage-combo-wide-3-door",
+      "name": "IKEA Best\u00e5 Storage Combo - Wide (3 Door)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-storage-combination-top-glass",
+      "name": "IKEA Best\u00e5 Storage Combo (Top Glass)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-storage-base-l-shape",
+      "name": "IKEA Best\u00e5 TV Storage - Base L Shape",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-storage-base-u-shape",
+      "name": "IKEA Best\u00e5 TV Storage - Base U Shape",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-storage-overhead",
+      "name": "IKEA Best\u00e5 TV Storage - Overhead",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-storage-overhead-c-shape",
+      "name": "IKEA Best\u00e5 TV Storage - Overhead C Shape",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-storage-overhead-stepping",
+      "name": "IKEA Best\u00e5 TV Storage - Overhead Stepping",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-storage-overhead-t-shape",
+      "name": "IKEA Best\u00e5 TV Storage - Overhead T Shape",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-storage-overhead-wide",
+      "name": "IKEA Best\u00e5 TV Storage - Overhead Wide",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-2-bay-low",
+      "name": "IKEA Best\u00e5 TV Unit - 2 Bay - Low",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-2-bay-low-doors",
+      "name": "IKEA Best\u00e5 TV Unit - 2 Bay - Low (Doors)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-2-bay-tall",
+      "name": "IKEA Best\u00e5 TV Unit - 2 Bay - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-2-bay-tall-doors",
+      "name": "IKEA Best\u00e5 TV Unit - 2 Bay - Tall (Doors)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-2-bay-tall-shelves",
+      "name": "IKEA Best\u00e5 TV Unit - 2 Bay - Tall (Shelves)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-3-bay-low",
+      "name": "IKEA Best\u00e5 TV Unit - 3 Bay - Low",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-3-bay-low-doors-shelves",
+      "name": "IKEA Best\u00e5 TV Unit - 3 Bay - Low (Doors & Shelves)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-3-bay-low-doors",
+      "name": "IKEA Best\u00e5 TV Unit - 3 Bay - Low (Doors)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-3-bay-low-shelves",
+      "name": "IKEA Best\u00e5 TV Unit - 3 Bay - Low (Shelves)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-3-bay-tall",
+      "name": "IKEA Best\u00e5 TV Unit - 3 Bay - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-3-bay-tall-doors-shelves",
+      "name": "IKEA Best\u00e5 TV Unit - 3 Bay - Tall (Doors & Shelves)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-unit-4-bay-tall",
+      "name": "IKEA Best\u00e5 TV Unit - 4 Bay - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/besta-tv-storage-unit-combination-overhead",
+      "name": "IKEA Best\u00e5 TV Unit - Combo Overhead",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/billy-bookcase-combination-duo",
+      "name": "IKEA Billy - Combo Duo",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/billy-bookcase-combination-trio",
+      "name": "IKEA Billy - Combo Trio",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/billy-bookcase-thin-low",
+      "name": "IKEA Billy - Thin Low",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/billy-bookcase-thin-tall",
+      "name": "IKEA Billy - Thin Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/billy-bookcase-thin-tall-combination",
+      "name": "IKEA Billy - Thin Tall Combo",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/billy-bookcase-wide-low",
+      "name": "IKEA Billy - Wide Low",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/billy-bookcase-wide-low-combination",
+      "name": "IKEA Billy - Wide Low Combo",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/billy-bookcase-wide-tall",
+      "name": "IKEA Billy - Wide Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/billy-bookcase-wide-tall-combination",
+      "name": "IKEA Billy - Wide Tall Combo",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/billy-bookcase-wide-tall-extension",
+      "name": "IKEA Billy - Wide Tall Extension",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/billy-bookcases",
+      "name": "IKEA Billy Bookcases",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bjorksnas-nightstand",
+      "name": "IKEA Bj\u00f6rksn\u00e4s Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bjursta-extendable-table",
+      "name": "IKEA Bjursta Extendable Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/boeskil-stool",
+      "name": "IKEA Boeskil Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-armchair",
+      "name": "IKEA Bondholmen Outdoor Armchair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-bench",
+      "name": "IKEA Bondholmen Outdoor Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-dining-set-rectangle-armchairs",
+      "name": "IKEA Bondholmen Outdoor Dining Set (Rectangle, Armchairs)",
+      "tags": [
+        "ikea",
+        "layouts"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-dining-set-rectangle-mix",
+      "name": "IKEA Bondholmen Outdoor Dining Set (Rectangle, Mix)",
+      "tags": [
+        "ikea",
+        "layouts"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-dining-set-rectangle-reclining",
+      "name": "IKEA Bondholmen Outdoor Dining Set (Rectangle, Reclining)",
+      "tags": [
+        "ikea",
+        "layouts"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-dining-set-round-armchairs",
+      "name": "IKEA Bondholmen Outdoor Dining Set (Round, Armchairs)",
+      "tags": [
+        "ikea",
+        "layouts"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-dining-set-round-reclining",
+      "name": "IKEA Bondholmen Outdoor Dining Set (Round, Reclining)",
+      "tags": [
+        "ikea",
+        "layouts"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-lounge-chair",
+      "name": "IKEA Bondholmen Outdoor Lounge Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-loveseat",
+      "name": "IKEA Bondholmen Outdoor Loveseat",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-reclining-chair",
+      "name": "IKEA Bondholmen Outdoor Reclining Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-table-rectangle",
+      "name": "IKEA Bondholmen Outdoor Table (Rectangle)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bondholmen-outdoor-table-round",
+      "name": "IKEA Bondholmen Outdoor Table (Round)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/breim-wardrobe",
+      "name": "IKEA Breim Wardrobe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-3-drawer-chest",
+      "name": "IKEA Brimnes 3-Drawer Chest",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-4-drawer-dresser",
+      "name": "IKEA Brimnes 4-Drawer Dresser",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-daybed",
+      "name": "IKEA Brimnes Daybed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-dressing-table",
+      "name": "IKEA Brimnes Dressing Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-glass-door-cabinet",
+      "name": "IKEA Brimnes Glass Door Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-glass-door-cabinet-tall",
+      "name": "IKEA Brimnes Glass Door Cabinet - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-glass-door-cabinet-tall-2-wide",
+      "name": "IKEA Brimnes Glass Door Cabinet - Tall (2 Wide)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-headboard-storage",
+      "name": "IKEA Brimnes Headboard",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-nightstand",
+      "name": "IKEA Brimnes Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-storage-cabinet",
+      "name": "IKEA Brimnes Storage Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-three-door-wardrobe",
+      "name": "IKEA Brimnes Three Door Wardrobe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-tv-storage-2-bay-l-shape",
+      "name": "IKEA Brimnes TV Storage - 2 Bay - L Shape",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-tv-storage-2-bay-u-shape",
+      "name": "IKEA Brimnes TV Storage - 2 Bay - U Shape",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-tv-storage-3-bay-l-shape",
+      "name": "IKEA Brimnes TV Storage - 3 Bay - L Shape",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-tv-storage-3-bay-u-shape",
+      "name": "IKEA Brimnes TV Storage - 3 Bay - U Shape",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-tv-unit-2-bay",
+      "name": "IKEA Brimnes TV Unit - 2 Bay",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-tv-unit-3-bay",
+      "name": "IKEA Brimnes TV Unit - 3 Bay",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brimnes-two-door-wardrobe",
+      "name": "IKEA Brimnes Two Door Wardrobe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bror-cart-closed-storage",
+      "name": "IKEA Bror Cart - Closed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bror-utility-cart",
+      "name": "IKEA Bror Utility Cart",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brusali-tv-unit",
+      "name": "IKEA Brusali TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/brusali-tv-unit-tall",
+      "name": "IKEA Brusali TV Unit - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/burvik-side-table",
+      "name": "IKEA Burvik Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/byas-tv-unit",
+      "name": "IKEA By\u00e5s TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/bygstad-wardrobe",
+      "name": "IKEA Bygstad Wardrobe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/dajlien-valet-stand",
+      "name": "IKEA Dajlien Valet Stand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/dalfred-barstool",
+      "name": "IKEA Dalfred Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/dalholen-bench",
+      "name": "IKEA Dalholen Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/delaktig-headboard",
+      "name": "IKEA Delaktig Headboard",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/detolf-glass-door-cabinet-tall",
+      "name": "IKEA Detolf Glass Door Cabinet - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/docksta-table",
+      "name": "IKEA Docksta Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/domsten-stool",
+      "name": "IKEA Domsten Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/dundra-activity-table",
+      "name": "IKEA Dundra Activity Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/duvskar-outdoor-table",
+      "name": "IKEA Duvsk\u00e4r Outdoor Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/eidsberg-headboard",
+      "name": "IKEA Eidsberg Headboard",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ekedalen-barstool",
+      "name": "IKEA Ekedalen Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ekedalen-bench",
+      "name": "IKEA Ekedalen Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ekedalen-extendable-table",
+      "name": "IKEA Ekedalen Extendable Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ekolsund-recliner",
+      "name": "IKEA Ekolsund Recliner",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ekrar-hat-coat-stand",
+      "name": "IKEA Ekrar Hat & Coat Stand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/erik-file-cabinet",
+      "name": "IKEA Erik File Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/espevar-divan-bed",
+      "name": "IKEA Espev\u00e4r Divan Bed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/fabrikor-glass-door-cabinet-tall",
+      "name": "IKEA Fabrik\u00f6r Glass Door Cabinet - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/fabrikor-glass-door-cabinet-wide",
+      "name": "IKEA Fabrik\u00f6r Glass Door Cabinet - Wide",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/falskar-outdoor-coffee-table",
+      "name": "IKEA F\u00e5lsk\u00e4r Outdoor Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/farlov-sleeper-sofa",
+      "name": "IKEA F\u00e4rl\u00f6v Sleeper Sofa",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/fejan-outdoor-table",
+      "name": "IKEA Fejan Outdoor Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/fjallbo-coffee-table",
+      "name": "IKEA Fj\u00e4llbo Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/fjallbo-tv-unit",
+      "name": "IKEA Fj\u00e4llbo TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/flekke-daybed",
+      "name": "IKEA Flekke Daybed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/flisat-childs-bench",
+      "name": "IKEA Flisat Child\u2019s Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/flisat-childrens-stool",
+      "name": "IKEA Flisat Children\u2019s Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/flisat-childrens-table",
+      "name": "IKEA Flisat Children\u2019s Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/flottebo-side-table",
+      "name": "IKEA Flottebo Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/flottebo-sleeper-sofa",
+      "name": "IKEA Flottebo Sleeper Sofa",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/flytta-kitchen-cart",
+      "name": "IKEA Flytta Kitchen Cart",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/forhoja-kitchen-cart",
+      "name": "IKEA F\u00f6rh\u00f6ja Kitchen Cart",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/forlunda-stool",
+      "name": "IKEA F\u00f6rlunda Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/fornyad-side-table",
+      "name": "IKEA F\u00f6rnyad Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/franklin-barstool",
+      "name": "IKEA Franklin Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/friheten-sleeper-sofa",
+      "name": "IKEA Friheten Sleeper Sofa",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/fyresdal-daybed",
+      "name": "IKEA Fyresdal Daybed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/fyresdal-nightstand",
+      "name": "IKEA Fyresdal Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/galant-drawer-unit",
+      "name": "IKEA Galant Drawer Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/galant-drawer-unit-wide",
+      "name": "IKEA Galant Drawer Unit - Wide",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/galant-file-cabinet-tall",
+      "name": "IKEA Galant File Cabinet - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/galant-storage-combination-low-2-wide",
+      "name": "IKEA Galant Storage Combo - Low (2-Wide)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/galant-storage-combination-tall-2-wide",
+      "name": "IKEA Galant Storage Combo - Tall (2-Wide)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/galant-storage-combination-tall-wide",
+      "name": "IKEA Galant Storage Combo - Tall (Wide)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/galant-storage-combination-tall-wide-2-wide",
+      "name": "IKEA Galant Storage Combo - Tall, Wide (2-Wide)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/gamlared-table",
+      "name": "IKEA Gamlared Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/gamleby-gateleg-table",
+      "name": "IKEA Gamleby Gateleg Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/gettorp-tv-unit",
+      "name": "IKEA Gettorp TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/gladom-tray-table",
+      "name": "IKEA Gladom Tray Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/glenn-barstool",
+      "name": "IKEA Glenn Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/gonatt-crib",
+      "name": "IKEA Gonatt Crib",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/granboda-nesting-tables",
+      "name": "IKEA Granboda Nesting Tables",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/grejig-shoe-rack",
+      "name": "IKEA Grejig Shoe Rack",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/gronadal-rocking-chair",
+      "name": "IKEA Gr\u00f6nadal Rocking Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/gronsta-barstool",
+      "name": "IKEA Gr\u00f6nsta Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/grubban-step-stool",
+      "name": "IKEA Grubban Step Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/gualov-storage-table",
+      "name": "IKEA Gual\u00f6v Storage Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/gulliver-changing-table",
+      "name": "IKEA Gulliver Changing Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/gulliver-crib",
+      "name": "IKEA Gulliver Crib",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/gunde-folding-stool",
+      "name": "IKEA Gunde Folding Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hallan-storage-cabinet-single-cube",
+      "name": "IKEA H\u00e4llan Storage Cabinet - Cube",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hallan-storage-cabinet-single-rectangle",
+      "name": "IKEA H\u00e4llan Storage Cabinet - Rectangle",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hallan-storage-combination-3-wide",
+      "name": "IKEA H\u00e4llan Storage Combo - 3-Wide",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hallan-storage-combination-tall-2-wide-4-grid",
+      "name": "IKEA H\u00e4llan Storage Combo - Tall (2-Wide, 4 Grid)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hallan-storage-combination-tall-2-wide-6-grid",
+      "name": "IKEA H\u00e4llan Storage Combo - Tall (2-Wide, 6 Grid)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hallan-storage-combination-tall-2-wide-mix",
+      "name": "IKEA H\u00e4llan Storage Combo - Tall (2-Wide, Mix)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hallan-storage-combination-tall-cube-pair",
+      "name": "IKEA H\u00e4llan Storage Combo - Tall (Cube Pair)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hallan-storage-combination-tall-cube-trio",
+      "name": "IKEA H\u00e4llan Storage Combo - Tall (Cube Trio)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hallan-storage-combination-tall-mixed-pair",
+      "name": "IKEA H\u00e4llan Storage Combo - Tall (Mixed Pair)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hallan-storage-combination-tall-rectangle-pair",
+      "name": "IKEA H\u00e4llan Storage Combo - Tall (Rectangle Pair)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hamo-reclining-chair",
+      "name": "IKEA H\u00e5m\u00f6 Reclining Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hasselvika-nightstand",
+      "name": "IKEA Hasselvika Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hauga-cabinet",
+      "name": "IKEA Hauga Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hauga-cabinet-tall",
+      "name": "IKEA Hauga Cabinet (Tall)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hauga-stool",
+      "name": "IKEA Hauga Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-coffee-table",
+      "name": "IKEA Havsta Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-glass-door-cabinet",
+      "name": "IKEA Havsta Glass Door Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-glass-door-cabinet-wide",
+      "name": "IKEA Havsta Glass Door Cabinet - Wide",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-storage-bookcase",
+      "name": "IKEA Havsta Storage - Bookcase",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-storage-display-case",
+      "name": "IKEA Havsta Storage - Display Case",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-storage-shelving-unit",
+      "name": "IKEA Havsta Storage - Shelving Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-storage-storage-cabinet",
+      "name": "IKEA Havsta Storage - Storage Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-storage-combination-2-wide-glass",
+      "name": "IKEA Havsta Storage Combo - 2 Wide (Glass)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-storage-combination-2-wide-mix",
+      "name": "IKEA Havsta Storage Combo - 2 Wide (Mix)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-storage-combination-tall",
+      "name": "IKEA Havsta Storage Combo - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-storage-combination-tall-2-wide",
+      "name": "IKEA Havsta Storage Combo - Tall (2 Wide)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-storage-combination-tall-3-wide",
+      "name": "IKEA Havsta Storage Combo - Tall (3 Wide)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-tv-storage-bookcases",
+      "name": "IKEA Havsta TV Storage - Bookcases",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-tv-storage-display",
+      "name": "IKEA Havsta TV Storage - Display",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-tv-storage-unit",
+      "name": "IKEA Havsta TV Storage Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/havsta-tv-unit",
+      "name": "IKEA Havsta TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hektar-floor-lamp",
+      "name": "IKEA Hektar Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-2-drawer-chest",
+      "name": "IKEA Hemnes 2-Drawer Chest",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-3-drawer-chest",
+      "name": "IKEA Hemnes 3-Drawer Chest",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-8-drawer-dresser",
+      "name": "IKEA Hemnes 8-Drawer Dresser",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-bed-frame",
+      "name": "IKEA Hemnes Bed Frame",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-bench",
+      "name": "IKEA Hemnes Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-bookcase-thin",
+      "name": "IKEA Hemnes Bookcase - Thin",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-bookcase-wide",
+      "name": "IKEA Hemnes Bookcase - Wide",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-coffee-table-rectangle",
+      "name": "IKEA Hemnes Coffee Table (Rectangle)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-coffee-table-square",
+      "name": "IKEA Hemnes Coffee Table (Square)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-console-table",
+      "name": "IKEA Hemnes Console Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-corner-tv-bench",
+      "name": "IKEA Hemnes Corner TV Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-daybed-2-drawers",
+      "name": "IKEA Hemnes Daybed - 2 Drawers",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-daybed-3-drawers",
+      "name": "IKEA Hemnes Daybed - 3 Drawers",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-desk-2-drawers",
+      "name": "IKEA Hemnes Desk - 2 Drawers",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-dressing-table-oval",
+      "name": "IKEA Hemnes Dressing Table - Oval",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-dressing-table-round-mirror",
+      "name": "IKEA Hemnes Dressing Table - Round Mirror",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-glass-door-cabinet",
+      "name": "IKEA Hemnes Glass Door Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-glass-door-cabinet-drawers",
+      "name": "IKEA Hemnes Glass Door Cabinet - Drawers",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-hat-coat-stand",
+      "name": "IKEA Hemnes Hat & Coat Stand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-nightstand",
+      "name": "IKEA Hemnes Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-shoe-storage-bench",
+      "name": "IKEA Hemnes Shoe Storage Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-side-table",
+      "name": "IKEA Hemnes Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-sideboard",
+      "name": "IKEA Hemnes Sideboard",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-tv-storage-bookcases-thin",
+      "name": "IKEA Hemnes TV Storage - Bookcases (Thin)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-tv-storage-bookcases-wide",
+      "name": "IKEA Hemnes TV Storage - Bookcases (Wide)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-tv-storage-mixed-storage",
+      "name": "IKEA Hemnes TV Storage - Mixed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-tv-unit",
+      "name": "IKEA Hemnes TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-tv-unit-long",
+      "name": "IKEA Hemnes TV Unit - Long",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hemnes-two-sliding-door-wardrobe",
+      "name": "IKEA Hemnes Two Sliding Door Wardrobe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/holmo-floor-lamp",
+      "name": "IKEA Holm\u00f6 Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/holmsjo-stool",
+      "name": "IKEA Holmsj\u00f6 Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/holmsund-sleeper-sofa",
+      "name": "IKEA Holmsund Sleeper Sofa",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hornsund-bench",
+      "name": "IKEA Hornsund Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hornsund-headboard",
+      "name": "IKEA Hornsund Headboard",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hornsund-nightstand",
+      "name": "IKEA Hornsund Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hovet-floor-mirror",
+      "name": "IKEA Hovet Floor MIrror",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/hovnas-floor-lamp",
+      "name": "IKEA Hovn\u00e4s Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ibbarbo-stool",
+      "name": "IKEA Ibbarbo Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/idanas-nightstand",
+      "name": "IKEA Idan\u00e4s Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/idasen-cabinet",
+      "name": "IKEA Id\u00e5sen Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/idasen-cabinet-glass-sliding-doors",
+      "name": "IKEA Id\u00e5sen Cabinet - Glass Sliding Doors",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/idasen-high-cabinet",
+      "name": "IKEA Id\u00e5sen High Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ikornnes-floor-mirror",
+      "name": "IKEA Ikornnes Floor Mirror",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/industriell-bench",
+      "name": "IKEA Industriell Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ingatorp-extendable-table-rectangular",
+      "name": "IKEA Ingatorp Extendable Table - Rectangular",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ingatorp-extendable-table-round",
+      "name": "IKEA Ingatorp Extendable Table - Round",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ingo-table",
+      "name": "IKEA Ingo Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ingolf-barstool",
+      "name": "IKEA Ingolf Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ingolf-chair",
+      "name": "IKEA Ingolf Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ingolf-stool",
+      "name": "IKEA Ingolf Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ivar-chair",
+      "name": "IKEA Ivar Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/jall-drying-rack",
+      "name": "IKEA J\u00e4ll Drying Rack",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/janinge-barstool",
+      "name": "IKEA Janinge Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/jularp-pouffe",
+      "name": "IKEA Jularp Pouffe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-shelf-unit-1x4",
+      "name": "IKEA Kallax Shelf Unit - 1x4",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-shelf-unit-2x2",
+      "name": "IKEA Kallax Shelf Unit - 2x2",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-shelf-unit-2x4",
+      "name": "IKEA Kallax Shelf Unit - 2x4",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-shelf-unit-3x3",
+      "name": "IKEA Kallax Shelf Unit - 3x3",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-shelf-unit-3x4",
+      "name": "IKEA Kallax Shelf Unit - 3x4",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-shelf-unit-4x1",
+      "name": "IKEA Kallax Shelf Unit - 4x1",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-shelf-unit-4x2",
+      "name": "IKEA Kallax Shelf Unit - 4x2",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-shelf-unit-4x3",
+      "name": "IKEA Kallax Shelf Unit - 4x3",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-shelf-unit-4x4",
+      "name": "IKEA Kallax Shelf Unit - 4x4",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-shelf-unit-5x5",
+      "name": "IKEA Kallax Shelf Unit - 5x5",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-shelf-unit-mixed",
+      "name": "IKEA Kallax Shelf Unit - Mixed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-workstation-2x4",
+      "name": "IKEA Kallax Workstation - 2x4",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kallax-workstation-4x4",
+      "name": "IKEA Kallax Workstation - 4x4",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/klabb-floor-lamp",
+      "name": "IKEA Klabb Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/klippan-loveseat",
+      "name": "IKEA Klippan Loveseat",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/knapper-floor-mirror",
+      "name": "IKEA Knapper Floor Mirror",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/knarrevik-nightstand",
+      "name": "IKEA Knarrevik Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/knoxhult-high-cabinet-1-door",
+      "name": "IKEA Knoxhult High Cabinet (1-Door)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/knoxhult-high-cabinet-2-door",
+      "name": "IKEA Knoxhult High Cabinet (2-Door)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kornsjo-storage-bench",
+      "name": "IKEA Kornsj\u00f6 Storage Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/korshamn-headboard",
+      "name": "IKEA Korshamn Headboard",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kragsta-coffee-table",
+      "name": "IKEA Kragsta Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kritter-childrens-chair",
+      "name": "IKEA Kritter Children\u2019s Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kritter-childrens-table",
+      "name": "IKEA Kritter Children\u2019s Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/krokholmen-outdoor-coffee-table",
+      "name": "IKEA Krokholmen Outdoor Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kullaberg-desk",
+      "name": "IKEA Kullaberg Desk",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kullen-2-drawer-chest",
+      "name": "IKEA Kullen 2-Drawer Chest",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kvikne-two-sliding-door-wardrobe",
+      "name": "IKEA Kvikne Two Sliding Door Wardrobe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kvistbro-side-table",
+      "name": "IKEA Kvistbro Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kvistbro-storage-table",
+      "name": "IKEA Kvistbro Storage Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/kyrre-stool",
+      "name": "IKEA Kyrre Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lack-coffee-table",
+      "name": "IKEA Lack Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lack-coffee-table-rectangle-large",
+      "name": "IKEA Lack Coffee Table (Rectangle)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lack-nesting-tables",
+      "name": "IKEA Lack Nesting Tables",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lack-side-table",
+      "name": "IKEA Lack Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lack-tv-unit-low",
+      "name": "IKEA Lack TV Unit - Low",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lack-tv-unit-tall",
+      "name": "IKEA Lack TV Unit - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lacko-outdoor-table",
+      "name": "IKEA L\u00e4ck\u00f6 Outdoor Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lagaskar-outdoor-coffee-table",
+      "name": "IKEA L\u00e5gask\u00e4r Outdoor Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lallerod-coffee-table",
+      "name": "IKEA Laller\u00f6d Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/landskrona-armchair",
+      "name": "IKEA Landskrona Armchair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/laneberg-extendable-table",
+      "name": "IKEA Laneberg Extendable Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lappland-tv-storage-unit",
+      "name": "IKEA Lappland TV Storage Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/latt-childrens-chair",
+      "name": "IKEA L\u00e4tt Children\u2019s Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/latt-childrens-table",
+      "name": "IKEA L\u00e4tt Children\u2019s Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lauters-floor-lamp",
+      "name": "IKEA Lauters Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lerberg-trestle-leg-desks",
+      "name": "IKEA Lerberg Trestle Leg Desks",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lerhamn-table-rectangular",
+      "name": "IKEA Lerhamn Table - Rectangular",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lerhamn-table-square",
+      "name": "IKEA Lerhamn Table - Square",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lersta-floor-lamp",
+      "name": "IKEA Lersta Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/liatorp-coffee-table",
+      "name": "IKEA Liatorp Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/liatorp-side-table",
+      "name": "IKEA Liatorp Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/liatorp-tv-unit",
+      "name": "IKEA Liatorp TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lierskogen-nightstand",
+      "name": "IKEA Lierskogen Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lillasen-desk",
+      "name": "IKEA Lillasen Desk",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lindved-side-table",
+      "name": "IKEA Lindved Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lisabo-coffee-table-rectangular",
+      "name": "IKEA Lisabo Coffee Table - Rectangular",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lisabo-coffee-table-square",
+      "name": "IKEA Lisabo Coffee Table - Square",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lisabo-side-table",
+      "name": "IKEA Lisabo Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lisabo-table",
+      "name": "IKEA Lisabo Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lisabo-tv-unit",
+      "name": "IKEA Lisabo TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/listerby-coffee-table-rectangular",
+      "name": "IKEA Listerby Coffee Table - Rectangular",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/listerby-coffee-table-round",
+      "name": "IKEA Listerby Coffee Table - Round",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/listerby-side-table",
+      "name": "IKEA Listerby Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lovbacken-side-table",
+      "name": "IKEA L\u00f6vbacken Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lubban-serving-cart",
+      "name": "IKEA Lubban Serving Cart",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lunnarp-coffee-table",
+      "name": "IKEA Lunnarp Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lunnarp-side-table",
+      "name": "IKEA Lunnarp Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/lycksele-lovas-sleeper-sofa",
+      "name": "IKEA Lycksele L\u00f6v\u00e5s Sleeper Sofa",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mackapar-coat-rack-shoe-storage-unit",
+      "name": "IKEA Mackap\u00e4r Coat Rack Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mackapar-shoe-rack",
+      "name": "IKEA Mackap\u00e4r Shoe Rack",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/majorna-floor-lamp",
+      "name": "IKEA Majorna Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/malm-2-drawer-chest",
+      "name": "IKEA Malm 2-Drawer Chest",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/malm-4-drawer-chest",
+      "name": "IKEA Malm 4-Drawer Chest",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/malm-6-drawer-dresser",
+      "name": "IKEA Malm 6-Drawer Dresser",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/malm-bed-frame",
+      "name": "IKEA Malm Bed Frame",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/malm-dressing-table",
+      "name": "IKEA Malm Dressing Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/malmsta-coffee-table",
+      "name": "IKEA Malmsta Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/malmsta-side-table",
+      "name": "IKEA Malmsta Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/malsjo-glass-door-cabinet-tall",
+      "name": "IKEA Malsj\u00f6 Glass Door Cabinet - Tall",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/malsjo-glass-door-cabinet-wide",
+      "name": "IKEA Malsj\u00f6 Glass Door Cabinet - Wide",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/malsjo-sideboard",
+      "name": "IKEA Malsj\u00f6 Sideboard",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/malsjo-tv-unit",
+      "name": "IKEA Malsj\u00f6 TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mammut-childrens-chair",
+      "name": "IKEA Mammut Children\u2019s Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mammut-childrens-stool",
+      "name": "IKEA Mammut Children\u2019s Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mammut-childrens-table-rectangle",
+      "name": "IKEA Mammut Children\u2019s Table (Rectangle)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mammut-childrens-table-round",
+      "name": "IKEA Mammut Children\u2019s Table (Round)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/marius-stool",
+      "name": "IKEA Marius Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/markerad-daybed",
+      "name": "IKEA Markerad Daybed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/maryd-tray-table",
+      "name": "IKEA Maryd Tray Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mathopen-bench",
+      "name": "IKEA Mathopen Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mathopen-headboard",
+      "name": "IKEA Mathopen Headboard",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mathopen-nightstand",
+      "name": "IKEA Mathopen Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/melltorp-table-rectangular",
+      "name": "IKEA Melltorp Table - Rectangular",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/melltorp-table-square",
+      "name": "IKEA Melltorp Table - Square",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/micke-drawer-unit",
+      "name": "IKEA Micke Drawer Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mockelby-bench",
+      "name": "IKEA M\u00f6ckelby Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mockelby-table",
+      "name": "IKEA M\u00f6ckelby Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/molger-bench",
+      "name": "IKEA Molger Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/morbylanga-bench",
+      "name": "IKEA M\u00f6rbyl\u00e5nga Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/morbylanga-table-rectangular",
+      "name": "IKEA M\u00f6rbyl\u00e5nga Table - Rectangular",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/morbylanga-table-rectangular-large",
+      "name": "IKEA M\u00f6rbyl\u00e5nga Table - Rectangular - Large",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/morbylanga-table-round",
+      "name": "IKEA M\u00f6rbyl\u00e5nga Table - Round",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/morsning-valet-stand",
+      "name": "IKEA Morsning Valet Stand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mortfors-stool",
+      "name": "IKEA M\u00f6rtfors Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mosjo-tv-unit",
+      "name": "IKEA Mosj\u00f6 TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mostorp-tv-unit",
+      "name": "IKEA Mostorp TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mulig-clothes-rack",
+      "name": "IKEA Mulig Clothes Rack",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/muren-recliner",
+      "name": "IKEA Muren Recliner",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/muskan-storage-stool",
+      "name": "IKEA Muskan Storage Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/mydal-bunk-bed",
+      "name": "IKEA Mydal Bunk Bed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/myllra-changing-table",
+      "name": "IKEA Myllra Changing Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-barstool",
+      "name": "IKEA N\u00e4mmar\u00f6 Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-chaise",
+      "name": "IKEA N\u00e4mmar\u00f6 Chaise",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-armchair",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Armchair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-bar-table-rectangle",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Bar Table (Rectangle)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-bar-table-square",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Bar Table (Square)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-bench",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-bench-backrest",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Bench (Backrest)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-folding-chair",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Folding Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-lounge-chair",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Lounge Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-modular-chair",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Modular Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-modular-chair-corner",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Modular Chair (Corner)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-modular-ottoman",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Modular Ottoman",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-modular-sofa-2-seat-sides",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Modular Sofa (2-Seat, Sides)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-modular-sofa-2-seat",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Modular Sofa (2-Seat)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-modular-sofa-3-seat-sides",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Modular Sofa (3-Seat, Sides)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-modular-sofa-3-seat",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Modular Sofa (3-Seat)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-modular-sofa-4-seat-corner-ottoman",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Modular Sofa (4-Seat, Corner, Ottoman)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-modular-sofa-4-seat-corner",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Modular Sofa (4-Seat, Corner)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-reclining-chair",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Reclining Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-shelving-unit",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Shelving Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-storage-box",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Storage Box",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-table-rectangle-large",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Table (Rectangle, Large)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-table-rectangle-medium",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Table (Rectangle, Medium)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-table-rectangle-small",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Table (Rectangle, Small)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-outdoor-table-round",
+      "name": "IKEA N\u00e4mmar\u00f6 Outdoor Table (Round)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-privacy-screen",
+      "name": "IKEA N\u00e4mmar\u00f6 Privacy Screen",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nammaro-stool",
+      "name": "IKEA N\u00e4mmar\u00f6 Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nikkeby-2-drawer-chest",
+      "name": "IKEA Nikkeby 2-Drawer Chest",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/norddal-bunk-bed",
+      "name": "IKEA Norddal Bunk Bed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/norden-extendable-table",
+      "name": "IKEA Norden Extendable Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/norden-extendable-table-large",
+      "name": "IKEA Norden Extendable Table - Large",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/norden-gateleg-table",
+      "name": "IKEA Norden Gateleg Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nordkisa-bench",
+      "name": "IKEA Nordkisa Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nordkisa-nightstand-medium",
+      "name": "IKEA Nordkisa Nightstand - Medium",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nordkisa-nightstand-small",
+      "name": "IKEA Nordkisa Nightstand - Small",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nordli-bed-frame",
+      "name": "IKEA Nordli Bed Frame",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nordli-headboard",
+      "name": "IKEA Nordli Headboard",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nordli-nightstand",
+      "name": "IKEA Nordli Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nordviken-barstool",
+      "name": "IKEA Nordviken Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/norraker-bench",
+      "name": "IKEA Norr\u00e5ker Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/norraker-table",
+      "name": "IKEA Norr\u00e5ker Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/norraryd-barstool",
+      "name": "IKEA Norraryd Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/norrmanso-outdoor-table",
+      "name": "IKEA Norrmans\u00f6 Outdoor Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/not-floor-lamp",
+      "name": "IKEA Not Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/not-floor-lamp-reading-lamp",
+      "name": "IKEA Not Floor Lamp - Reading",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nyboda-coffee-table-large",
+      "name": "IKEA Nyboda Coffee Table - Large",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nyboda-coffee-table-medium",
+      "name": "IKEA Nyboda Coffee Table - Medium",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nyboda-side-table",
+      "name": "IKEA Nyboda Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/nyhamn-sleeper-sofa",
+      "name": "IKEA Nyhamn Sleeper Sofa",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/olivblad-plant-stand-round",
+      "name": "IKEA Olivblad Plant Stand (Round)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/olivblad-plant-stand-trio",
+      "name": "IKEA Olivblad Plant Stand (Trio)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/olivblad-plant-stand-wide",
+      "name": "IKEA Olivblad Plant Stand (Wide)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/oppaker-bench",
+      "name": "IKEA Oppaker Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/otteron-innerskar-pouffe",
+      "name": "IKEA Otter\u00f6n | Innersk\u00e4r Pouffe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/overallt-rocking-chair",
+      "name": "IKEA \u00d6verallt Rocking Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ovraryd-backaryd-table",
+      "name": "IKEA \u00d6vraryd | Backaryd Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ovraryd-vastana-table",
+      "name": "IKEA \u00d6vraryd | V\u00e4stan\u00e5 Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/perjohan-stool",
+      "name": "IKEA Perjohan Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/pinnig-coat-rack-storage-bench",
+      "name": "IKEA Pinnig Coat Rack Storage Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/pinnig-shoe-storage-bench",
+      "name": "IKEA Pinnig Shoe Storage Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/poang-armchair",
+      "name": "IKEA Po\u00e4ng Armchair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/poang-rocking-chair",
+      "name": "IKEA Po\u00e4ng Rocking Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ps-1995-storage-bench",
+      "name": "IKEA PS 1995 Storage Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ps-2012-drop-leaf-table",
+      "name": "IKEA PS 2012 Drop-leaf Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ps-cabinet",
+      "name": "IKEA PS Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ragrund-chair-towel-rack",
+      "name": "IKEA R\u00e5grund Chair & Towel Rack",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ranarp-floor-lamp",
+      "name": "IKEA Ranarp Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/raskog-utility-cart",
+      "name": "IKEA R\u00e5skog Utility Cart",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/regissor-coffee-table",
+      "name": "IKEA Regiss\u00f6r Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/regissor-glass-door-cabinet",
+      "name": "IKEA Regiss\u00f6r Glass Door Cabinet",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/rimforsa-work-bench",
+      "name": "IKEA Rimforsa Work Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/risatorp-utility-cart",
+      "name": "IKEA Risatorp Utility Cart",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/risor-room-divider",
+      "name": "IKEA Ris\u00f6r Room Divider",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ronninge-barstool",
+      "name": "IKEA R\u00f6nninge Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/rydeback-backaryd-table",
+      "name": "IKEA Rydeb\u00e4ck | Backaryd Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sammanhang-coffee-table",
+      "name": "IKEA Sammanhang Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/segeron-barstool",
+      "name": "IKEA Seger\u00f6n Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/segeron-outdoor-bar-table",
+      "name": "IKEA Seger\u00f6n Outdoor Bar Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/segeron-outdoor-coffee-table",
+      "name": "IKEA Seger\u00f6n Outdoor Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/segeron-outdoor-table-large",
+      "name": "IKEA Seger\u00f6n Outdoor Table (Large)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/segeron-outdoor-table-medium",
+      "name": "IKEA Seger\u00f6n Outdoor Table (Medium)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/segeron-swivel-barstool",
+      "name": "IKEA Seger\u00f6n Swivel Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/seglaro-hanging-umbrella",
+      "name": "IKEA Seglar\u00f6 Hanging Umbrella",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/selje-nightstand",
+      "name": "IKEA Selje Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/seljord-bench",
+      "name": "IKEA Seljord Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/setskog-nightstand",
+      "name": "IKEA Setskog Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/silveran-storage-bench",
+      "name": "IKEA Silver\u00e5n Storage Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sjalland-bench",
+      "name": "IKEA Sj\u00e4lland Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sjalland-reclining-chair",
+      "name": "IKEA Sj\u00e4lland Reclining Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sjopenna-floor-lamp",
+      "name": "IKEA Sj\u00f6penna Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/skogsta-bench-large",
+      "name": "IKEA Skogsta Bench - Large",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/skogsta-bench-small",
+      "name": "IKEA Skogsta Bench - Small",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/skurup-floor-lamp",
+      "name": "IKEA Skurup Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/slahult-dalshult-table",
+      "name": "IKEA Sl\u00e4hult | Dalshult Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sniglar-changing-table",
+      "name": "IKEA Sniglar Changing Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sniglar-crib",
+      "name": "IKEA Sniglar Crib",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/solgul-cradle",
+      "name": "IKEA Solgul Cradle",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/solgul-crib",
+      "name": "IKEA Solgul Crib",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/solleftea-floor-lamp",
+      "name": "IKEA Sollefte\u00e5 Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/songesand-nightstand",
+      "name": "IKEA Songesand Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/songesand-wardrobe",
+      "name": "IKEA Songesand Wardrobe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stackholmen-stool",
+      "name": "IKEA Stackholmen Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stefan-chair",
+      "name": "IKEA Stefan Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stenstorp-kitchen-cart",
+      "name": "IKEA Stenstorp Kitchen Cart",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stig-barstool",
+      "name": "IKEA Stig Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stockholm-2017-floor-lamp",
+      "name": "IKEA Stockholm 2017 Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stockholm-coffee-table",
+      "name": "IKEA Stockholm Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stockholm-nesting-tables",
+      "name": "IKEA Stockholm Nesting Tables",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stockholm-tv-unit",
+      "name": "IKEA Stockholm TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stocksund-bench",
+      "name": "IKEA Stocksund Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stora-loft-bed",
+      "name": "IKEA Stor\u00e5 Loft Bed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/strandon-folding-stool",
+      "name": "IKEA Strand\u00f6n Folding Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stuva-bench",
+      "name": "IKEA Stuva Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stuva-crib",
+      "name": "IKEA Stuva Crib",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/stuva-loft-bed",
+      "name": "IKEA Stuva Loft Bed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sundso-table-round",
+      "name": "IKEA Sunds\u00f6 Table (Round)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sundso-table-square",
+      "name": "IKEA Sunds\u00f6 Table (Square)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sundvik-childrens-chair",
+      "name": "IKEA Sundvik Children\u2019s Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sundvik-childrens-desk",
+      "name": "IKEA Sundvik Children's Desk",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sundvik-childrens-rocking-chair",
+      "name": "IKEA Sundvik Children\u2019s Rocking Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sundvik-childrens-table",
+      "name": "IKEA Sundvik Children's Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sundvik-crib",
+      "name": "IKEA Sundvik Crib",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/sunnersta-utility-cart",
+      "name": "IKEA Sunnersta Utility Cart",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/svarta-bunk-bed",
+      "name": "IKEA Sv\u00e4rta Bunk Bed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/svarta-loft-bed",
+      "name": "IKEA Sv\u00e4rta Loft Bed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tankvard-bench",
+      "name": "IKEA T\u00e4nkv\u00e4rd Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tarendo-table",
+      "name": "IKEA T\u00e4rend\u00f6 Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tarno-outdoor-table-rectangle",
+      "name": "IKEA T\u00e4rn\u00f6 Outdoor Table (Rectangle)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tarno-outdoor-table-square",
+      "name": "IKEA T\u00e4rn\u00f6 Outdoor Table (Square)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tarva-bed-frame",
+      "name": "IKEA Tarva Bed Frame",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tarva-nightstand",
+      "name": "IKEA Tarva Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tegelon-outdoor-table-large",
+      "name": "IKEA Tegel\u00f6n Outdoor Table (Large)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tegelon-outdoor-table-medium",
+      "name": "IKEA Tegel\u00f6n Outdoor Table (Medium)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tingby-side-table",
+      "name": "IKEA Tingby Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tjusig-shoe-rack",
+      "name": "IKEA Tjusig Shoe Rack",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tjusig-shoe-storage-bench",
+      "name": "IKEA Tjusig Shoe Storage Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tobias-chair",
+      "name": "IKEA Tobias Chair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tofteryd-coffee-table",
+      "name": "IKEA Tofteryd Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tornviken-kitchen-island",
+      "name": "IKEA Tornviken Kitchen Island",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tornviken-kitchen-island-wide",
+      "name": "IKEA Tornviken Kitchen Island - Wide",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/torparo-outdoor-folding-table-large",
+      "name": "IKEA Torpar\u00f6 Outdoor Folding Table (Large)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/torparo-outdoor-folding-table-small",
+      "name": "IKEA Torpar\u00f6 Outdoor Folding Table (Small)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tossberg-barstool",
+      "name": "IKEA Tossberg Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tranaro-stool-side-table",
+      "name": "IKEA Tranar\u00f6 Stool & Side Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trofast-storage-combination-low-single",
+      "name": "IKEA Trofast Storage Combination (Low, Single)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trofast-storage-combination-low-wide",
+      "name": "IKEA Trofast Storage Combination (Low, Wide)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trofast-storage-combination-stepped",
+      "name": "IKEA Trofast Storage Combination (Stepped)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trofast-storage-combination-vertical-tall",
+      "name": "IKEA Trofast Storage Combination (Vertical, Tall)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trofast-storage-combination-vertical",
+      "name": "IKEA Trofast Storage Combination (Vertical)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trofast-storage-combination-wall-single",
+      "name": "IKEA Trofast Storage Combination (Wall, Single)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trofast-storage-combination-wall-wide",
+      "name": "IKEA Trofast Storage Combination (Wall, Wide)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trogen-childs-step-stool",
+      "name": "IKEA Trogen Child\u2019s Step Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trulstorp-coffee-table",
+      "name": "IKEA Trulstorp Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trysil-four-drawer-wardrobe",
+      "name": "IKEA Trysil Four Drawer Wardrobe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trysil-nightstand",
+      "name": "IKEA Trysil Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/trysil-wardrobe",
+      "name": "IKEA Trysil Wardrobe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tuffing-bunk-bed",
+      "name": "IKEA Tuffing Bunk Bed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tuffing-loft-bed",
+      "name": "IKEA Tuffing Loft Bed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/turbo-clothes-rack",
+      "name": "IKEA Turbo Clothes Rack",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tyssedal-dressing-table",
+      "name": "IKEA Tyssedal Dressing Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tyssedal-dressing-table-mirror",
+      "name": "IKEA Tyssedal Dressing Table - Mirror",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tyssedal-nightstand",
+      "name": "IKEA Tyssedal Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/tyssedal-wardrobe",
+      "name": "IKEA Tyssedal Wardrobe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/utaker-daybed",
+      "name": "IKEA Ut\u00e5ker Daybed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/utter-childrens-table",
+      "name": "IKEA Utter Children's Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/utter-stool",
+      "name": "IKEA Utter Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/uttran-reclining-armchair",
+      "name": "IKEA Uttran Reclining Armchair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vadholma-kitchen-island",
+      "name": "IKEA Vadholma Kitchen Island",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vadholma-kitchen-island-rack",
+      "name": "IKEA Vadholma Kitchen Island - Rack",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vadholma-kitchen-island-wide",
+      "name": "IKEA Vadholma Kitchen Island - Wide",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vannas-reclining-armchair",
+      "name": "IKEA V\u00e4nn\u00e4s Reclining Armchair",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/varmanso-outdoor-table-large",
+      "name": "IKEA V\u00e4rmans\u00f6 Outdoor Table (Large)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/varmanso-outdoor-table-medium",
+      "name": "IKEA V\u00e4rmans\u00f6 Outdoor Table (Medium)",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vasman-outdoor-table",
+      "name": "IKEA V\u00e4sman Outdoor Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/veberod-bench",
+      "name": "IKEA Veber\u00f6d Bench",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/veberod-room-divider",
+      "name": "IKEA Veber\u00f6d Room Divider",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vejmon-coffee-table",
+      "name": "IKEA Vejmon Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/viggja-tray-stand",
+      "name": "IKEA Viggja Tray Stand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vikhammer-nightstand",
+      "name": "IKEA Vikhammer Nightstand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vilto-storage-stool",
+      "name": "IKEA Vilto Storage Stool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vilto-towel-stand",
+      "name": "IKEA Vilto Towel Stand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vimle-sleeper-sofa-2-seater",
+      "name": "IKEA Vimle Sleeper Sofa - 2 Seater",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vimle-sleeper-sofa-3-seater",
+      "name": "IKEA Vimle Sleeper Sofa - 3 Seater",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vittsjo-coffee-table",
+      "name": "IKEA Vittsj\u00f6 Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vittsjo-laptop-stand",
+      "name": "IKEA Vittsj\u00f6 Laptop Stand",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vittsjo-tv-unit",
+      "name": "IKEA Vittsj\u00f6 TV Unit",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vitval-bunk-bed",
+      "name": "IKEA Vitval Bunk Bed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vitval-loft-bed",
+      "name": "IKEA Vitval Loft Bed",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/vuku-wardrobe",
+      "name": "IKEA Vuku Wardrobe",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/yngvar-barstool",
+      "name": "IKEA Yngvar Barstool",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ypperlig-coffee-table",
+      "name": "IKEA Ypperlig Coffee Table",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ypperlig-floor-lamp",
+      "name": "IKEA Ypperlig Floor Lamp",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    },
+    {
+      "id": "ikea/ypperlig-sleeper-sofa",
+      "name": "IKEA Ypperlig Sleeper Sofa",
+      "tags": [
+        "furniture",
+        "ikea"
+      ]
+    }
+  ]
+}

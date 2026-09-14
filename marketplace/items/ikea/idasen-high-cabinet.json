@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/idasen-high-cabinet",
+  "name": "IKEA Id\u00e5sen High Cabinet",
+  "shape": {
+    "type": "rect",
+    "w": 450,
+    "d": 470
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

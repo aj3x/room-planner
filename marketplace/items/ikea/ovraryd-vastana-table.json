@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/ovraryd-vastana-table",
+  "name": "IKEA \u00d6vraryd | V\u00e4stan\u00e5 Table",
+  "shape": {
+    "type": "rect",
+    "w": 1500,
+    "d": 780
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

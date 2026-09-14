@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/tavolo-xz3-table",
+  "name": "Tavolo XZ3 Table",
+  "shape": {
+    "type": "rect",
+    "w": 1200,
+    "d": 1200
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/brimnes-tv-storage-3-bay-l-shape",
+  "name": "IKEA Brimnes TV Storage - 3 Bay - L Shape",
+  "shape": {
+    "type": "rect",
+    "w": 2580,
+    "d": 410
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

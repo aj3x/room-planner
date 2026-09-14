@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/ekrar-hat-coat-stand",
+  "name": "IKEA Ekrar Hat & Coat Stand",
+  "shape": {
+    "type": "rect",
+    "w": 630,
+    "d": 630
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

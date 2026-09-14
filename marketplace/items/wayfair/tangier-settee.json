@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/tangier-settee",
+  "name": "Tangier Settee",
+  "shape": {
+    "type": "rect",
+    "w": 1650,
+    "d": 860
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

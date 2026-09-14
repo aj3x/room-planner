@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/applaro-bench",
+  "name": "IKEA \u00c4pplar\u00f6 Bench",
+  "shape": {
+    "type": "rect",
+    "w": 410,
+    "d": 410
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

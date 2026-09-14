@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/sundvik-childrens-table",
+  "name": "IKEA Sundvik Children's Table",
+  "shape": {
+    "type": "rect",
+    "w": 760,
+    "d": 500
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

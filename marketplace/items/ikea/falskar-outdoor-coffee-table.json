@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/falskar-outdoor-coffee-table",
+  "name": "IKEA F\u00e5lsk\u00e4r Outdoor Coffee Table",
+  "shape": {
+    "type": "rect",
+    "w": 520,
+    "d": 440
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

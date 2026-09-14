@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/baguette-table-large",
+  "name": "Baguette Table - Large",
+  "shape": {
+    "type": "rect",
+    "w": 2032,
+    "d": 838
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

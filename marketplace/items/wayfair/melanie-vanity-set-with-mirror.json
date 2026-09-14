@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/melanie-vanity-set-with-mirror",
+  "name": "Melanie Vanity Set",
+  "shape": {
+    "type": "rect",
+    "w": 910,
+    "d": 480
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

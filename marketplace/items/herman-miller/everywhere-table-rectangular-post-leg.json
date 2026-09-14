@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/everywhere-table-rectangular-post-leg",
+  "name": "Everywhere Table - Rectangular - Post Leg",
+  "shape": {
+    "type": "ellipse",
+    "w": 914,
+    "d": 914
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

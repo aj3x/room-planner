@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/forhoja-kitchen-cart",
+  "name": "IKEA F\u00f6rh\u00f6ja Kitchen Cart",
+  "shape": {
+    "type": "rect",
+    "w": 430,
+    "d": 1000
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/casa-umbrella-stand",
+  "name": "Casa Umbrella Stand",
+  "shape": {
+    "type": "rect",
+    "w": 210,
+    "d": 210
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

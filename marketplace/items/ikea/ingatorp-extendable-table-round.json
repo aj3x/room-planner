@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/ingatorp-extendable-table-round",
+  "name": "IKEA Ingatorp Extendable Table - Round",
+  "shape": {
+    "type": "rect",
+    "w": 1100,
+    "d": 1100
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

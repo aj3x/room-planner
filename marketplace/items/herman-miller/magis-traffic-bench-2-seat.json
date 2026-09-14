@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/magis-traffic-bench-2-seat",
+  "name": "Magis Traffic Bench - 2-Seat",
+  "shape": {
+    "type": "rect",
+    "w": 521,
+    "d": 521
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

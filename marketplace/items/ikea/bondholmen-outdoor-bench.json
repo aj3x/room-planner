@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/bondholmen-outdoor-bench",
+  "name": "IKEA Bondholmen Outdoor Bench",
+  "shape": {
+    "type": "rect",
+    "w": 1625,
+    "d": 620
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

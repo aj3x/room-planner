@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/lisabo-side-table",
+  "name": "IKEA Lisabo Side Table",
+  "shape": {
+    "type": "rect",
+    "w": 450,
+    "d": 450
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

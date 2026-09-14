@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/malm-4-drawer-chest",
+  "name": "IKEA Malm 4-Drawer Chest",
+  "shape": {
+    "type": "rect",
+    "w": 800,
+    "d": 480
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

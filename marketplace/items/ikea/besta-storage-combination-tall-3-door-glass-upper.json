@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/besta-storage-combination-tall-3-door-glass-upper",
+  "name": "IKEA Best\u00e5 Storage Combo - Tall (3 Door, Glass Upper)",
+  "shape": {
+    "type": "rect",
+    "w": 600,
+    "d": 420
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/slit-table-oblong",
+  "name": "Slit Table - Oblong",
+  "shape": {
+    "type": "rect",
+    "w": 495,
+    "d": 273
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

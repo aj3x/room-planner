@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/bondholmen-outdoor-dining-set-rectangle-mix",
+  "name": "IKEA Bondholmen Outdoor Dining Set (Rectangle, Mix)",
+  "shape": {
+    "type": "rect",
+    "w": 2350,
+    "d": 1990
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "ikea",
+    "layouts"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

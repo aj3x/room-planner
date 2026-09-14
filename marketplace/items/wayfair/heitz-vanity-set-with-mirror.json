@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/heitz-vanity-set-with-mirror",
+  "name": "Heitz Vanity Set",
+  "shape": {
+    "type": "rect",
+    "w": 800,
+    "d": 400
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

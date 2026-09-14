@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/eames-molded-plywood-dining-chair",
+  "name": "Eames Molded Plywood Dining Chair",
+  "shape": {
+    "type": "rect",
+    "w": 521,
+    "d": 533
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

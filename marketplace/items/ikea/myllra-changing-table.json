@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/myllra-changing-table",
+  "name": "IKEA Myllra Changing Table",
+  "shape": {
+    "type": "rect",
+    "w": 850,
+    "d": 790
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

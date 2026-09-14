@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/idanas-nightstand",
+  "name": "IKEA Idan\u00e4s Nightstand",
+  "shape": {
+    "type": "rect",
+    "w": 470,
+    "d": 400
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

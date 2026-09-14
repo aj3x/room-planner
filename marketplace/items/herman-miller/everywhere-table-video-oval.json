@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/everywhere-table-video-oval",
+  "name": "Everywhere Table - Video Oval",
+  "shape": {
+    "type": "rect",
+    "w": 1067,
+    "d": 1067
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

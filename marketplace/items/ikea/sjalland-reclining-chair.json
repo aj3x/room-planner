@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/sjalland-reclining-chair",
+  "name": "IKEA Sj\u00e4lland Reclining Chair",
+  "shape": {
+    "type": "rect",
+    "w": 580,
+    "d": 750
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

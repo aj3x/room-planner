@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/svarta-loft-bed",
+  "name": "IKEA Sv\u00e4rta Loft Bed",
+  "shape": {
+    "type": "rect",
+    "w": 1030,
+    "d": 1980
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

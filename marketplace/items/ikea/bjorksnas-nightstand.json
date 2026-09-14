@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/bjorksnas-nightstand",
+  "name": "IKEA Bj\u00f6rksn\u00e4s Nightstand",
+  "shape": {
+    "type": "rect",
+    "w": 480,
+    "d": 380
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

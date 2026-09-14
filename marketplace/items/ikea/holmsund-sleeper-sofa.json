@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/holmsund-sleeper-sofa",
+  "name": "IKEA Holmsund Sleeper Sofa",
+  "shape": {
+    "type": "rect",
+    "w": 2300,
+    "d": 990
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/lisabo-coffee-table-rectangular",
+  "name": "IKEA Lisabo Coffee Table - Rectangular",
+  "shape": {
+    "type": "rect",
+    "w": 1180,
+    "d": 500
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

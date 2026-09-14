@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/tarno-outdoor-table-square",
+  "name": "IKEA T\u00e4rn\u00f6 Outdoor Table (Square)",
+  "shape": {
+    "type": "rect",
+    "w": 550,
+    "d": 540
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

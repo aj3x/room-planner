@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/perch-bunk-bed",
+  "name": "Perch Bunk Bed",
+  "shape": {
+    "type": "rect",
+    "w": 1070,
+    "d": 1980
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/hovnas-floor-lamp",
+  "name": "IKEA Hovn\u00e4s Floor Lamp",
+  "shape": {
+    "type": "rect",
+    "w": 500,
+    "d": 500
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

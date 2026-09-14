@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/tarva-bed-frame",
+  "name": "IKEA Tarva Bed Frame",
+  "shape": {
+    "type": "rect",
+    "w": 1600,
+    "d": 2090
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

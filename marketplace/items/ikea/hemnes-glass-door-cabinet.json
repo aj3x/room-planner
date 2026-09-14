@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/hemnes-glass-door-cabinet",
+  "name": "IKEA Hemnes Glass Door Cabinet",
+  "shape": {
+    "type": "rect",
+    "w": 900,
+    "d": 370
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

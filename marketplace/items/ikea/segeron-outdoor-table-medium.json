@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/segeron-outdoor-table-medium",
+  "name": "IKEA Seger\u00f6n Outdoor Table (Medium)",
+  "shape": {
+    "type": "rect",
+    "w": 1460,
+    "d": 900
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

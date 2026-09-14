@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/bekant-conference-table-3-piece",
+  "name": "IKEA Bekant Conference Table - 3-Piece",
+  "shape": {
+    "type": "rect",
+    "w": 2800,
+    "d": 1400
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

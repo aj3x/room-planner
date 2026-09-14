@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/bekant-conference-table-round-2-piece",
+  "name": "IKEA Bekant Conference Table - Round 2-Piece",
+  "shape": {
+    "type": "rect",
+    "w": 1400,
+    "d": 1400
+  },
+  "color": "#6e8b7a",
+  "tags": [
+    "furniture",
+    "ikea"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

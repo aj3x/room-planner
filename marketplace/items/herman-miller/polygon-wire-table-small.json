@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/polygon-wire-table-small",
+  "name": "Polygon Wire Table - Small",
+  "shape": {
+    "type": "rect",
+    "w": 457,
+    "d": 457
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

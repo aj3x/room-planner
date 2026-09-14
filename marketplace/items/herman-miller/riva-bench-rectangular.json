@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "herman-miller/riva-bench-rectangular",
+  "name": "Riva Bench - Rectangular",
+  "shape": {
+    "type": "rect",
+    "w": 406,
+    "d": 406
+  },
+  "color": "#5a6b8c",
+  "tags": [
+    "furniture",
+    "herman-miller"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}

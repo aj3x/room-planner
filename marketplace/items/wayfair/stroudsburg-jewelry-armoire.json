@@ -1,0 +1,19 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "wayfair/stroudsburg-jewelry-armoire",
+  "name": "Stroudsburg Jewelry Armoire",
+  "shape": {
+    "type": "rect",
+    "w": 340,
+    "d": 250
+  },
+  "color": "#a67c52",
+  "tags": [
+    "furniture",
+    "wayfair"
+  ],
+  "count": 1,
+  "passThrough": false,
+  "open": null
+}
