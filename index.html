@@ -1390,6 +1390,9 @@ const WALK={comfortable:900, tight:550, narrow:350};
    swung door leaf when a straightened line passes it — a hair short of half
    the narrowest passable gap, so it never rules out a legitimate squeeze */
 const WALK_OBJ_BUFFER=100;
+/* spacing of clearance samples along a route — fine enough that the pinch
+   between two corners can't slip between samples */
+const WALK_SAMPLE=50;
 /* the leaf of a hinged door swept fully open — a physical barrier that eats
    into the room's floor next to the doorway, the same as a pillar would */
 function doorLeafPoly(o){
@@ -1644,7 +1647,19 @@ function walkPaths(){
   const edges=[]; for(let i=0;i<R.length;i++) edges.push([R[i],R[(i+1)%R.length]]);
   for(const op of obstacles) for(let i=0;i<op.length;i++) edges.push([op[i],op[(i+1)%op.length]]);
   const far=Math.max(b.w,b.h)*2+1000;
-  const annotate=pts=>pts.map(pt=>({pt,clear:clearAtPoint(pt,edges,far)}));
+  // sample clearance along every leg, not just at the bends — a straight run
+  // between two doors has no vertices in the gap it squeezes through
+  const annotate=pts=>{
+    const out=[{pt:pts[0], clear:clearAtPoint(pts[0],edges,far)}];
+    for(let i=1;i<pts.length;i++){
+      const a=pts[i-1], c=pts[i], n=Math.max(1,Math.ceil(Math.hypot(c[0]-a[0],c[1]-a[1])/WALK_SAMPLE));
+      for(let k=1;k<=n;k++){
+        const pt = k===n ? c : [a[0]+(c[0]-a[0])*k/n, a[1]+(c[1]-a[1])*k/n];
+        out.push({pt, clear:clearAtPoint(pt,edges,far)});
+      }
+    }
+    return out;
+  };
   const out=[];
   const route=(from,to)=>{ const pts=walkRoute(from,to,R,obstacles,WALK_OBJ_BUFFER); return pts&&pts.length>1 ? annotate(pts) : null; };
   if(doors.length>=2){
@@ -1718,9 +1733,15 @@ function walkPinchLabel(path,C){
 function drawWalkPath(path,C){
   if(path.length<2) return;
   ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=.85;
-  for(let i=1;i<path.length;i++){
-    const a=path[i-1], b=path[i], band=walkBand(Math.min(a.clear,b.clear));
-    ctx.beginPath(); ctx.moveTo(sx(a.pt[0]),sy(a.pt[1])); ctx.lineTo(sx(b.pt[0]),sy(b.pt[1]));
+  // samples are dense, so stroke each run of same-band steps as one polyline —
+  // stroking every 50mm step on its own would restart the dash pattern each time
+  let i=1;
+  while(i<path.length){
+    const band=walkBand(Math.min(path[i-1].clear,path[i].clear));
+    ctx.beginPath(); ctx.moveTo(sx(path[i-1].pt[0]),sy(path[i-1].pt[1]));
+    while(i<path.length && walkBand(Math.min(path[i-1].clear,path[i].clear))===band){
+      ctx.lineTo(sx(path[i].pt[0]),sy(path[i].pt[1])); i++;
+    }
     if(band==='comfortable'){ ctx.setLineDash([]); ctx.lineWidth=4; ctx.strokeStyle=C.ink2; ctx.globalAlpha=.4; }
     else if(band==='tight'){ ctx.setLineDash([]); ctx.lineWidth=2.5; ctx.strokeStyle=C.ink2; ctx.globalAlpha=.75; }
     else if(band==='narrow'){ ctx.setLineDash([2,3]); ctx.lineWidth=1.75; ctx.strokeStyle=C.danger; ctx.globalAlpha=.9; }
