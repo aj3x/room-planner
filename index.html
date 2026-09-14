@@ -3341,6 +3341,9 @@ function itemDialog(id){
   const type0 = it?it.shape.type:'rect';
   openModal(it?'Edit '+it.name:'Add a thing', `
     <div class="field"><label for="iName">Name</label><input type="text" id="iName" value="${esc(it?it.name:'')}" placeholder="Sofa"></div>
+    <div class="field"><label for="iId">Id</label><input type="text" class="id" id="iId" spellcheck="false" autocapitalize="off" autocorrect="off" value="${esc(dlgId)}"></div>
+    <p class="hint" id="iIdNote"></p>
+    <p class="hint">Letters, digits and ! - _ . * ' ( ) . Use / to file it away like a folder — <code>ikea/kallax/4x2</code> and <code>ikea/kallax/2x4</code> then sit together. Rooms that already use this thing follow the rename.</p>
     <div class="field"><label for="iShape">Shape</label><select id="iShape">
       <option value="rect">Rectangle</option><option value="ellipse">Circle / oval</option>
       <option value="lshape">L-shape</option><option value="poly">Custom outline</option></select></div>
@@ -3363,14 +3366,7 @@ function itemDialog(id){
     ${tagFieldHTML('iTags','living room, seating, IKEA')}
     <p class="hint">Type to pick from tags you already use. Tab or comma adds one, backspace removes the last. Used to filter your inventory and to set a folder's default filter.</p>
     <p class="hint">Plain numbers are read as ${unitWord()}. You can also type 6'2", 30in, 75cm, 1.2m.</p>
-    <details class="adv" id="iAdv">
-      <summary>Advanced</summary>
-      <div class="advbody">
-        <div class="field"><label for="iId">Id</label><input type="text" class="id" id="iId" spellcheck="false" autocapitalize="off" autocorrect="off" value="${esc(dlgId)}"></div>
-        <p class="hint" id="iIdNote"></p>
-        <p class="hint">Letters, digits and ! - _ . * ' ( ) . Use / to file it away like a folder — <code>ikea/kallax/4x2</code> and <code>ikea/kallax/2x4</code> then sit together. Rooms that already use this thing follow the rename.</p>
-      </div>
-    </details>`,
+`,
     'Save',
     ()=>{
       const type=$('iShape').value;
@@ -3401,8 +3397,8 @@ function itemDialog(id){
       }) : null;
       const newId=($('iId').value||'').trim();
       const bad=idProblem(newId);
-      if(bad){ $('iAdv').open=true; moError(bad); return false; }
-      if(S.inventory.some(x=>x.id===newId && x.id!==id)){ $('iAdv').open=true; moError('Another thing already uses that id'); return false; }
+      if(bad){ moError(bad); return false; }
+      if(S.inventory.some(x=>x.id===newId && x.id!==id)){ moError('Another thing already uses that id'); return false; }
       if(id){
         const cur=itemOf(id);
         Object.assign(cur,{name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,open});
@@ -3452,11 +3448,6 @@ function itemDialog(id){
       };
       idIn.addEventListener('input',sayId);
       sayId();
-      // the block sits at the bottom of a tall dialog — bring it into view when it opens
-      $('iAdv').addEventListener('toggle', ()=>{
-        const a=$('iAdv');
-        if(a.open && a.scrollIntoView) a.scrollIntoView({block:'nearest'});
-      });
     });
 }
 $('btnAddItem').addEventListener('click',()=>itemDialog(null));
@@ -3838,6 +3829,11 @@ function itemFolderSubtreeIds(id){
   (function walk(pid){ for(const f of childItemFolders(pid)){ out.add(f.id); walk(f.id); } })(id);
   return out;
 }
+function itemCountInSubtree(fid){
+  let n=itemsInFolder(fid).length;
+  for(const f of childItemFolders(fid)) n+=itemCountInSubtree(f.id);
+  return n;
+}
 function ancestorTags(folderId){
   const s=new Set();
   for(const f of itemFolderPath(folderId)) for(const t of (f.tags||[])) s.add(t);
@@ -4124,9 +4120,11 @@ function renderLibTreeLevel(parentId,depth){
   let html='';
   for(const f of childItemFolders(parentId)){
     const open=libTreeOpen.has(f.id);
+    const n=itemCountInSubtree(f.id);
     html+=`<div class="tree-row" draggable="true" data-folder="${f.id}">
       <span class="caret-zone" data-act="toggle" style="width:${depth*14+16}px">${open?'▾':'▸'}</span>
       <span class="ico">\u{1F4C1}</span><span class="nm">${esc(f.name)}</span>${folderTagsInline(f)}
+      ${n?`<span class="count" title="${n} thing${n>1?'s':''} in this folder">${n}</span>`:''}
       <button type="button" class="tree-more" data-act="more" title="More…" aria-label="More…">⋯</button>
     </div>`;
     if(open) html+=renderLibTreeLevel(f.id,depth+1);
@@ -4157,8 +4155,9 @@ function renderMarketTreeLevel(parentId,depth){
 function renderLibTree(){
   const box=$('tree');
   if(nav.tab==='library'){
+    const n0=S.inventory.length;
     box.innerHTML=`<div class="tree-row root-row ${nav.libFolderId===null&&!nav.searching?'active':''}" data-root="1">
-        <span class="ico">\u{1F4DA}</span><span class="nm">Library</span></div>`
+        <span class="ico">\u{1F4DA}</span><span class="nm">Library</span>${n0?`<span class="count" title="${n0} thing${n0>1?'s':''}">${n0}</span>`:''}</div>`
       + renderLibTreeLevel(null,1);
   } else {
     box.innerHTML=`<div class="tree-row root-row ${nav.marketFolderId===null&&!nav.searching?'active':''}" data-root="1">
