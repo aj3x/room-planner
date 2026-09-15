@@ -4812,8 +4812,9 @@ function importDialog(inc){
     ${inc.prefs?`<label class="check"><input type="checkbox" id="imPrefs">Settings — units, snap, stock, and what the plan shows</label>`:''}
     <div class="field" id="imDupeRow"><label for="imDupe">Same id</label><select id="imDupe">
       <option value="mine">Keep mine</option>
+      <option value="theirs">Overwrite mine</option>
       <option value="copy">Add theirs as a copy</option></select></div>
-    <p class="hint" id="imDupeNote">An id already in your library, like <code>ikea/kallax/4x2</code>, means the same product — by default yours is kept and incoming rooms use it.</p>`,
+    <p class="hint" id="imDupeNote">An id already in your library, like <code>ikea/kallax/4x2</code>, means the same product — by default yours is kept and incoming rooms use it. "Overwrite mine" replaces your item's data with the incoming one, in place.</p>`,
     'Import',
     ()=>{
       const roomIds=pickValues('imRooms'), itemIds=pickValues('imThings');
@@ -4879,6 +4880,13 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
   let addedItems=0;
   for(const it of items){
     if(takenItems.has(it.id) && dupe==='mine'){ itemMap[it.id]=it.id; continue; }
+    if(takenItems.has(it.id) && dupe==='theirs'){
+      const idx=S.inventory.findIndex(x=>x.id===it.id);
+      if(idx>=0) S.inventory[idx]=it;
+      itemMap[it.id]=it.id;
+      addedItems++;
+      continue;
+    }
     const nid=uniqueId(it.id, takenItems);
     itemMap[it.id]=nid; it.id=nid;
     takenItems.add(nid);
