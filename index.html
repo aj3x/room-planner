@@ -177,7 +177,11 @@ main.lc{--lw:36px} main.rc{--rw:36px}
 section.collapsed .sec-head{margin-bottom:0}
 section.collapsed .sec-head h2::before{transform:translateX(-1px) rotate(-45deg)}
 section.collapsed > :not(.sec-head){display:none!important}
-body[data-mode=room] .for-furn,body[data-mode=furniture] .for-room{display:none!important}
+body[data-mode=room] .for-furn,body[data-mode=room] .for-floor,
+body[data-mode=furniture] .for-room,body[data-mode=furniture] .for-floor,
+body[data-mode=floor] .for-room,body[data-mode=floor] .for-furn{display:none!important}
+/* measuring and undo are per-room tools; a floor only frames the arrangement */
+body[data-mode=floor] #ctlMode .sep,body[data-mode=floor] #btnMeasure,body[data-mode=floor] #measureBar{display:none!important}
 
 /* lists: one line per row, quiet until you point at it */
 ul.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
@@ -442,10 +446,10 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
   .pane-head{display:none}
   .pane-body section{background:var(--surface)}
   .pane-body section:first-child{border-top:1px solid var(--line);padding-top:12px}
-  section[data-sec=sel],section[data-sec=roomsel]{order:1}
+  section[data-sec=sel],section[data-sec=roomsel],section[data-sec=floorsel]{order:1}
   section[data-sec=layout]{order:2}
   section[data-sec=walls],section[data-sec=openings],section[data-sec=structure],section[data-sec=things]{order:3}
-  section[data-sec=shape],section[data-sec=stock]{order:4}
+  section[data-sec=shape],section[data-sec=stock],section[data-sec=floorprops]{order:4}
   section[data-sec=drawing]{order:5;padding-bottom:40px}
   #readout{display:none}
   #paneLibrary.on{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
@@ -471,6 +475,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
     <symbol id="i-folder" viewBox="0 0 16 16"><path d="M1.75 4.25a1 1 0 0 1 1-1h3.1l1.5 1.5h5.9a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H2.75a1 1 0 0 1-1-1z"/></symbol>
     <symbol id="i-folder-plus" viewBox="0 0 16 16"><path d="M7.25 12.75h-4.5a1 1 0 0 1-1-1v-7.5a1 1 0 0 1 1-1h3.1l1.5 1.5h5.9a1 1 0 0 1 1 1v2.5"/><path d="M12 9.5v5M9.5 12h5"/></symbol>
     <symbol id="i-room" viewBox="0 0 16 16"><path d="M2.5 2.5h11v11h-11z"/><path d="M2.5 9h4M9.5 2.5v4"/></symbol>
+    <symbol id="i-floor" viewBox="0 0 16 16"><path d="M2 3.25h12v9.5H2z"/><path d="M7.5 3.25v9.5M7.5 8h6.5"/></symbol>
     <symbol id="i-library" viewBox="0 0 16 16"><path d="M2.5 2.5h3v11h-3zM6.5 2.5h3v11h-3z"/><path d="m10.4 3.2 2.9-.8 2.2 10.6-2.9.7z"/></symbol>
     <symbol id="i-store" viewBox="0 0 16 16"><path d="M2 6.5 3 2.5h10l1 4"/><path d="M2 6.5a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0"/><path d="M3 8.5v5h10v-5M6.5 13.5v-3h3v3"/></symbol>
     <symbol id="i-box" viewBox="0 0 16 16"><path d="M8 1.75 14 5v6L8 14.25 2 11V5z"/><path d="M2 5l6 3.25L14 5M8 8.25v6"/></symbol>
@@ -517,6 +522,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
         <section data-sec="layout">
           <div class="sec-head"><h2>Rooms</h2>
             <div class="sec-act">
+              <button class="btn quiet sm icon" id="btnNewFloor" title="New floor" aria-label="New floor"><svg class="i"><use href="#i-floor"/></svg></button>
               <button class="btn quiet sm icon" id="btnNewFolder" title="New folder" aria-label="New folder"><svg class="i"><use href="#i-folder-plus"/></svg></button>
               <button class="btn quiet sm icon" id="btnNewLayout" title="New room" aria-label="New room"><svg class="i"><use href="#i-plus"/></svg></button>
             </div>
@@ -568,6 +574,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
       <canvas id="cv" aria-label="Floor plan"></canvas>
       <div class="island" id="ctlMode">
         <div class="seg" id="modeSeg" role="group" aria-label="Editing mode">
+          <button type="button" data-mode="floor" aria-pressed="false" title="See this room beside the others on its floor">Floor</button>
           <button type="button" data-mode="room" aria-pressed="false" title="Edit walls, doors and windows">Room</button>
           <button type="button" data-mode="furniture" aria-pressed="true" title="Place and move items">Furniture</button>
         </div>
@@ -602,6 +609,14 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
         <section data-sec="roomsel" class="for-room">
           <div class="sec-head"><h2 id="roomSelTitle">Selection</h2></div>
           <div id="roomSelBox"></div>
+        </section>
+        <section data-sec="floorsel" class="for-floor">
+          <div class="sec-head"><h2 id="floorSelTitle">Selection</h2></div>
+          <div id="floorSelBox"></div>
+        </section>
+        <section data-sec="floorprops" class="for-floor">
+          <div class="sec-head"><h2>Floor</h2></div>
+          <div id="floorPropsBox"></div>
         </section>
 
         <section data-sec="shape" class="for-room">
@@ -920,8 +935,10 @@ function uniqueId(base, taken){
 const clone = v => JSON.parse(JSON.stringify(v));
 const rectPts = (w,d) => [[0,0],[w,0],[w,d],[0,d]];
 
+function blankFloorPlace(){ return {x:0, y:0, rot:0}; }
 function blankLayout(name,folderId){
   return {id:uid(), name:name||'My room', folderId:folderId||null,
+    floorId:null, floorPlace:blankFloorPlace(),
     room:{points:rectPts(4270,3660), wall:114, floor:'#f5f3ee', trimOn:false, trim:19, pillars:[], iwalls:[]},
     openings:[], placed:[], measures:[]};
 }
@@ -929,6 +946,7 @@ let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true,
          planMode:'furniture', // the Room/Furniture mode to go back to when returning to the Plan screen
          inventory:[], layouts:[blankLayout()], active:null,
          folders:[],          // {id, name, parentId(null=root), tags:[...]}
+         floors:[],           // {id, name, parentId(null=root)} — an arrangement of rooms; see l.floorId / l.floorPlace
          tagFilter:[],        // active tag chips in the Things pane
          untaggedOnly:false,  // the "Untagged" chip in the Things pane
          invSearch:'',        // search text in the Things pane
@@ -947,6 +965,9 @@ S.active = S.layouts[0].id;
 
 let sel = null;        // placed furniture id
 let roomSel = null;    // {kind:'wall'|'corner'|'opening', i} / {kind:'opening', id}
+let floorSel = null;   // id of the room picked up in Floor mode
+let floorGuides = [];  // edges a dragged room is currently lining up with
+let floorSnapNote = ''; // what that alignment is, shown while dragging
 let treeOpen = new Set();  // expanded folder ids in the layout tree
 
 const L = () => S.layouts.find(l=>l.id===S.active) || S.layouts[0];
@@ -955,9 +976,48 @@ const itemOf = id => S.inventory.find(i=>i.id===id);
 const instOf = id => L().placed.find(p=>p.id===id);
 const openOf = id => L().openings.find(o=>o.id===id);
 const roomMode = () => S.mode==='room';
+const furnMode = () => S.mode==='furniture';
+const floorMode = () => S.mode==='floor';
 const folderOf = id => id ? S.folders.find(f=>f.id===id) : null;
 const childFolders = pid => S.folders.filter(f=>(f.parentId||null)===(pid||null));
 const childLayouts = pid => S.layouts.filter(l=>(l.folderId||null)===(pid||null));
+const floorOf = id => id ? S.floors.find(f=>f.id===id) : null;
+const childFloors = pid => S.floors.filter(f=>(f.parentId||null)===(pid||null));
+/* rooms standing on a floor, in S.layouts order — that order is also their z-order */
+const floorLayouts = fid => fid ? S.layouts.filter(l=>l.floorId===fid) : [];
+/* ---- floor space ----
+   A room keeps drawing itself in its own mm space. Standing it on a floor is one
+   rigid move: spin about its own bbox centre, then shift. The matrix is worldPoly's,
+   so turning a room reads exactly like turning an item, and because the points come
+   out already in floor space every sx()/sy() call downstream works untouched. */
+function floorXf(l, place){
+  const b=bbox(l.room.points), pl=place||l.floorPlace||blankFloorPlace(), r=(pl.rot||0)*Math.PI/180;
+  return {cx:(b.x0+b.x1)/2, cy:(b.y0+b.y1)/2, c:Math.cos(r), s:Math.sin(r), dx:pl.x||0, dy:pl.y||0, rot:pl.rot||0};
+}
+/* the room's outline as it WOULD sit at some placement, for testing a drag before committing it */
+const ptsAt = (l,place) => { const t=floorXf(l,place); return l.room.points.map(p=>floorPt(t,p)); };
+/* floor space back into one room's own space — how a neighbour is shown while you edit */
+const floorPtInv = (t,q) => { const dx=q[0]-t.dx-t.cx, dy=q[1]-t.dy-t.cy;
+  return [t.cx+dx*t.c+dy*t.s, t.cy-dx*t.s+dy*t.c]; };
+const floorPt = (t,p) => { const dx=p[0]-t.cx, dy=p[1]-t.cy;
+  return [t.cx+dx*t.c-dy*t.s+t.dx, t.cy+dx*t.s+dy*t.c+t.dy]; };
+function floorPts(l){ const t=floorXf(l); return l.room.points.map(p=>floorPt(t,p)); }
+/* a placed item or pillar carried onto the floor: it also turns with the room */
+const floorInst = (l,inst,t) => { t=t||floorXf(l); const q=floorPt(t,[inst.x,inst.y]);
+  return Object.assign({}, inst, {x:q[0], y:q[1], rot:(inst.rot||0)+t.rot}); };
+const floorIWall = (l,w,t) => { t=t||floorXf(l);
+  return Object.assign({}, w, {a:floorPt(t,w.a), b:floorPt(t,w.b)}); };
+/* union bounds of everything standing on a floor; null when nothing is */
+function floorBBox(fid){
+  const pts=[]; for(const l of floorLayouts(fid)) pts.push(...floorPts(l));
+  return pts.length ? bbox(pts) : null;
+}
+/* a room joining a floor lands beside what is already there, never on top of it.
+   Call before setting l.floorId, so the floor's bounds don't already include it. */
+function placeOnFloor(l, fid){
+  const b=floorBBox(fid), own=bbox(l.room.points);
+  l.floorPlace = b ? {x:b.x1+1000-own.x0, y:b.y0-own.y0, rot:0} : blankFloorPlace();
+}
 /* ---- how far a thing's stock reaches ----
    'project': one pool for everything — placing a sofa anywhere spends it.
    'folder' : the rooms sitting DIRECTLY in a folder share a pool. A subfolder
@@ -1022,7 +1082,7 @@ function folderDescendant(id,parentId){
 /* switching into a room under a DIFFERENT folder re-applies that folder's tag filter;
    switching between rooms in the SAME folder leaves whatever filter the person set alone */
 function activateLayout(id){
-  S.active=id; sel=null; roomSel=null;
+  S.active=id; sel=null; roomSel=null; floorSel=null;
   resetMeasureState();
   seedHistFor();
   const fid = L() ? (L().folderId||null) : null;
@@ -1031,8 +1091,41 @@ function activateLayout(id){
 }
 
 /* ------------------------- walls ------------------------- */
-function wallOf(i){
-  const P=RP(), n=P.length, a=P[i], b=P[(i+1)%n];
+/* ---- walls you can take away ----
+   room.wallOff runs parallel to room.points: entry i is the edge from points[i] to
+   points[i+1]. Turning one off removes the wall, not the corner — the polygon still
+   bounds the room's floor, so area, furniture and validity are untouched. It is how
+   one room opens onto the next without a partition between them. */
+function syncWallOff(room){
+  const n=room.points.length;
+  if(!Array.isArray(room.wallOff)) room.wallOff=[];
+  room.wallOff.length=n;
+  for(let i=0;i<n;i++) room.wallOff[i]=!!room.wallOff[i];
+  return room.wallOff;
+}
+const wallIsOff = (room,i) => !!(room.wallOff && room.wallOff[i]);
+/* the polygon as runs of consecutive walled edges, so each run mitres its own corners;
+   null means every edge is walled and it should be stroked as one closed loop */
+function wallRuns(P, off){
+  const n=P.length;
+  if(!off || !off.some(Boolean)) return null;
+  const runs=[];
+  let cur=null;
+  for(let i=0;i<n;i++){
+    if(off[i]){ cur=null; continue; }
+    if(!cur){ cur=[P[i]]; runs.push(cur); }
+    cur.push(P[(i+1)%n]);
+  }
+  // a run spanning the wrap-around joins the last edge to the first, so that corner mitres
+  if(runs.length>1 && !off[0] && !off[n-1]){
+    const first=runs.shift();
+    runs[runs.length-1].push(...first.slice(1));
+  }
+  return runs;
+}
+/* `poly` lets a floor ask about a room other than the active one; it defaults to that one */
+function wallOf(i, poly){
+  const P=poly||RP(), n=P.length, a=P[i], b=P[(i+1)%n];
   const dx=b[0]-a[0], dy=b[1]-a[1], len=Math.hypot(dx,dy)||1e-9;
   const dir=[dx/len,dy/len];
   let nrm=[-dir[1],dir[0]];
@@ -1057,8 +1150,10 @@ function tryRoomEdit(fn){
   if(!polySimple(RP())){
     L().room.points = JSON.parse(before);
     flash('That would fold the room over itself');
+    syncWallOff(L().room);
     return false;
   }
+  syncWallOff(L().room);
   clampOpenings();
   return true;
 }
@@ -1177,8 +1272,8 @@ function setOpeningDispOffset(o,len,val){
   o.offset = o.corner==='ccw' ? (len-o.width-val) : val;
   o.offset = Math.max(0, Math.min(o.offset, len-o.width));
 }
-function openGeom(o){
-  const w = wallOf(o.wall);
+function openGeom(o, poly){
+  const w = wallOf(o.wall, poly);
   const p0=[w.a[0]+w.dir[0]*o.offset, w.a[1]+w.dir[1]*o.offset];
   const p1=[w.a[0]+w.dir[0]*(o.offset+o.width), w.a[1]+w.dir[1]*(o.offset+o.width)];
   const g={p0,p1,dir:w.dir,nrm:w.nrm,mid:[(p0[0]+p1[0])/2,(p0[1]+p1[1])/2]};
@@ -1195,9 +1290,9 @@ function openGeom(o){
   }
   return g;
 }
-function swingPoly(o){
+function swingPoly(o, poly){
   if(o.kind!=='door'||o.dtype!=='hinge') return null;
-  const g=openGeom(o), pts=[g.hinge.slice()], N=14;
+  const g=openGeom(o, poly), pts=[g.hinge.slice()], N=14;
   let diff=g.a1-g.a0;
   while(diff>Math.PI) diff-=Math.PI*2;
   while(diff<-Math.PI) diff+=Math.PI*2;
@@ -1770,7 +1865,7 @@ function drawWalkPath(path,C){
   walkPinchLabel(path,C);
 }
 function drawWalkOverlay(){
-  if(!S.showWalk || roomMode()) return;
+  if(!S.showWalk || !furnMode()) return;
   const grid=walkGrid();
   if(!grid.cols) return;
   const C=PAL();
@@ -1810,7 +1905,7 @@ const roomHist={}, furnHist={};
 const snapRoom = () => JSON.stringify({room:L().room, openings:L().openings});
 const snapFurn = () => JSON.stringify({placed:L().placed});
 function histEntry(map,snapFn){ const id=L().id; if(!map[id]) map[id]={stack:[snapFn()], idx:0}; return map[id]; }
-function seedHistFor(){ histEntry(roomHist,snapRoom); histEntry(furnHist,snapFurn); }
+function seedHistFor(){ histEntry(roomHist,snapRoom); histEntry(furnHist,snapFurn); floorEntry(); }
 function commit(map,snapFn){
   const h=histEntry(map,snapFn);
   const s=snapFn();
@@ -1842,8 +1937,48 @@ const undoRoom=()=>stepHist(roomHist,snapRoom,applyRoomSnap,-1);
 const redoRoom=()=>stepHist(roomHist,snapRoom,applyRoomSnap,1);
 const undoFurn=()=>stepHist(furnHist,snapFurn,applyFurnSnap,-1);
 const redoFurn=()=>stepHist(furnHist,snapFurn,applyFurnSnap,1);
+/* An arrangement is the floor's own history, keyed by floor, not by room: moving one
+   room changes the floor. It is deliberately NOT folded into snapRoom, whose
+   {room,openings} snapshot belongs to Room mode — sharing one stack would make a
+   wall edit and a floor move undo each other. */
+const floorHist={};
+const curFloorId = () => (L() && L().floorId) || null;
+const snapFloor = () => JSON.stringify(floorLayouts(curFloorId()).map(l=>[l.id, l.floorPlace]));
+function floorEntry(){
+  const id=curFloorId(); if(!id) return null;
+  if(!floorHist[id]) floorHist[id]={stack:[snapFloor()], idx:0};
+  return floorHist[id];
+}
+function commitFloor(){
+  const h=floorEntry(); if(!h) return;
+  const s=snapFloor();
+  if(h.stack[h.idx]===s) return;
+  h.stack=h.stack.slice(0,h.idx+1); h.stack.push(s);
+  if(h.stack.length>80) h.stack.shift();
+  h.idx=h.stack.length-1;
+  updateHistButtons();
+}
+function applyFloorSnap(s){
+  for(const [id,place] of s){ const l=S.layouts.find(x=>x.id===id); if(l) l.floorPlace=place; }
+  renderFloorSel(); draw(); save();
+}
+function stepFloor(dir){
+  const h=floorEntry(); if(!h) return;
+  const ni=h.idx+dir;
+  if(ni<0||ni>=h.stack.length) return;
+  h.idx=ni; applyFloorSnap(JSON.parse(h.stack[ni]));
+  updateHistButtons();
+}
+const undoFloor=()=>stepFloor(-1);
+const redoFloor=()=>stepFloor(1);
 function updateHistButtons(){
   const btnU=$('btnUndo'), btnR=$('btnRedo'); if(!btnU) return;
+  if(floorMode()){
+    const h=floorEntry();
+    btnU.disabled = !h || h.idx<=0;
+    btnR.disabled = !h || h.idx>=h.stack.length-1;
+    return;
+  }
   const h = roomMode() ? histEntry(roomHist,snapRoom) : histEntry(furnHist,snapFurn);
   btnU.disabled = h.idx<=0;
   btnR.disabled = h.idx>=h.stack.length-1;
@@ -1861,6 +1996,7 @@ function normLayout(l){
     delete l.room.w; delete l.room.d;
   }
   l.room.wall = l.room.wall||114;
+  syncWallOff(l.room);
   l.room.floor = normHex(l.room.floor)||'#f5f3ee';
   l.room.trim = l.room.trim||19;
   if(!Array.isArray(l.room.pillars)) l.room.pillars=[];
@@ -1894,6 +2030,14 @@ function normLayout(l){
   if(!Array.isArray(l.measures)) l.measures=[];
   pruneMeasures(l);
   if(l.folderId===undefined) l.folderId=null;
+  if(l.floorId===undefined) l.floorId=null;
+  /* the bbox is honest for a rectangle and overstates an L-shape, so a plan can say
+     what the room is really called on paper */
+  l.dimLabel = typeof l.dimLabel==='string' ? l.dimLabel : '';
+  {
+    const p = l.floorPlace||{};
+    l.floorPlace = {x:isFinite(p.x)?p.x:0, y:isFinite(p.y)?p.y:0, rot:isFinite(p.rot)?norm360(p.rot):0};
+  }
   return l;
 }
 /* a measurement's ends point at things by id (a room wall by its index); drop any whose
@@ -1931,6 +2075,7 @@ function migrate(st){
   st.inventory = st.inventory||[];
   for(const it of st.inventory) normItem(it);
   if(!Array.isArray(st.folders)) st.folders=[];
+  if(!Array.isArray(st.floors)) st.floors=[];
   if(!Array.isArray(st.tagFilter)) st.tagFilter=[];
   if(st.untaggedOnly==null) st.untaggedOnly=false;
   if(typeof st.invSearch!=='string') st.invSearch='';
@@ -1941,7 +2086,7 @@ function migrate(st){
   if(st.leftOpen==null) st.leftOpen=true;
   if(st.rightOpen==null) st.rightOpen=true;
   if(!Array.isArray(st.secClosed)) st.secClosed=[];
-  if(!['room','furniture','inventory','marketplace'].includes(st.mode)) st.mode='furniture';
+  if(!['room','furniture','floor','inventory','marketplace'].includes(st.mode)) st.mode='furniture';
   if(!isCanvasMode(st.planMode)) st.planMode = isCanvasMode(st.mode) ? st.mode : 'furniture';
   if(!st.layouts.some(l=>l.id===st.active)) st.active=st.layouts[0].id;
   const fl=st.layouts.find(l=>l.id===st.active);
@@ -1956,6 +2101,13 @@ function migrate(st){
     if(it.folderId===undefined) it.folderId=null;
     if(!Array.isArray(it.manualTags)) it.manualTags=(it.tags||[]).slice();
   }
+  for(const f of st.floors){
+    f.parentId=f.parentId||null;
+    f.extWall = isFinite(f.extWall) && f.extWall>0 ? f.extWall : 0;   // 0 = each room's own wall
+  }
+  /* a room can only stand on a floor that still exists */
+  { const live=new Set(st.floors.map(f=>f.id));
+    for(const l of st.layouts) if(l.floorId && !live.has(l.floorId)) l.floorId=null; }
   for(const f of st.itemFolders){ f.parentId=f.parentId||null; if(!Array.isArray(f.tags)) f.tags=[]; }
   for(const f of st.marketFolders) f.parentId=f.parentId||null;
   for(const l of st.marketListings) l.parentId=l.parentId||null;
@@ -2214,13 +2366,26 @@ function resize(){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   scheduleDraw();
 }
-function fit(){
-  const b=bbox(RP()), pad=72;
+function fitBBox(b){
+  const pad=72;
   const s=Math.min((W-pad*2)/Math.max(b.w,1),(H-pad*2)/Math.max(b.h,1));
   view.scale = s>0 ? s : .05;
   view.ox = (W-b.w*view.scale)/2 - b.x0*view.scale;
   view.oy = (H-b.h*view.scale)/2 - b.y0*view.scale;
   draw();
+}
+/* in Floor mode the frame is the whole arrangement, grown so the outermost
+   wall bands aren't clipped off at the edge */
+function fit(){
+  if(floorMode()){
+    const fl=floorOf(L().floorId), b=fl&&floorBBox(fl.id);
+    if(b){
+      let pad=0; for(const l of floorLayouts(fl.id)) pad=Math.max(pad, l.room.wall||0);
+      fitBBox({x0:b.x0-pad, y0:b.y0-pad, w:b.w+pad*2, h:b.h+pad*2});
+      return;
+    }
+  }
+  fitBBox(bbox(RP()));
 }
 const sx=x=>view.ox+x*view.scale, sy=y=>view.oy+y*view.scale;
 const wx=p=>(p-view.ox)/view.scale, wy=p=>(p-view.oy)/view.scale;
@@ -2257,6 +2422,7 @@ function cancelCustomDraw(){
 function finishCustomDraw(){
   if(!drawState||drawState.pts.length<3){ flash('Add at least 3 corners first'); return; }
   L().room.points=drawState.pts.map(p=>p.slice());
+  L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
   clampOpenings(); roomSel=null;
   drawState=null; $('drawHint').hidden=true;
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
@@ -2343,9 +2509,11 @@ function addPoly(p){
 function pathPoly(p){ ctx.beginPath(); addPoly(p); }
 
 function draw(){
+  if(floorMode()){ drawFloor(); return; }
   const r=L().room, P=RP(), C=PAL();
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle=C.stage; ctx.fillRect(0,0,W,H);
+  if(roomMode()) drawFloorUnderlay();
 
   pathPoly(P); ctx.fillStyle=r.floor; ctx.fill('evenodd');
   drawGrid(P);
@@ -2361,7 +2529,7 @@ function draw(){
   drawIWalls();
   drawPillars();
   const blocked = S.showSwing ? blockedOpenings() : [];
-  for(const o of L().openings) drawOpening(o, blocked);
+  for(const o of L().openings) if(!wallIsOff(r,o.wall)) drawOpening(o, blocked);
 
   const {bad,openBad}=getConflicts();
   ctx.globalAlpha = roomMode() ? .4 : 1;
@@ -2371,16 +2539,357 @@ function draw(){
     const oa = pa&&pa.passThrough ? 0 : 1, ob = pb&&pb.passThrough ? 0 : 1;
     return oa-ob || a.i-b.i;
   });
-  for(const {p} of drawOrder) drawItem(p, !roomMode()&&p.id===sel, bad.has(p.id));
+  for(const {p} of drawOrder) drawItem(p, furnMode()&&p.id===sel, bad.has(p.id));
   ctx.globalAlpha = 1;
 
   drawWallLabels();
   // editing tools always sit above everything else on the plan
-  if(roomMode()) drawHandles(); else drawItemTools();
+  if(roomMode()) drawHandles(); else if(furnMode()) drawItemTools();
   drawMeasures();
   drawCustomOverlay();
   drawWallDrawOverlay();
   updateReadout(bad, openBad);
+}
+/* ---- the floor, drawn as one plan ----
+   Walls are why this has its own pass order rather than looping draw(). A room's
+   band lies OUTSIDE its measured face (see drawWalls), so two rooms parked exactly
+   one wall-thickness apart both fill that same gap and it reads as a single shared
+   wall, with no boolean geometry anywhere. That only holds if every band is laid
+   down BEFORE any opening is punched: punch as you go and the next room's band
+   paints the doorway shut again. */
+function floorMembers(fl){
+  return fl ? floorLayouts(fl.id).map(l=>{ const t=floorXf(l); return {l, t, P:l.room.points.map(p=>floorPt(t,p))}; }) : [];
+}
+function drawFloor(){
+  const C=PAL(), fl=floorOf(L().floorId), members=floorMembers(fl);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=C.stage; ctx.fillRect(0,0,W,H);
+  if(!fl || !members.length){ drawFloorEmpty(fl); updateFloorReadout(fl,members); return; }
+
+  // A — each room's floor, grid and baseboard
+  for(const m of members){
+    const r=m.l.room;
+    pathPoly(m.P); ctx.fillStyle=r.floor; ctx.fill('evenodd');
+    drawGrid(m.P);
+    if(r.trimOn && r.trim>0){
+      ctx.save(); pathPoly(m.P); ctx.clip();
+      pathPoly(m.P);
+      ctx.lineWidth=Math.max(1,r.trim*2*view.scale);
+      ctx.strokeStyle=C.trim; ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // B — every wall band, clipped outside EVERY room so a band can never paint over a neighbour's floor
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-20,-20,W+40,H+40);
+  for(const m of members) addPoly(m.P);
+  ctx.clip('evenodd');
+  ctx.lineJoin='miter'; ctx.miterLimit=10; ctx.strokeStyle=C.wall;
+  const depths=floorEdgeDepths(members, fl.extWall);
+  members.forEach((m,mi)=>{
+    const runs=depthRuns(m.P, depths[mi]);
+    if(!runs){
+      if(!depths[mi][0]) return;                 // every wall on this room has been taken away
+      pathPoly(m.P);
+      ctx.lineWidth=Math.max(2,depths[mi][0]*view.scale)*2;
+      ctx.stroke();
+      return;
+    }
+    for(const run of runs){
+      if(!run.depth) continue;
+      ctx.beginPath();
+      ctx.moveTo(sx(run.pts[0][0]), sy(run.pts[0][1]));
+      for(let k=1;k<run.pts.length;k++) ctx.lineTo(sx(run.pts[k][0]), sy(run.pts[k][1]));
+      ctx.lineWidth=Math.max(2,run.depth*view.scale)*2;
+      ctx.stroke();
+    }
+  });
+  // C — and only now punch the doorways, each to the depth of the wall it sits in
+  ctx.lineCap='butt';
+  members.forEach((m,mi)=>{
+    for(const o of m.l.openings){
+      if(wallIsOff(m.l.room,o.wall)) continue;
+      const g=openGeom(o,m.P);
+      const d=depths[mi][o.wall] != null ? depths[mi][o.wall] : (m.l.room.wall||0);
+      ctx.strokeStyle = o.kind==='window' ? C.glass : m.l.room.floor;
+      ctx.lineWidth=Math.max(2,d*view.scale)*2+2;
+      ctx.beginPath(); ctx.moveTo(sx(g.p0[0]),sy(g.p0[1])); ctx.lineTo(sx(g.p1[0]),sy(g.p1[1])); ctx.stroke();
+    }
+  });
+  ctx.restore();
+
+  // D — door and window symbols, structure, then everything standing in each room
+  members.forEach((m,mi)=>{
+    /* jambs and window lines are drawn across the band, so they take its depth too */
+    for(const o of m.l.openings){
+      if(wallIsOff(m.l.room,o.wall)) continue;
+      const d=depths[mi][o.wall];
+      drawOpening(o, [], d ? Object.assign({}, m.l.room, {wall:d}) : m.l.room, m.P);
+    }
+    for(const w of m.l.room.iwalls){
+      pathPoly(iwallPoly(floorIWall(m.l,w,m.t)));
+      ctx.fillStyle=C.wall; ctx.fill();
+      ctx.lineWidth=1; ctx.strokeStyle=C.wallEdge; ctx.stroke();
+    }
+    for(const pl of m.l.room.pillars){
+      const fp=floorInst(m.l,pl,m.t);
+      pathPoly(worldPoly(fp,fp));
+      ctx.fillStyle=C.pillar; ctx.fill();
+      ctx.lineWidth=1.25; ctx.strokeStyle=C.wall; ctx.stroke();
+    }
+    for(const p of m.l.placed) drawItem(floorInst(m.l,p,m.t), false, false);
+  });
+
+  // E — which room is which, without having to open it
+  for(const m of members) drawFloorLabel(m);
+
+  // F — two rooms sitting on top of each other is a broken arrangement; say so rather
+  //     than trying to render it, since the evenodd clip in pass B can't represent it
+  for(let i=0;i<members.length;i++) for(let j=i+1;j<members.length;j++){
+    if(!polyHit(members[i].P, members[j].P)) continue;
+    ctx.save();
+    pathPoly(members[i].P); ctx.clip();
+    pathPoly(members[j].P);
+    ctx.fillStyle='rgba('+C.dangerRGB+',.22)'; ctx.fill();
+    ctx.restore();
+  }
+  for(const g of floorGuides){
+    ctx.save();
+    ctx.setLineDash([6,5]); ctx.lineWidth=1.5; ctx.strokeStyle=C.stageAccent;
+    ctx.beginPath(); ctx.moveTo(sx(g[0][0]),sy(g[0][1])); ctx.lineTo(sx(g[1][0]),sy(g[1][1])); ctx.stroke();
+    ctx.restore();
+  }
+  const selM=members.find(m=>m.l.id===floorSel);
+  if(selM){
+    ctx.save();
+    pathPoly(selM.P);
+    ctx.lineWidth=2; ctx.strokeStyle=C.accent; ctx.stroke();
+    const h=floorRotHandle(selM.P), b=bbox(selM.P);
+    ctx.beginPath(); ctx.moveTo(sx((b.x0+b.x1)/2), sy(b.y0)); ctx.lineTo(h.x,h.y);
+    ctx.lineWidth=1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(h.x,h.y,6,0,Math.PI*2);
+    ctx.fillStyle=C.surface; ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
+    ctx.restore();
+  }
+  updateFloorReadout(fl, members);
+}
+/* ---- arranging ----
+   Two rooms share a wall when their measured faces sit exactly one wall-thickness
+   apart, so that is what the magnet aims for: not flush, but `max(wallA,wallB)` of
+   clear air, which both bands then fill. Corner alignment along the wall is solved
+   separately from the gap across it, so a room can meet one neighbour's face and
+   line up with another's corner in the same drag. */
+const PARALLEL_TOL = Math.sin(2*Math.PI/180);
+/* A room this size needs a more generous magnet than a wall endpoint does */
+const floorSnapRadius = () => 24/view.scale;
+/* Every way this room could line up with one neighbour edge, as {dir, delta}: move the
+   room by dir*delta and that relationship becomes exact. Three kinds, in priority order:
+     wall  — the two faces end up one wall-thickness apart, so they share a wall.
+             Only offered when the edges actually overlap, i.e. genuinely face each other.
+     line  — the two faces end up on the same line. This is what keeps the sides of
+             stacked rooms flush, and it must NOT require overlap: the left wall of a
+             kitchen sitting below a living room never overlaps the wall it lines up with.
+     end   — a corner of this room meets a corner of that one, along the wall. */
+function floorSnapCandidates(l, P, others, rad){
+  const out=[], n=P.length;
+  for(let i=0;i<n;i++){
+    const a1=P[i], b1=P[(i+1)%n];
+    const dx=b1[0]-a1[0], dy=b1[1]-a1[1], len1=Math.hypot(dx,dy);
+    if(len1<1) continue;
+    const u=[dx/len1, dy/len1], nr=[-u[1], u[0]];
+    const mineOff=wallIsOff(l.room,i);
+    for(const o of others){
+      const m=o.P.length;
+      for(let j=0;j<m;j++){
+        /* how much air belongs between these two faces: enough for both walls, for the
+           one wall that is there, or none at all when both sides have been opened —
+           which is what lets two rooms read as one open space with a continuous floor */
+        const theirsOff=wallIsOff(o.l.room,j);
+        const gap = mineOff && theirsOff ? 0
+                  : mineOff ? (o.l.room.wall||0)
+                  : theirsOff ? (l.room.wall||0)
+                  : Math.max(l.room.wall||0, o.l.room.wall||0);
+        const a2=o.P[j], b2=o.P[(j+1)%m];
+        const ex=b2[0]-a2[0], ey=b2[1]-a2[1], len2=Math.hypot(ex,ey);
+        if(len2<1) continue;
+        if(Math.abs(u[0]*(ey/len2)-u[1]*(ex/len2))>PARALLEL_TOL) continue;
+        const sep=(a2[0]-a1[0])*nr[0]+(a2[1]-a1[1])*nr[1];
+        const sa=(a2[0]-a1[0])*u[0]+(a2[1]-a1[1])*u[1];
+        const sb=(b2[0]-a1[0])*u[0]+(b2[1]-a1[1])*u[1];
+        if(Math.max(sa,sb)>1 && Math.min(sa,sb)<len1-1){
+          const d=sep-(sep>=0?gap:-gap);        // +delta along nr closes sep by delta
+          if(Math.abs(d)<rad) out.push({dir:nr, delta:d, cost:Math.abs(d), kind:gap?'wall':'open', guide:[a2,b2], gap});
+        }
+        if(Math.abs(sep)<rad) out.push({dir:nr, delta:sep, cost:Math.abs(sep)+rad*0.4, kind:'line', guide:[a2,b2]});
+        for(const s of [sa,sb]) for(const mine of [0,len1]){
+          const d=s-mine;
+          if(Math.abs(d)<rad) out.push({dir:u, delta:d, cost:Math.abs(d)+rad*0.25, kind:'end', guide:[a2,b2]});
+        }
+      }
+    }
+  }
+  return out;
+}
+/* Solve one axis, then the other. Taking the single best correction overall used to mean
+   a room could meet its left neighbour or line up with the one above it, never both. */
+function snapFloorPlace(l, x, y){
+  const others=floorLayouts(l.floorId).filter(o=>o.id!==l.id).map(o=>({l:o, P:floorPts(o)}));
+  if(!others.length){ const p=snapPt([x,y]); return {x:p[0], y:p[1], guides:[], note:'' }; }
+  const rad=floorSnapRadius(), rot=l.floorPlace.rot||0;
+  let px=x, py=y, took=null;
+  const guides=[], kinds=[];
+  for(let pass=0; pass<2; pass++){
+    const cands=floorSnapCandidates(l, ptsAt(l,{x:px,y:py,rot}), others, rad);
+    let pick=null;
+    for(const c of cands){
+      // the second correction has to be across a different axis, or it just re-solves the first
+      if(took && Math.abs(c.dir[0]*took[0]+c.dir[1]*took[1])>0.3) continue;
+      if(!pick || c.cost<pick.cost) pick=c;
+    }
+    if(!pick) break;
+    px+=pick.dir[0]*pick.delta; py+=pick.dir[1]*pick.delta;
+    guides.push(pick.guide); kinds.push(pick.kind);
+    took=pick.dir;
+  }
+  if(!guides.length){ const p=snapPt([x,y]); return {x:p[0], y:p[1], guides:[], note:''}; }
+  const note = kinds.includes('open') ? 'Open through'
+             : kinds.includes('wall') ? 'Sharing a wall'
+             : kinds.includes('line') ? 'Lined up' : 'Corners meet';
+  return {x:px, y:py, guides, note};
+}
+/* How deep each room's wall band runs, edge by edge.
+   An edge facing a neighbour is a SHARED wall, and its depth is the real gap between
+   the two faces — so a door punched from either side clears the whole thickness even
+   when the two rooms carry different wall settings. An edge facing nothing is
+   EXTERIOR and takes the floor's exterior thickness, which is how a plan gets a heavy
+   outer shell around thin partitions without any boolean union of the outline. */
+function floorEdgeDepths(members, extWall){
+  return members.map(m=>{
+    const own=m.l.room.wall||0, n=m.P.length;
+    return m.P.map((a1,i)=>{
+      const b1=m.P[(i+1)%n];
+      const dx=b1[0]-a1[0], dy=b1[1]-a1[1], len=Math.hypot(dx,dy);
+      if(len<1) return own;
+      if(wallIsOff(m.l.room,i)) return 0;        // no wall here: nothing to draw, nothing to punch
+      const u=[dx/len,dy/len], w=wallOf(i,m.P), out=[-w.nrm[0],-w.nrm[1]];
+      let found=0;
+      for(const o of members){
+        if(o.l.id===m.l.id) continue;
+        const lim=Math.max(own, o.l.room.wall||0)*1.35+1;
+        for(let j=0;j<o.P.length;j++){
+          const a2=o.P[j], b2=o.P[(j+1)%o.P.length];
+          const ex=b2[0]-a2[0], ey=b2[1]-a2[1], l2=Math.hypot(ex,ey);
+          if(l2<1) continue;
+          if(Math.abs(u[0]*(ey/l2)-u[1]*(ex/l2))>PARALLEL_TOL) continue;
+          const d=(a2[0]-a1[0])*out[0]+(a2[1]-a1[1])*out[1];
+          if(d<=0.5 || d>lim) continue;                       // behind us, or too far to be a shared wall
+          const sa=(a2[0]-a1[0])*u[0]+(a2[1]-a1[1])*u[1];
+          const sb=(b2[0]-a1[0])*u[0]+(b2[1]-a1[1])*u[1];
+          if(Math.max(sa,sb)<1 || Math.min(sa,sb)>len-1) continue;
+          if(!found || d<found) found=d;
+        }
+      }
+      return found || Math.max(own, extWall||0);
+    });
+  });
+}
+/* consecutive edges sharing a depth, so each run strokes as one mitred polyline */
+function extendEnd(pts,i,j,by){
+  const a=pts[i], b=pts[j];
+  const dx=a[0]-b[0], dy=a[1]-b[1], len=Math.hypot(dx,dy);
+  if(len<1e-6 || !by) return;
+  pts[i]=[a[0]+dx/len*by, a[1]+dy/len*by];
+}
+function depthRuns(P, depths){
+  const n=P.length, runs=[];
+  let start=-1;
+  for(let k=0;k<n;k++) if(depths[k]!==depths[(k-1+n)%n]){ start=k; break; }
+  if(start<0) return null;                                    // every edge the same: stroke it closed instead
+  let cur=null;
+  for(let k=0;k<n;k++){
+    const i=(start+k)%n;
+    if(!cur || depths[i]!==cur.depth){ cur={depth:depths[i], pts:[P[i].slice()], first:i, last:i}; runs.push(cur); }
+    cur.pts.push(P[(i+1)%n].slice());
+    cur.last=i;
+  }
+  /* A run stops wherever the thickness changes, which would leave that outside corner
+     open — a thick outer wall meeting a thin shared one has a square hole between them.
+     Carry each end on by the NEIGHBOURING band's depth and the two close up exactly.
+     Anything that overshoots into a room is removed by the floor-wide clip. */
+  for(const r of runs){
+    extendEnd(r.pts, 0, 1, depths[(r.first-1+n)%n]);
+    extendEnd(r.pts, r.pts.length-1, r.pts.length-2, depths[(r.last+1)%n]);
+  }
+  return runs;
+}
+function pickFloorRoom(px,py){
+  const fl=floorOf(L().floorId); if(!fl) return null;
+  const ms=floorMembers(fl), pt=[wx(px),wy(py)];
+  for(let i=ms.length-1;i>=0;i--) if(pointInPoly(pt, ms[i].P)) return ms[i].l.id;
+  return null;
+}
+const floorRotHandle = P => { const b=bbox(P); return {x:sx((b.x0+b.x1)/2), y:sy(b.y0)-26}; };
+/* While editing one room, show the others on its floor as a faint backdrop, drawn
+   in THIS room's own space. Shaping a foyer to meet four neighbours is guesswork
+   otherwise. Nothing here is pickable; it is a tracing aid, not part of the room. */
+function drawFloorUnderlay(){
+  const me=L(), fl=floorOf(me.floorId); if(!fl) return;
+  const t=floorXf(me), C=PAL();
+  ctx.save();
+  ctx.globalAlpha=0.3;
+  for(const o of floorLayouts(fl.id)){
+    if(o.id===me.id) continue;
+    const to=floorXf(o);
+    const pts=o.room.points.map(p=>floorPtInv(t, floorPt(to,p)));
+    pathPoly(pts);
+    ctx.fillStyle=o.room.floor; ctx.fill('evenodd');
+    ctx.lineWidth=Math.max(1,(o.room.wall||0)*view.scale);
+    ctx.strokeStyle=C.wall; ctx.stroke();
+    const b=bbox(pts), wpx=b.w*view.scale;
+    if(wpx>56 && b.h*view.scale>24){
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.font='600 11px ui-sans-serif,system-ui,sans-serif'; ctx.fillStyle=C.ink2;
+      ctx.fillText(clip(o.name.toUpperCase(), wpx), sx((b.x0+b.x1)/2), sy((b.y0+b.y1)/2));
+    }
+  }
+  ctx.restore();
+}
+function drawFloorLabel(m){
+  const C=PAL(), b=bbox(m.P), wpx=b.w*view.scale, hpx=b.h*view.scale;
+  if(wpx<56 || hpx<34) return;
+  let anchor=centroid(m.P);
+  if(!anchor||!pointInPoly(anchor,m.P)) anchor=[(b.x0+b.x1)/2,(b.y0+b.y1)/2];
+  const own=bbox(m.l.room.points);
+  const dims=m.l.dimLabel || (fmtLen(own.w)+' × '+fmtLen(own.h));
+  const cxp=sx(anchor[0]), cyp=sy(anchor[1]);
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font='600 12px ui-sans-serif,system-ui,sans-serif';
+  ctx.fillStyle=C.ink;
+  ctx.fillText(clip(m.l.name.toUpperCase(), wpx), cxp, cyp-7);
+  ctx.font='400 11px ui-sans-serif,system-ui,sans-serif';
+  ctx.fillStyle=C.ink2;
+  ctx.fillText(clip(dims, wpx), cxp, cyp+8);
+}
+/* nothing to show: say which of the two reasons it is */
+function drawFloorEmpty(fl){
+  const C=PAL();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=C.wall;
+  ctx.font='600 14px ui-sans-serif,system-ui,sans-serif';
+  ctx.fillText(fl ? '“'+fl.name+'” has no rooms on it yet'
+                  : '“'+L().name+'” is not on a floor', W/2, H/2-10);
+  ctx.font='400 12px ui-sans-serif,system-ui,sans-serif';
+  ctx.fillText(fl ? 'Add rooms to it from the Rooms list.'
+                  : 'Put it on one from its ⋯ menu in the Rooms list.', W/2, H/2+12);
+}
+function updateFloorReadout(fl, members){
+  const el=$('readout'); if(!el) return;
+  if(!fl || !members.length){ el.textContent = fl ? 'No rooms on this floor' : 'Not on a floor'; return; }
+  if(floorSnapNote){ el.textContent = floorSnapNote; return; }
+  let area=0; for(const m of members) area+=Math.abs(polyArea(m.P));
+  el.textContent = plural(members.length,'room')+' · '+fmtArea(area,S.unit);
 }
 let drawPending=false;
 function scheduleDraw(){
@@ -2414,11 +2923,19 @@ function drawWalls(){
   ctx.rect(-20,-20,W+40,H+40);
   addPoly(P);
   ctx.clip('evenodd');
-  pathPoly(P);
   ctx.lineWidth=t*2; ctx.lineJoin='miter'; ctx.miterLimit=10;
-  ctx.strokeStyle=PAL().wall; ctx.stroke();
+  ctx.strokeStyle=PAL().wall;
+  const runs=wallRuns(P, r.wallOff);
+  if(!runs){ pathPoly(P); ctx.stroke(); }
+  else for(const run of runs){
+    ctx.beginPath();
+    ctx.moveTo(sx(run[0][0]),sy(run[0][1]));
+    for(let k=1;k<run.length;k++) ctx.lineTo(sx(run[k][0]),sy(run[k][1]));
+    ctx.stroke();
+  }
   ctx.lineCap='butt';
   for(const o of L().openings){
+    if(wallIsOff(r,o.wall)) continue;
     const g=openGeom(o);
     ctx.strokeStyle = o.kind==='window' ? PAL().glass : r.floor;
     ctx.lineWidth=t*2+2;
@@ -2458,8 +2975,9 @@ function drawWallDrawOverlay(){
   }
   ctx.restore();
 }
-function drawOpening(o,blocked){
-  const r=L().room, g=openGeom(o), t=Math.max(2,r.wall*view.scale);
+/* `room`/`poly` let a floor draw a door on a room other than the active one */
+function drawOpening(o,blocked,room,poly){
+  const r=room||L().room, g=openGeom(o,poly), t=Math.max(2,r.wall*view.scale);
   const C=PAL();
   // jambs
   ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(1.5,t*.35);
@@ -2479,7 +2997,7 @@ function drawOpening(o,blocked){
     }
   } else if(o.dtype==='hinge'){
     if(S.showSwing){
-      const sp=swingPoly(o), bad=blocked.includes(o.id);
+      const sp=swingPoly(o,poly), bad=blocked.includes(o.id);
       pathPoly(sp);
       ctx.fillStyle = bad?'rgba('+C.dangerRGB+',.16)':C.swing; ctx.fill();
       ctx.strokeStyle = bad?'rgba('+C.dangerRGB+',.7)':C.swingLine;
@@ -2503,7 +3021,7 @@ function drawOpening(o,blocked){
 }
 /* the open footprint is always drawn for whatever you have hold of, so you can
    see where it will reach as you place it, toggle on or off */
-const showOpenFor = p => S.showOpen || (!roomMode() && p.id===sel);
+const showOpenFor = p => S.showOpen || (furnMode() && p.id===sel);
 function drawOpenRegion(p,bad){
   const it=itemOf(p.itemId);
   const poly=it&&openPoly(p,it);
@@ -3105,6 +3623,36 @@ cv.addEventListener('pointerdown', e=>{
 
   if(measureOn){ measurePointerDown(px,py); return; }
 
+  /* Floor mode positions whole rooms; their walls and items are edited in Room/Furniture */
+  if(floorMode()){
+    const fl=floorOf(L().floorId);
+    if(fl && floorSel){
+      const m=floorMembers(fl).find(x=>x.l.id===floorSel);
+      if(m){
+        const h=floorRotHandle(m.P);
+        if(Math.hypot(px-h.x,py-h.y)<14){
+          const b=bbox(m.P);
+          drag={mode:'floor-rot', id:floorSel, start:m.l.floorPlace.rot||0,
+                a0:Math.atan2(wy(py)-(b.y0+b.y1)/2, wx(px)-(b.x0+b.x1)/2)};
+          return;
+        }
+      }
+    }
+    const hit=pickFloorRoom(px,py);
+    if(hit){
+      const l=S.layouts.find(x=>x.id===hit);
+      floorEntry();   // baseline the arrangement BEFORE it moves, or there is nothing to undo to
+      floorSel=hit;
+      drag={mode:'floor-room', id:hit, dx:wx(px)-l.floorPlace.x, dy:wy(py)-l.floorPlace.y};
+      renderFloorSel(); draw();
+      return;
+    }
+    if(floorSel){ floorSel=null; renderFloorSel(); }
+    drag={mode:'pan', px, py, ox:view.ox, oy:view.oy};
+    draw();
+    return;
+  }
+
   if(roomMode()){
     const hit=pickRoom(px,py);
     if(hit){
@@ -3154,12 +3702,30 @@ cv.addEventListener('pointermove', e=>{
   if(measureOn && !drag){ measureHoverAt(e.offsetX,e.offsetY); return; }
   if(!drag) return;
   const px=e.offsetX, py=e.offsetY, pt=[wx(px),wy(py)];
+  const floorDrag = drag.mode==='floor-room'||drag.mode==='floor-rot';
   // nothing has moved yet: remember how things stood so Escape can put them back
-  if(drag.mode!=='pan' && !drag.snap) drag.snap = ROOM_DRAGS.includes(drag.mode) ? snapRoom() : snapFurn();
+  if(drag.mode!=='pan' && !drag.snap) drag.snap = floorDrag ? snapFloor() : ROOM_DRAGS.includes(drag.mode) ? snapRoom() : snapFurn();
 
   if(drag.mode==='pan'){
     view.ox=drag.ox+(px-drag.px); view.oy=drag.oy+(py-drag.py);
     scheduleDraw(); return;
+  }
+  if(drag.mode==='floor-room'){
+    const l=S.layouts.find(x=>x.id===drag.id); if(!l) return;
+    let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
+    if(e.altKey){ floorGuides=[]; floorSnapNote='Free'; }   // alt drops the magnet, same as everywhere else
+    else { const s=snapFloorPlace(l,nx,ny); nx=s.x; ny=s.y; floorGuides=s.guides; floorSnapNote=s.note; }
+    l.floorPlace.x=nx; l.floorPlace.y=ny;
+    scheduleDraw(); renderFloorSel(); return;
+  }
+  if(drag.mode==='floor-rot'){
+    const l=S.layouts.find(x=>x.id===drag.id); if(!l) return;
+    const b=bbox(floorPts(l));
+    const a=Math.atan2(pt[1]-(b.y0+b.y1)/2, pt[0]-(b.x0+b.x1)/2);
+    let deg=drag.start+(a-drag.a0)*180/Math.PI;
+    if(!e.altKey) deg=Math.round(deg/15)*15;   // free turn is the exception, not the rule
+    l.floorPlace.rot=norm360(deg);
+    scheduleDraw(); renderFloorSel(); return;
   }
   if(drag.mode==='corner'){
     const P=RP(), was=P[drag.i].slice();
@@ -3245,20 +3811,23 @@ cv.addEventListener('pointermove', e=>{
 });
 /* Escape mid-drag: put whatever was being dragged back exactly where it started */
 function cancelDrag(){
+  const wasFloor = drag.mode==='floor-room'||drag.mode==='floor-rot';
   if(drag.mode==='pan'){ view.ox=drag.ox; view.oy=drag.oy; }
   else if(drag.snap){
     const s=JSON.parse(drag.snap);
-    if(ROOM_DRAGS.includes(drag.mode)){ L().room=s.room; L().openings=s.openings; }
+    if(wasFloor) for(const [id,place] of s){ const l=S.layouts.find(x=>x.id===id); if(l) l.floorPlace=place; }
+    else if(ROOM_DRAGS.includes(drag.mode)){ L().room=s.room; L().openings=s.openings; }
     else L().placed=s.placed;
-    bumpRev();
+    if(!wasFloor) bumpRev();
   }
-  drag=null;
-  renderSel(); renderRoomSel(); renderWalls(); renderOpen(); draw();
+  drag=null; floorGuides=[]; floorSnapNote='';
+  renderSel(); renderRoomSel(); renderWalls(); renderOpen(); renderFloorSel(); draw();
 }
 function endDrag(e){
   if(drag&&drag.mode!=='pan'){
     save();
-    if(ROOM_DRAGS.includes(drag.mode)) commitRoom();
+    if(drag.mode==='floor-room'||drag.mode==='floor-rot'){ floorGuides=[]; floorSnapNote=''; commitFloor(); renderFloorSel(); draw(); }
+    else if(ROOM_DRAGS.includes(drag.mode)) commitRoom();
     else { commitFurn(); renderSel(); }
   }
   drag=null;
@@ -3268,7 +3837,14 @@ cv.addEventListener('pointerup',endDrag);
 cv.addEventListener('pointercancel',endDrag);
 /* in Room mode, double-clicking a wall types its length in rather than dragging for it */
 cv.addEventListener('dblclick', e=>{
-  if(drawState||!roomMode()) return;
+  if(drawState) return;
+  /* double-clicking a room on the floor is the way back to editing it */
+  if(floorMode()){
+    const id=pickFloorRoom(e.offsetX,e.offsetY);
+    if(id){ drag=null; activateLayout(id); setMode('room'); renderAll(); fit(); save(); }
+    return;
+  }
+  if(!roomMode()) return;
   const hit=pickRoom(e.offsetX,e.offsetY);
   if(hit&&hit.kind==='wall'){ drag=null; wallDialog(hit.i); }
 });
@@ -3288,7 +3864,7 @@ document.addEventListener('keydown', e=>{
     if(e.key==='Escape'){ cancelWallDraw(); return; }
     return;
   }
-  if(mo.hidden && (e.key==='m'||e.key==='M') && !e.ctrlKey && !e.metaKey && !e.altKey && isCanvasMode(S.mode)){
+  if(mo.hidden && (e.key==='m'||e.key==='M') && !e.ctrlKey && !e.metaKey && !e.altKey && isCanvasMode(S.mode) && !floorMode()){
     setMeasure(!measureOn); return;
   }
   if(measureOn && mo.hidden){
@@ -3303,17 +3879,24 @@ document.addEventListener('keydown', e=>{
   }
   if(e.key==='Escape'){
     if(!mo.hidden){ closeModal(); return; }
-    sel=null; roomSel=null; renderSel(); renderRoomSel(); renderWalls(); renderOpen(); draw(); return;
+    sel=null; roomSel=null; floorSel=null; renderSel(); renderRoomSel(); renderWalls(); renderOpen(); renderFloorSel(); draw(); return;
   }
   if(mo.hidden && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){
     e.preventDefault();
     const redo=e.shiftKey;
-    if(roomMode()){ redo?redoRoom():undoRoom(); } else { redo?redoFurn():undoFurn(); }
+    if(floorMode()){ redo?redoFloor():undoFloor(); }
+    else if(roomMode()){ redo?redoRoom():undoRoom(); } else { redo?redoFurn():undoFurn(); }
     return;
   }
   if(mo.hidden && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y'){
     e.preventDefault();
-    roomMode() ? redoRoom() : redoFurn();
+    floorMode() ? redoFloor() : roomMode() ? redoRoom() : redoFurn();
+    return;
+  }
+  /* turning the picked room a quarter at a time is what an arrangement actually needs */
+  if(mo.hidden && floorMode() && floorSel && (e.key==='['||e.key===']') && !e.ctrlKey && !e.metaKey){
+    const l=S.layouts.find(x=>x.id===floorSel);
+    if(l){ e.preventDefault(); turnFloorRoom(l, e.key==='[' ? -90 : 90); }
     return;
   }
   if(roomMode()){
@@ -3395,29 +3978,34 @@ function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 function normSearch(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
 function renderAll(){
   renderTree(); renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
-  renderInv(); renderSel(); renderSnap(); renderMode(); renderMeasureBar(); updateHistButtons(); draw();
+  renderInv(); renderSel(); renderFloorSel(); renderSnap(); renderMode(); renderMeasureBar(); updateHistButtons(); draw();
 }
 /* the mode also lives in ?mode=, so a refresh (or a shared link) lands back in the same mode */
 function paramMode(){
   const m=new URLSearchParams(location.search).get('mode');
-  return ['room','furniture','inventory','marketplace'].includes(m) ? m : null;
+  return ['room','furniture','floor','inventory','marketplace'].includes(m) ? m : null;
 }
 function syncModeParam(){
   const usp=new URLSearchParams(location.search);
   usp.set('mode', S.mode);
   history.replaceState(null,'',location.pathname+'?'+usp.toString()+location.hash);
 }
-const isCanvasMode = m => m==='room'||m==='furniture';
+const isCanvasMode = m => m==='room'||m==='furniture'||m==='floor';
 let pendingFit=false;
 function setMode(m){
   S.mode=m;
   if(isCanvasMode(m)) S.planMode=m;
-  if(m==='furniture') roomSel=null; else if(m==='room') sel=null;
-  if(!isCanvasMode(m) && measureOn){ measureOn=false; resetMeasureState(); renderMeasureBar(); }
+  if(m==='furniture') roomSel=null;
+  else if(m==='room') sel=null;
+  else if(m==='floor'){ sel=null; roomSel=null; floorSel = L().floorId ? L().id : null; floorEntry(); }
+  if(m!=='floor'){ floorGuides=[]; floorSnapNote=''; }
+  /* measurements belong to one room, so Floor mode leaves the tool behind too */
+  if((!isCanvasMode(m) || m==='floor') && measureOn){ measureOn=false; resetMeasureState(); renderMeasureBar(); }
   renderMode(); applyLayoutMode();
   if(isCanvasMode(m)){
     resize();
     if(pendingFit){ pendingFit=false; fit(); }
+    else if(m==='floor') fit();   // arriving at a floor, frame the whole arrangement
     renderRoomSel(); renderWalls(); renderOpen(); renderSel(); updateHistButtons(); draw();
   }
   else renderLibAll();
@@ -3505,8 +4093,30 @@ function folderLabel(f){
   return `<span class="nm">${esc(f.name)}</span>${tags}`;
 }
 const moreBtn = (cls,label) => `<button type="button" class="btn quiet sm icon ${cls}" data-act="more" title="${label||'More actions'}" aria-label="${label||'More actions'}">${svgI('more')}</button>`;
+const layoutRowHTML = (l,depth) =>
+  `<div class="tree-row layout-row ${l.id===S.active?'active':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*12+26}px" ${l.id===S.active?'aria-current="true"':''}>
+      <span class="ico">${svgI('room')}</span><span class="nm">${esc(l.name)}</span>
+      ${moreBtn('tree-more')}
+    </div>`;
+/* a floor holds its rooms directly: a room standing on one shows up here, not
+   back under its folder, so it is only ever in the tree once */
+function floorRowHTML(fl,depth){
+  const open=treeOpen.has(fl.id), rooms=floorLayouts(fl.id);
+  let html=`<div class="tree-row floor-row" data-floor="${fl.id}" style="padding-left:${depth*12+4}px" aria-expanded="${open}">
+      <button type="button" class="caret" data-act="toggle" aria-label="${open?'Collapse':'Expand'}">${svgI(open?'chev-d':'chev-r')}</button>
+      <span class="ico">${svgI('floor')}</span><span class="nm">${esc(fl.name)}</span>
+      <span class="tagchip">${rooms.length} room${rooms.length===1?'':'s'}</span>
+      ${moreBtn('tree-more')}
+    </div>`;
+  if(open){
+    for(const l of rooms) html+=layoutRowHTML(l,depth+1);
+    if(!rooms.length) html+=`<div class="tree-empty" style="padding-left:${(depth+1)*12+26}px">No rooms yet</div>`;
+  }
+  return html;
+}
 function renderTreeLevel(parentId,depth){
   let html='';
+  if(!parentId) for(const fl of childFloors(null)) html+=floorRowHTML(fl,depth);
   for(const f of childFolders(parentId)){
     const open=treeOpen.has(f.id);
     html+=`<div class="tree-row folder-row" draggable="true" data-folder="${f.id}" style="padding-left:${depth*12+4}px" aria-expanded="${open}">
@@ -3516,32 +4126,35 @@ function renderTreeLevel(parentId,depth){
     </div>`;
     if(open) html+=renderTreeLevel(f.id,depth+1);
   }
-  for(const l of childLayouts(parentId)){
-    html+=`<div class="tree-row layout-row ${l.id===S.active?'active':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*12+26}px" ${l.id===S.active?'aria-current="true"':''}>
-      <span class="ico">${svgI('room')}</span><span class="nm">${esc(l.name)}</span>
-      ${moreBtn('tree-more')}
-    </div>`;
-  }
-  if(depth>0 && !childFolders(parentId).length && !childLayouts(parentId).length){
+  const loose=childLayouts(parentId).filter(l=>!l.floorId);
+  for(const l of loose) html+=layoutRowHTML(l,depth);
+  if(depth>0 && !childFolders(parentId).length && !loose.length){
     html+=`<div class="tree-empty" style="padding-left:${depth*12+26}px">Empty</div>`;
   }
   return html;
 }
 function renderTree(){ $('layoutTree').innerHTML=renderTreeLevel(null,0); }
 const treeBox=$('layoutTree');
-const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layout="'+id+'"]');
+const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layout="'+id+'"],[data-floor="'+id+'"]');
 
 treeBox.addEventListener('click', e=>{
   const more=e.target.closest('[data-act=more]');
   const fRow=e.target.closest('.folder-row');
   const lRow=e.target.closest('.layout-row');
+  const flRow=e.target.closest('.floor-row');
   if(more){
     cancelSingleClick();
-    if(fRow) folderMenu(fRow.dataset.folder, more);
+    if(flRow) floorMenu(flRow.dataset.floor, more);
+    else if(fRow) folderMenu(fRow.dataset.folder, more);
     else if(lRow) layoutMenu(lRow.dataset.layout, more);
     return;
   }
   // held back briefly so a second click can turn into a rename instead
+  if(flRow){
+    const id=flRow.dataset.floor;
+    singleClick(()=>{ treeOpen.has(id)?treeOpen.delete(id):treeOpen.add(id); renderTree(); });
+    return;
+  }
   if(fRow){
     const id=fRow.dataset.folder;
     singleClick(()=>{ treeOpen.has(id)?treeOpen.delete(id):treeOpen.add(id); renderTree(); });
@@ -3556,7 +4169,8 @@ treeBox.addEventListener('dblclick', e=>{
   cancelSingleClick();
   if(e.target.closest('button')) return;
   const row=e.target.closest('.tree-row'); if(!row) return;
-  if(row.dataset.folder) renameFolder(row.dataset.folder);
+  if(row.dataset.floor) renameFloor(row.dataset.floor);
+  else if(row.dataset.folder) renameFolder(row.dataset.folder);
   else renameLayout(row.dataset.layout);
 });
 function renameFolder(id){
@@ -3569,6 +4183,11 @@ function renameLayout(id){
   if(!l||!row) return;
   inlineEdit(row.querySelector('.nm'), l.name, v=>{ if(v){ l.name=v; save(); } renderTree(); });
 }
+function renameFloor(id){
+  const f=floorOf(id), row=treeRowEl(id);
+  if(!f||!row) return;
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderTree(); });
+}
 
 /* ---- drag a room or folder to move it: onto a folder puts it inside, on the
         upper/lower edge of a row drops it beside that row ---- */
@@ -3576,6 +4195,7 @@ let dragTree=null;
 treeBox.addEventListener('dragstart', e=>{
   const row=e.target.closest('.tree-row'); if(!row) return;
   cancelSingleClick(); closeMenu();
+  if(row.dataset.floor) return;   // floors don't reorder; rooms are dragged onto them
   dragTree = row.dataset.folder ? {kind:'folder',id:row.dataset.folder} : {kind:'layout',id:row.dataset.layout};
   row.classList.add('dragging');
   e.dataTransfer.effectAllowed='move';
@@ -3590,6 +4210,8 @@ function treeDropSpot(e){
   if(!dragTree) return null;
   const row=e.target.closest('.tree-row');
   if(!row) return {mode:'root'};
+  /* dropping a room on a floor row is how you stand it on that floor */
+  if(row.dataset.floor) return dragTree.kind==='layout' ? {mode:'onto-floor',id:row.dataset.floor,row} : null;
   const isFolder=!!row.dataset.folder;
   const id=isFolder?row.dataset.folder:row.dataset.layout;
   if(isFolder && dragTree.kind==='folder' && id===dragTree.id) return null;
@@ -3603,7 +4225,7 @@ treeBox.addEventListener('dragover', e=>{
   e.dataTransfer.dropEffect='move';
   clearDropMarks(treeBox);
   if(spot.mode==='root'){ treeBox.classList.add('drop-root'); return; }
-  spot.row.classList.add(spot.mode==='into'?'drop-into':spot.mode==='before'?'drop-before':'drop-after');
+  spot.row.classList.add(spot.mode==='into'||spot.mode==='onto-floor'?'drop-into':spot.mode==='before'?'drop-before':'drop-after');
 });
 treeBox.addEventListener('dragleave', e=>{ if(e.target===treeBox) clearDropMarks(treeBox); });
 treeBox.addEventListener('drop', e=>{
@@ -3611,6 +4233,12 @@ treeBox.addEventListener('drop', e=>{
   clearDropMarks(treeBox);
   if(!spot||!d) return;
   e.preventDefault();
+  if(spot.mode==='onto-floor'){
+    const l=S.layouts.find(x=>x.id===d.id);
+    dragTree=null;
+    if(l && l.floorId!==spot.id) putOnFloor(l, spot.id); else renderTree();
+    return;
+  }
   let parent=null, targetId=null, after=false;
   if(spot.mode==='into'){ parent=spot.id; treeOpen.add(parent); }
   else if(spot.mode!=='root'){
@@ -3628,6 +4256,7 @@ treeBox.addEventListener('drop', e=>{
   } else {
     const l=S.layouts.find(x=>x.id===d.id); if(!l) return;
     l.folderId=parent;
+    l.floorId=null;   // dragged back into the tree proper, so off the floor it comes
     moveBefore(S.layouts, d.id, targetId, after);
   }
   dragTree=null;
@@ -3659,9 +4288,87 @@ function layoutMenu(id, anchor){
     {label:'Rename', fn:()=>renameLayout(id)},
     {label:'Duplicate', fn:()=>duplicateLayout(id)},
     {label:'Move to folder\u2026', fn:()=>moveDialog('layout',id)},
+    l.floorId
+      ? {label:'Take off \u201c'+(floorOf(l.floorId)||{name:'the floor'}).name+'\u201d', fn:()=>{ l.floorId=null; renderAll(); save(); }}
+      : (S.floors.length
+          ? {label:'Put on a floor\u2026', fn:()=>putOnFloorDialog(id)}
+          : {label:'Put on a new floor\u2026', fn:()=>newFloorWith(l)}),
     {sep:true},
     {label:'Delete room\u2026', danger:true, fn:()=>deleteLayout(id)},
   ], l.name);
+}
+/* ---- floors: a named arrangement of rooms. A floor owns no geometry of its
+        own — each room keeps its outline and carries where it stands. ---- */
+function newFloor(){
+  askText('New floor','Name','Floor', n=>{
+    const fl={id:uid(), name:n, parentId:null, extWall:0};
+    S.floors.push(fl); treeOpen.add(fl.id);
+    renderTree(); save();
+  });
+}
+function floorMenu(id, anchor){
+  const fl=floorOf(id); if(!fl) return;
+  openMenu(anchor, [
+    {label:'Rename', fn:()=>renameFloor(id)},
+    {label:'Rooms on this floor…', fn:()=>floorRoomsDialog(id)},
+    {sep:true},
+    {label:'Delete floor…', danger:true, fn:()=>deleteFloor(id)},
+  ], fl.name);
+}
+function floorRoomsDialog(id){
+  const fl=floorOf(id); if(!fl) return;
+  const rooms=S.layouts.map(l=>{
+    const other = l.floorId && l.floorId!==id ? floorOf(l.floorId) : null;
+    return {value:l.id, label:l.name, sub: other ? 'on '+other.name : folderLine(l), checked: l.floorId===id};
+  });
+  openModal('Rooms on “'+fl.name+'”', `
+    <p class="hint">Tick the rooms that make up this floor. A room can only stand on one floor at a time.</p>
+    ${pickerHTML('flRooms','Rooms',rooms,'You have no rooms yet')}`,
+    'Save', ()=>{
+      const picked=new Set(pickValues('flRooms'));
+      for(const l of S.layouts){
+        if(picked.has(l.id)){ if(l.floorId!==id){ placeOnFloor(l,id); l.floorId=id; } }
+        else if(l.floorId===id) l.floorId=null;
+      }
+      treeOpen.add(id);
+      renderAll(); save();
+    });
+}
+/* deleting a floor never deletes a room: the arrangement goes, the rooms stay */
+function deleteFloor(id){
+  const fl=floorOf(id); if(!fl) return;
+  const rooms=floorLayouts(id), n=rooms.length;
+  const drop=()=>{
+    for(const l of rooms) l.floorId=null;
+    S.floors=S.floors.filter(x=>x.id!==id);
+    treeOpen.delete(id);
+    renderAll(); save();
+  };
+  if(!n){ askConfirm('Delete this floor?', '“'+fl.name+'” is empty.', 'Delete floor', drop); return; }
+  askConfirm('Delete “'+fl.name+'”?',
+    n+' room'+(n>1?'s':'')+' stand'+(n>1?'':'s')+' on it. Deleting the floor keeps every room — they go back to their folders.',
+    'Delete floor', drop);
+}
+function putOnFloor(l, fid){ placeOnFloor(l,fid); l.floorId=fid; treeOpen.add(fid); renderAll(); save(); }
+function newFloorWith(l){
+  askText('New floor','Name','Floor', n=>{
+    const fl={id:uid(), name:n, parentId:null, extWall:0};
+    S.floors.push(fl); putOnFloor(l, fl.id);
+  });
+}
+function putOnFloorDialog(id){
+  const l=S.layouts.find(x=>x.id===id); if(!l) return;
+  const opts=S.floors.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
+  openModal('Put “'+l.name+'” on a floor', `
+    <div class="field"><label for="flPick">Floor</label>
+      <select id="flPick">${opts}<option value="">New floor…</option></select></div>
+    <p class="hint">The room keeps its own outline, walls and items. It just gains a place to stand.</p>`,
+    'Put on floor', ()=>{
+      const v=$('flPick').value;
+      /* deferred so this modal is closed before the name prompt opens over it */
+      if(!v){ setTimeout(()=>newFloorWith(l),0); return; }
+      putOnFloor(l, v);
+    });
 }
 function folderTagsDialog(id){
   const f=folderOf(id);
@@ -3729,6 +4436,8 @@ function duplicateLayout(id){
   c.room.pillars.forEach(p=>renew('pillar',p));
   c.room.iwalls.forEach(w=>renew('iwall',w));
   remapMeasures(c, map);
+  /* a copy stays on the same floor, nudged clear so it isn't hidden under the original */
+  if(c.floorId) c.floorPlace={x:(c.floorPlace.x||0)+500, y:(c.floorPlace.y||0)+500, rot:c.floorPlace.rot||0};
   S.layouts.splice(S.layouts.indexOf(src)+1, 0, c);
   activateLayout(c.id);
   renderAll(); save();
@@ -3759,11 +4468,12 @@ function moveDialog(kind,id){
     <label class="stack-label" for="moFolder">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
-      if(kind==='folder') obj.parentId=v; else obj.folderId=v;
+      if(kind==='folder') obj.parentId=v; else { obj.folderId=v; obj.floorId=null; }
       if(v) treeOpen.add(v);
       renderTree(); renderInv(); save();
     });
 }
+$('btnNewFloor').addEventListener('click', newFloor);
 $('btnNewFolder').addEventListener('click', ()=>{
   askText('New folder','Name','Folder', n=>{ S.folders.push({id:uid(),name:n,parentId:null,tags:[]}); renderTree(); save(); });
 });
@@ -3808,13 +4518,15 @@ function renderSnap(){
   s.value=S.snap;
 }
 function renderWalls(){
-  const ul=$('wallList'), P=RP();
+  const ul=$('wallList'), P=RP(), room=L().room;
   ul.innerHTML=P.map((_,i)=>{
     const w=wallOf(i);
     const on=roomSel&&roomSel.kind==='wall'&&roomSel.i===i;
+    const meta = wallIsOff(room,i) ? 'Open · '+esc(fmtLen(w.len,S.unit))
+                                   : esc(fmtLen(w.len,S.unit))+' · '+Math.round(wallAngle(i))+'°';
     return `<li data-i="${i}" class="${on?'on':''}">
       <span class="nm">Wall ${i+1}</span>
-      <span class="lmeta">${esc(fmtLen(w.len,S.unit))} · ${Math.round(wallAngle(i))}°</span></li>`;
+      <span class="lmeta">${meta}</span></li>`;
   }).join('');
   renderObstacles();
 }
@@ -3933,18 +4645,83 @@ function renderRoomSel(){
   if(roomSel.kind==='iwall') return renderIWallProps();
   return renderOpeningProps();
 }
+/* Floor mode's Properties: the picked room's place on the floor, and the floor itself.
+   Anything about the room's own shape or contents stays in Room/Furniture mode. */
+function renderFloorSel(){
+  const box=$('floorSelBox'), t=$('floorSelTitle'); if(!box) return;
+  const l = floorSel && S.layouts.find(x=>x.id===floorSel);
+  box.closest('section').classList.toggle('is-empty', !(floorMode()&&l));
+  renderFloorProps();
+  if(!floorMode() || !l){
+    t.textContent='Selection';
+    box.innerHTML='<p class="hint">Click a room in the plan to move or turn it here.</p>';
+    return;
+  }
+  const p=l.floorPlace, own=bbox(l.room.points);
+  t.textContent=l.name;
+  box.innerHTML=`
+    <div class="field"><label for="flX">From left</label><input type="text" class="len" id="flX" value="${esc(fmtLen(p.x+own.x0))}"></div>
+    <div class="field"><label for="flY">From top</label><input type="text" class="len" id="flY" value="${esc(fmtLen(p.y+own.y0))}"></div>
+    <div class="field"><label for="flRot">Angle</label><input type="text" id="flRot" value="${trimNum(p.rot,1)}"><span class="unit">°</span>
+      <button class="btn quiet sm icon" id="flRotL" title="Turn left 90°" aria-label="Turn left 90 degrees">${svgI('rot-l')}</button>
+      <button class="btn quiet sm icon" id="flRotR" title="Turn right 90°" aria-label="Turn right 90 degrees">${svgI('rot-r')}</button></div>
+    <div class="field"><label for="flDim">Label</label><input type="text" id="flDim" value="${esc(l.dimLabel||'')}" placeholder="${esc(fmtLen(own.w)+' × '+fmtLen(own.h))}"></div>
+    <div class="row actions">
+      <button class="btn sm" id="flEdit">Edit this room</button>
+      <button class="btn sm quiet" id="flOff">Take off floor</button>
+    </div>`;
+  const move=(k,v)=>{ if(v==null||!isFinite(v)) return; l.floorPlace[k]=v-(k==='x'?own.x0:own.y0); commitFloor(); renderFloorSel(); draw(); save(); };
+  $('flX').addEventListener('change',e=>move('x',parseLen(e.target.value)));
+  $('flY').addEventListener('change',e=>move('y',parseLen(e.target.value)));
+  $('flRot').addEventListener('change',e=>{
+    const v=parseFloat(e.target.value);
+    if(isFinite(v)){ l.floorPlace.rot=norm360(v); commitFloor(); renderFloorSel(); draw(); save(); }
+  });
+  $('flDim').addEventListener('change',e=>{ l.dimLabel=e.target.value.trim(); draw(); save(); });
+  $('flRotL').addEventListener('click',()=>turnFloorRoom(l,-90));
+  $('flRotR').addEventListener('click',()=>turnFloorRoom(l,90));
+  $('flEdit').addEventListener('click',()=>{ activateLayout(l.id); setMode('room'); renderAll(); fit(); save(); });
+  $('flOff').addEventListener('click',()=>{ l.floorId=null; floorSel=null; renderAll(); save(); });
+}
+function turnFloorRoom(l,deg){
+  l.floorPlace.rot=norm360((l.floorPlace.rot||0)+deg);
+  commitFloor(); renderFloorSel(); draw(); save();
+}
+function renderFloorProps(){
+  const box=$('floorPropsBox'); if(!box) return;
+  const fl=floorOf(L().floorId);
+  if(!fl){
+    box.innerHTML='<p class="hint">This room is not on a floor yet. Put it on one from its ⋯ menu in the Rooms list.</p>';
+    return;
+  }
+  const n=floorLayouts(fl.id).length;
+  box.innerHTML=`
+    <div class="field"><label for="flName">Name</label><input type="text" id="flName" value="${esc(fl.name)}"></div>
+    <div class="field"><label for="flExt">Outer wall</label><input type="text" class="len" id="flExt" value="${fl.extWall?esc(fmtLen(fl.extWall)):''}" placeholder="Same as each room"></div>
+    <p class="hint">${plural(n,'room')} on this floor. Drag one against another and it clicks to a shared wall.</p>
+    <div class="row actions"><button class="btn sm quiet" id="flFit">Fit floor</button></div>`;
+  $('flName').addEventListener('change',e=>{ const v=e.target.value.trim(); if(v){ fl.name=v; renderTree(); save(); } });
+  $('flExt').addEventListener('change',e=>{
+    const raw=e.target.value.trim(), v=raw?parseLen(raw):0;
+    fl.extWall = raw && isFinite(v) && v>0 ? v : 0;
+    renderFloorProps(); draw(); save();
+  });
+  $('flFit').addEventListener('click',()=>fit());
+}
 function renderWallProps(){
-  const i=roomSel.i, w=wallOf(i);
+  const i=roomSel.i, w=wallOf(i), room=L().room, off=wallIsOff(room,i);
   $('roomSelTitle').textContent='Wall '+(i+1);
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="wLen">Length</label><input type="text" class="len" id="wLen" value="${esc(fmtLen(w.len,S.unit))}"></div>
     <div class="field"><label for="wAng">Direction</label><input type="number" class="deg" id="wAng" step="1" value="${Math.round(wallAngle(i))}"><span class="unit">°</span></div>
     <p class="hint">0° points right, 90° up. Changing either moves the far corner.</p>
+    ${off?'<p class="hint">This side is open: the corner stays, the wall is gone. The room still keeps its floor area.</p>':''}
     <div class="row actions">
-      <button class="btn sm" id="wDoor">Add door…</button>
-      <button class="btn sm" id="wWin">Add window…</button>
+      ${off?'' : '<button class="btn sm" id="wDoor">Add door…</button><button class="btn sm" id="wWin">Add window…</button>'}
       <button class="btn sm" id="wSplit">Split</button>
+      <button class="btn sm ${off?'':'danger'}" id="wOff">${off?'Put the wall back':'Open this side'}</button>
     </div>`;
+  $('wOff').addEventListener('click',()=>toggleWallOff(i));
   $('wLen').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
     if(isFinite(v)&&v>=100) setWallLen(i,v); else flash('Give the wall a length');
@@ -3955,8 +4732,10 @@ function renderWallProps(){
     if(isFinite(v)) setWallAngle(i,v);
     renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
   });
-  $('wDoor').addEventListener('click',()=>openingDialog(null,'door',i));
-  $('wWin').addEventListener('click',()=>openingDialog(null,'window',i));
+  if(!off){
+    $('wDoor').addEventListener('click',()=>openingDialog(null,'door',i));
+    $('wWin').addEventListener('click',()=>openingDialog(null,'window',i));
+  }
   $('wSplit').addEventListener('click',()=>splitWall(i));
 }
 function renderCornerProps(){
@@ -3976,17 +4755,45 @@ function renderCornerProps(){
   $('cY').addEventListener('change',go);
   $('cDel').addEventListener('click',()=>deleteCorner(i));
 }
+/* Taking a wall away takes its doors and windows with it — there is nothing left for
+   them to sit in. It all goes through commitRoom, so one undo brings the wall and
+   everything that was in it back together. */
+function toggleWallOff(i){
+  const l=L(), room=l.room;
+  syncWallOff(room);
+  if(wallIsOff(room,i)){
+    room.wallOff[i]=false;
+    renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
+    return;
+  }
+  const inWall=l.openings.filter(o=>o.wall===i);
+  const apply=()=>{
+    room.wallOff[i]=true;
+    if(inWall.length) l.openings=l.openings.filter(o=>o.wall!==i);
+    renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
+  };
+  if(!inWall.length){ apply(); return; }
+  askConfirm('Open this side?',
+    'Wall '+(i+1)+' holds '+plural(inWall.length,'door or window')+'. Opening the side removes '+(inWall.length>1?'them':'it')+' too.',
+    'Open this side', apply);
+}
 function splitWall(i){
-  const P=RP(), n=P.length, w=wallOf(i);
+  const P=RP(), n=P.length, w=wallOf(i), room=L().room;
   tryRoomEdit(()=>{ P.splice(i+1,0,[w.mid[0],w.mid[1]]); });
+  // both halves inherit whether that wall was there
+  if(P.length!==n) room.wallOff.splice(i+1, 0, wallIsOff(room,i));
+  syncWallOff(room);
   roomSel={kind:'corner', i:i+1};
   renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
 }
 function deleteCorner(i){
   const P=RP();
   if(P.length<=3){ flash('A room needs at least three corners'); return; }
+  const room=L().room;
   const removed=P.splice(i,1);
   if(!polySimple(P)){ P.splice(i,0,removed[0]); flash("That corner can't be removed"); return; }
+  room.wallOff.splice(i,1);   // the two edges merge; the one before keeps its state
+  syncWallOff(room);
   clampOpenings();
   roomSel=null;
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
@@ -4098,7 +4905,7 @@ function renderOpeningProps(){
   o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
   $('roomSelTitle').textContent=KIND(o);
   $('roomSelBox').innerHTML=`
-    <div class="field"><label for="oWall">Wall</label><select id="oWall">${RP().map((_,i)=>`<option value="${i}" ${i===o.wall?'selected':''}>Wall ${i+1}</option>`).join('')}</select></div>
+    <div class="field"><label for="oWall">Wall</label><select id="oWall">${RP().map((_,i)=>wallIsOff(L().room,i)&&i!==o.wall?'':`<option value="${i}" ${i===o.wall?'selected':''}>Wall ${i+1}</option>`).join('')}</select></div>
     <div class="field"><label for="oW">Width</label><input type="text" class="len" id="oW" value="${esc(fmtLen(o.width,S.unit))}"></div>
     <div class="field"><label for="oCorner">From</label><select id="oCorner">
       <option value="cw" ${o.corner==='cw'?'selected':''}>Near corner</option>
@@ -4277,7 +5084,7 @@ invBox.addEventListener('drop', e=>{
 
 function renderSel(){
   const box=$('selBox');
-  const inst=!roomMode()&&sel&&instOf(sel), it=inst&&itemOf(inst.itemId);
+  const inst=furnMode()&&sel&&instOf(sel), it=inst&&itemOf(inst.itemId);
   box.closest('section').classList.toggle('is-empty', !(inst&&it));
   if(!inst||!it){
     box.innerHTML=`<p class="hint">Click an item in the plan to move, turn or remove it.</p>
@@ -4362,7 +5169,8 @@ $('btnPreRect').addEventListener('click', ()=>{
       const w=parseLen($('pW').value,S.unit), d=parseLen($('pD').value,S.unit);
       if(!isFinite(w)||!isFinite(d)||w<500||d<500){ moError('Give a width and depth of at least 500 mm'); return false; }
       L().room.points=rectPts(w,d);
-      clampOpenings(); roomSel=null;
+      L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
+  clampOpenings(); roomSel=null;
       renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
     });
 });
@@ -4382,7 +5190,8 @@ $('btnPreL').addEventListener('click', ()=>{
       if(![w,d,cw,cd].every(v=>isFinite(v)&&v>100)){ moError('Fill in all four measurements'); return false; }
       if(cw>=w-100||cd>=d-100){ moError('The notch has to be smaller than the room'); return false; }
       L().room.points=shapePoly({type:'lshape',w,d,cw,cd,corner:$('pC').value}).map(([x,y])=>[x+w/2,y+d/2]);
-      clampOpenings(); roomSel=null;
+      L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
+  clampOpenings(); roomSel=null;
       renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
     });
 });
@@ -4398,8 +5207,8 @@ $('showWalk').addEventListener('change', e=>{ S.showWalk=e.target.checked; draw(
 $('showMeasure').addEventListener('change', e=>{ S.showMeasure=e.target.checked; draw(); save(); });
 $('showDims').addEventListener('change', e=>{ S.showDims=e.target.checked; draw(); save(); });
 $('showOpen').addEventListener('change', e=>{ S.showOpen=e.target.checked; draw(); save(); });
-$('btnUndo').addEventListener('click',()=>{ roomMode()?undoRoom():undoFurn(); });
-$('btnRedo').addEventListener('click',()=>{ roomMode()?redoRoom():redoFurn(); });
+$('btnUndo').addEventListener('click',()=>{ floorMode()?undoFloor():roomMode()?undoRoom():undoFurn(); });
+$('btnRedo').addEventListener('click',()=>{ floorMode()?redoFloor():roomMode()?redoRoom():redoFurn(); });
 $('btnZoomIn').addEventListener('click',()=>zoomAt(1.25,W/2,H/2));
 $('btnZoomOut').addEventListener('click',()=>zoomAt(1/1.25,W/2,H/2));
 $('btnFit').addEventListener('click',fit);
@@ -4591,7 +5400,7 @@ function openingDialog(id, kind, wallIdx){
   const corner = o?(o.corner==='ccw'?'ccw':'cw'):'cw';
   const dispOff = o ? openingDispOffset(o, wallOf(wi).len) : 600;
   openModal(o?('Edit '+KIND(o).toLowerCase()):(k==='window'?'Add window':'Add door'), `
-    <div class="field"><label for="dWall">Wall</label><select id="dWall">${RP().map((_,i)=>`<option value="${i}" ${i===wi?'selected':''}>Wall ${i+1} (${esc(fmtLen(wallOf(i).len,S.unit))})</option>`).join('')}</select></div>
+    <div class="field"><label for="dWall">Wall</label><select id="dWall">${RP().map((_,i)=>wallIsOff(L().room,i)&&i!==wi?'':`<option value="${i}" ${i===wi?'selected':''}>Wall ${i+1} (${esc(fmtLen(wallOf(i).len,S.unit))})</option>`).join('')}</select></div>
     <div class="field"><label for="dWidth">Width</label><input type="text" class="len" id="dWidth" value="${esc(fmtLen(o?o.width:(k==='window'?1200:813),S.unit))}"></div>
     <div class="field"><label for="dCorner">From</label><select id="dCorner">
       <option value="cw" ${corner==='cw'?'selected':''}>Near corner (clockwise)</option>
@@ -4707,9 +5516,12 @@ function exportPayload(roomIds, itemIds, withPrefs){
   const layouts=S.layouts.filter(l=>roomIds.includes(l.id)).map(clone);
   const keep=new Set();
   for(const l of layouts) for(const id of ancestorFolderIds(S.folders, l.folderId)) keep.add(id);
+  /* a floor travels whenever one of the rooms standing on it does */
+  const keepFl=new Set(layouts.map(l=>l.floorId).filter(Boolean));
   const out={
     app:'room-planner', version:2, exported:new Date().toISOString(),
     folders:S.folders.filter(f=>keep.has(f.id)).map(clone),
+    floors:S.floors.filter(f=>keepFl.has(f.id)).map(clone),
     layouts,
     inventory:S.inventory.filter(i=>itemIds.includes(i.id)).map(clone)
   };
@@ -4790,6 +5602,13 @@ function readImport(data){
     if(!Array.isArray(c.tags)) c.tags=[];
     return c;
   });
+  const floors = (Array.isArray(data.floors)?data.floors:[]).filter(f=>f&&f.id).map(f=>{
+    const c=clone(f);
+    c.name=c.name||'Floor';
+    c.parentId=null;
+    c.extWall = isFinite(c.extWall) && c.extWall>0 ? c.extWall : 0;
+    return c;
+  });
   if(!layouts.length && !inventory.length) return null;
   const prefs={};
   for(const k of PREF_KEYS) if(data[k]!==undefined) prefs[k]=data[k];
@@ -4797,7 +5616,7 @@ function readImport(data){
   if(prefs.invScope && !INV_SCOPES[prefs.invScope]) delete prefs.invScope;
   if(prefs.snap!==undefined) prefs.snap=String(prefs.snap);
   for(const k of ['showSwing','showDims','showOpen','showWalk','showMeasure','onlyAvailable']) if(prefs[k]!==undefined) prefs[k]=!!prefs[k];
-  return {layouts, folders, inventory, active:data.active, prefs:Object.keys(prefs).length?prefs:null};
+  return {layouts, folders, floors, inventory, active:data.active, prefs:Object.keys(prefs).length?prefs:null};
 }
 function importDialog(inc){
   const rooms=inc.layouts.map(l=>({value:l.id, label:l.name, sub:folderLine(l,inc.folders), checked:true}));
@@ -4845,12 +5664,14 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
   const keep=new Set();
   for(const l of layouts) for(const id of ancestorFolderIds(inc.folders, l.folderId)) keep.add(id);
   const folders=inc.folders.filter(f=>keep.has(f.id)).map(clone);
+  const keepFl=new Set(layouts.map(l=>l.floorId).filter(Boolean));
+  const floors=(inc.floors||[]).filter(f=>keepFl.has(f.id)).map(clone);
 
   if(replace){
     const st={
       mode:'furniture', tagFilter:[], untaggedOnly:false,
       leftOpen:S.leftOpen, rightOpen:S.rightOpen, secClosed:S.secClosed.slice(),
-      inventory:items, folders, layouts
+      inventory:items, folders, floors, layouts
     };
     for(const k of PREF_KEYS) st[k]=S[k];
     if(wantPrefs && inc.prefs) Object.assign(st, inc.prefs);
@@ -4899,11 +5720,24 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     f.parentId = f.parentId ? (folderMap[f.parentId]||null) : null;
     S.folders.push(f);
   }
+  /* floors follow the same rule as folders: an id you already have IS that floor */
+  const takenFloors=new Set(S.floors.map(f=>f.id));
+  for(const f of floors){
+    if(takenFloors.has(f.id)) continue;
+    takenFloors.add(f.id);
+    S.floors.push(f);
+  }
   const takenLayouts=new Set(S.layouts.map(l=>l.id));
   for(const l of layouts){
     if(takenLayouts.has(l.id)) l.id=uid();
     takenLayouts.add(l.id);
     l.folderId = l.folderId ? (folderMap[l.folderId]||null) : null;
+    l.floorId = l.floorId && takenFloors.has(l.floorId) ? l.floorId : null;
+    /* importing the same file twice must not hide one room exactly under another */
+    if(l.floorId){
+      const near = p => floorLayouts(l.floorId).some(o=>Math.abs(o.floorPlace.x-p.x)<50 && Math.abs(o.floorPlace.y-p.y)<50);
+      while(near(l.floorPlace)){ l.floorPlace.x+=300; l.floorPlace.y+=300; }
+    }
     const placedMap={};
     l.placed = l.placed.filter(p=>{
       // the thing came in with the room, or one of yours already answers to that id
