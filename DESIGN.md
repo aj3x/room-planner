@@ -101,7 +101,33 @@ seen".
 What we took: a small token set, higher text contrast, colour kept out of
 neutral surfaces, and density appropriate for a professional tool.
 
-### 1.3 Our priority order
+### 1.3 Laws of UX (Yablonski)
+
+Jon Yablonski's *Laws of UX* collects named findings from cognitive and
+perceptual psychology (Gestalt proximity/similarity, Hick's, Fitts's,
+Miller's, Jakob's, Postel's, the Doherty threshold, Von Restorff, serial
+position, Zeigarnik, Tesler's, and others). Gestalt grouping, restraint and
+aesthetic-usability are already covered above and in §3.4 and §3.9. The rest
+were audited directly against the code (`index.html`) rather than assumed:
+
+| Law | Verdict | Evidence |
+| --- | --- | --- |
+| **Jakob's Law** — users expect this app to work like others they know | Followed | Undo/redo, drag-to-move, Esc-cancels/Enter-submits modals, click-row-to-select: all standard canvas-app conventions (§2.2, §3.9). |
+| **Fitts's Law** — targets should be large enough and close to what they affect | Followed | Controls are 32px default / 28px small, growing to 36–40px under `@media (pointer:coarse)` (`index.html:421-424`); object actions (rotate, delete) live in Properties next to the object, not a distant toolbar (§2.2). |
+| **Hick's Law** — more choices, slower decisions | Followed | The header exposes only three places plus Import/Export (`index.html:495-506`); section actions are one `+` each, not a flat list of every possible action. |
+| **Miller's Law** — chunk information, don't list it flat | Followed | Left panel is chunked into named sections (Rooms, Items, Walls, Doors…) rather than one long list; each section collapses independently. |
+| **Doherty Threshold** — respond within ~400ms and keep users informed | Followed | Toasts read `Math.max(1600, Math.min(5000, len*60))` ms (`index.html:2010`), so short and long messages are both legible; no action currently runs long enough to need a spinner. |
+| **Postel's Law** — be liberal in what input you accept | Followed | `parseLen()` accepts mixed units, fractions and slop in one string ("3ft 6in", "3 1/2\"", bare numbers) rather than one rigid format (`index.html:697-712`). |
+| **Von Restorff Effect** — the one thing that matters should look different | Followed | Danger actions get their own colour (`.menu button.danger`, `.btn.danger`) and destructive buttons are visually distinct from the neutral default (§3.2, §3.9). |
+| **Serial Position Effect** — order affects what's remembered/misclicked | Followed | Destructive items are placed last, after a divider, in every menu and action row audited (`index.html:2954, 3969, 4006, 4034, 4108, 4309, 6209`), so a reflexive first/last click never lands on Delete. |
+| **Zeigarnik Effect** — unfinished tasks stay in mind | Not directly applicable | The app has no multi-step wizards; each action (add item, place object) completes in one step, so there's no state to track resolved. |
+| **Tesler's Law** — complexity can be moved, not removed | Followed | The app absorbs unit conversion, collision/fit checks and snapping instead of asking the user to compute or avoid them (§1.2, Norman "constraints over errors"). |
+
+No violations were found in this pass. The table exists so a future change can
+be checked against a specific law instead of a vague "feels off", and so a
+new violation gets caught in review rather than rediscovered later.
+
+### 1.4 Our priority order
 
 > **Practical → Intuitive → Simple → Beautiful**
 
@@ -584,3 +610,4 @@ Before adding or changing any UI, answer each question:
 - [The art of simple design — MUJI](https://www.muji.eu/pages/muji-stories/the-art-of-simple-design.html)
 - [Refactoring UI — key points (Wathan & Schoger)](https://medium.com/design-bootcamp/top-20-key-points-from-refactoring-ui-by-adam-wathan-steve-schoger-d81042ac9802)
 - [How we redesigned the Linear UI — Linear](https://linear.app/now/how-we-redesigned-the-linear-ui)
+- [Laws of UX — Jon Yablonski](https://lawsofux.com/)
