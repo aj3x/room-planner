@@ -375,8 +375,8 @@ reason.
 - 16px viewBox, 1.5px stroke, round caps and joins, no fills (except dots),
   `currentColor`.
 - The set: `undo, redo, plus, minus, fit, more, chevron-left/right/down,
-  folder, folder-plus, room, library, store, box, link, rotate-l, rotate-r,
-  close, search, ruler`.
+  folder, folder-plus, room, floor, plan, library, store, box, link,
+  rotate-l, rotate-r, close, search, ruler, photo, check`.
 - Icons pair with text unless universal (§2.6). Icon colour follows the text
   colour of its control.
 
