@@ -1317,6 +1317,8 @@ function setOpeningDispOffset(o,len,val){
   o.offset = o.corner==='ccw' ? (len-o.width-val) : val;
   o.offset = Math.max(0, Math.min(o.offset, len-o.width));
 }
+/* how far a bi-fold's fold stands off the wall, as a fraction of half the opening */
+const BP_BIFOLD_RISE=0.5;
 function openGeom(o, poly){
   const w = wallOf(o.wall, poly);
   const p0=[w.a[0]+w.dir[0]*o.offset, w.a[1]+w.dir[1]*o.offset];
@@ -1324,11 +1326,13 @@ function openGeom(o, poly){
   const g={p0,p1,dir:w.dir,nrm:w.nrm,mid:[(p0[0]+p1[0])/2,(p0[1]+p1[1])/2]};
   if(o.kind==='door' && o.dtype==='bifold'){
     /* A closet is drawn as a chevron: one leaf from each jamb meeting at an apex over the
-       middle. Measured off the blueprint the apex stands a half-width clear of the wall,
-       which puts both leaves at 45 degrees — so that is the geometry, not a guess. */
+       middle. Measured off the blueprint that apex stands a half-width clear of the wall,
+       a 46 degree leaf — but drawn at 46 degrees, filled, it reads as a solid arrow
+       pointing into the room rather than as a door. So it is drawn slightly open instead:
+       the same chevron, lower, which is what the symbol is trying to say. */
     const half=o.width/2;
     const n = o.swing==='out' ? [-w.nrm[0],-w.nrm[1]] : w.nrm;
-    g.apex=[g.mid[0]+n[0]*half, g.mid[1]+n[1]*half];
+    g.apex=[g.mid[0]+n[0]*half*BP_BIFOLD_RISE, g.mid[1]+n[1]*half*BP_BIFOLD_RISE];
     g.leafN=n;
   }
   if(o.kind==='door' && o.dtype==='hinge'){
@@ -3077,14 +3081,16 @@ function drawOpening(o,blocked,room,poly){
   } else if(o.dtype==='bifold'){
     /* the chevron a closet is drawn with: a leaf from each jamb meeting at a fold, and
        no sweep arc, because a bi-fold does not sweep — it folds back on itself */
-    if(S.showSwing){
-      const sp=swingPoly(o,poly), bad=blocked.includes(o.id);
-      pathPoly(sp);
-      ctx.fillStyle = bad?'rgba('+C.dangerRGB+',.16)':C.swing; ctx.fill();
-      ctx.strokeStyle = bad?'rgba('+C.dangerRGB+',.7)':C.swingLine;
-      ctx.setLineDash([4,4]); ctx.lineWidth=bad?1.5:1; ctx.stroke(); ctx.setLineDash([]);
+    /* only shaded when it is in the way — a bi-fold takes far less room than a swing,
+       so shading it by default drew attention to clearance that is rarely the problem */
+    const bad=blocked.includes(o.id);
+    if(S.showSwing && bad){
+      pathPoly(swingPoly(o,poly));
+      ctx.fillStyle='rgba('+C.dangerRGB+',.16)'; ctx.fill();
+      ctx.strokeStyle='rgba('+C.dangerRGB+',.7)';
+      ctx.setLineDash([4,4]); ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]);
     }
-    ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(2,t*.45);
+    ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(1.5,t*.3);
     ctx.lineCap='round'; ctx.lineJoin='round';
     ctx.beginPath();
     ctx.moveTo(sx(g.p0[0]),sy(g.p0[1]));
