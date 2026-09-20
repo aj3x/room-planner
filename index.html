@@ -356,6 +356,20 @@ details.adv .advbody{padding-top:8px}
 .bp-steps li[data-done="1"] .i{opacity:1}
 .bp-steps li[data-now="1"]{color:var(--ink-2)}
 .bp-back{margin-bottom:8px}
+.bp-review li.bad .nm,.bp-review li.bad .meta{color:var(--danger)}
+.bp-review .lact{display:flex;align-items:center;gap:4px}
+/* the side column is 320px and these rows carry a length, a kind and a delete, which will
+   not sit beside a label — so let them stack rather than clip */
+#bpOpens li{flex-wrap:wrap}
+#bpOpens .lmain{flex:1 1 100%;min-width:0}
+#bpOpens .lact{flex:1 1 100%;justify-content:flex-start;margin-top:4px}
+#bpOpens .len{width:88px}
+#bpOpens select{flex:1;min-width:0}
+#bpRooms li{flex-wrap:wrap}
+#bpRooms .lmain{flex:1 1 100%;min-width:0}
+#bpRooms .lmain .nm{width:100%}
+#bpRooms .lact{flex:1 1 100%;margin-top:4px}
+#bpRooms select{width:100%}
 
 /* ---------------- menus ---------------- */
 .menu{position:fixed;z-index:60;min-width:188px;max-width:280px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-2);display:flex;flex-direction:column;animation:rise var(--dur) var(--ease)}
@@ -6285,6 +6299,7 @@ function bpAnalyse(work, opts){
    shared wall band is deep enough to punch from either side, so emitting it once leaves a
    door that reads correctly from the living room and is a solid wall from the bedroom. */
 function bpAttachOpenings(layouts, openings, edits, mm, G, wallMm){
+  const where={};
   for(const l of layouts) l.openings=[];
   for(const o of openings){
     const ed=edits.openings[o.id]||(edits.openings[o.id]={});
@@ -6328,9 +6343,12 @@ function bpAttachOpenings(layouts, openings, edits, mm, G, wallMm){
           rec.swing = dot < 0 ? 'in' : 'out';
         }
       }
+      rec._bpOpen=o.id;
       l.openings.push(rec);
+      (where[o.id]||(where[o.id]=[])).push(l.name);
     }
   }
+  return where;
 }
 /* the drawing knows how thick its own walls are; 114 is only a fallback */
 function bpEffWall(){
@@ -6377,7 +6395,7 @@ function bpRebuild(){
     out.layouts.push(l);
     out.area+=polyArea(l.room.points);
   }
-  bpAttachOpenings(out.layouts, st.proposal.openings||[], e, mm, G, wall);
+  out.openingRooms=bpAttachOpenings(out.layouts, st.proposal.openings||[], e, mm, G, wall);
   for(const l of out.layouts) clampOpenings(l);
   return out;
 }
@@ -6634,11 +6652,55 @@ function bpRenderReview(){
           </span></li>`;
       }).join('')}</ul>
       ${d.problems.map(p=>`<p class="hint warn">${esc(p.name)}: ${esc(p.why)} — it'll be left out.</p>`).join('')}
-    </div>`;
+    </div>
+    ${bpOpenListHTML(d)}`;
   $('moOk').textContent='Create '+plural(d.layouts.length,'room');
   $('moOk').disabled = !d.layouts.length || !e.scale;
   bpBindReview();
   bpDrawReview();
+}
+/* One row per opening, not one per room, even though a door between two rooms is created
+   twice. Two rows for the same door would read as two doors and invite deleting one. */
+function bpOpenListHTML(d){
+  const st=bpState, e=st.edits, ops=st.proposal.openings||[];
+  if(!ops.length) return '';
+  const live=ops.filter(o=>!(e.openings[o.id]||{}).deleted);
+  return `<div class="group">
+    <div class="group-title">${esc(plural(live.length,'door'))} and windows</div>
+    <ul class="list" id="bpOpens">${ops.map(o=>{
+      const ed=e.openings[o.id]||(e.openings[o.id]={});
+      const kind=ed.kind||o.kind;
+      const rooms=(d.openingRooms&&d.openingRooms[o.id])||[];
+      const wMm=ed.widthMm || Math.round(o.widthPx*(e.scale?e.scale.mmPerPx:0));
+      const where = rooms.length ? rooms.join(' · ') : 'not on a wall yet';
+      return `<li data-oid="${esc(o.id)}"${ed.deleted?' class="bad"':''}>
+        <span class="lmain">
+          <span class="nm">${esc(kind==='window'?'Window':(o.dtype==='hinge'?'Hinged door':'Doorway'))}</span>
+          <span class="meta">${esc(where)}${ed.deleted?' · left out':''}</span>
+        </span>
+        <span class="lact">
+          <input type="text" class="len" data-bp="ow" value="${esc(fmtLen(wMm,S.unit))}">
+          <select data-bp="okind">
+            <option value="door"${kind==='door'?' selected':''}>Door</option>
+            <option value="window"${kind==='window'?' selected':''}>Window</option>
+          </select>
+          <button type="button" class="btn quiet sm icon" data-bp="odel" title="${ed.deleted?'Put back':'Leave out'}">${svgI(ed.deleted?'plus':'close')}</button>
+        </span></li>`;
+    }).join('')}</ul>
+  </div>`;
+}
+function bpBindOpens(){
+  const e=bpState.edits, ul=$('bpOpens');
+  if(!ul) return;
+  for(const li of ul.querySelectorAll('li')){
+    const id=li.dataset.oid, ed=e.openings[id];
+    li.querySelector('[data-bp=ow]').addEventListener('change', ev=>{
+      const mm=parseLen(ev.target.value, S.unit);
+      if(mm>0){ ed.widthMm=mm; bpRenderReview(); }
+    });
+    li.querySelector('[data-bp=okind]').addEventListener('change', ev=>{ ed.kind=ev.target.value; bpRenderReview(); });
+    li.querySelector('[data-bp=odel]').addEventListener('click', ()=>{ ed.deleted=!ed.deleted; bpRenderReview(); });
+  }
 }
 function bpBindReview(){
   const e=bpState.edits;
@@ -6669,6 +6731,7 @@ function bpBindReview(){
     li.querySelector('[data-bp=name]').addEventListener('input', ev=>{ ed.name=ev.target.value; ed.touched=true; });
     li.querySelector('[data-bp=kind]').addEventListener('change', ev=>{ ed.kind=ev.target.value; bpRenderReview(); });
   }
+  bpBindOpens();
 }
 function bpMountReviewStage(){
   const cv2=$('bpRev'), work=bpState.work;
