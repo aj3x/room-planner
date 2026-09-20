@@ -1322,6 +1322,15 @@ function openGeom(o, poly){
   const p0=[w.a[0]+w.dir[0]*o.offset, w.a[1]+w.dir[1]*o.offset];
   const p1=[w.a[0]+w.dir[0]*(o.offset+o.width), w.a[1]+w.dir[1]*(o.offset+o.width)];
   const g={p0,p1,dir:w.dir,nrm:w.nrm,mid:[(p0[0]+p1[0])/2,(p0[1]+p1[1])/2]};
+  if(o.kind==='door' && o.dtype==='bifold'){
+    /* A closet is drawn as a chevron: one leaf from each jamb meeting at an apex over the
+       middle. Measured off the blueprint the apex stands a half-width clear of the wall,
+       which puts both leaves at 45 degrees — so that is the geometry, not a guess. */
+    const half=o.width/2;
+    const n = o.swing==='out' ? [-w.nrm[0],-w.nrm[1]] : w.nrm;
+    g.apex=[g.mid[0]+n[0]*half, g.mid[1]+n[1]*half];
+    g.leafN=n;
+  }
   if(o.kind==='door' && o.dtype==='hinge'){
     const atStart = o.hinge!=='end';
     g.hinge = atStart ? p0 : p1;
@@ -1336,7 +1345,12 @@ function openGeom(o, poly){
   return g;
 }
 function swingPoly(o, poly){
-  if(o.kind!=='door'||o.dtype!=='hinge') return null;
+  if(o.kind!=='door') return null;
+  if(o.dtype==='bifold'){
+    const g=openGeom(o, poly);
+    return [g.p0.slice(), g.apex.slice(), g.p1.slice()];
+  }
+  if(o.dtype!=='hinge') return null;
   const g=openGeom(o, poly), pts=[g.hinge.slice()], N=14;
   let diff=g.a1-g.a0;
   while(diff>Math.PI) diff-=Math.PI*2;
@@ -3060,6 +3074,24 @@ function drawOpening(o,blocked,room,poly){
     ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(2,t*.45); ctx.lineCap='round';
     ctx.beginPath(); ctx.moveTo(sx(g.hinge[0]),sy(g.hinge[1])); ctx.lineTo(sx(g.open[0]),sy(g.open[1])); ctx.stroke();
     ctx.lineCap='butt';
+  } else if(o.dtype==='bifold'){
+    /* the chevron a closet is drawn with: a leaf from each jamb meeting at a fold, and
+       no sweep arc, because a bi-fold does not sweep — it folds back on itself */
+    if(S.showSwing){
+      const sp=swingPoly(o,poly), bad=blocked.includes(o.id);
+      pathPoly(sp);
+      ctx.fillStyle = bad?'rgba('+C.dangerRGB+',.16)':C.swing; ctx.fill();
+      ctx.strokeStyle = bad?'rgba('+C.dangerRGB+',.7)':C.swingLine;
+      ctx.setLineDash([4,4]); ctx.lineWidth=bad?1.5:1; ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(2,t*.45);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath();
+    ctx.moveTo(sx(g.p0[0]),sy(g.p0[1]));
+    ctx.lineTo(sx(g.apex[0]),sy(g.apex[1]));
+    ctx.lineTo(sx(g.p1[0]),sy(g.p1[1]));
+    ctx.stroke();
+    ctx.lineCap='butt'; ctx.lineJoin='miter';
   } else if(o.dtype==='slide'){
     const off=[-g.nrm[0]*r.wall*.5, -g.nrm[1]*r.wall*.5];
     ctx.lineWidth=Math.max(2,t*.4);
@@ -4929,7 +4961,7 @@ function renderIWallProps(){
   $('iwDel').addEventListener('click',()=>deleteIWall(w.id));
 }
 
-const KIND = o => o.kind==='window' ? 'Window' : (o.dtype==='slide'?'Sliding door':o.dtype==='open'?'Doorway':'Hinged door');
+const KIND = o => o.kind==='window' ? 'Window' : (o.dtype==='slide'?'Sliding door':o.dtype==='open'?'Doorway':o.dtype==='bifold'?'Bi-fold door':'Hinged door');
 function renderOpen(){
   const ul=$('openList'), os=L().openings;
   if(!os.length){ ul.innerHTML=emptyRow('None yet'); return; }
@@ -5470,7 +5502,7 @@ function openingDialog(id, kind, wallIdx){
     <div class="field"><label for="dOffset">Offset</label><input type="text" class="len" id="dOffset" value="${esc(fmtLen(dispOff,S.unit))}"></div>
     ${k==='door' ? `
       <div class="field"><label for="dType">Type</label><select id="dType">
-        <option value="hinge">Hinged</option><option value="slide">Sliding</option><option value="open">Open doorway</option></select></div>
+        <option value="hinge">Hinged</option><option value="bifold">Bi-fold</option><option value="slide">Sliding</option><option value="open">Open doorway</option></select></div>
       <div id="hingeBits">
         <div class="field"><label for="dHinge">Hinge</label><select id="dHinge">
           <option value="start">Near corner</option><option value="end">Far corner</option></select></div>
@@ -5507,7 +5539,13 @@ function openingDialog(id, kind, wallIdx){
     ()=>{
       if(k!=='door') return;
       if(o){ $('dType').value=o.dtype; $('dHinge').value=o.hinge||'start'; $('dSwing').value=o.swing||'in'; }
-      const t=()=>{ $('hingeBits').hidden = $('dType').value!=='hinge'; };
+      /* a bi-fold has no hinge side to choose — both jambs carry one — but it does
+         still fold to one side of the wall */
+      const t=()=>{
+        const v=$('dType').value;
+        $('hingeBits').hidden = v!=='hinge' && v!=='bifold';
+        const hf=$('dHinge').closest('.field'); if(hf) hf.hidden = v==='bifold';
+      };
       $('dType').addEventListener('change',t);
       t();
     });
@@ -6032,28 +6070,67 @@ function bpClassifyCuts(cuts, structure, wall, w, h, tPart){
     if(cut.wide){ cut.kind='divider'; continue; }
     /* empty gap — look for a swing arc about each jamb */
     const jambs=[pt(cut.a0,0), pt(cut.a1,0)];
-    const score=jambs.map(j=>{
-      let n=0; let sx=0, sy=0;
-      const lo=len*0.88, hi=len*1.12;
-      for(let y=Math.max(0,Math.round(j[1]-hi)); y<=Math.min(h-1,Math.round(j[1]+hi)); y++)
-        for(let x=Math.max(0,Math.round(j[0]-hi)); x<=Math.min(w-1,Math.round(j[0]+hi)); x++){
-          if(!thin[y*w+x]) continue;
-          const d=Math.hypot(x-j[0], y-j[1]);
-          if(d<lo||d>hi) continue;
-          n++; sx+=x-j[0]; sy+=y-j[1];
-        }
-      return {n, dir:n?[sx/n, sy/n]:[0,0]};
-    });
+    /* Count is not the discriminator — the far jamb of a hinged door picks up plenty of
+       stray ink, so both ends score in the hundreds. Nor is raw angular spread: measured
+       all the way round, every door reads 100 degrees or more because the wall itself and
+       the neighbouring fixtures sit in the radius band.
+
+       A swing lives in ONE QUADRANT: from the line of the wall, round to square with it,
+       on one side. Measured inside that quadrant a real arc fills most of the 90 degrees,
+       while a bi-fold leaf is a straight line at a single bearing and a plain doorway has
+       nothing. Everything outside the quadrant is somebody else's ink. */
+    const ux = cut.axis==='h' ? 1 : 0, uy = cut.axis==='h' ? 0 : 1;
+    const score=[];
+    for(let ji=0; ji<2; ji++){
+      const j=jambs[ji], s = ji===0 ? 1 : -1;
+      const u=[ux*s, uy*s];
+      for(const sgn of [1,-1]){
+        const nv=[-u[1]*sgn, u[0]*sgn];
+        const lo=len*0.82, hi=len*1.18, bins=new Uint8Array(10);
+        let n=0;
+        for(let y=Math.max(0,Math.round(j[1]-hi)); y<=Math.min(h-1,Math.round(j[1]+hi)); y++)
+          for(let x=Math.max(0,Math.round(j[0]-hi)); x<=Math.min(w-1,Math.round(j[0]+hi)); x++){
+            if(!thin[y*w+x]) continue;
+            const dx=x-j[0], dy=y-j[1], d=Math.hypot(dx,dy);
+            if(d<lo||d>hi) continue;
+            const cu=dx*u[0]+dy*u[1], cn=dx*nv[0]+dy*nv[1];
+            if(cn<0) continue;
+            const ang=Math.atan2(cn,cu)*180/Math.PI;
+            if(ang<-5||ang>100) continue;
+            n++; bins[Math.max(0,Math.min(9,Math.floor(ang/10)))]=1;
+          }
+        let span=0; for(let i=0;i<10;i++) span+=bins[i];
+        score.push({ji, n, span:span*10, dir:nv});
+      }
+    }
+    score.sort((a,b)=> b.span-a.span || b.n-a.n);
     void at;
-    const best = score[0].n>=score[1].n ? 0 : 1;
-    const other = 1-best;
-    const strong = score[best].n >= Math.max(8, len*0.35) && score[best].n >= score[other].n*1.4;
-    if(!strong){ cut.kind='doorway'; continue; }
-    cut.kind='door';
-    cut.hingeAt=best;                  // 0 = the a0 end, 1 = the a1 end
-    cut.hingePx=jambs[best];
-    cut.arcDir=score[best].dir;        // points into the side the door opens to
-    cut.arcN=score[best].n;
+    const top=score[0];
+    /* a real swing sweeps a quarter turn; under about 55 degrees of the quadrant it is a
+       straight line clipping the radius band, not an arc */
+    const isArc = top.n >= Math.max(8, len*0.3) && top.span >= 55;
+    if(isArc){
+      cut.kind='door';
+      cut.hingeAt=top.ji;              // 0 = the a0 end, 1 = the a1 end
+      cut.hingePx=jambs[top.ji];
+      cut.arcDir=top.dir;              // points into the side the door opens to
+      cut.arcN=top.n;
+      cut.arcSpan=top.span;
+      continue;
+    }
+    /* No arc, so it is a plain doorway as far as this can tell.
+       A bi-fold closet is NOT detected here, deliberately. It is drawn as a chevron rather
+       than an arc, and three separate cheap tests all failed to tell one from the other on
+       real plans: counting ink at the door's radius (the far jamb scores in the hundreds
+       too), angular spread (the wall and neighbouring fixtures fill the band whichever
+       door it is), and a radial profile (the quadrant beside the bedroom closet holds 1296
+       ink pixels when the chevron itself is about 200). Isolating the stroke as its own
+       component would fix the pollution, but the thin mask is a single blob — the ragged
+       1-2px rind left around every thick wall wires every arc, leaf and fixture together.
+       Doing this properly needs the stroke classifier the openings design calls for, not
+       another threshold. Until then the review list carries a type control, and guessing
+       wrong in the drawing is worse than leaving it plain. */
+    cut.kind='doorway'; continue;
   }
   return cuts;
 }
@@ -6266,7 +6343,7 @@ function bpAnalyse(work, opts){
         const end=(a)=> cut.axis==='h' ? [a, cut.c] : [cut.c, a];
         openings.push({id:uid(), aPx:end(cut.a0), bPx:end(cut.a1),
           kind: cut.kind==='window' ? 'window' : 'door',
-          dtype: cut.kind==='door' ? 'hinge' : (cut.kind==='doorway' ? 'open' : 'open'),
+          dtype: cut.kind==='door' ? (cut.bifold?'bifold':'hinge') : 'open',
           hingePx: cut.hingePx||null, arcDir: cut.arcDir||null, widthPx: cut.widthPx, tPx: cut.t});
       }
 
@@ -6328,9 +6405,15 @@ function bpAttachOpenings(layouts, openings, edits, mm, G, wallMm){
       const rec={ id:uid(), kind:ed.kind||o.kind,
         wall:bi, width:ed.widthMm||width, offset:Math.max(0,Math.min(t0,t1)),
         corner:'cw',
-        dtype: (ed.kind||o.kind)==='window' ? 'open' : (o.dtype||'open'),
+        dtype: (ed.kind||o.kind)==='window' ? 'open' : (ed.dtype||o.dtype||'open'),
         hinge:'start', swing:'in' };
       if(rec.kind==='window'){ rec.sill=900; rec.dtype='open'; }
+      else if(rec.dtype==='bifold'){
+        if(o.arcDir){
+          const dot=o.arcDir[0]*wl.nrm[0] + o.arcDir[1]*wl.nrm[1];
+          rec.swing = dot < 0 ? 'in' : 'out';
+        }
+      }
       else if(rec.dtype==='hinge' && o.hingePx){
         const hp=[o.hingePx[0]*mm-G.x0-off[0], o.hingePx[1]*mm-G.y0-off[1]];
         const p0=[wl.a[0]+wl.dir[0]*rec.offset, wl.a[1]+wl.dir[1]*rec.offset];
@@ -6673,12 +6756,13 @@ function bpOpenListHTML(d){
     <ul class="list" id="bpOpens">${ops.map(o=>{
       const ed=e.openings[o.id]||(e.openings[o.id]={});
       const kind=ed.kind||o.kind;
+      const dt=ed.dtype||o.dtype||'open';
       const rooms=(d.openingRooms&&d.openingRooms[o.id])||[];
       const wMm=ed.widthMm || Math.round(o.widthPx*(e.scale?e.scale.mmPerPx:0));
       const where = rooms.length ? rooms.join(' · ') : 'not on a wall yet';
       return `<li data-oid="${esc(o.id)}"${ed.deleted?' class="bad"':''}>
         <span class="lmain">
-          <span class="nm">${esc(kind==='window'?'Window':(o.dtype==='hinge'?'Hinged door':'Doorway'))}</span>
+          <span class="nm">${esc(kind==='window'?'Window':KIND({kind:'door',dtype:dt}))}</span>
           <span class="meta">${esc(where)}${ed.deleted?' · left out':''}</span>
         </span>
         <span class="lact">
@@ -6686,6 +6770,12 @@ function bpOpenListHTML(d){
           <select data-bp="okind">
             <option value="door"${kind==='door'?' selected':''}>Door</option>
             <option value="window"${kind==='window'?' selected':''}>Window</option>
+          </select>
+          <select data-bp="odtype"${kind==='window'?' hidden':''}>
+            <option value="hinge"${dt==='hinge'?' selected':''}>Hinged</option>
+            <option value="bifold"${dt==='bifold'?' selected':''}>Bi-fold</option>
+            <option value="slide"${dt==='slide'?' selected':''}>Sliding</option>
+            <option value="open"${dt==='open'?' selected':''}>Open doorway</option>
           </select>
           <button type="button" class="btn quiet sm icon" data-bp="odel" title="${ed.deleted?'Put back':'Leave out'}">${svgI(ed.deleted?'plus':'close')}</button>
         </span></li>`;
@@ -6702,6 +6792,8 @@ function bpBindOpens(){
       if(mm>0){ ed.widthMm=mm; bpRenderReview(); }
     });
     li.querySelector('[data-bp=okind]').addEventListener('change', ev=>{ ed.kind=ev.target.value; bpRenderReview(); });
+    const dtEl=li.querySelector('[data-bp=odtype]');
+    if(dtEl) dtEl.addEventListener('change', ev=>{ ed.dtype=ev.target.value; bpRenderReview(); });
     li.querySelector('[data-bp=odel]').addEventListener('click', ()=>{ ed.deleted=!ed.deleted; bpRenderReview(); });
   }
 }
