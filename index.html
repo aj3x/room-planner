@@ -2522,11 +2522,11 @@ const CANVAS={
   light:{stage:'#e6e6e2', stageAccent:'#2a5bd7', wall:'#2b2b29', wallEdge:'rgba(29,29,27,.5)', pillar:'#585853', ink:'#1d1d1b', ink2:'#585853',
          surface:'#fcfcfb', accent:'#2a5bd7', accentSoft:'#e9effc', danger:'#c0392b', dangerRGB:'192,57,43',
          grid:'rgba(29,29,27,.075)', trim:'rgba(29,29,27,.10)', glass:'#cfd8e2', glassLine:'#5c7a99', swing:'rgba(29,29,27,.05)', swingLine:'rgba(29,29,27,.3)',
-         scrim:'rgba(20,20,19,.45)'},
+         scrim:'rgba(20,20,19,.45)', ok:'#1f7a4d', okSoft:'#dcf0e4'},
   dark: {stage:'#141413', stageAccent:'#7aa2f7', wall:'#8a8a84', wallEdge:'rgba(236,236,234,.35)', pillar:'#6f6f69', ink:'#1d1d1b', ink2:'#adada7',
          surface:'#fcfcfb', accent:'#2a5bd7', accentSoft:'#e9effc', danger:'#c0392b', dangerRGB:'192,57,43',
          grid:'rgba(29,29,27,.075)', trim:'rgba(29,29,27,.10)', glass:'#9fb3c8', glassLine:'#5c7a99', swing:'rgba(29,29,27,.06)', swingLine:'rgba(29,29,27,.35)',
-         scrim:'rgba(20,20,19,.45)'}
+         scrim:'rgba(20,20,19,.45)', ok:'#1f7a4d', okSoft:'#dcf0e4'}
 };
 const darkMQ=window.matchMedia('(prefers-color-scheme: dark)');
 let forceLightCanvas=false;
@@ -6613,6 +6613,9 @@ function bpMountReview(){
 }
 function bpRenderReview(){
   const st=bpState; st.draft=bpRebuild();
+  /* the list is rebuilt from innerHTML, so nothing is focused or hovered afterwards and
+     a stale highlight would point at the wrong room */
+  st.focusRid=null; st.hoverRid=null;
   const d=st.draft, e=st.edits, side=$('bpSide');
   if(!side) return;
   const warn=bpScaleSanity(d);
@@ -6728,7 +6731,15 @@ function bpBindReview(){
   });
   for(const li of $('bpRooms').querySelectorAll('li')){
     const rid=li.dataset.rid, ed=e.spaces[rid];
-    li.querySelector('[data-bp=name]').addEventListener('input', ev=>{ ed.name=ev.target.value; ed.touched=true; });
+    const nameEl=li.querySelector('[data-bp=name]');
+    nameEl.addEventListener('input', ev=>{ ed.name=ev.target.value; ed.touched=true; });
+    /* focus, not click, so tabbing between rows lights them up too. Focus and hover are
+       tracked apart and focus wins: sliding the pointer off the row while still typing
+       in it must not take the highlight away. */
+    nameEl.addEventListener('focus', ()=>{ bpState.focusRid=rid; bpDrawReview(); });
+    nameEl.addEventListener('blur', ()=>{ if(bpState.focusRid===rid){ bpState.focusRid=null; bpDrawReview(); } });
+    li.addEventListener('pointerenter', ()=>{ bpState.hoverRid=rid; bpDrawReview(); });
+    li.addEventListener('pointerleave', ()=>{ if(bpState.hoverRid===rid){ bpState.hoverRid=null; bpDrawReview(); } });
     li.querySelector('[data-bp=kind]').addEventListener('change', ev=>{ ed.kind=ev.target.value; bpRenderReview(); });
   }
   bpBindOpens();
@@ -6754,14 +6765,26 @@ function bpDrawReview(){
   const x=cv2.getContext('2d'), C=PAL(), work=bpState.work, d=bpState.draft;
   x.clearRect(0,0,cv2.width,cv2.height);
   x.globalAlpha=0.55; x.drawImage(work,0,0); x.globalAlpha=1;
-  for(const l of d.layouts){
+  /* the room being named is picked out in green, because a list of five rows all called
+     "Room" says nothing about which outline you are about to name. Drawn last so it sits
+     over its neighbours. */
+  const lw=Math.max(2, work.width/450);
+  const lit = bpState.focusRid || bpState.hoverRid || null;
+  const paint=l=>{
+    const on = l._bpRegion===lit;
     const P=l._bpPx;
     x.beginPath();
     P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));
     x.closePath();
-    x.fillStyle=C.accentSoft; x.globalAlpha=0.35; x.fill(); x.globalAlpha=1;
-    x.strokeStyle=C.ink; x.lineWidth=Math.max(2, work.width/450); x.stroke();
-  }
+    x.fillStyle = on ? C.okSoft : C.accentSoft;
+    x.globalAlpha = on ? 0.62 : 0.35; x.fill(); x.globalAlpha=1;
+    if(on){ x.strokeStyle=C.surface; x.lineWidth=lw*2.6; x.stroke(); }
+    x.strokeStyle = on ? C.ok : C.ink;
+    x.lineWidth = on ? lw*1.6 : lw;
+    x.stroke();
+  };
+  for(const l of d.layouts) if(l._bpRegion!==lit) paint(l);
+  for(const l of d.layouts) if(l._bpRegion===lit) paint(l);
   const c=bpState.cal;
   if(c&&c.a){
     const r=Math.max(3, work.width/220);
