@@ -1317,6 +1317,9 @@ function setOpeningDispOffset(o,len,val){
   o.offset = o.corner==='ccw' ? (len-o.width-val) : val;
   o.offset = Math.max(0, Math.min(o.offset, len-o.width));
 }
+/* How much of the opening a bi-fold's folded panels cover, as drawn. 0.5 is half open,
+   1 would be shut flat. Three-quarters reads as a closet door standing ajar. */
+const BP_BIFOLD_SHUT=0.75;
 function openGeom(o, poly){
   const w = wallOf(o.wall, poly);
   const p0=[w.a[0]+w.dir[0]*o.offset, w.a[1]+w.dir[1]*o.offset];
@@ -1328,18 +1331,20 @@ function openGeom(o, poly){
        thing, and why a chevron spanning the full width is wrong: that is a double bi-fold,
        four panels, meeting in the middle.
 
-       No fudge factor in here. Each panel is half the opening, and half open the free end
-       has travelled half the opening along the rail, so the fold is the apex of a triangle
-       with two sides of w/2 on a base of w/2 — equilateral, standing w*sqrt(3)/4 clear. */
+       Drawn three-quarters shut: the folded panels cover that much of the opening and the
+       rest stands clear. Nothing is fudged — each panel is half the opening, so two sides
+       of w/2 on a base of `reach` fix the fold's standoff by Pythagoras. */
     const atStart = o.hinge!=='end';
     const u = atStart ? w.dir : [-w.dir[0], -w.dir[1]];
     const n = o.swing==='out' ? [-w.nrm[0],-w.nrm[1]] : w.nrm;
     const pivot = atStart ? p0 : p1;
-    const reach = o.width/2;
+    const reach = o.width*BP_BIFOLD_SHUT;
     g.pivot=pivot;
     g.railEnd=[pivot[0]+u[0]*reach, pivot[1]+u[1]*reach];
     const midR=[pivot[0]+u[0]*reach/2, pivot[1]+u[1]*reach/2];
-    const rise=o.width*Math.sqrt(3)/4;
+    /* the panels do not stretch: two of w/2 on a base of `reach` fixes how far the fold
+       stands off the wall, so the drawn state follows from BP_BIFOLD_SHUT alone */
+    const rise=Math.sqrt(Math.max(0, Math.pow(o.width/2,2) - Math.pow(reach/2,2)));
     g.apex=[midR[0]+n[0]*rise, midR[1]+n[1]*rise];
     g.leafN=n;
   }
