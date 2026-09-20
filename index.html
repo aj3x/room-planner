@@ -5596,15 +5596,37 @@ function bpMergeShortEdges(P,min){
   }
   return out;
 }
+/* A traced border that pinches to a point walks into the neck and back out again, so the
+   same vertex appears twice. That is a legal border walk but a self-intersecting polygon,
+   and polySimple is right to refuse it. Cut the smaller lobe off rather than lose the
+   whole room — a kitchen minus its alcove beats no kitchen at all. */
+function bpUnpinch(P, tol){
+  tol=tol||25;
+  let Q=P;
+  for(let guard=0; guard<40; guard++){
+    let hit=null;
+    for(let i=0;i<Q.length && !hit;i++)
+      for(let j=i+2;j<Q.length;j++){
+        if(i===0 && j===Q.length-1) continue;
+        if(Math.abs(Q[i][0]-Q[j][0])<=tol && Math.abs(Q[i][1]-Q[j][1])<=tol){ hit=[i,j]; break; }
+      }
+    if(!hit) break;
+    const a=Q.slice(hit[0],hit[1]), b=Q.slice(0,hit[0]).concat(Q.slice(hit[1]));
+    const next = polyArea(a)>=polyArea(b) ? a : b;
+    if(next.length<4) break;
+    Q=next;
+  }
+  return Q;
+}
 /* the one gate. The previous attempt at this feature shipped a weakened copy that
    dropped the 50mm rule and compared area in pixels against a millimetre threshold,
    so its rooms were born invalid and every later edit rolled back with "That would
    fold the room over itself". There is no second polygon check in this file. */
 function bpCleanPoly(P){
-  let Q=bpNormWinding(P);
+  let Q=bpUnpinch(bpNormWinding(P));
   Q=bpMergeShortEdges(bpDropCollinear(Q,1.5), 50);
   Q=bpDropCollinear(Q,1.5);
-  return Q;
+  return bpNormWinding(bpUnpinch(Q));
 }
 
 /* ---- blueprint: pixels ----
@@ -5963,6 +5985,69 @@ function bpOrtho(P,eps){
   return out;
 }
 
+/* ---- blueprint: rectify ----
+   Traced faces land a pixel or two apart, never exactly. floorEdgeDepths tolerates that
+   and the plan DRAWS correctly straight from measurement — but snapFloorPlace aims at
+   exactly max(wallA,wallB), so a room a few millimetres out jumps the first time anyone
+   drags it. Pull every near-axis edge onto a shared line, then set facing pairs to exactly
+   one wall apart, and the import arrives already snapped.
+
+   The clustering tolerance has to stay well under half a partition, or the two faces of
+   one wall collapse onto a single line and the rooms either side fuse. */
+function bpRectify(regions, tPart){
+  const tol=Math.min(tPart*0.4, 40);
+  const recs=[], lines={x:[], y:[]};
+  for(const r of regions){
+    const P=r.polyPx, n=P.length, kind=[], coord=[];
+    for(let i=0;i<n;i++){
+      const a=P[i], b=P[(i+1)%n];
+      const dx=Math.abs(b[0]-a[0]), dy=Math.abs(b[1]-a[1]), len=Math.hypot(dx,dy);
+      if(dy<=tol && dx>dy){ kind[i]='h'; coord[i]=(a[1]+b[1])/2; lines.y.push({v:coord[i],len,r:recs.length,i}); }
+      else if(dx<=tol && dy>dx){ kind[i]='v'; coord[i]=(a[0]+b[0])/2; lines.x.push({v:coord[i],len,r:recs.length,i}); }
+      else { kind[i]='f'; coord[i]=0; }
+    }
+    recs.push({r,P,kind,coord});
+  }
+  for(const ax of ['x','y']){
+    const arr=lines[ax].sort((p,q)=>p.v-q.v), groups=[];
+    let g=null;
+    for(const e of arr){
+      if(g && e.v-g.last<=tol){ g.items.push(e); g.last=e.v; }
+      else { g={items:[e], last:e.v}; groups.push(g); }
+    }
+    for(const gr of groups){
+      let num=0, den=0;
+      for(const e of gr.items){ num+=e.v*e.len; den+=e.len; }
+      gr.c=den?num/den:gr.items[0].v;
+    }
+    for(let i=0;i<groups.length-1;i++){
+      if(groups[i].paired||groups[i+1].paired) continue;
+      const d=groups[i+1].c-groups[i].c;
+      if(d>=tPart*0.5 && d<=tPart*1.6){
+        const mid=(groups[i].c+groups[i+1].c)/2;
+        groups[i].c=mid-tPart/2; groups[i+1].c=mid+tPart/2;
+        groups[i].paired=groups[i+1].paired=true;
+      }
+    }
+    for(const gr of groups) for(const e of gr.items) recs[e.r].coord[e.i]=gr.c;
+  }
+  for(const rec of recs){
+    const {P,kind,coord}=rec, n=P.length, out=[];
+    for(let i=0;i<n;i++){
+      const prev=(i-1+n)%n, a=P[i];
+      if(kind[prev]==='v'&&kind[i]==='h') out.push([coord[prev],coord[i]]);
+      else if(kind[prev]==='h'&&kind[i]==='v') out.push([coord[i],coord[prev]]);
+      else if(kind[prev]==='h') out.push([a[0],coord[prev]]);
+      else if(kind[prev]==='v') out.push([coord[prev],a[1]]);
+      else if(kind[i]==='h') out.push([a[0],coord[i]]);
+      else if(kind[i]==='v') out.push([coord[i],a[1]]);
+      else out.push(a.slice());
+    }
+    rec.r.polyPx=out;
+  }
+  return regions;
+}
+
 /* ---- blueprint: detection ----
    Component labelling comes FIRST, on the raw ink, before any thickness work. Text is
    removed by topology, not by stroke weight: bold label glyphs carry the same 9-13px
@@ -6016,7 +6101,9 @@ function bpAnalyse(work, opts){
       const bts=bands.map(b=>b.t).sort((a,b)=>a-b);
       const pctile=p=>bts.length?bts[Math.floor((bts.length-1)*p)]:4;
       const tPart=Math.max(2, pctile(0.40));
-      const tExt=Math.max(tPart, pctile(0.80));
+      /* p70, not higher: the top of the distribution is junction blocks, where both runs
+         are long and the thickness reading is meaningless */
+      const tExt=Math.max(tPart, pctile(0.70));
       /* a 2px "line" is a fixture outline, not a wall */
       const bandsOk=bands.filter(b=>b.t>=Math.max(3,tSplit));
       const lines=bpWallLines(bandsOk,wall,w,h,Math.max(4,Math.round(tPart*0.6)), tPart*20);
@@ -6095,6 +6182,7 @@ function bpAnalyse(work, opts){
         if(poly.length<3) continue;
         regions.push({id:uid(), name:'', polyPx:poly, areaPx:c.area, bboxPx:[c.x0,c.y0,c.x1,c.y1]});
       }
+      bpRectify(regions, tPart);
       regions.sort((a,b)=>b.areaPx-a.areaPx);
 
       step('text');
@@ -6115,12 +6203,20 @@ function bpAnalyse(work, opts){
    The proposal is never mutated. Every correction lands in bpState.edits and the
    draft is rebuilt from scratch, because changing the scale moves every room and
    that has to stay idempotent over whatever the user has already fixed. */
+/* the drawing knows how thick its own walls are; 114 is only a fallback */
+function bpEffWall(){
+  const st=bpState; if(!st||!st.edits) return 114;
+  if(st.edits.wallMm) return st.edits.wallMm;
+  const mm=st.edits.scale&&st.edits.scale.mmPerPx;
+  if(!mm||!st.proposal) return 114;
+  return Math.max(50, Math.round((st.proposal.tPart||14)*mm));
+}
 function bpRebuild(){
   const st=bpState; if(!st||!st.proposal) return {layouts:[], problems:[], area:0};
   const e=st.edits, mm=e.scale&&e.scale.mmPerPx;
   const out={layouts:[], problems:[], area:0};
   if(!mm) return out;
-  const wall=e.wallMm||114;
+  const wall=bpEffWall();
   const built=[];
   for(const r of st.proposal.regions){
     const ed=e.spaces[r.id]||(e.spaces[r.id]={name:'',kind:'room',touched:false});
@@ -6338,7 +6434,8 @@ function bpDetectDialog(){
     if(runId!==bpRunSeq||!bpState) return;
     bpState.proposal=p;
     bpState.detectedFor=JSON.stringify(bpState.cropRect);
-    bpState.edits={scale:p.scale||null, wallMm:114, extMm:0, spaces:{}, openings:{}, items:{}};
+    /* left null so the draft takes the thickness measured off the drawing */
+    bpState.edits={scale:p.scale||null, wallMm:null, extMm:null, spaces:{}, openings:{}, items:{}};
     bpReviewDialog();
   });
 }
@@ -6389,7 +6486,7 @@ function bpRenderReview(){
     </div>
     <div class="bp-row mt">
       <label class="meta" for="bpWall">Wall</label>
-      <input type="text" class="len" id="bpWall" value="${esc(fmtLen(e.wallMm, S.unit))}">
+      <input type="text" class="len" id="bpWall" value="${esc(fmtLen(bpEffWall(), S.unit))}">
     </div>
     <div class="group">
       <div class="group-title">${esc(plural(d.layouts.length,'room'))}</div>
@@ -6490,7 +6587,9 @@ function bpCommit(){
   const st=bpState, d=bpRebuild();
   if(!d.layouts.length){ moError('Nothing here could become a room yet — set the scale, or try a tighter crop'); return false; }
   const target=st.targetFloorId ? floorOf(st.targetFloorId) : null;
-  const floor=target || {id:uid(), name:bpFloorName(), parentId:null, extWall:st.edits.extMm||0};
+  const mmPx=st.edits.scale?st.edits.scale.mmPerPx:0;
+  const extWall=st.edits.extMm || Math.round((st.proposal.tExt||0)*mmPx) || 0;
+  const floor=target || {id:uid(), name:bpFloorName(), parentId:null, extWall};
   if(!target) S.floors.push(floor);
   const ids=[];
   for(const l of d.layouts){
