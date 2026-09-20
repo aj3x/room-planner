@@ -5607,22 +5607,504 @@ function bpCleanPoly(P){
   return Q;
 }
 
+/* ---- blueprint: pixels ----
+   Nothing in here may be a function of the image's pixel count. Every parameter is a
+   multiple of a quantity measured off the drawing itself — the wall stroke weight, the
+   glyph size — so the same plan gives the same answer at any zoom. Scaling constants
+   off image size is what made the previous attempt find different doors in the same
+   photo at two resolutions. */
+function bpGray(cv){
+  const w=cv.width, h=cv.height;
+  const d=cv.getContext('2d').getImageData(0,0,w,h).data;
+  const g=new Uint8Array(w*h);
+  for(let i=0,p=0;i<g.length;i++,p+=4) g[i]=(d[p]*0.299+d[p+1]*0.587+d[p+2]*0.114)|0;
+  return {gray:g,w,h};
+}
+function bpHist(g){ const H=new Float64Array(256); for(let i=0;i<g.length;i++) H[g[i]]++; return H; }
+function bpOtsu(g){
+  const H=bpHist(g), N=g.length;
+  let sum=0; for(let t=0;t<256;t++) sum+=t*H[t];
+  let sumB=0, wB=0, best=-1, thr=128;
+  for(let t=0;t<256;t++){
+    wB+=H[t]; if(!wB) continue;
+    const wF=N-wB; if(wF<=0) break;
+    sumB+=t*H[t];
+    const mB=sumB/wB, mF=(sum-sumB)/wF, v=wB*wF*(mB-mF)*(mB-mF);
+    if(v>best){ best=v; thr=t; }
+  }
+  return thr;
+}
+/* Two thresholds, because one will not do. Otsu separates solid black from paper, but
+   downscaling turns a 1px window mullion into mid-grey — and those faint lines are
+   structural: they are what seals the outer wall. So the strict mask feeds the stroke
+   thickness histogram, where haloes would inflate the reading, and the lenient one
+   feeds component labelling and the barrier, where the mullions have to survive. */
+function bpThresholds(g){
+  const H=bpHist(g), hi=bpOtsu(g);
+  let bg=hi; for(let v=hi;v<256;v++) if(H[v]>H[bg]) bg=v;
+  return {hi, lo:Math.round(bg-0.35*(bg-hi)), bg};
+}
+const bpMaskOf=(g,thr)=>{ const m=new Uint8Array(g.length); for(let i=0;i<g.length;i++) m[i]=g[i]<thr?1:0; return m; };
+
+/* 8-connected, because that is what keeps a hairline and a door arc attached to the
+   wall they spring from. Iterative: a recursive fill blows the stack on a real plan. */
+function bpLabel8(mask,w,h){
+  const lab=new Int32Array(w*h), st=new Int32Array(w*h), comps=[];
+  let n=0;
+  for(let s=0;s<mask.length;s++){
+    if(!mask[s]||lab[s]) continue;
+    n++; let sp=0; st[sp++]=s; lab[s]=n;
+    let area=0, x0=w, y0=h, x1=0, y1=0;
+    while(sp){
+      const p=st[--sp], px=p%w, py=(p/w)|0;
+      area++;
+      if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py;
+      for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+        if(!dx&&!dy) continue;
+        const nx=px+dx, ny=py+dy;
+        if(nx<0||ny<0||nx>=w||ny>=h) continue;
+        const q=ny*w+nx;
+        if(mask[q]&&!lab[q]){ lab[q]=n; st[sp++]=q; }
+      }
+    }
+    comps.push({id:n, area, x0, y0, x1, y1, bw:x1-x0+1, bh:y1-y0+1});
+  }
+  return {lab, comps, n};
+}
+/* What fraction of the image the outside reaches. The cheapest, most scale-free check
+   in the pipeline: a sealed plan sits near a fifth, a leaking one swallows everything
+   and a decorative border that won the largest-component contest swallows almost none. */
+function bpLeak(barrier,w,h){
+  const seen=new Uint8Array(w*h), st=new Int32Array(w*h);
+  let sp=0, a=0;
+  const push=q=>{ if(!barrier[q]&&!seen[q]){ seen[q]=1; st[sp++]=q; } };
+  for(let x=0;x<w;x++){ push(x); push((h-1)*w+x); }
+  for(let y=0;y<h;y++){ push(y*w); push(y*w+w-1); }
+  while(sp){
+    const p=st[--sp], px=p%w, py=(p/w)|0;
+    a++;
+    if(px>0) push(p-1);
+    if(px<w-1) push(p+1);
+    if(py>0) push(p-w);
+    if(py<h-1) push(p+w);
+  }
+  return {frac:a/(w*h), outside:seen};
+}
+function bpRuns(mask,w,h){
+  const hR=new Uint16Array(w*h), vR=new Uint16Array(w*h);
+  for(let y=0;y<h;y++){
+    let x=0;
+    while(x<w){
+      if(mask[y*w+x]){ const s=x; while(x<w&&mask[y*w+x]) x++; for(let i=s;i<x;i++) hR[y*w+i]=x-s; }
+      else x++;
+    }
+  }
+  for(let x=0;x<w;x++){
+    let y=0;
+    while(y<h){
+      if(mask[y*w+x]){ const s=y; while(y<h&&mask[y*w+x]) y++; for(let j=s;j<y;j++) vR[j*w+x]=y-s; }
+      else y++;
+    }
+  }
+  return {hR,vR};
+}
+const bpMedian=a=>{ if(!a.length) return 0; const b=a.slice().sort((p,q)=>p-q); return b[b.length>>1]; };
+/* Otsu is the wrong tool for the thickness histogram and picks a threshold two to three
+   times too high, which classifies every interior partition as "not a wall". Use
+   prominence instead, and take the SMALLEST valley that is deep enough: over-including
+   arcs and casework is undone by the stroke classifier, but deleting a partition merges
+   two rooms into one and nothing downstream can recover that. */
+function bpValley(hist){
+  const h=new Float64Array(hist.length);
+  for(let pass=0;pass<2;pass++){
+    const src=pass?h.slice():hist;
+    for(let i=0;i<h.length;i++){
+      const a=src[i-1]||0, b=src[i]||0, c=src[i+1]||0;
+      h[i]=(a+2*b+c)/4;
+    }
+  }
+  let total=0; for(let i=0;i<h.length;i++) total+=h[i];
+  let acc=0, hiEnd=h.length-1;
+  for(let i=0;i<h.length;i++){ acc+=h[i]; if(acc>=total*0.95){ hiEnd=i; break; } }
+  let peak=0; for(let i=2;i<hiEnd;i++) if(h[i]>h[peak]) peak=i;
+  let p1=2;
+  for(let t=2;t<hiEnd;t++) if(h[t]>=h[t-1] && h[t]>h[t+1] && h[t]>=0.05*h[peak]){ p1=t; break; }
+  const maxOver=(a,b)=>{ let m=0; for(let i=a;i<=b;i++) if(h[i]>m) m=h[i]; return m; };
+  let best=null;
+  for(let t=p1+1;t<hiEnd;t++){
+    const L=maxOver(p1,t), R=maxOver(t,hiEnd);
+    const floor=Math.min(L,R);
+    if(floor<=0) continue;
+    const depth=1-h[t]/floor;
+    if(!best||depth>best.depth) best={t,depth};
+  }
+  if(!best) return 3;
+  let pick=best.t;
+  for(let t=p1+1;t<best.t;t++){
+    const L=maxOver(p1,t), R=maxOver(t,hiEnd), floor=Math.min(L,R);
+    if(floor>0 && 1-h[t]/floor >= 0.75*best.depth){ pick=t; break; }
+  }
+  return Math.max(3, pick);
+}
+
+/* ---- blueprint: walls ----
+   A horizontal band is where the horizontal run is the long one; a vertical band is the
+   other way round. Pixels where the two are comparable are junctions and belong to BOTH,
+   so a band runs through its corners instead of being chopped at them. Thickness is then
+   measured only where one run clearly dominates, which is what stops a corner block
+   reading as a two-foot-thick wall. */
+function bpBands(wall,w,h,hR,vR,minLen){
+  const out=[];
+  for(const axis of ['h','v']){
+    const m=new Uint8Array(w*h);
+    for(let i=0;i<wall.length;i++){
+      if(!wall[i]) continue;
+      m[i] = axis==='h' ? (hR[i]>=vR[i]*0.8?1:0) : (vR[i]>=hR[i]*0.8?1:0);
+    }
+    const {lab,comps}=bpLabel8(m,w,h);
+    for(const c of comps){
+      const long = axis==='h' ? c.bw : c.bh;
+      if(long < minLen) continue;
+      const cs=[], ts=[];
+      const a0 = axis==='h' ? c.x0 : c.y0, a1 = axis==='h' ? c.x1 : c.y1;
+      for(let a=a0;a<=a1;a++){
+        let lo=-1, hiV=-1;
+        const cross = axis==='h' ? c.bh : c.bw;
+        const b0 = axis==='h' ? c.y0 : c.x0;
+        for(let b=b0;b<b0+cross;b++){
+          const idx = axis==='h' ? b*w+a : a*w+b;
+          if(lab[idx]===c.id){ if(lo<0) lo=b; hiV=b; }
+        }
+        if(lo<0) continue;
+        cs.push((lo+hiV)/2); ts.push(hiV-lo+1);
+      }
+      if(!cs.length) continue;
+      out.push({axis, c:bpMedian(cs), t:Math.max(1,bpMedian(ts)), a0, a1, area:c.area});
+    }
+  }
+  return out;
+}
+/* Where a wall actually runs, read straight off the mask rather than off component
+   topology. Bands say where the lines ARE and how thick; they are a poor witness to how
+   far each one reaches, because a short stub meeting a tall wall has its pixels claimed
+   by the tall one and the surviving fragment is too short to look like a wall at all.
+   That loses the pilaster beside a door, and losing it loses the door. */
+function bpLineProfile(wall,w,h,L,minSeg){
+  const N = L.axis==='h' ? w : h;
+  const half = Math.max(1, Math.round(L.t*0.45));
+  const c = Math.round(L.c);
+  const segs=[];
+  let a=0, runStart=-1;
+  const hit=q=>{
+    for(let d=-half;d<=half;d++){
+      const x = L.axis==='h' ? q : c+d, y = L.axis==='h' ? c+d : q;
+      if(x<0||y<0||x>=w||y>=h) continue;
+      if(wall[y*w+x]) return true;
+    }
+    return false;
+  };
+  for(a=0;a<=N;a++){
+    const on = a<N && hit(a);
+    if(on && runStart<0) runStart=a;
+    else if(!on && runStart>=0){
+      /* bridge a one or two pixel nick rather than calling it an opening */
+      const last=segs[segs.length-1];
+      if(last && runStart-last[1] <= 3) last[1]=a-1;
+      else segs.push([runStart,a-1]);
+      runStart=-1;
+    }
+  }
+  return segs.filter(s=>s[1]-s[0]+1 >= minSeg);
+}
+/* Collinear bands are one wall with holes in it. Grouping them first is what turns "this
+   component stops here" into "there is an opening here". */
+function bpWallLines(bands,wall,w,h,minSeg,joinMax){
+  const lines=[];
+  for(const axis of ['h','v']){
+    const bs=bands.filter(b=>b.axis===axis).sort((p,q)=>q.area-p.area);
+    for(const b of bs){
+      const hit=lines.find(L=>L.axis===axis && Math.abs(L.c-b.c) <= 0.75*Math.max(L.t,b.t));
+      if(hit){ hit.t=Math.max(hit.t,b.t); hit.a0=Math.min(hit.a0,b.a0); hit.a1=Math.max(hit.a1,b.a1); }
+      else lines.push({axis, c:b.c, t:b.t, a0:b.a0, a1:b.a1});
+    }
+  }
+  for(const L of lines){
+    const all=bpLineProfile(wall,w,h,L,minSeg);
+    /* The profile sees every wall that crosses this row, not just this one. Two pieces of
+       the SAME wall are never further apart than an opening can be — so split at anything
+       wider and keep the stretch the bands actually found. Without this, a horizontal line
+       picks up the exterior wall on the far side of the room and "closes the gap" straight
+       through the middle of the living area. */
+    const runs=[]; let cur=null;
+    for(const s of all){
+      if(cur && s[0]-cur[cur.length-1][1] <= joinMax) cur.push(s);
+      else { cur=[s]; runs.push(cur); }
+    }
+    const core=runs.find(r=>r[r.length-1][1]>=L.a0 && r[0][0]<=L.a1) || [];
+    L.segs=core;
+    L.gaps=[];
+    for(let i=0;i<core.length-1;i++) L.gaps.push([core[i][1]+1, core[i+1][0]-1]);
+  }
+  return lines.filter(L=>L.segs.length);
+}
+/* Stamp a wall across every gap before filling, so a doorway stops leaking one room into
+   the next. A gap wider than a room is not an opening, it is a wall that simply does not
+   continue, so it is left alone. */
+function bpCloseGaps(barrier,w,h,lines,tPart){
+  const cuts=[], gMin=Math.max(2, tPart*1.2), gMax=tPart*40;
+  for(const L of lines){
+    for(const g of L.gaps){
+      const len=g[1]-g[0]+1;
+      if(len<gMin || len>gMax) continue;
+      const half=Math.max(1, Math.round(L.t/2));
+      const c=Math.round(L.c);
+      for(let a=g[0];a<=g[1];a++)
+        for(let d=-half;d<=half;d++){
+          const x = L.axis==='h' ? a : c+d, y = L.axis==='h' ? c+d : a;
+          if(x>=0&&y>=0&&x<w&&y<h) barrier[y*w+x]=1;
+        }
+      cuts.push({axis:L.axis, c:L.c, t:L.t, a0:g[0], a1:g[1], widthPx:len,
+                 wide: len > tPart*13});
+    }
+  }
+  return cuts;
+}
+
+/* ---- blueprint: outlines ----
+   Real Moore-neighbour border following. The previous attempt took the leftmost and
+   rightmost pixel of each row instead, which cannot represent a U-shape or any
+   horizontal notch — and a floor plan is made of those. */
+const BP_DIRS=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+/* `limit` is bounded by the region's own perimeter, not by the image. A border walk that
+   fails to close must fail cheaply — bounding it by w*h grows a multi-million-point
+   array before giving up, which is slow enough to look like a hang. */
+function bpTrace(lab,target,w,h,start,limit){
+  const sx=start%w, sy=(start/w)|0;
+  const out=[[sx,sy]];
+  let cx=sx, cy=sy, b=4, guard=0;
+  if(!limit) limit=w*h*4;
+  for(;;){
+    let moved=false;
+    for(let k=1;k<=8;k++){
+      const d=(b+k)%8, nx=cx+BP_DIRS[d][0], ny=cy+BP_DIRS[d][1];
+      if(nx<0||ny<0||nx>=w||ny>=h) continue;
+      if(lab[ny*w+nx]===target){ b=(d+4)%8; cx=nx; cy=ny; out.push([cx,cy]); moved=true; break; }
+    }
+    if(!moved || (cx===sx&&cy===sy) || ++guard>limit) break;
+  }
+  if(out.length>1 && out[out.length-1][0]===sx && out[out.length-1][1]===sy) out.pop();
+  return out;
+}
+function bpRDP(pts,eps){
+  if(pts.length<3) return pts.slice();
+  const keep=new Uint8Array(pts.length); keep[0]=keep[pts.length-1]=1;
+  const stack=[[0,pts.length-1]];
+  while(stack.length){
+    const [a,b]=stack.pop();
+    let far=-1, fd=eps;
+    for(let i=a+1;i<b;i++){
+      const d=ptSegDist(pts[i],pts[a],pts[b]).d;
+      if(d>fd){ fd=d; far=i; }
+    }
+    if(far>0){ keep[far]=1; stack.push([a,far],[far,b]); }
+  }
+  return pts.filter((_,i)=>keep[i]);
+}
+/* Partial rectilinearisation, degrading per edge. The previous attempt bailed out to raw
+   jagged output whenever the vertex count was odd or any edge ran diagonally; here a
+   diagonal simply keeps its own endpoints and its neighbours still snap. */
+function bpOrtho(P,eps){
+  const n=P.length;
+  if(n<4) return P;
+  const kind=[], coord=[];
+  for(let i=0;i<n;i++){
+    const a=P[i], b=P[(i+1)%n];
+    const dx=Math.abs(b[0]-a[0]), dy=Math.abs(b[1]-a[1]);
+    if(dy<=eps && dx>dy){ kind[i]='h'; coord[i]=(a[1]+b[1])/2; }
+    else if(dx<=eps && dy>dx){ kind[i]='v'; coord[i]=(a[0]+b[0])/2; }
+    else { kind[i]='f'; coord[i]=0; }
+  }
+  /* three fragments of one wall should agree on one coordinate, so cluster them,
+     weighting by edge length — the long run is the one that knows where the wall is */
+  const cluster=k=>{
+    const idx=[]; for(let i=0;i<n;i++) if(kind[i]===k) idx.push(i);
+    idx.sort((p,q)=>coord[p]-coord[q]);
+    let g=[];
+    const flush=()=>{
+      if(!g.length) return;
+      let num=0, den=0;
+      for(const i of g){
+        const a=P[i], b=P[(i+1)%n];
+        const len=Math.hypot(b[0]-a[0], b[1]-a[1])||1;
+        num+=coord[i]*len; den+=len;
+      }
+      const v=num/den;
+      for(const i of g) coord[i]=v;
+      g=[];
+    };
+    for(const i of idx){
+      if(g.length && Math.abs(coord[i]-coord[g[g.length-1]])>eps) flush();
+      g.push(i);
+    }
+    flush();
+  };
+  cluster('h'); cluster('v');
+  const out=[];
+  for(let i=0;i<n;i++){
+    const prev=(i-1+n)%n, a=P[i];
+    if(kind[prev]==='v' && kind[i]==='h') out.push([coord[prev], coord[i]]);
+    else if(kind[prev]==='h' && kind[i]==='v') out.push([coord[i], coord[prev]]);
+    else if(kind[prev]==='h' && kind[i]==='f') out.push([a[0], coord[prev]]);
+    else if(kind[prev]==='v' && kind[i]==='f') out.push([coord[prev], a[1]]);
+    else if(kind[prev]==='f' && kind[i]==='h') out.push([a[0], coord[i]]);
+    else if(kind[prev]==='f' && kind[i]==='v') out.push([coord[i], a[1]]);
+    else out.push(a.slice());
+  }
+  return out;
+}
+
 /* ---- blueprint: detection ----
-   Placeholder: hands back the crop itself as one rectangle, so the whole path from
-   photo to an editable room works and can be verified before any pixel analysis
-   exists. Replaced stage by stage; the proposal shape is the contract. */
+   Component labelling comes FIRST, on the raw ink, before any thickness work. Text is
+   removed by topology, not by stroke weight: bold label glyphs carry the same 9-13px
+   strokes as an interior partition, so a thickness filter leaves the letters of BEDROOM
+   standing as a phantom wall band. Taking the largest connected component deletes every
+   glyph by construction and leaves the envelope watertight. */
 function bpAnalyse(work, opts){
   const runId=opts&&opts.runId, step=(opts&&opts.onStep)||(()=>{});
   return new Promise(res=>{
     const go=()=>{
       if(runId!==bpRunSeq) return;
       step('walls');
-      const w=work.width, h=work.height, in6=Math.round(Math.min(w,h)*0.02);
+      const {gray,w,h}=bpGray(work);
+      let g=gray;
+      const th0=bpThresholds(g);
+      /* a plan printed white-on-black is still a plan */
+      if(th0.bg<128){ const inv=new Uint8Array(g.length); for(let i=0;i<g.length;i++) inv[i]=255-g[i]; g=inv; }
+      const th=bpThresholds(g);
+      const inkLo=bpMaskOf(g,th.lo), inkHi=bpMaskOf(g,th.hi);
+
+      const {lab,comps}=bpLabel8(inkLo,w,h);
+      const byArea=comps.slice().sort((a,b)=>b.area-a.area);
+      let pick=null;
+      for(const c of byArea.slice(0,4)){
+        const fill=c.area/(c.bw*c.bh);
+        if(c.bw*c.bh < w*h*0.25) continue;
+        if(fill>0.6) continue;
+        pick=c; break;
+      }
+      if(!pick) pick=byArea[0];
+      const structure=new Uint8Array(w*h);
+      if(pick) for(let i=0;i<lab.length;i++) if(lab[i]===pick.id) structure[i]=1;
+      const leak=bpLeak(structure,w,h);
+
+      const strict=new Uint8Array(w*h);
+      for(let i=0;i<w*h;i++) strict[i]=structure[i]&&inkHi[i]?1:0;
+      const {hR,vR}=bpRuns(strict,w,h);
+      const tHist=new Float64Array(256);
+      for(let i=0;i<w*h;i++) if(strict[i]) tHist[Math.min(255,Math.min(hR[i],vR[i]))]++;
+      const tSplit=bpValley(tHist);
+      const wall=new Uint8Array(w*h);
+      for(let i=0;i<w*h;i++) wall[i]=strict[i] && Math.min(hR[i],vR[i])>=tSplit ? 1 : 0;
+
       step('rooms');
+      const bands=bpBands(wall,w,h,hR,vR,tSplit*3);
+      /* Thickness is measured ONE SAMPLE PER BAND, never per pixel. A pixel-weighted
+         median reads the exterior shell, because a thick wall running the height of the
+         plan simply has more pixels in it than every partition put together — which puts
+         the door-width thresholds out by a factor of three. Partitions are the many, the
+         shell is the few, so a low percentile finds the partition and a high one the shell. */
+      const bts=bands.map(b=>b.t).sort((a,b)=>a-b);
+      const pctile=p=>bts.length?bts[Math.floor((bts.length-1)*p)]:4;
+      const tPart=Math.max(2, pctile(0.40));
+      const tExt=Math.max(tPart, pctile(0.80));
+      /* a 2px "line" is a fixture outline, not a wall */
+      const bandsOk=bands.filter(b=>b.t>=Math.max(3,tSplit));
+      const lines=bpWallLines(bandsOk,wall,w,h,Math.max(4,Math.round(tPart*0.6)), tPart*20);
+      /* the barrier is the walls plus the mullions that seal the shell, NOT the raw ink:
+         built from raw ink it would dent every room around every counter and door arc */
+      /* The shell has to be sealed by the STRUCTURE, not by the thick-wall mask. A long
+         window is drawn as two hairlines with nothing solid behind them, so on this plan
+         the thick mask has an 850px hole across the top and every room drains out through
+         it. The structure component is watertight by construction, so the skin of it that
+         faces outwards is the seal, whatever weight it was drawn at. */
+      const outS=bpLeak(structure,w,h);
+      const skin=new Uint8Array(w*h);
+      for(let i=0;i<w*h;i++){
+        if(!structure[i]) continue;
+        const x=i%w, y=(i/w)|0;
+        if((x>0&&outS.outside[i-1])||(x<w-1&&outS.outside[i+1])||
+           (y>0&&outS.outside[i-w])||(y<h-1&&outS.outside[i+w])) skin[i]=1;
+      }
+      /* A thin enclosed strip between two hairlines is the inside of a window, not a
+         room. Filling those keeps the room's edge on the inner face of the glass. */
+      const encl=new Uint8Array(w*h);
+      for(let i=0;i<w*h;i++) encl[i]=(!structure[i] && !outS.outside[i])?1:0;
+      const el=bpLabel8(encl,w,h);
+      const cavity=new Uint8Array(w*h);
+      let frontier=[];
+      for(const c of el.comps){
+        /* generous, because nothing a person walks into is a foot wide: a strip this
+           narrow is glass, hatching or the inside of a stud wall */
+        if(Math.min(c.bw,c.bh) >= tPart*4) continue;
+        for(let y=c.y0;y<=c.y1;y++) for(let x=c.x0;x<=c.x1;x++){
+          const q=y*w+x; if(el.lab[q]===c.id){ cavity[q]=1; frontier.push(q); }
+        }
+      }
+      /* Absorb the hairlines bounding each cavity. A window is drawn as two or three
+         parallel lines, and leaving the lines themselves out of the barrier leaves a
+         3px hole per line for the room to escape through — so the room swallows the
+         glazing and comes out a foot too deep. Only thin strokes are absorbed; a thick
+         wall is already barrier and must not be eaten into. */
+      for(let step=0; step<4 && frontier.length; step++){
+        const next=[];
+        for(const p of frontier){
+          const px=p%w, py=(p/w)|0;
+          for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+            if(!dx&&!dy) continue;
+            const nx=px+dx, ny=py+dy;
+            if(nx<0||ny<0||nx>=w||ny>=h) continue;
+            const q=ny*w+nx;
+            if(structure[q] && !wall[q] && !cavity[q]){ cavity[q]=1; next.push(q); }
+          }
+        }
+        frontier=next;
+      }
+      /* Walls, the outward skin and the window cavities — and deliberately NOT door arcs,
+         casework or fixtures, which are structure too but must not dent a room. */
+      const barrier=new Uint8Array(w*h);
+      for(let i=0;i<w*h;i++) barrier[i]=(wall[i]||skin[i]||cavity[i])?1:0;
+      const cuts=bpCloseGaps(barrier,w,h,lines,tPart);
+
+      const out=bpLeak(barrier,w,h);
+      const inner=new Uint8Array(w*h);
+      for(let i=0;i<w*h;i++) inner[i]=(!barrier[i] && !out.outside[i])?1:0;
+      const rl=bpLabel8(inner,w,h);
+      const minArea=Math.pow(tPart*5,2);
+      const regions=[];
+      for(const c of rl.comps){
+        /* a room is not eleven inches wide — that is a wall cavity or a hatching gap */
+        if(c.area<minArea || Math.min(c.bw,c.bh)<tPart*3) continue;
+        let start=-1;
+        for(let y=c.y0;y<=c.y1 && start<0;y++)
+          for(let x=c.x0;x<=c.x1;x++) if(rl.lab[y*w+x]===c.id){ start=y*w+x; break; }
+        if(start<0) continue;
+        const chain=bpTrace(rl.lab,c.id,w,h,start, 8*(c.bw+c.bh)+64);
+        if(chain.length<8) continue;
+        const eps=Math.max(1.5, tPart*0.35);
+        let poly=bpOrtho(bpRDP(chain,eps), eps);
+        if(poly.length<3) continue;
+        regions.push({id:uid(), name:'', polyPx:poly, areaPx:c.area, bboxPx:[c.x0,c.y0,c.x1,c.y1]});
+      }
+      regions.sort((a,b)=>b.areaPx-a.areaPx);
+
+      step('text');
       res({
-        scale:null,
-        regions:[{id:uid(), name:'', polyPx:[[in6,in6],[w-in6,in6],[w-in6,h-in6],[in6,h-in6]]}],
-        splits:[], openings:[], fixtures:[]
+        scale:null, regions, splits:[], openings:[], fixtures:[],
+        cuts, lines, tPart, tExt,
+        debug:{w, h, thresholds:th, compCount:comps.length, structureArea:pick?pick.area:0,
+               structureFill:pick?pick.area/(pick.bw*pick.bh):0, leakFraction:leak.frac,
+               tSplit, tPart, tExt, bandCount:bands.length, lineCount:lines.length,
+               cutCount:cuts.length, regionCount:regions.length, barrierLeak:out.frac}
       });
     };
     requestAnimationFrame(()=>requestAnimationFrame(go));
