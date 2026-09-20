@@ -283,6 +283,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #ctlZoom{left:12px;bottom:12px}
 #zoomPct{min-width:52px;font-size:var(--fs-sm)}
 #readout{right:12px;bottom:12px;gap:8px;height:36px;padding:0 12px;font-size:var(--fs-sm);color:var(--ink-2);white-space:nowrap}
+#readout .snap{color:var(--accent);font-weight:600}
 #readout .bad{color:var(--danger);font-weight:600;display:inline-flex;align-items:center;gap:6px}
 #readout .bad::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 #drawHint{left:50%;top:12px;transform:translateX(-50%);max-width:min(520px,calc(100% - 24px));padding:8px 12px;font-size:var(--fs-sm);line-height:16px;color:var(--ink-2);display:block}
@@ -629,7 +630,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
         <button class="btn quiet icon" id="btnZoomIn" title="Zoom in" aria-label="Zoom in"><svg class="i"><use href="#i-plus"/></svg></button>
       </div>
       <div class="island" id="readout" aria-live="polite"></div>
-      <div class="island" id="drawHint" hidden><b>Drawing the room.</b> Click to place each corner, then click the first corner (or press Enter) to close. Shift keeps lines straight. Esc cancels.</div>
+      <div class="island" id="drawHint" hidden><b>Drawing the room.</b> Click to place each corner, then click the first corner (or press Enter) to close. Corners line up with the ones already down; Shift locks to 45°. Esc cancels.</div>
       <div class="toast" id="flash" role="status" aria-live="polite"></div>
     </div>
 
@@ -1010,6 +1011,8 @@ let roomSel = null;    // {kind:'wall'|'corner'|'opening', i} / {kind:'opening',
 let floorSel = null;   // id of the room picked up in Floor mode
 let floorGuides = [];  // edges a dragged room is currently lining up with
 let floorSnapNote = ''; // what that alignment is, shown while dragging
+let alignGuides = [];  // lines a dragged corner is currently latched onto
+let alignNote = '';    // what that alignment is, shown in the readout
 let treeOpen = new Set();  // expanded folder ids in the layout tree
 
 const L = () => S.layouts.find(l=>l.id===S.active) || S.layouts[0];
@@ -2500,29 +2503,44 @@ function startCustomDraw(){
   draw();
 }
 function cancelCustomDraw(){
-  drawState=null; $('drawHint').hidden=true; draw();
+  drawState=null; alignGuides=[]; alignNote=''; $('drawHint').hidden=true; draw();
 }
 function finishCustomDraw(){
   if(!drawState||drawState.pts.length<3){ flash('Add at least 3 corners first'); return; }
   L().room.points=drawState.pts.map(p=>p.slice());
   L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
   clampOpenings(); roomSel=null;
-  drawState=null; $('drawHint').hidden=true;
+  drawState=null; alignGuides=[]; alignNote=''; $('drawHint').hidden=true;
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
 }
+/* Where the next corner would land, and why — the same magnet the corner drag uses, so
+   an outline comes out straight and square while it is being drawn rather than having to
+   be tidied up afterwards. Shift still means the old 45° lock off the last corner. */
 function drawSnapPoint(raw,shift){
-  let p=snapPt(raw);
-  if(shift&&drawState.pts.length){
-    const prev=drawState.pts[drawState.pts.length-1];
+  const pts=drawState.pts;
+  if(shift&&pts.length){
+    const prev=pts[pts.length-1];
     const v=[raw[0]-prev[0], raw[1]-prev[1]], len=Math.hypot(v[0],v[1])||1;
-    let ang=Math.round(Math.atan2(v[1],v[0])/(Math.PI/4))*(Math.PI/4);
-    p=snapPt([prev[0]+Math.cos(ang)*len, prev[1]+Math.sin(ang)*len]);
+    const ang=Math.round(Math.atan2(v[1],v[0])/(Math.PI/4))*(Math.PI/4);
+    alignGuides=[]; alignNote='Straight';
+    return snapPt([prev[0]+Math.cos(ang)*len, prev[1]+Math.sin(ang)*len]);
   }
-  return p;
+  if(!pts.length){ alignGuides=[]; alignNote=''; return snapPt(raw); }
+  const last=pts.length-1;
+  const refs=pts.map((p,k)=>({
+    p,
+    bias: k===last ? 0 : (k===0 ? 0.15 : 0.3),   // the corner just placed pulls hardest, then the one the loop closes on
+    edge: k===last && k>0 ? [p[0]-pts[k-1][0], p[1]-pts[k-1][1]] : null
+  }));
+  const s=alignPoint(raw, refs, alignRadius());
+  alignGuides=s.guides;
+  alignNote = s.guides.length ? (pts.length>1 && isSquare(pts[last-1], pts[last], s.pt) ? 'Right angle' : 'Lined up') : '';
+  return s.pt;
 }
 cv.addEventListener('mousemove', e=>{
   if(!drawState && !wallDrawState) return;
-  drawCursor=[wx(e.offsetX),wy(e.offsetY)];
+  const raw=[wx(e.offsetX),wy(e.offsetY)];
+  drawCursor = drawState ? drawSnapPoint(raw, e.shiftKey) : raw;
   wallDrawShift=e.shiftKey;
   scheduleDraw();
 });
@@ -2564,6 +2582,37 @@ let forceLightCanvas=false;
 const PAL = () => (!forceLightCanvas && darkMQ.matches) ? CANVAS.dark : CANVAS.light;
 darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>scheduleDraw());
 
+/* the dashed lines saying which alignment is holding a dragged or hovered point */
+function drawAlignGuides(){
+  if(!alignGuides.length) return;
+  const C=PAL();
+  ctx.save();
+  ctx.setLineDash([6,5]); ctx.lineWidth=1.5; ctx.strokeStyle=C.accent;
+  for(const g of alignGuides){
+    ctx.beginPath(); ctx.moveTo(sx(g[0][0]),sy(g[0][1])); ctx.lineTo(sx(g[1][0]),sy(g[1][1])); ctx.stroke();
+  }
+  ctx.restore();
+}
+/* The square in the corner, the way a plan marks 90°. On a corner that turns the other
+   way it lands on the wall band, so it is drawn twice — a pale line first, then the
+   accent over it — to stay legible whatever is underneath. */
+function drawSquareTick(a,b,c){
+  const C=PAL(), bx=sx(b[0]), by=sy(b[1]);
+  const dir=(q)=>{ const dx=sx(q[0])-bx, dy=sy(q[1])-by, l=Math.hypot(dx,dy); return l<1?null:[dx/l,dy/l]; };
+  const u=dir(a), v=dir(c);
+  if(!u||!v) return;
+  const s=16;
+  ctx.save();
+  ctx.lineJoin='miter';
+  for(const pass of [{w:5, c:C.surface}, {w:2.5, c:C.accent}]){
+    ctx.beginPath();
+    ctx.moveTo(bx+u[0]*s, by+u[1]*s);
+    ctx.lineTo(bx+(u[0]+v[0])*s, by+(u[1]+v[1])*s);
+    ctx.lineTo(bx+v[0]*s, by+v[1]*s);
+    ctx.strokeStyle=pass.c; ctx.lineWidth=pass.w; ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawCustomOverlay(){
   if(!drawState) return;
   const pts=drawState.pts, C=PAL();
@@ -3278,6 +3327,11 @@ function drawWallLabels(){
 }
 function drawHandles(){
   const P=RP(), C=PAL(), r=L().room;
+  drawAlignGuides();
+  if(alignNote==='Right angle' && drag && drag.mode==='corner' && P.length>2){
+    const n=P.length, i=drag.i;
+    drawSquareTick(P[(i-1+n)%n], P[i], P[(i+1)%n]);
+  }
   const pl=roomSel&&roomSel.kind==='pillar'&&r.pillars.find(q=>q.id===roomSel.id);
   if(pl){
     pathPoly(worldPoly(pl,pl));
@@ -3326,6 +3380,7 @@ function updateReadout(bad,openBad){
     bits.push(L().placed.length+' placed', Math.round(used/total*100)+'% covered');
   }
   let html=bits.join(' · ');
+  if(alignNote) html=`<span class="snap">${esc(alignNote)}</span> · `+html;
   if(n) html+=`<span class="bad">${n} ${n===1?"doesn't":"don't"} fit</span>`;
   if(no) html+=`<span class="bad">${no} can't open</span>`;
   el.innerHTML=html;
@@ -3645,24 +3700,110 @@ function flash(msg){
   el.textContent=msg; el.classList.add('on');
   clearTimeout(flashT); flashT=setTimeout(()=>el.classList.remove('on'),readTime(msg));
 }
-/* shift-drag a corner: align it with the X or Y coordinate of a neighbour */
-function snapCornerAxis(i,raw){
-  const P=RP(), n=P.length, Pprev=P[(i-1+n)%n], Pnext=P[(i+1)%n];
-  const intersectionRadius=12/Math.max(view.scale,1e-6);
-  const intersections=[[Pprev[0],Pnext[1]], [Pnext[0],Pprev[1]]];
-  const nearIntersection=intersections
-    .map(point=>({point,d:Math.hypot(point[0]-raw[0],point[1]-raw[1])}))
-    .filter(hit=>hit.d<=intersectionRadius)
-    .sort((a,b)=>a.d-b.d)[0];
-  if(nearIntersection) return nearIntersection.point;
-  const candidates=[];
-  for(const neighbour of [Pprev,Pnext]){
-    candidates.push([neighbour[0],raw[1]], [raw[0],neighbour[1]]);
+/* ------------------------- the alignment magnet -------------------------
+   A dragged point used to land wherever the grid allowed, which is hopeless on a plan
+   whose other corners are not on the grid themselves (anything imported or drawn
+   freehand): a neighbour's exact x or y was simply unreachable, so squaring a corner
+   by eye never came off. Instead the point is pulled onto the lines the rest of the
+   room already lies on, and onto the crossing of two of them — which, when the two
+   come from the corners either side, IS a right angle. */
+
+/* how close, in world mm, a magnet still bites — pixel-based so it feels the same at
+   every zoom, and a little wider than snapRadius() since this is chasing an alignment
+   rather than one exact point */
+const alignRadius = () => 18/Math.max(view.scale,1e-6);
+
+/* Drop `raw` onto the best pair of lines within `reach`. Solved as a pair rather than
+   one axis and then the other, because the pair is the whole point: an x borrowed from
+   one corner and a y from another is a square corner. Two lines only pair up if they
+   actually cross and hang off different points — both from one point would just land
+   on top of it. An axis with nothing to line up with falls back to the ordinary grid. */
+function snapToLines(raw, lines, reach){
+  const unit=alignRadius();
+  const near=lines.map(l=>{
+    const d=Math.abs((raw[0]-l.p[0])*(-l.dir[1]) + (raw[1]-l.p[1])*l.dir[0]);
+    return {l, d, cost:d + (l.bias||0)*unit};
+  }).filter(c=>c.d<=reach).sort((a,b)=>a.cost-b.cost);
+  const first=near[0];
+  if(!first) return {pt:snapPt(raw), guides:[]};
+  const second=near.find(c=>c!==first && c.l.pin!==first.l.pin
+    && Math.abs(c.l.dir[0]*first.l.dir[0]+c.l.dir[1]*first.l.dir[1])<0.3);
+  const pt = second ? lineCross(first.l, second.l) : lineProject(first.l, snapPt(raw));
+  const took = second ? [first.l, second.l] : [first.l];
+  return {pt, guides:took.map(l=>guideSeg(l,pt))};
+}
+function lineProject(l,q){
+  const nx=-l.dir[1], ny=l.dir[0];
+  const d=(q[0]-l.p[0])*nx + (q[1]-l.p[1])*ny;
+  return [q[0]-nx*d, q[1]-ny*d];
+}
+function lineCross(a,b){
+  const det=a.dir[0]*b.dir[1]-a.dir[1]*b.dir[0];
+  if(Math.abs(det)<1e-9) return a.p.slice();
+  const t=((b.p[0]-a.p[0])*b.dir[1]-(b.p[1]-a.p[1])*b.dir[0])/det;
+  return [a.p[0]+a.dir[0]*t, a.p[1]+a.dir[1]*t];
+}
+/* the dashed line shown while a magnet holds: from the point it hangs off to where the
+   dragged point landed, run on a little past both ends so it reads as a guide, not a wall */
+function guideSeg(l,pt){
+  const over=10/Math.max(view.scale,1e-6);
+  const vx=pt[0]-l.pin[0], vy=pt[1]-l.pin[1], len=Math.hypot(vx,vy);
+  const u = len>1e-6 ? [vx/len, vy/len] : l.dir;
+  const end = len>1e-6 ? pt : l.pin;
+  return [[l.pin[0]-u[0]*over, l.pin[1]-u[1]*over], [end[0]+u[0]*over, end[1]+u[1]*over]];
+}
+/* Every line a dragged point can latch onto, from the points it should line up with.
+   A ref is {p, bias, edge}: `p` is the point, `bias` how reluctantly it is used (a
+   fraction of the magnet's radius, so a corner across the room yields to a neighbour),
+   and `edge` the wall arriving at it, which adds a line square to that wall — the one
+   thing that gives a room sitting at an angle its right angles too. */
+function alignPoint(raw, refs, reach){
+  const lines=[];
+  for(const r of refs){
+    const bias=r.bias||0;
+    lines.push({pin:r.p, p:r.p, dir:[0,1], bias});
+    lines.push({pin:r.p, p:r.p, dir:[1,0], bias});
+    const e=r.edge, L=e&&Math.hypot(e[0],e[1]);
+    if(L>1) lines.push({pin:r.p, p:r.p, dir:[-e[1]/L, e[0]/L], bias:bias+0.35});
   }
-  return candidates.reduce((best,cand)=>
-    Math.hypot(cand[0]-raw[0],cand[1]-raw[1]) < best.d
-      ? {point:cand,d:Math.hypot(cand[0]-raw[0],cand[1]-raw[1])} : best,
-    {point:raw,d:Infinity}).point;
+  return snapToLines(raw, lines, reach);
+}
+/* is the corner at b square? */
+function isSquare(a,b,c){
+  const ux=a[0]-b[0], uy=a[1]-b[1], vx=c[0]-b[0], vy=c[1]-b[1];
+  const lu=Math.hypot(ux,uy), lv=Math.hypot(vx,vy);
+  if(lu<1||lv<1) return false;
+  return Math.abs((ux*vx+uy*vy)/(lu*lv)) < 0.002;   // inside about a tenth of a degree
+}
+/* dragging corner i: the corners either side pull hardest, then every other corner */
+function snapCorner(i, raw, reach){
+  const P=RP(), n=P.length, prev=(i-1+n)%n, next=(i+1)%n;
+  const refs=[];
+  for(let k=0;k<n;k++){
+    if(k===i) continue;
+    if(k===prev||k===next){
+      const far=P[k===prev ? (prev-1+n)%n : (next+1)%n];
+      refs.push({p:P[k], bias:0, edge:[P[k][0]-far[0], P[k][1]-far[1]]});
+    } else refs.push({p:P[k], bias:0.3});
+  }
+  const s=alignPoint(raw, refs, reach);
+  if(!s.guides.length) return {pt:s.pt, guides:[], note:''};
+  return {pt:s.pt, guides:s.guides, note: isSquare(P[prev], s.pt, P[next]) ? 'Right angle' : 'Lined up'};
+}
+/* Put the corner at exactly 90° without dragging for it. Every point that squares this
+   corner sits on the circle with its two neighbours as diameter, so the nearest point on
+   that circle is the smallest move that does it. */
+function squareCorner(i){
+  const P=RP(), n=P.length;
+  if(n<3) return;
+  const a=P[(i-1+n)%n], c=P[(i+1)%n], b=P[i];
+  const mx=(a[0]+c[0])/2, my=(a[1]+c[1])/2, rad=Math.hypot(c[0]-a[0], c[1]-a[1])/2;
+  if(rad<1){ flash('Those two walls meet at the same point'); return; }
+  let vx=b[0]-mx, vy=b[1]-my, len=Math.hypot(vx,vy);
+  if(len<1){ vx=-(c[1]-a[1]); vy=c[0]-a[0]; len=rad*2; }   // dead centre: step off square to the span
+  const ok=tryRoomEdit(()=>{ P[i]=[mx+vx/len*rad, my+vy/len*rad]; });
+  if(!ok) return;
+  renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
 }
 function pickAt(x,y){
   const ps=L().placed;
@@ -3712,6 +3853,7 @@ cv.addEventListener('pointerdown', e=>{
       if(Math.hypot(px-s0[0], py-s0[1])<12){ finishCustomDraw(); return; }
     }
     drawState.pts.push(drawSnapPoint(raw,e.shiftKey));
+    alignGuides=[]; alignNote='';
     draw();
     return;
   }
@@ -3834,9 +3976,16 @@ cv.addEventListener('pointermove', e=>{
   }
   if(drag.mode==='corner'){
     const P=RP(), was=P[drag.i].slice();
-    const np = e.shiftKey ? snapCornerAxis(drag.i,pt) : (e.altKey?pt:snapPt(pt));
+    let np=pt;
+    if(e.altKey){ alignGuides=[]; alignNote='Free'; }   // alt drops the magnet, same as everywhere else
+    else {
+      // shift reaches past the magnet's radius, for an alignment too far off to bite on its own
+      const s=snapCorner(drag.i, pt, e.shiftKey?Infinity:alignRadius());
+      np=s.pt; alignGuides=s.guides; alignNote=s.note;
+    }
     P[drag.i]=np;
-    if(!polySimple(P)) P[drag.i]=was; else clampOpenings();
+    if(!polySimple(P)){ P[drag.i]=was; alignGuides=[]; alignNote=''; }
+    else clampOpenings();
     bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
   if(drag.mode==='wall'){
@@ -3925,14 +4074,15 @@ function cancelDrag(){
     else L().placed=s.placed;
     if(!wasFloor) bumpRev();
   }
-  drag=null; floorGuides=[]; floorSnapNote='';
+  drag=null; floorGuides=[]; floorSnapNote=''; alignGuides=[]; alignNote='';
   renderSel(); renderRoomSel(); renderWalls(); renderOpen(); renderFloorSel(); draw();
 }
 function endDrag(e){
   if(drag&&drag.mode!=='pan'){
     save();
+    alignGuides=[]; alignNote='';
     if(drag.mode==='floor-room'||drag.mode==='floor-rot'){ floorGuides=[]; floorSnapNote=''; commitFloor(); renderFloorSel(); draw(); }
-    else if(ROOM_DRAGS.includes(drag.mode)) commitRoom();
+    else if(ROOM_DRAGS.includes(drag.mode)){ commitRoom(); scheduleDraw(); }
     else { commitFurn(); renderSel(); }
   }
   drag=null;
@@ -4104,6 +4254,7 @@ function setMode(m){
   else if(m==='room') sel=null;
   else if(m==='floor'){ sel=null; roomSel=null; floorSel = L().floorId ? L().id : null; floorEntry(); }
   if(m!=='floor'){ floorGuides=[]; floorSnapNote=''; }
+  alignGuides=[]; alignNote='';
   /* measurements belong to one room, so Floor mode leaves the tool behind too */
   if((!isCanvasMode(m) || m==='floor') && measureOn){ measureOn=false; resetMeasureState(); renderMeasureBar(); }
   renderMode(); applyLayoutMode();
@@ -4857,8 +5008,8 @@ function renderCornerProps(){
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="cX">From left</label><input type="text" class="len" id="cX" value="${esc(fmtLen(p[0]-b.x0,S.unit))}"></div>
     <div class="field"><label for="cY">From top</label><input type="text" class="len" id="cY" value="${esc(fmtLen(p[1]-b.y0,S.unit))}"></div>
-    <p class="hint">Both walls meeting here move with the corner.</p>
-    <div class="row actions"><button class="btn sm danger" id="cDel" ${P.length<=3?'disabled title="A room needs at least three corners"':''}>Remove corner</button></div>`;
+    <p class="hint">Both walls meeting here move with the corner. Dragging it lines it up with the rest of the room; hold Alt for a free hand.</p>
+    <div class="row actions"><button class="btn sm" id="cSq">Square this corner</button><button class="btn sm danger" id="cDel" ${P.length<=3?'disabled title="A room needs at least three corners"':''}>Remove corner</button></div>`;
   const go=()=>{
     const x=parseLen($('cX').value,S.unit), y=parseLen($('cY').value,S.unit);
     if(isFinite(x)&&isFinite(y)) tryRoomEdit(()=>{ P[i]=[b.x0+x, b.y0+y]; });
@@ -4866,6 +5017,7 @@ function renderCornerProps(){
   };
   $('cX').addEventListener('change',go);
   $('cY').addEventListener('change',go);
+  $('cSq').addEventListener('click',()=>squareCorner(i));
   $('cDel').addEventListener('click',()=>deleteCorner(i));
 }
 /* Taking a wall away takes its doors and windows with it — there is nothing left for
