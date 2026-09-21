@@ -175,14 +175,50 @@ rooms going missing, then a missing opening, then a misclassification.
       one-off fix here.
 
 ### S6: OCR
-- [ ] Tesseract.js from CDN, **all four artefacts pinned** (js, worker, core, lang)
-- [ ] Write that version's API rather than feature-sniffing across three majors
-- [ ] Per-line crops from the full-resolution original, PSM 7, no character whitelist
-- [ ] `bpSolveScale`: fit each dimension pair in **both** orientations, pool across rooms,
-      take the median, report the spread as confidence
-- [ ] Graceful degradation, four layers, and **skip OCR entirely on `file://`**, where the
-      worker and wasm cannot load and trying costs a 15-second hang
-- [ ] Room names and `l.dimLabel` from the labels
+- [x] Tesseract.js from CDN, **all four artefacts pinned** (js, worker, core, lang):
+      `tesseract.js@7.0.0` and `tesseract.js-core@7.0.0` off jsDelivr, `eng.traineddata`
+      off `tessdata.projectnaptha.com/4.0.0`.
+- [x] Write that version's API rather than feature-sniffing across three majors: v7's
+      `createWorker(lang, oem, {workerPath, corePath, langPath})`, one call, no fallback
+      chain across majors.
+- [x] **Not per-line crops at PSM 7, as planned** — changed after running against the real
+      photo. `bpLabelBlocks`'s candidate glyphs are capped at `tPart*6` per component
+      (S4's own cap, tuned for divider placement), and bold, closely-kerned room-name
+      lettering binarises into one blob per word at this resolution — comfortably over
+      that cap. So the name was never in `cand` to begin with, and every block bpAnalyse
+      finds is built entirely out of the dimension line and the rule under the name.
+      Confirmed against the real photo by rendering the crop a line-level pass would have
+      taken: it starts right at that rule, name entirely above it and entirely absent.
+      Fixed by cropping the whole **block** instead, padded three glyph heights past its
+      own top edge to pull the name in, and reading it with PSM 6 (uniform block) so
+      Tesseract's own line-break detection — not `bpLabelBlocks`'s glyph candidates —
+      is what separates the name from the dimension line. Verified against the real
+      photo: LIVING AREA, BEDROOM and KITCHEN all read cleanly this way.
+- [x] `bpSolveScale`: fit each dimension pair in **both** orientations, pool across rooms,
+      take the median, report the spread as confidence.
+- [x] **Only fit boxy rooms.** A blueprint already runs a little loose against real-world
+      scale, and a room that opens straight into its neighbour — Living Area into Foyer,
+      here — traces as one merged, irregular outline, so the number printed inside it was
+      never describing that outline's own bbox in the first place. Confirmed against the
+      real photo: Living Area's printed 15'4"×11'11" fit against its own (22-vertex, very
+      not rectangular) bbox before this check produced nonsense. `bpRegionIsBoxy` requires
+      the traced polygon to fill at least 90% of its own bbox and have 6 vertices or
+      fewer; only simple, self-contained rooms (a bedroom, a closet) ever feed the scale
+      fit — everything else still gets its name and its dimension line as a label, just
+      not a vote on the scale.
+- [x] Bounds-checked every parsed dimension (150mm–15000mm) before it can reach the pool.
+      OCR drops the foot-mark often enough on this font — "11'10"" read as "1110"", "5'11""
+      as "511"" — that an unchecked reading can be out by a factor of ten, which is worse
+      for a median than no reading at all.
+- [x] Graceful degradation, four layers, and **skip OCR entirely on `file://`**, where the
+      worker and wasm cannot load and trying costs a 15-second hang: no network → skip
+      before trying; the library or the worker failing to load → skip OCR for the whole
+      photo; one block's crop failing or running long → skip that block, keep going; a
+      recognised line that doesn't parse as a name or a dimension pair → left blank.
+- [x] Room names and `l.dimLabel` from the labels. `dimLabel` is the OCR text verbatim,
+      not reformatted through `fmtLen` — it's meant to show what's printed on the plan,
+      including when that disagrees with what got traced, so reformatting it would defeat
+      the point.
 
 ### S7: fixtures
 - [ ] `BP_FIXTURES` table plus `BP_FIXTURE_ITEMS` (there are zero fixture items in
@@ -205,7 +241,15 @@ rooms going missing, then a missing opening, then a misclassification.
 - [ ] **Living + Foyer.** S4 now proposes a divider between them off their two name labels,
       but this has only been run against synthetic plans. Whether the two names are found
       on the real blueprint, and whether the proposed line lands where it should, is the
-      first thing to check.
+      first thing to check. Partial answer from running S6's OCR against the real photo:
+      no divider fires here — the traced Living Area region is still one 22-vertex outline
+      (`bpRegionIsBoxy` correctly refuses to fit a scale off it), and only ever carries the
+      LIVING AREA name; the FOYER block is never attributed to any region at all
+      (`region.labels` comes back empty for the area where Foyer sits). So `bpProposeSplits`
+      either never sees both labels on the same first-pass region, or the block-to-region
+      containment test (a single sample point per block, against the label raster) is
+      missing on this photo specifically — still to be traced through `bpLabelBlocks` /
+      `bpDeriveRegions`, not fixed here.
 - [ ] **A hairline wall spur can appear beside a divider.** `bpRectify` aligns two facing
       faces exactly, and then `bpCleanPoly`'s sub-50mm edge merge moves a vertex by up to
       half a short edge afterwards — so a face pair it had put on one line can end up a
