@@ -4622,6 +4622,8 @@ function floorMenu(id, anchor){
   openMenu(anchor, [
     {label:'Rename', fn:()=>renameFloor(id)},
     {label:'Rooms on this floor…', fn:()=>floorRoomsDialog(id)},
+    {label:'Import a blueprint onto this floor…', fn:()=>bpUploadDialog(false, id)},
+    ...(bpLastImport && bpLastImport.floorId===id ? [{label:'Undo the blueprint import…', fn:bpUndoImport}] : []),
     {sep:true},
     {label:'Delete floor…', danger:true, fn:()=>deleteFloor(id)},
   ], fl.name);
@@ -5935,14 +5937,112 @@ function bpUnpinch(P, tol){
   }
   return Q;
 }
+/* A vertex whose two edges fold back within 30° of the way they came is a spike, not a
+   corner — no real wall meets another that sharply, so this is always a tracing glitch
+   (a stray pixel snagged the border walk) rather than architecture. Same iterative
+   removal as bpDropCollinear, just testing for near-reversal (dot ~ -1) instead of
+   near-straight (dot ~ +1); dropping the tip vertex outright joins its neighbours
+   directly, and a subsequent merge/collinear pass cleans up what that leaves behind. */
+function bpDropSpikes(P, deg){
+  const tol=Math.cos((deg||30)*Math.PI/180);
+  let out=P.slice();
+  for(let guard=0; guard<200 && out.length>3; guard++){
+    let cut=-1;
+    for(let i=0;i<out.length;i++){
+      const a=out[(i-1+out.length)%out.length], b=out[i], c=out[(i+1)%out.length];
+      const u=[b[0]-a[0],b[1]-a[1]], v=[c[0]-b[0],c[1]-b[1]];
+      const lu=Math.hypot(u[0],u[1]), lv=Math.hypot(v[0],v[1]);
+      if(lu<1e-6||lv<1e-6) continue;
+      if((u[0]*v[0]+u[1]*v[1])/(lu*lv) <= -tol){ cut=i; break; }
+    }
+    if(cut<0) break;
+    out.splice(cut,1);
+  }
+  return out;
+}
+/* A vertex whose "ear" — the triangle it cuts with its two immediate neighbours — is
+   physically tiny can't be a real corner either, whatever angle it turns at: every wall
+   on a floor plan runs at least hundreds of mm between corners, so a nibble a couple of
+   inches across (both its edges short, and little perpendicular deviation off the
+   straight line between its neighbours) is quantization noise off a fixture's rounded
+   ink, not architecture — a rounded tub rim leaves exactly this shape, a small-angle
+   notch bpDropSpikes' sharp-reversal test doesn't catch since neither edge folds back.
+   Expressed as effective width (twice the ear's area over its base length) rather than
+   raw distance so it still means "how far off straight," the same quantity bpDropCollinear
+   tests via angle; this just catches it at any angle, provided the deviation is tiny in
+   absolute terms.
+   150mm does NOT sit under every real corner, though — checked directly against this same
+   test photo, a genuine step in the west exterior wall (confirmed against the source
+   image: a clean, deliberate 90-degree jog, not rounding) measures only 84mm off straight,
+   comfortably inside the 150mm meant to clear a rounded fixture's nibble. Distance alone
+   can't tell those apart; a floor plan's own right angles can be exactly that small. What
+   DOES tell them apart is the turn itself: every real corner in an orthogonal plan turns a
+   clean 90 degrees, while the tub rim's two nibbles turn at 113 and 151 degrees (measured
+   off this same photo) — nowhere near it. So a vertex within 20 degrees of a true
+   90-degree turn is left alone regardless of how tiny its ear reads, and only a vertex
+   that turns at some OTHER angle is judged by distance at all. */
+function bpDropNoise(P, mm){
+  const lim=mm||150, angTol=20*Math.PI/180;
+  let out=P.slice();
+  for(let guard=0; guard<200 && out.length>3; guard++){
+    let cut=-1;
+    for(let i=0;i<out.length;i++){
+      const a=out[(i-1+out.length)%out.length], b=out[i], c=out[(i+1)%out.length];
+      const base=[c[0]-a[0],c[1]-a[1]], baselen=Math.hypot(base[0],base[1]);
+      if(baselen<1e-6) continue;
+      const cross=(b[0]-a[0])*(c[1]-a[1]) - (b[1]-a[1])*(c[0]-a[0]);
+      if(Math.abs(cross)/baselen > lim) continue;
+      const u=[b[0]-a[0],b[1]-a[1]], v=[c[0]-b[0],c[1]-b[1]];
+      const turn=Math.atan2(u[0]*v[1]-u[1]*v[0], u[0]*v[0]+u[1]*v[1]);
+      if(Math.abs(Math.abs(turn)-Math.PI/2) <= angTol) continue;
+      cut=i; break;
+    }
+    if(cut<0) break;
+    out.splice(cut,1);
+  }
+  return out;
+}
 /* the one gate. The previous attempt at this feature shipped a weakened copy that
    dropped the 50mm rule and compared area in pixels against a millimetre threshold,
    so its rooms were born invalid and every later edit rolled back with "That would
    fold the room over itself". There is no second polygon check in this file. */
 function bpCleanPoly(P){
-  let Q=bpUnpinch(bpNormWinding(P));
+  /* A vertex the raw trace left sitting almost exactly on the line between its own
+     neighbours (a stair-stepped wall corner traced one pixel wide, say) isn't noise
+     ABOUT that corner, it's noise NEXT TO it — and left in, it drags a real corner's own
+     ear-area test down with it: measured against a genuine ~90 degree corner one photo
+     pixel away from a redundant collinear point, the corner's effective width read at
+     54mm, under bpDropNoise's own 150mm limit, and the corner itself got dropped instead
+     of the noise beside it (the bedroom closet on the test photo, its near wall traced
+     dead straight, came out a trapezoid this way). Collinear points carry no angle and no
+     ear at all, so dropping them first is always safe — never a real corner — and it
+     costs the later spike/noise passes nothing since the deliberate second pass after
+     them already repeats it. */
+  let Q=bpDropCollinear(bpUnpinch(bpNormWinding(P)), 1.5);
+  Q=bpDropSpikes(Q,30);
+  Q=bpDropNoise(Q,150);
   Q=bpMergeShortEdges(bpDropCollinear(Q,1.5), 50);
-  Q=bpDropCollinear(Q,1.5);
+  /* dropping a spike or a noise nibble can leave two former neighbours sub-50mm apart —
+     the exact shape polySimple's own edge-length check exists to catch — so the
+     merge/collinear pass has to run again after this second pass, not just before it. */
+  Q=bpDropSpikes(Q, 30);
+  Q=bpDropNoise(Q, 150);
+  Q=bpMergeShortEdges(bpDropCollinear(Q,1.5), 50);
+  /* Every pass above judges one vertex at a time, off its own two immediate neighbours —
+     which is exactly why a whole EDGE can still end up a few tens of millimetres off
+     true even once nothing along it looks droppable on its own. Checked against this same
+     real photo: a 510mm edge left 37mm off horizontal, and two edges either side of one
+     divider seam left 17-18mm off, each too small on its own to trip any test above but
+     still a visible kink once drawn. A floor plan this pipeline traces is orthogonal by
+     construction — the wall detection this whole file is built on doesn't support a
+     genuinely angled wall yet (see AGENTS.md) — so an edge that's already almost exactly
+     horizontal or vertical is meant to BE horizontal or vertical, and `bpOrtho` (built for
+     exactly this, snapping the raw per-pixel trace before any of this file's per-vertex
+     cleanup ever sees it) is run again here, on the finished edge, to catch what tracing
+     left behind. 50mm matches the short-edge floor two lines up, for the same reason: past
+     that, a real diagonal wall becomes the more likely explanation, not measurement noise. */
+  Q=bpOrtho(Q, 50);
+  Q=bpMergeShortEdges(bpDropCollinear(Q,1.5), 50);
   return bpNormWinding(bpUnpinch(Q));
 }
 
@@ -6009,6 +6109,31 @@ function bpLabel8(mask,w,h){
     comps.push({id:n, area, x0, y0, x1, y1, bw:x1-x0+1, bh:y1-y0+1});
   }
   return {lab, comps, n};
+}
+/* The crop step's own default box, guessed from where the ink actually is rather than a
+   blind inset off the photo's own edges — a fixed percentage trims a fixed amount no
+   matter how tightly the plan fills the frame, and on a plan drawn close to the edge it
+   was cropping real walls off before the person ever got a chance to see them. Same
+   largest-connected-component idea `bpAnalyse` uses for `structure`: the wall/text network
+   is by far the biggest connected mass of dark pixels on a clean photo of a plan, so its
+   bbox is a far more reliable "here's the drawing" guess than "here's every dark pixel,"
+   which a shadow or a scanner's own border would also answer to. Padded a little past that
+   bbox so an edge wall's outer stroke isn't sitting exactly on the crop line. Falls back to
+   null (the caller's old fixed-inset guess) when nothing looks big enough to trust — a
+   near-blank or very noisy photo shouldn't get auto-cropped to a speck. */
+function bpAutoCropRect(full){
+  const w=full.width, h=full.height;
+  const {gray}=bpGray(full);
+  const mask=bpMaskOf(gray, bpOtsu(gray));
+  const {comps}=bpLabel8(mask, w, h);
+  if(!comps.length) return null;
+  let big=comps[0];
+  for(const c of comps) if(c.area>big.area) big=c;
+  if(big.area < w*h*0.01) return null;
+  const pad=Math.round(Math.min(w,h)*0.02);
+  const x0=Math.max(0,big.x0-pad), y0=Math.max(0,big.y0-pad);
+  const x1=Math.min(w,big.x1+pad), y1=Math.min(h,big.y1+pad);
+  return {x:x0, y:y0, w:x1-x0, h:y1-y0};
 }
 /* What fraction of the image the outside reaches. The cheapest, most scale-free check
    in the pipeline: a sealed plan sits near a fifth, a leaking one swallows everything
@@ -6185,6 +6310,65 @@ function bpWallLines(bands,wall,w,h,minSeg,joinMax){
     for(let i=0;i<core.length-1;i++) L.gaps.push([core[i][1]+1, core[i+1][0]-1]);
   }
   return lines.filter(L=>L.segs.length);
+}
+/* Where a wall's own drawn extent simply stops — no ink, no corner, nothing — with no
+   perpendicular line crossing it there. Most dead ends are exactly that: the plan's own
+   exterior, or a room the crop cut off, and mean nothing. But a real closet drawn with no
+   jamb stub at all on its open side (common for a shallow reach-in) leaves the identical
+   mark: a wall that just stops. `bpProposeArcCuts` is what tells that case apart from an
+   ordinary dead end. */
+function bpFreeEnds(lines, tPart){
+  const free=[];
+  for(const L of lines){
+    if(!L.segs.length) continue;
+    const ptFor=a => L.axis==='h' ? [a, L.c] : [L.c, a];
+    for(const a of [L.segs[0][0], L.segs[L.segs.length-1][1]]){
+      const [px,py]=ptFor(a);
+      let junction=false;
+      for(const o of lines){
+        if(o===L || o.axis===L.axis || !o.segs.length) continue;
+        const perp = o.axis==='h' ? py : px;
+        if(Math.abs(o.c-perp) > tPart*1.5) continue;
+        const along = o.axis==='h' ? px : py;
+        if(along >= o.segs[0][0]-tPart*1.5 && along <= o.segs[o.segs.length-1][1]+tPart*1.5){ junction=true; break; }
+      }
+      if(!junction) free.push({axis:L.axis, c:L.c, t:L.t, px, py});
+    }
+  }
+  return free;
+}
+/* Two wall dead ends, of the SAME axis (both the stubs of a would-be closet's header and
+   sill, say), whose facing coordinate lines up and whose gap reads as door width, are
+   exactly what a closet drawn with no jamb on its open side looks like from the wall data
+   alone — the missing side is the OPPOSITE axis from the two stubs bracketing it. A door
+   width closer than the real ones (`bpCloseGaps` allows up to 40 partitions, a whole
+   wall's worth) on purpose: this is inventing a wall from silence, not reading one off the
+   page, so it only reaches as far as an actual closet plausibly does. Proposed here, not
+   stamped — `bpClassifyCuts` still has to find a real swing arc spanning it before this
+   earns a wall; a coincidental alignment with nothing drawn between the two stubs must be
+   left exactly as open as an ordinary wide doorway into a room. */
+function bpProposeArcCuts(lines, tPart){
+  const free=bpFreeEnds(lines, tPart);
+  const out=[], gMin=Math.max(2, tPart*1.2), gMax=tPart*16;
+  for(let i=0;i<free.length;i++) for(let j=i+1;j<free.length;j++){
+    const A=free[i], B=free[j];
+    if(A.axis!==B.axis) continue;
+    const tol=Math.max(A.t,B.t)*1.2;
+    if(A.axis==='h'){
+      if(Math.abs(A.px-B.px) > tol) continue;
+      const len=Math.abs(A.py-B.py);
+      if(len<gMin || len>gMax) continue;
+      out.push({axis:'v', c:(A.px+B.px)/2, t:Math.max(A.t,B.t),
+                 a0:Math.min(A.py,B.py), a1:Math.max(A.py,B.py), widthPx:len, wide:false, freeArc:true});
+    } else {
+      if(Math.abs(A.py-B.py) > tol) continue;
+      const len=Math.abs(A.px-B.px);
+      if(len<gMin || len>gMax) continue;
+      out.push({axis:'h', c:(A.py+B.py)/2, t:Math.max(A.t,B.t),
+                 a0:Math.min(A.px,B.px), a1:Math.max(A.px,B.px), widthPx:len, wide:false, freeArc:true});
+    }
+  }
+  return out;
 }
 /* Stamp a wall across every gap before filling, so a doorway stops leaking one room into
    the next. A gap wider than a room is not an opening, it is a wall that simply does not
@@ -6529,14 +6713,17 @@ function bpLabelBlocks(comps, pick, tPart){
   const cand=comps.filter(c=> (!pick||c.id!==pick.id) && c.area>=6 && Math.max(c.bw,c.bh)<=tPart*6);
   /* a plan with this many loose marks on it is hatching, not lettering; proposing
      nothing leaves the rooms exactly as they came out, which is the safe answer */
-  if(cand.length<2 || cand.length>1500) return {blocks:[], gh:tPart};
+  if(cand.length<2 || cand.length>1500) return {blocks:[], gh:tPart, glyphIds:new Set()};
   /* Weighted by ink, because a plain median counts a dimension tick the same as a letter
      and there are more ticks, hatching dashes and stray specks on a drawing than there
      are glyphs. Unweighted, the test plan's median glyph is four pixels tall and the
      filter below then throws away every actual letter. */
   const gh=bpInkMedian(cand.map(c=>c.bh), cand.map(c=>c.area)) || tPart;
   const glyphs=cand.filter(c=> c.bh>=gh*0.4 && c.bh<=gh*2.2 && c.bw<=gh*3);
-  if(glyphs.length<2) return {blocks:[], gh};
+  /* handed back so fixture detection (S7) can leave lettering alone without redoing this
+     same glyph test a second time */
+  const glyphIds=new Set(glyphs.map(c=>c.id));
+  if(glyphs.length<2) return {blocks:[], gh, glyphIds};
   /* One pairwise sweep and a union-find, not merge-and-restart: growing a box and
      rescanning is O(n²) PER MERGE, which is a quarter of a second of the detection
      budget spent on lettering nobody is going to read until S5. */
@@ -6570,7 +6757,7 @@ function bpLabelBlocks(comps, pick, tPart){
   boxes=group(boxes, gh*2.0, 'y');       // a name and the dimensions under it are one block
   const blocks=boxes.filter(b=> b.n>=3 && b.x1-b.x0 >= gh*1.5)
     .map(b=>({x0:b.x0,y0:b.y0,x1:b.x1,y1:b.y1,cx:(b.x0+b.x1)/2,cy:(b.y0+b.y1)/2,n:b.n}));
-  return {blocks, gh};
+  return {blocks, gh, glyphIds};
 }
 /* Recursive bisection on the names, splitting at the widest gap between them each time.
    Two names all but touching are one name over its own dimension line that failed to
@@ -6640,25 +6827,134 @@ function bpIdentify(regions, lab, prev){
     r.id = cl ? cl.p.id : uid();
   }
 }
+/* A component that fails the width/area floor below isn't automatically hatching or a
+   wall cavity with nothing on the far side of it. On the real photo, a plumbing chase
+   behind a tub and the sliver a doorway leaves beside it both trace as their own
+   too-narrow components sitting flush against a real room and nothing else — dropping
+   them silently leaves a hole in that room's own floor exactly where a person would
+   expect it to keep going to the real wall. Absorbed only when unambiguous: each of the
+   sliver's two long sides leads to at most one thing found by piercing straight out
+   through the barrier, and at most one of those two things is an accepted room. Anything
+   murkier — two different rooms facing each other across it, as at a real doorway wide
+   enough to fail the floor on its own — is left exactly as it was, not guessed at, and
+   the exterior wall itself is never a target since "outside" doesn't carry a label. */
+function bpAbsorbSlivers(bar, w, h, tPart, rl, accepted){
+  const reach=Math.ceil(tPart*2.5), steps=5;
+  const sideLabel=(x0,y0,x1,y1,dx,dy)=>{
+    const tally=new Map();
+    let inconclusive=false;
+    for(let i=0;i<steps;i++){
+      const t=steps===1?0.5:i/(steps-1);
+      const px=Math.round(x0+(x1-x0)*t), py=Math.round(y0+(y1-y0)*t);
+      let found=null;
+      for(let s=1;s<=reach;s++){
+        const x=px+dx*s, y=py+dy*s;
+        if(x<0||y<0||x>=w||y>=h){ inconclusive=true; break; }
+        if(!bar[y*w+x]){ found=y*w+x; break; }
+      }
+      if(found==null) continue;
+      const lab=rl.lab[found];
+      if(!lab) inconclusive=true;
+      else tally.set(lab,(tally.get(lab)||0)+1);
+    }
+    let best=null, bestN=0;
+    tally.forEach((n,l)=>{ if(n>bestN){ bestN=n; best=l; } });
+    return {label:best, inconclusive};
+  };
+  /* Opens the WHOLE shared border, not a few sample points — a comb of narrow slits
+     leaves barrier remnants between them, and a boundary trace over that teeth-like
+     shape doesn't simplify back down to a simple polygon (bpOrtho starts failing
+     polySimple on it). One real doorway's worth of opening is what a merge should look
+     like, not several. */
+  const pierce=(x0,y0,x1,y1,dx,dy)=>{
+    const n=Math.max(Math.abs(x1-x0), Math.abs(y1-y0));
+    for(let i=0;i<=n;i++){
+      const t=n===0?0:i/n;
+      const px=Math.round(x0+(x1-x0)*t), py=Math.round(y0+(y1-y0)*t);
+      for(let s=1;s<=reach;s++){
+        const x=px+dx*s, y=py+dy*s;
+        if(x<0||y<0||x>=w||y>=h) break;
+        const idx=y*w+x;
+        if(!bar[idx]) break;
+        bar[idx]=0;
+      }
+    }
+  };
+  let dissolved=false;
+  const touched=[];   // padded bboxes of merged slivers, to scope the spur cleanup below
+  for(const c of rl.comps){
+    if(accepted.has(c.id)) continue;
+    if(c.area<tPart*tPart) continue;   // pure noise, not a real gap
+    const vertical=c.bw<=c.bh;
+    const a = vertical ? sideLabel(c.x0,c.y0,c.x0,c.y1,-1,0) : sideLabel(c.x0,c.y0,c.x1,c.y0,0,-1);
+    const b = vertical ? sideLabel(c.x1,c.y0,c.x1,c.y1,1,0)  : sideLabel(c.x0,c.y1,c.x1,c.y1,0,1);
+    const targets=[a,b].filter(s=>s.label!=null && accepted.has(s.label));
+    const distinct=new Set(targets.map(s=>s.label));
+    if(distinct.size!==1) continue;
+    const targetLabel=[...distinct][0];
+    if(a.label===targetLabel){
+      if(vertical) pierce(c.x0,c.y0,c.x0,c.y1,-1,0);
+      else pierce(c.x0,c.y0,c.x1,c.y0,0,-1);
+    }
+    if(b.label===targetLabel){
+      if(vertical) pierce(c.x1,c.y0,c.x1,c.y1,1,0);
+      else pierce(c.x0,c.y1,c.x1,c.y1,0,1);
+    }
+    dissolved=true;
+    touched.push([Math.max(0,c.x0-reach), Math.max(0,c.y0-reach), Math.min(w-1,c.x1+reach), Math.min(h-1,c.y1+reach)]);
+  }
+  /* A merge can expose a fixture detail that was already touching the wall — the tub's
+     own faucet icon, on the real photo — as a thin barrier peninsula poking into the
+     floor it was just joined to. It never mattered while the two sides traced apart;
+     joined into one longer boundary, the trace has to detour around it, and that detour
+     doesn't always simplify back down to a simple polygon. Shaving off any barrier pixel
+     that's mostly surrounded by open floor is the same "casework must not dent a room"
+     rule bpAnalyse's own barrier comment already states, applied after the fact — and
+     only inside a merged sliver's own small neighbourhood, never to a wall nothing
+     merged into. */
+  for(const [bx0,by0,bx1,by1] of touched){
+    for(let pass=0; pass<3; pass++){
+      const spurs=[];
+      for(let y=by0;y<=by1;y++) for(let x=bx0;x<=bx1;x++){
+        const i=y*w+x;
+        if(!bar[i]) continue;
+        let openN=0;
+        if(x>0 && !bar[i-1]) openN++;
+        if(x<w-1 && !bar[i+1]) openN++;
+        if(y>0 && !bar[i-w]) openN++;
+        if(y<h-1 && !bar[i+w]) openN++;
+        if(openN>=3) spurs.push(i);
+      }
+      if(!spurs.length) break;
+      for(const i of spurs) bar[i]=0;
+    }
+  }
+  return dissolved;
+}
 function bpDeriveRegions(barrier, w, h, tPart, splits, blocks, prev){
   const bar = (splits && splits.length) ? barrier.slice() : barrier;
   const spans={};
   for(const s of (splits||[])){ const sp=bpStampSplit(bar,w,h,s); if(sp) spans[s.id]=sp; }
-  const out=bpLeak(bar,w,h);
-  const inner=new Uint8Array(w*h);
-  for(let i=0;i<w*h;i++) inner[i]=(!bar[i] && !out.outside[i])?1:0;
-  const rl=bpLabel8(inner,w,h);
   /* Matches the width floor below, not a stricter one of its own — a real closet can be
      exactly as narrow as this pipeline already allows a room to be, just short, and an
      area threshold a partition-width wider than that (tPart*5) rejects one for its
      length rather than its width. Confirmed against the real photo: a linen closet and
      the entry nook beside it both measure a hair over 3*tPart wide and neither reaches
      5*tPart squared, so a stricter area floor drops both, not just hatching. */
-  const minArea=Math.pow(tPart*3,2);
+  const minArea=Math.pow(tPart*3,2), minDim=tPart*3;
+  const deriveInner=()=>{
+    const out=bpLeak(bar,w,h);
+    const inner=new Uint8Array(w*h);
+    for(let i=0;i<w*h;i++) inner[i]=(!bar[i] && !out.outside[i])?1:0;
+    return {out, rl:bpLabel8(inner,w,h)};
+  };
+  let {out, rl}=deriveInner();
+  const accepted=new Set(rl.comps.filter(c=>c.area>=minArea && Math.min(c.bw,c.bh)>=minDim).map(c=>c.id));
+  if(bpAbsorbSlivers(bar, w, h, tPart, rl, accepted)) ({out, rl}=deriveInner());
   const regions=[];
   for(const c of rl.comps){
     /* a room is not eleven inches wide — that is a wall cavity or a hatching gap */
-    if(c.area<minArea || Math.min(c.bw,c.bh)<tPart*3) continue;
+    if(c.area<minArea || Math.min(c.bw,c.bh)<minDim) continue;
     let start=-1;
     for(let y=c.y0;y<=c.y1 && start<0;y++)
       for(let x=c.x0;x<=c.x1;x++) if(rl.lab[y*w+x]===c.id){ start=y*w+x; break; }
@@ -6681,6 +6977,97 @@ function bpDeriveRegions(barrier, w, h, tPart, splits, blocks, prev){
   bpRectify(regions, tPart);
   regions.sort((a,b)=>b.areaPx-a.areaPx);
   return {regions, spans, leak:out.frac};
+}
+
+/* ---- blueprint: fixtures ----
+   Free-standing symbols the wall pass already set aside as their own ink component:
+   not the structure blob (bpAnalyse's `pick`), not a label glyph (bpLabelBlocks'
+   `glyphIds`). Scored against a small table of real-world fixture footprints by size,
+   ink density and how many small round marks travel with it — a stove's burners are
+   the one signal nothing else on a plan produces. A fixture drawn touching a wall (or
+   any other structure ink) fuses into the structure component at the labelling step
+   and never becomes a component of its own, so it is never found here. That ceiling —
+   roughly 40-60% precision, not full recall — is accepted rather than chased, because
+   closing it needs the stroke classifier the door-type problem (S5) already flagged,
+   not another threshold on this table. */
+const BP_FIXTURES=[
+  {type:'toilet',       w:[320,440],  d:[580,800], fill:[0.04,0.60], circ:[0,2], item:'fixture/toilet'},
+  {type:'tub',          w:[1350,1950],d:[650,950], fill:[0.02,0.45], circ:[0,1], item:'fixture/tub'},
+  {type:'sink-bath',    w:[380,720],  d:[340,620], fill:[0.05,0.65], circ:[0,1], item:'fixture/sink-bath'},
+  {type:'sink-kitchen', w:[580,970],  d:[480,720], fill:[0.03,0.65], circ:[0,2], item:'fixture/sink-kitchen'},
+  {type:'range',        w:[640,860],  d:[540,720], fill:[0.03,0.65], circ:[3,5], item:'fixture/range'},
+  {type:'fridge',       w:[720,1020], d:[620,880], fill:[0.02,0.50], circ:[0,0], item:'fixture/fridge'},
+];
+const BP_FIXTURE_ITEMS={
+  'fixture/toilet':      {name:'Toilet',        shape:{type:'ellipse', w:380, d:680}, color:'#c9cdd3'},
+  'fixture/tub':          {name:'Bathtub',       shape:{type:'rect', w:1520, d:760}, color:'#c9cdd3'},
+  'fixture/sink-bath':    {name:'Bathroom sink', shape:{type:'rect', w:530, d:460}, color:'#c9cdd3'},
+  'fixture/sink-kitchen': {name:'Kitchen sink',  shape:{type:'rect', w:800, d:560}, color:'#c9cdd3'},
+  'fixture/range':        {name:'Range',         shape:{type:'rect', w:760, d:660}, color:'#7e8c99'},
+  'fixture/fridge':       {name:'Refrigerator',  shape:{type:'rect', w:900, d:750}, color:'#7e8c99'},
+};
+/* a round-ish bbox, not a real circularity test — a bbox aspect near 1:1 is cheap and
+   catches a toilet bowl, a round burner or a round table equally well */
+const bpFixtureRound = c => { const a=Math.min(c.bw,c.bh), b=Math.max(c.bw,c.bh); return b ? a/b>=0.72 : false; };
+function bpScoreFixture(bwMm,bhMm,fill,circ){
+  let best=null;
+  for(const f of BP_FIXTURES){
+    for(const swap of [false,true]){
+      const W=swap?bhMm:bwMm, D=swap?bwMm:bhMm;
+      /* generous outside the table's own range — real fixtures vary by manufacturer —
+         but never past 15%, or every size band starts overlapping its neighbours */
+      if(W<f.w[0]*0.85||W>f.w[1]*1.15||D<f.d[0]*0.85||D>f.d[1]*1.15) continue;
+      const wc=(f.w[0]+f.w[1])/2, dc=(f.d[0]+f.d[1])/2;
+      let err=Math.abs(W-wc)/wc + Math.abs(D-dc)/dc;
+      if(fill<f.fill[0]||fill>f.fill[1]) err+=0.4;
+      if(circ<f.circ[0]||circ>f.circ[1]) err+=0.6;
+      if(!best||err<best.err) best={type:f.type, item:f.item, err, rot:swap?90:0};
+    }
+  }
+  return best && best.err<1.1 ? best : null;
+}
+/* Real-world size only means anything once a scale exists, and OCR frequently doesn't
+   find one (a dimension line too garbled to parse leaves nothing to pool — see
+   bpSolveScale). But a scale can still arrive later, from the user measuring a known
+   wall by hand on the Scale screen — and unlike bpAnalyse, which runs once, bpRebuild
+   (where bpAttachFixtures is called) reruns on every edit with whatever scale currently
+   holds. So the expensive part — finding candidate ink components at all — happens once
+   here in pixel space, scale-free; the cheap part — is 8px×9px a 660mm×740mm toilet or a
+   66mm×74mm speck — happens at attach time in bpScoreFixture, against whatever `mm` is
+   current. A plan the user had to calibrate by hand still gets its fixtures. */
+function bpDetectFixtures(comps, pick, glyphIds, regions, tPart){
+  /* burner-sized round marks, gathered once so counting a candidate's own circle count is
+     a lookup rather than a rescan of every component in the photo. Expressed in tPart —
+     a partition wall's own thickness — rather than millimetres, since that is the only
+     real-world ruler available before a scale exists; tPart runs 60-180mm on plans this
+     pipeline has actually been tested against, which brackets a burner knob well enough
+     to tell it from a whole fixture at one end and a speck of grit at the other. */
+  const small=comps.filter(c=>{
+    const m=Math.max(c.bw,c.bh);
+    return bpFixtureRound(c) && m>=tPart*0.2 && m<=tPart*1.8;
+  });
+  const circCountFor=c=>{
+    const cx=(c.x0+c.x1)/2, cy=(c.y0+c.y1)/2, pad=Math.max(c.bw,c.bh)*0.6;
+    let n=0;
+    for(const s of small){
+      const sx=(s.x0+s.x1)/2, sy=(s.y0+s.y1)/2;
+      if(Math.abs(sx-cx)<=c.bw/2+pad && Math.abs(sy-cy)<=c.bh/2+pad) n++;
+    }
+    return n;
+  };
+  const out=[];
+  for(const c of comps){
+    if(pick && c.id===pick.id) continue;
+    if(glyphIds.has(c.id)) continue;
+    const m=Math.max(c.bw,c.bh);
+    if(m>tPart*24 || m<tPart*2) continue;   // no fixture on a plan is a room, or a speck
+    const cx=(c.x0+c.x1)/2, cy=(c.y0+c.y1)/2;
+    const region=regions.find(r=>pointInPoly([cx,cy], r.polyPx));
+    if(!region) continue;     // not standing inside any traced room
+    out.push({id:uid(), cPx:[cx,cy], bwPx:c.bw, bhPx:c.bh,
+               fill:c.area/(c.bw*c.bh), circ:circCountFor(c)});
+  }
+  return out;
 }
 
 /* ---- blueprint: detection ----
@@ -6741,7 +7128,32 @@ function bpAnalyse(work, opts){
       const tExt=Math.max(tPart, pctile(0.70));
       /* a 2px "line" is a fixture outline, not a wall */
       const bandsOk=bands.filter(b=>b.t>=Math.max(3,tSplit));
-      const lines=bpWallLines(bandsOk,wall,w,h,Math.max(4,Math.round(tPart*0.6)), tPart*20);
+      /* A band this compact — its own run barely longer than its own thickness, or
+         shorter — is never a wall drawn as a line; it's a blob of ink (a stove's burner
+         grid, its connecting frame lines) that happened to read thick-and-long enough to
+         pass the band test above. A real wall clears this by a wide margin even at its
+         own stubbiest pilaster or at a room corner: checked against the real photo, the
+         tightest genuine wall/corner band here still scores 1.5, the stove's own burner
+         block scores 0.79. 1.2 leaves daylight on both sides. Cut from `wall` itself
+         (not just left out of the line list below), so the room boundary stops denting
+         around the blob — and safely, because the real wall behind it is always a
+         SEPARATE band with its own reading, never this one, so nothing here can open a
+         gap in it. */
+      const wallish=bandsOk.filter(b=>(b.a1-b.a0)>=b.t*1.2);
+      for(const b of bandsOk){
+        if(wallish.indexOf(b)>=0) continue;
+        const half=Math.max(1,Math.round(b.t/2));
+        if(b.axis==='h'){
+          for(let x=Math.max(0,b.a0); x<=Math.min(w-1,b.a1); x++)
+            for(let y=Math.max(0,Math.round(b.c-half)); y<=Math.min(h-1,Math.round(b.c+half)); y++)
+              wall[y*w+x]=0;
+        } else {
+          for(let y=Math.max(0,b.a0); y<=Math.min(h-1,b.a1); y++)
+            for(let x=Math.max(0,Math.round(b.c-half)); x<=Math.min(w-1,Math.round(b.c+half)); x++)
+              wall[y*w+x]=0;
+        }
+      }
+      const lines=bpWallLines(wallish,wall,w,h,Math.max(4,Math.round(tPart*0.6)), tPart*20);
       /* the barrier is the walls plus the mullions that seal the shell, NOT the raw ink:
          built from raw ink it would dent every room around every counter and door arc */
       /* The shell has to be sealed by the STRUCTURE, not by the thick-wall mask. A long
@@ -6804,7 +7216,24 @@ function bpAnalyse(work, opts){
          casework or fixtures, which are structure too but must not dent a room. */
       const barrier=new Uint8Array(w*h);
       for(let i=0;i<w*h;i++) barrier[i]=(wall[i]||skin[i]||cavity[i])?1:0;
-      const cuts=bpClassifyCuts(bpCloseGaps(barrier,w,h,lines,tPart), structure, wall, w, h, tPart);
+      const gapCuts=bpCloseGaps(barrier,w,h,lines,tPart);
+      const arcCandidates=bpProposeArcCuts(lines,tPart);
+      let cuts=bpClassifyCuts([...gapCuts, ...arcCandidates], structure, wall, w, h, tPart);
+      /* A proposed free-standing arc only earns the wall it's guessing at by actually
+         reading as a swing arc above — the same test a real gap has to pass to be called
+         a door rather than a doorway. Anything weaker (a plain gap, or a fill ratio high
+         enough to read as a window) was a coincidental alignment between two unrelated
+         dead ends, not a closet, and is dropped rather than left half-classified. */
+      cuts=cuts.filter(c=>!c.freeArc || c.kind==='door');
+      for(const c of cuts){
+        if(!c.freeArc) continue;
+        const half=Math.max(1, Math.round(c.t/2));
+        for(let a=Math.round(c.a0); a<=Math.round(c.a1); a++)
+          for(let d=-half; d<=half; d++){
+            const x=Math.round(c.axis==='h'?a:c.c+d), y=Math.round(c.axis==='h'?c.c+d:a);
+            if(x>=0&&y>=0&&x<w&&y<h) barrier[y*w+x]=1;
+          }
+      }
       /* A window drawn as hairlines too light to clear the wall's own ink threshold never
          becomes part of `wall`, so no band ever forms for bpWallLines/bpCloseGaps to find
          a gap in — the strip above already reads it fine, off the low threshold, so
@@ -6855,7 +7284,7 @@ function bpAnalyse(work, opts){
          says which region each name is standing in; only then is there anything to
          propose. The second pass is the one the review screen opens on, so nothing has
          to be re-derived before the first frame. */
-      const {blocks, gh}=bpLabelBlocks(comps, pick, tPart);
+      const {blocks, gh, glyphIds}=bpLabelBlocks(comps, pick, tPart);
       const first=bpDeriveRegions(barrier, w, h, tPart, [], blocks, null);
       const splits=bpProposeSplits(first.regions, blocks, barrier, w, h, tPart, gh);
       const derived = splits.length
@@ -6879,17 +7308,22 @@ function bpAnalyse(work, opts){
       step('text');
       const scale=await bpRunOcr(regions, blocks, gh, runId);
       if(runId!==bpRunSeq) return;
+      const fixtures=bpDetectFixtures(comps, pick, glyphIds, regions, tPart);
       res({
-        scale, regions, spans:derived.spans, splits, openings, fixtures:[],
+        scale, regions, spans:derived.spans, splits, openings, fixtures,
         cuts, lines, tPart, tExt, labels:blocks, gh,
         /* kept so a divider can be moved without re-reading the photo; it is a byte per
            pixel and it never goes near S */
         barrier, w, h,
+        /* raw intermediate masks, one byte per pixel each, kept only on bpState.proposal
+           (never S) so #bpdebug can render exactly what the pipeline saw at each stage
+           instead of a symptom being guessed at from the final polygons */
+        masks:{structure, wall, skin, cavity},
         debug:{w, h, thresholds:th, compCount:comps.length, structureArea:pick?pick.area:0,
                structureFill:pick?pick.area/(pick.bw*pick.bh):0, leakFraction:leak.frac,
                tSplit, tPart, tExt, bandCount:bands.length, lineCount:lines.length,
                cutCount:cuts.length, regionCount:regions.length, barrierLeak:out.frac,
-               labelCount:blocks.length, splitCount:splits.length}
+               labelCount:blocks.length, splitCount:splits.length, fixtureCount:fixtures.length}
       });
     };
     /* Double rAF so "Finding the rooms" has definitively painted before the main thread
@@ -7173,6 +7607,36 @@ function bpAttachOpenings(layouts, openings, edits, mm, G, wallMm){
   }
   return where;
 }
+/* Same geometry-only handoff as openings: a fixture is just a point, so it is placed by
+   asking each room "is this point inside you", not by remembering which region it was
+   detected in — a region's own id doesn't survive a divider being redrawn, a room's
+   polygon does. First room whose polygon contains it wins; a fixture standing in no
+   room at all (drawn in a hallway too thin to survive the width floor, say) is dropped. */
+function bpAttachFixtures(layouts, fixtures, edits, mm, G){
+  const where={};
+  for(const l of layouts) l._bpFixtures=[];
+  for(const fx of fixtures){
+    const ed=edits.items[fx.id]||(edits.items[fx.id]={});
+    if(ed.deleted) continue;
+    let item=ed.item, rot=ed.rot;
+    if(!item){
+      const match=bpScoreFixture(fx.bwPx*mm, fx.bhPx*mm, fx.fill, fx.circ);
+      if(!match) continue;   // doesn't read as any known fixture at the current scale
+      item=match.item;
+      if(rot==null) rot=match.rot;
+    }
+    const gx=fx.cPx[0]*mm-G.x0, gy=fx.cPx[1]*mm-G.y0;
+    for(const l of layouts){
+      const off=[l.floorPlace.x, l.floorPlace.y];
+      const lp=[gx-off[0], gy-off[1]];
+      if(!pointInPoly(lp, l.room.points)) continue;
+      l._bpFixtures.push({fxId:fx.id, item, x:lp[0], y:lp[1], rot:rot||0});
+      (where[fx.id]||(where[fx.id]=[])).push(l.name);
+      break;
+    }
+  }
+  return where;
+}
 /* the drawing knows how thick its own walls are; 114 is only a fallback */
 function bpEffWall(){
   const st=bpState; if(!st||!st.edits) return 114;
@@ -7324,6 +7788,7 @@ function bpRebuild(){
   /* before the openings, so a door never attaches itself to a divider */
   bpMarkSeams(out.layouts, reg.spans||{}, st.proposal.tPart);
   out.openingRooms=bpAttachOpenings(out.layouts, st.proposal.openings||[], e, mm, G, wall);
+  out.fixtureRooms=bpAttachFixtures(out.layouts, st.proposal.fixtures||[], e, mm, G);
   for(const l of out.layouts) clampOpenings(l);
   return out;
 }
@@ -7357,7 +7822,7 @@ function bpUploadDialog(keep, targetFloorId){
   if(!bpState) bpState={file:null,img:null,url:null,full:null,crop:null,cropRect:null,work:null,
                         proposal:null,detectedFor:null,edits:null,draft:null,cal:null,worker:null,
                         regions:null,spans:null,regionsKey:null,addSplit:false,drag:null,
-                        targetFloorId:targetFloorId||null};
+                        debugMask:'none',targetFloorId:targetFloorId||null};
   openModal('Import a blueprint', `
     <div class="dropzone" id="bpDrop">Drop a photo of a floor plan here<br>
       <label class="btn sm">Choose photo…<input type="file" id="bpFile" accept="image/*" hidden></label></div>
@@ -7447,8 +7912,11 @@ function bpMountCropStage(){
   cv2.width=W; cv2.height=H;
   const cx=cv2.getContext('2d');
   if(!bpState.crop){
-    const ix=Math.round(W*0.06), iy=Math.round(H*0.06);
-    bpState.crop={x:ix, y:iy, w:W-ix*2, h:H-iy*2};
+    bpState.crop = bpAutoCropRect(src);
+    if(!bpState.crop){
+      const ix=Math.round(W*0.06), iy=Math.round(H*0.06);
+      bpState.crop={x:ix, y:iy, w:W-ix*2, h:H-iy*2};
+    }
   }
   const HS=Math.max(8, Math.round(Math.min(W,H)*0.018));
   const handles=r=>({
@@ -7692,6 +8160,20 @@ function bpDrawScale(){
   }
 }
 
+/* ---- blueprint: debug mask viewer ----
+   `#bpdebug` in the URL, checked live (not cached at wizard-open) so it can be flipped
+   on mid-session without restarting the import. Renders whichever of bpAnalyse's own
+   intermediate masks (structure/wall/skin/cavity/barrier) is picked, straight from the
+   pixels the pipeline actually classified — so a boundary bug gets diagnosed against
+   what the pipeline saw, not guessed at from the final polygon. */
+function bpDebugOn(){ return true; } // TODO: revert to `location.hash.indexOf('bpdebug')>=0` when asked to hide debug mode again
+const BP_DEBUG_MASKS=['none','structure','wall','skin','cavity','barrier'];
+function bpDebugMaskArr(name){
+  const p=bpState&&bpState.proposal; if(!p) return null;
+  if(name==='barrier') return p.barrier||null;
+  return (p.masks&&p.masks[name])||null;
+}
+
 /* ---- blueprint: step 4, review ----
    Detection will be wrong somewhere. This is the screen that makes that survivable,
    so everything it found is listed, named and removable before anything is created. */
@@ -7718,14 +8200,16 @@ function bpRenderReview(){
   const st=bpState; st.draft=bpRebuild();
   /* the list is rebuilt from innerHTML, so nothing is focused or hovered afterwards and
      a stale highlight would point at the wrong room */
-  st.focusRid=null; st.hoverRid=null; st.hoverSid=null;
+  st.focusRid=null; st.hoverRid=null; st.hoverSid=null; st.hoverFid=null; st.hoverOid=null;
   const d=st.draft, e=st.edits, side=$('bpSide');
   if(!side) return;
-  const tab=st.reviewTab;
+  const tab=st.reviewTab, dbg=bpDebugOn();
   side.innerHTML = `
     <div class="seg full" id="bpReviewTabs" role="group" aria-label="Review">
       <button type="button" data-tab="rooms" aria-pressed="${tab==='rooms'}">Rooms</button>
       <button type="button" data-tab="openings" aria-pressed="${tab==='openings'}">Openings</button>
+      <button type="button" data-tab="fixtures" aria-pressed="${tab==='fixtures'}">Fixtures</button>
+      ${dbg?`<button type="button" data-tab="debug" aria-pressed="${tab==='debug'}">Debug</button>`:''}
     </div>
     <div id="bpTabRooms" ${tab==='rooms'?'':'hidden'}>
       <div class="group-title mt">${esc(plural(d.layouts.length,'room'))}</div>
@@ -7744,10 +8228,45 @@ function bpRenderReview(){
       ${d.problems.map(p=>`<p class="hint warn">${esc(p.name)}: ${esc(p.why)} — it'll be left out.</p>`).join('')}
       ${bpSplitListHTML(d)}
     </div>
-    <div id="bpTabOpenings" ${tab==='openings'?'':'hidden'}>${bpOpenListHTML(d)}</div>`;
+    <div id="bpTabOpenings" ${tab==='openings'?'':'hidden'}>${bpOpenListHTML(d)}</div>
+    <div id="bpTabFixtures" ${tab==='fixtures'?'':'hidden'}>${bpFixtureListHTML(d)}</div>
+    ${dbg?`<div id="bpTabDebug" ${tab==='debug'?'':'hidden'}>${bpDebugListHTML()}</div>`:''}`;
   $('moOk').disabled = !d.layouts.length;
   bpBindReview();
   bpDrawReview();
+}
+/* Not styled to DESIGN.md's usual polish on purpose — this tab only exists behind
+   #bpdebug, for tracing a detection bug against the real pixels, not for an end user. */
+function bpDebugListHTML(){
+  const st=bpState, p=st.proposal, dg=(p&&p.debug)||{};
+  const opts=BP_DEBUG_MASKS.map(m=>`<option value="${m}"${st.debugMask===m?' selected':''}>${m==='none'?'None':m[0].toUpperCase()+m.slice(1)}</option>`).join('');
+  const rows=Object.keys(dg).filter(k=>k!=='w'&&k!=='h'&&k!=='thresholds').map(k=>{
+    const v=dg[k]; return `<li><span class="lmain"><span class="nm">${esc(k)}</span></span><span class="meta">${esc(typeof v==='number'?(Number.isInteger(v)?v:v.toFixed(3)):String(v))}</span></li>`;
+  }).join('');
+  return `<div class="group mt">
+    <div class="group-title">Mask overlay</div>
+    <select id="bpDebugMask">${opts}</select>
+    <p class="hint">Rendered as a red tint over the photo. "Wall" is what got treated as
+      solid structure when the room boundary was traced; "cavity" is what the window-gap
+      absorption pass swallowed into the barrier — a fixture's own linework showing up in
+      either one is the bug.</p>
+  </div>
+  <div class="group">
+    <div class="group-title">Pipeline counts</div>
+    <ul class="list">${rows}</ul>
+    <div class="bp-row mt"><button type="button" class="btn sm" id="bpDebugCopy">Copy report</button></div>
+  </div>`;
+}
+function bpBindDebug(){
+  const sel=$('bpDebugMask'); if(!sel) return;
+  sel.addEventListener('change', ()=>{ bpState.debugMask=sel.value; bpDrawReview(); });
+  const btn=$('bpDebugCopy');
+  if(btn) btn.addEventListener('click', async ()=>{
+    const p=bpState.proposal, dg=(p&&p.debug)||{};
+    const text=JSON.stringify(dg, null, 2);
+    try{ await navigator.clipboard.writeText(text); flash('Copied the debug report.'); }
+    catch(e){ flash("Couldn't copy — see the console instead."); console.log(text); }
+  });
 }
 /* One row per divider. The rooms either side are named on the row, because a dashed line
    over a photo is not by itself an answer to "what did that just do" — and a divider that
@@ -7874,6 +8393,60 @@ function bpBindOpens(){
     const dtEl=li.querySelector('[data-bp=odtype]');
     if(dtEl) dtEl.addEventListener('change', ev=>{ ed.dtype=ev.target.value; bpRenderReview(); });
     li.querySelector('[data-bp=odel]').addEventListener('click', ()=>{ ed.deleted=!ed.deleted; bpRenderReview(); });
+    li.addEventListener('pointerenter', ()=>{ bpState.hoverOid=id; bpDrawReview(); });
+    li.addEventListener('pointerleave', ()=>{ if(bpState.hoverOid===id){ bpState.hoverOid=null; bpDrawReview(); } });
+  }
+}
+/* One row per fixture, same shape as the openings list above. This is a 40-60%
+   precision feature by design (see bpDetectFixtures) — the list exists so a wrong guess
+   or a fixture nobody wants placed is one click to fix or drop, not something to hunt
+   for on the floor after import. */
+function bpFixtureListHTML(d){
+  const st=bpState, e=st.edits, raw=st.proposal.fixtures||[];
+  if(!raw.length) return '<p class="hint">No fixtures recognised on this plan.</p>';
+  const mm=e.scale&&e.scale.mmPerPx;
+  /* candidates are found scale-free (bpDetectFixtures); scoring them against a
+     real-world type needs one. In practice this branch is unreachable from the wizard —
+     Scale won't let the user past itself without e.scale set, same as Review's own room
+     sizes — but Fixtures is rendered by the same bpRenderReview as everything else, so it
+     has to degrade the same way rather than assume. */
+  if(!mm) return '<p class="hint">Set a scale first — a fixture can\'t be sized without one.</p>';
+  const scored=raw.map(f=>{
+    const ed=e.items[f.id]||(e.items[f.id]={});
+    const auto=bpScoreFixture(f.bwPx*mm, f.bhPx*mm, f.fill, f.circ);
+    return {f, ed, item: ed.item||(auto&&auto.item)};
+  }).filter(x=>x.item);
+  if(!scored.length) return '<p class="hint">No fixtures recognised on this plan.</p>';
+  const live=scored.filter(x=>!x.ed.deleted);
+  return `<div class="group">
+    <div class="group-title">${esc(plural(live.length,'fixture'))}</div>
+    <ul class="list" id="bpFixtures">${scored.map(({f,ed,item})=>{
+      const rooms=(d.fixtureRooms&&d.fixtureRooms[f.id])||[];
+      const where = rooms.length ? rooms.join(' · ') : 'not inside a traced room';
+      return `<li data-fid="${esc(f.id)}"${ed.deleted?' class="bad"':''}>
+        <span class="lmain">
+          <span class="nm">${esc((BP_FIXTURE_ITEMS[item]||{}).name||'Fixture')}</span>
+          <span class="meta">${esc(where)}${ed.deleted?' · left out':''}</span>
+        </span>
+        <span class="lact">
+          <select data-bp="fitem">${BP_FIXTURES.map(t=>
+            `<option value="${esc(t.item)}"${item===t.item?' selected':''}>${esc(BP_FIXTURE_ITEMS[t.item].name)}</option>`).join('')}
+          </select>
+          <button type="button" class="btn quiet sm icon" data-bp="fdel" title="${ed.deleted?'Put back':'Leave out'}">${svgI(ed.deleted?'plus':'close')}</button>
+        </span></li>`;
+    }).join('')}</ul>
+    <p class="hint">Guessed from size and shape alone — expect some misses and some wrong guesses, especially anything drawn touching a wall.</p>
+  </div>`;
+}
+function bpBindFixtures(){
+  const e=bpState.edits, ul=$('bpFixtures');
+  if(!ul) return;
+  for(const li of ul.querySelectorAll('li')){
+    const id=li.dataset.fid, ed=e.items[id];
+    li.querySelector('[data-bp=fitem]').addEventListener('change', ev=>{ ed.item=ev.target.value; bpRenderReview(); });
+    li.querySelector('[data-bp=fdel]').addEventListener('click', ()=>{ ed.deleted=!ed.deleted; bpRenderReview(); });
+    li.addEventListener('pointerenter', ()=>{ bpState.hoverFid=id; bpDrawReview(); });
+    li.addEventListener('pointerleave', ()=>{ if(bpState.hoverFid===id){ bpState.hoverFid=null; bpDrawReview(); } });
   }
 }
 function bpBindReview(){
@@ -7896,6 +8469,8 @@ function bpBindReview(){
   }
   bpBindSplits();
   bpBindOpens();
+  bpBindFixtures();
+  bpBindDebug();
 }
 function bpMountReviewStage(){
   const cv2=$('bpRev'), work=bpState.work;
@@ -7943,6 +8518,20 @@ function bpDrawReview(){
   const x=cv2.getContext('2d'), C=PAL(), work=bpState.work, d=bpState.draft;
   x.clearRect(0,0,cv2.width,cv2.height);
   x.globalAlpha=0.55; x.drawImage(work,0,0); x.globalAlpha=1;
+  /* #bpdebug only: whichever intermediate mask bpAnalyse classified, tinted red and
+     drawn at native resolution — the arrays are exactly work.width x work.height, one
+     byte per pixel, so no scaling is needed */
+  if(bpDebugOn() && bpState.debugMask && bpState.debugMask!=='none'){
+    const arr=bpDebugMaskArr(bpState.debugMask);
+    if(arr && arr.length===work.width*work.height){
+      const id=x.createImageData(work.width, work.height);
+      for(let i=0;i<arr.length;i++){
+        if(!arr[i]) continue;
+        const o=i*4; id.data[o]=230; id.data[o+1]=40; id.data[o+2]=40; id.data[o+3]=170;
+      }
+      x.putImageData(id,0,0);
+    }
+  }
   /* the room being named is picked out in green, because a list of five rows all called
      "Room" says nothing about which outline you are about to name. Drawn last so it sits
      over its neighbours. */
@@ -7980,6 +8569,30 @@ function bpDrawReview(){
     x.beginPath(); x.moveTo(A[0],A[1]); x.lineTo(B[0],B[1]); x.stroke();
     x.restore();
   }
+  /* a fixture row highlighted the same way a room row is — a box around the ink
+     component it was found from, padded a little since a sink or a toilet is a lot
+     smaller on the page than a room */
+  const hf = bpState.hoverFid && (bpState.proposal.fixtures||[]).find(f=>f.id===bpState.hoverFid);
+  if(hf){
+    const pad=lw*3, x0=hf.cPx[0]-hf.bwPx/2-pad, y0=hf.cPx[1]-hf.bhPx/2-pad, w=hf.bwPx+pad*2, h=hf.bhPx+pad*2;
+    x.save();
+    x.fillStyle=C.okSoft; x.globalAlpha=0.5; x.fillRect(x0,y0,w,h); x.globalAlpha=1;
+    x.strokeStyle=C.surface; x.lineWidth=lw*2.6; x.strokeRect(x0,y0,w,h);
+    x.strokeStyle=C.ok; x.lineWidth=lw*1.6; x.strokeRect(x0,y0,w,h);
+    x.restore();
+  }
+  /* an opening row highlighted the same way — a band along the same aPx/bPx segment
+     bpAttachOpenings re-attaches from, as wide as the cut itself read off the wall */
+  const ho = bpState.hoverOid && (bpState.proposal.openings||[]).find(o=>o.id===bpState.hoverOid);
+  if(ho){
+    x.save();
+    x.lineCap='round';
+    x.strokeStyle=C.surface; x.lineWidth=Math.max(lw*3.4, ho.tPx+lw*2.6);
+    x.beginPath(); x.moveTo(ho.aPx[0],ho.aPx[1]); x.lineTo(ho.bPx[0],ho.bPx[1]); x.stroke();
+    x.strokeStyle=C.ok; x.lineWidth=Math.max(lw*2, ho.tPx+lw*1.2);
+    x.beginPath(); x.moveTo(ho.aPx[0],ho.aPx[1]); x.lineTo(ho.bPx[0],ho.bPx[1]); x.stroke();
+    x.restore();
+  }
 }
 
 /* ---- blueprint: commit ----
@@ -8001,20 +8614,60 @@ function bpCommit(){
     clampOpenings(l);
     S.layouts.push(l); ids.push(l.id);
   }
+  const newItems=[];
+  const fxCount=bpPlaceFixtures(d.layouts, newItems);
   bpSeedHistory(d.layouts, floor.id);
-  bpLastImport={floorId:floor.id, layoutIds:ids, itemIds:[], prevActive:S.active, createdFloor:!target};
+  bpLastImport={floorId:floor.id, layoutIds:ids, itemIds:newItems, prevActive:S.active, createdFloor:!target};
   const left=d.problems.length;
   bpDispose();
   treeOpen.add(floor.id);
   activateLayout(ids[0]);
   setMode('floor');
   renderAll(); save();
-  flash(`${plural(ids.length,'room')} added to ${floor.name}${left?` — ${plural(left,'room')} left out`:''}.`);
+  flash(`${plural(ids.length,'room')} added to ${floor.name}${fxCount?`, ${plural(fxCount,'fixture')}`:''}${left?` — ${plural(left,'room')} left out`:''}.`);
 }
 function bpFloorName(){
   const base='Ground floor';
   let n=base, i=2;
   while(S.floors.some(f=>f.name===n)) n=base+' '+(i++);
+  return n;
+}
+/* The catalog entry is created once, on first use, and reused by every later import — a
+   stable id (`bp/`+the BP_FIXTURES key) means a second blueprint's toilets land on the
+   same library item as the first's rather than growing a duplicate per import. `created`
+   collects only the ids actually added here, so an undo can try to remove them: an item
+   that already existed before this import is never this import's to remove. */
+function bpEnsureFixtureItem(key, created){
+  const proto=BP_FIXTURE_ITEMS[key]; if(!proto) return null;
+  const id='bp/'+key;
+  if(!S.inventory.some(i=>i.id===id)){
+    S.inventory.push(normItem(Object.assign({id, passThrough:false, count:1, tags:['fixture']}, clone(proto))));
+    created.push(id);
+  }
+  return id;
+}
+/* Placed after the layouts are already in S.layouts and each has its own S.active turn,
+   because validate() (the real one furniture placement uses, not a fixture-shaped
+   approximation of it) reads the active layout — insideRoom/collides both call L(). A
+   fixture that doesn't validate (drawn a few pixels into a wall by the rectify pass, say)
+   is silently dropped rather than placed wrong; the review list already told the user
+   this is a 40-60% precision feature, so a quiet miss here is the expected shape of one. */
+function bpPlaceFixtures(layouts, created){
+  const keep=S.active;
+  let n=0;
+  for(const l of layouts){
+    const drafts=l._bpFixtures||[]; delete l._bpFixtures;
+    if(!drafts.length) continue;
+    S.active=l.id;
+    for(const d of drafts){
+      const itemId=bpEnsureFixtureItem(d.item, created);
+      const it=itemId && itemOf(itemId);
+      if(!it) continue;
+      const inst={id:uid(), itemId, x:d.x, y:d.y, rot:d.rot};
+      if(validate(inst, worldPoly(inst,it)).ok){ l.placed.push(inst); n++; }
+    }
+  }
+  S.active=keep;
   return n;
 }
 /* each imported room needs its own pristine baseline, or undo inside it has nowhere
@@ -8036,6 +8689,14 @@ function bpUndoImport(){
       S.layouts=S.layouts.filter(l=>!kill.has(l.id));
       if(imp.createdFloor) S.floors=S.floors.filter(f=>f.id!==imp.floorId);
       for(const id of kill){ delete roomHist[id]; delete furnHist[id]; }
+      /* a fixture item this import created and nothing else ever placed goes with it;
+         one it merely reused (another import's toilets, say) stays in the library */
+      if(imp.itemIds&&imp.itemIds.length){
+        const stillUsed=new Set();
+        for(const l of S.layouts) for(const p of l.placed) stillUsed.add(p.itemId);
+        const drop=new Set(imp.itemIds.filter(id=>!stillUsed.has(id)));
+        if(drop.size) S.inventory=S.inventory.filter(i=>!drop.has(i.id));
+      }
       delete floorHist[imp.floorId];
       treeOpen.delete(imp.floorId);
       if(!S.layouts.length) S.layouts=[blankLayout()];
