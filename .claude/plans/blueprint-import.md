@@ -116,17 +116,22 @@ Walls are measured off the drawing rather than defaulted: 99mm partitions, 174mm
 ## Left to do
 
 ### S5: bug fixes (review-stage accuracy)  ← next
-Found reviewing a real blueprint (not the synthetic test plan): 1BR/1BA, living area,
-kitchen, foyer, bedroom, bathroom. Ordered worst-to-least: a correctness bug first, then
-room shapes getting corrupted, then whole rooms going missing, then a missing opening,
-then a misclassification.
+Found reviewing a real blueprint, now checked in at `example blueprints/apartment-1.png`
+(1BR/1BA: living area, kitchen, foyer, bedroom, bathroom) — the first real-world case this
+pipeline has been run against; everything before this was the synthetic test plan. Ordered
+worst-to-least: a correctness bug first, then room shapes getting corrupted, then whole
+rooms going missing, then a missing opening, then a misclassification.
 
-- [ ] **One door per connection.** A door between two rooms is deliberately emitted into
-      **both** rooms with mirrored hinge/swing (S3) — but some connections are additionally
-      picking up a second, independently-detected door, so two doors draw over what should
-      be one opening. Needs a dedup pass before doors are committed: openings whose
-      segments coincide across two adjacent rooms collapse to the one mirrored pair, not
-      two unrelated doors.
+- [x] **One door per connection.** Not a second detected door: the mirrored-into-both-rooms
+      behaviour (S3, deliberate, so neither
+      side renders as a solid wall) was also mirroring the **leaf and swing**, so one
+      physical door drew two overlapping hinge/bifold symbols, one per room. Verified
+      against the real photo: `bpAttachOpenings` now buffers both rooms' records for an
+      opening before committing either, and if more than one came back for a `door`, only
+      the copy whose swing reads `'in'` (or the first, if that's ambiguous) keeps its real
+      `dtype`; the other is downgraded to `'open'` — still punches its own wall so neither
+      room shows solid, but draws jambs only, no leaf. Windows are unaffected (only ever
+      attach to one room).
 - [ ] **Fixture-adjacent room boundary is cut short.** Three symptoms, likely one cause:
       the kitchen counter run isn't included in the kitchen's outline, the toilet isn't
       included in the bathroom's, and the bottom strip of both the foyer and the bathroom
@@ -135,14 +140,21 @@ then a misclassification.
       edge instead of floor, so the polygon stops at the fixture rather than the real wall
       behind it. Fix in the segmentation step (`bpAnalyse`/region derivation), not per
       fixture — this is a room-shape bug, not a missing-fixture bug.
+      Confirmed against the real photo, worse than expected: the toilet's own round outline
+      splits the bathroom into two disconnected blobs (a sliver around the fixtures, a
+      separate one around the tub), and the sliver fails `polySimple` outright — so on this
+      photo the toilet doesn't just fail to join the room, the gap where it stood is missing
+      from the floor entirely, "Room was left out — this outline folds over itself."
 - [ ] **Missed closets.** The closet beside the bathroom isn't proposed as a room at all;
       a previously-known case fails `polySimple` outright (see Known defects). Revisit
       once the boundary-cutoff fix above lands — a region shrunk by that same bug is a
       plausible reason a small closet drops below a minimum-area or shape-validity bar.
-- [ ] **Large windows on the north wall aren't detected.** The window-vs-door heuristic
-      (does ink keep drawing through the gap) was tuned against the synthetic test plan's
-      window widths; check whether it drops out past some width or aspect ratio on a real
-      blueprint's wider windows.
+- [ ] **Large windows on the north wall aren't detected.** Confirmed against the real
+      photo: the long window band running the full width of the north wall produces
+      **zero** cuts (every cut `bpAnalyse` found was on the west wall or an interior door),
+      so this isn't a width/aspect-ratio miss at the margins — that wall's window detection
+      isn't firing at all. Needs tracing through `bpBands`/`bpWallLines`/`bpCloseGaps` for
+      why a long horizontal run behaves differently from the vertical ones that do work.
 - [ ] **Door type is often wrong for the image** (closet vs. hinged vs. double-leaf).
       Deepest item, done last on purpose: getting this right needs real per-object-type
       detection (bi-fold vs. single vs. double leaf, and eventually sinks/tubs/ovens/
