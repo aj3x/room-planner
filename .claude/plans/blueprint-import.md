@@ -69,6 +69,41 @@ Walls are measured off the drawing rather than defaulted: 99mm partitions, 174mm
 - [x] Review list: kind, width in display units, which rooms it landed on, leave-out
 - [x] Openings that land on no wall say so rather than vanishing
 
+### S4: dividers
+- [x] A divider is a **seed point and an axis**, not a polygon operation: stamp one pixel
+      of barrier out from the seed until it meets the barrier already there, then derive
+      the regions with the same code the first pass ran
+- [x] Merging is deleting one and re-deriving, so there is still no polygon union
+- [x] Proposed where one region holds two or more **name labels** — the glyphs are the
+      components the largest-component step already throws away, so finding them is free.
+      S6 (OCR) reads them; S4 only needs to know where they are
+- [x] Names merge twice: glyphs into words along a baseline, then a name and the
+      dimension line under it into one block. Without the second pass every room on the
+      plan proposes a split down its own middle
+- [x] Glyph height is an **ink-weighted** median. Plain median counts a dimension tick the
+      same as a letter and there are more ticks than glyphs, which reads the test plan's
+      median glyph as four pixels tall and then filters out every actual letter
+- [x] Recursive bisection at the widest gap between names, so three names give two
+      dividers; two names nearly touching give none, because that is one name over its
+      own dimensions that failed to merge
+- [x] Dashed, deletable (merge), draggable (re-zone), addable. Dragging is perpendicular
+      only and re-derives on the way up, because a flood fill per pointermove is a
+      slideshow
+- [x] Region ids survive a divider moving, so a name typed into a room stays in it: each
+      previous region claims whichever new region holds most of its sample points, and on
+      a split the larger half keeps the name
+- [x] Regions are re-derived only when a divider has actually moved — `bpRebuild` runs on
+      every keystroke that changes a length
+- [x] `wallOff` on **both** facing edges, rooms placed at **zero** separation, so
+      `floorSnapCandidates` returns `kind:'open'` and `floorEdgeDepths` returns 0
+- [x] The seam is cut out of the edge as an **edge of its own**. Where a stub of real wall
+      runs past the opening the two are collinear and `bpOrtho` has already clustered them
+      into one edge; switching that whole edge off would delete a wall somebody drew
+- [x] A door never attaches to a divider — there is no wall there to punch through
+- [x] Acceptance met on a synthetic plan: three named rooms, one continuous floor, every
+      nudge snapping back exactly and reading **"Open through"**, every `wallOff` edge
+      measuring 0mm of wall, and all three rooms still accepting a corner drag
+
 ### Asked for along the way
 - [x] Green highlight on the room being named (`83a7116`), where focus beats hover
 - [x] Bi-fold closet door (`24f7bed`, `b4975a9`, `67647fb`, `752cf9e`): two panels on a
@@ -80,16 +115,42 @@ Walls are measured off the drawing rather than defaulted: 99mm partitions, 174mm
 
 ## Left to do
 
-### S4: dividers  ← next, and the answer to the original open-plan question
-- [ ] Propose a split line where one region holds two or more name labels
-- [ ] Draw split lines dashed, deletable (merge), draggable (re-zone), addable
-- [ ] Emit `wallOff = true` on **both** facing edges and place the rooms with **zero**
-      separation, so `floorSnapCandidates` resolves them to `kind:'open'` / "Open through"
-- [ ] Merging is deleting a split line and re-deriving the region, so no polygon union
-- [ ] Acceptance: Living + Kitchen + Foyer read as one continuous floor, each named,
-      and the readout says "Open through"
+### S5: bug fixes (review-stage accuracy)  ← next
+Found reviewing a real blueprint (not the synthetic test plan): 1BR/1BA, living area,
+kitchen, foyer, bedroom, bathroom. Ordered worst-to-least: a correctness bug first, then
+room shapes getting corrupted, then whole rooms going missing, then a missing opening,
+then a misclassification.
 
-### S5: OCR
+- [ ] **One door per connection.** A door between two rooms is deliberately emitted into
+      **both** rooms with mirrored hinge/swing (S3) — but some connections are additionally
+      picking up a second, independently-detected door, so two doors draw over what should
+      be one opening. Needs a dedup pass before doors are committed: openings whose
+      segments coincide across two adjacent rooms collapse to the one mirrored pair, not
+      two unrelated doors.
+- [ ] **Fixture-adjacent room boundary is cut short.** Three symptoms, likely one cause:
+      the kitchen counter run isn't included in the kitchen's outline, the toilet isn't
+      included in the bathroom's, and the bottom strip of both the foyer and the bathroom
+      (behind the tub) is missing from the room entirely. Region-growing is probably
+      reading a fixture's ink (and whatever wall-like band it sits against) as the room's
+      edge instead of floor, so the polygon stops at the fixture rather than the real wall
+      behind it. Fix in the segmentation step (`bpAnalyse`/region derivation), not per
+      fixture — this is a room-shape bug, not a missing-fixture bug.
+- [ ] **Missed closets.** The closet beside the bathroom isn't proposed as a room at all;
+      a previously-known case fails `polySimple` outright (see Known defects). Revisit
+      once the boundary-cutoff fix above lands — a region shrunk by that same bug is a
+      plausible reason a small closet drops below a minimum-area or shape-validity bar.
+- [ ] **Large windows on the north wall aren't detected.** The window-vs-door heuristic
+      (does ink keep drawing through the gap) was tuned against the synthetic test plan's
+      window widths; check whether it drops out past some width or aspect ratio on a real
+      blueprint's wider windows.
+- [ ] **Door type is often wrong for the image** (closet vs. hinged vs. double-leaf).
+      Deepest item, done last on purpose: getting this right needs real per-object-type
+      detection (bi-fold vs. single vs. double leaf, and eventually sinks/tubs/ovens/
+      counters as fixtures in their own right), not one more threshold on the existing
+      classifier. Treat it as the seed of S7's fixture-recognition pass rather than a
+      one-off fix here.
+
+### S6: OCR
 - [ ] Tesseract.js from CDN, **all four artefacts pinned** (js, worker, core, lang)
 - [ ] Write that version's API rather than feature-sniffing across three majors
 - [ ] Per-line crops from the full-resolution original, PSM 7, no character whitelist
@@ -99,7 +160,7 @@ Walls are measured off the drawing rather than defaulted: 99mm partitions, 174mm
       worker and wasm cannot load and trying costs a 15-second hang
 - [ ] Room names and `l.dimLabel` from the labels
 
-### S6: fixtures
+### S7: fixtures
 - [ ] `BP_FIXTURES` table plus `BP_FIXTURE_ITEMS` (there are zero fixture items in
       `marketplace/` today)
 - [ ] Score free-standing symbols by size, fill and circle count, in millimetres
@@ -107,7 +168,7 @@ Walls are measured off the drawing rather than defaulted: 99mm partitions, 174mm
 - [ ] Honest ceiling: 40-60% precision; fixtures touching a wall merge into the structure
       and are unreachable
 
-### S7: polish
+### S8: polish
 - [ ] Accordion grouping in review, one section open at a time
 - [ ] Canvas-to-row linkage: hover a row to highlight, click a shape to scroll to its row
 - [ ] Import report modal with "Undo this import"
@@ -117,8 +178,24 @@ Walls are measured off the drawing rather than defaulted: 99mm partitions, 174mm
 
 ## Known defects
 
-- [ ] **Living + Foyer come in merged.** Correct today, since they are one open space, but S4
-      is what splits them.
+- [ ] **Living + Foyer.** S4 now proposes a divider between them off their two name labels,
+      but this has only been run against synthetic plans. Whether the two names are found
+      on the real blueprint, and whether the proposed line lands where it should, is the
+      first thing to check.
+- [ ] **A hairline wall spur can appear beside a divider.** `bpRectify` aligns two facing
+      faces exactly, and then `bpCleanPoly`'s sub-50mm edge merge moves a vertex by up to
+      half a short edge afterwards — so a face pair it had put on one line can end up a
+      pixel apart. `floorEdgeDepths` then reads that as a 12mm shared wall and draws a
+      sliver of it. Pre-existing (it is the same mechanism as the jagged kitchen edge
+      below) but dividers create more adjacent room pairs, so it shows more often. The fix
+      is for `bpCleanPoly` not to undo what `bpRectify` decided, which is a change to the
+      order of the pipeline rather than a threshold.
+- [ ] **A wide cased opening still becomes solid wall.** `bpCloseGaps` classifies a gap over
+      about 13 partitions wide as a `divider` cut and stamps it shut, and `bpAnalyse` then
+      filters `divider` out of `openings` — so the two rooms arrive sharing an unbroken
+      wall with no opening in it at all. Unrelated to S4's dividers despite the name, and
+      deliberately left alone here: emitting it as a wide `dtype:'open'` doorway looks
+      right but changes behaviour S3 settled on purpose.
 - [ ] **2 of 12 openings do not attach** to any wall. Listed as "not on a wall yet" rather
       than dropped, but still a miss.
 - [ ] **1 closet fails `polySimple`** and is reported as left out.
@@ -133,7 +210,7 @@ Walls are measured off the drawing rather than defaulted: 99mm partitions, 174mm
       every thick wall wires every arc, leaf and fixture together. Needs the stroke
       classifier, not another threshold.
 - [ ] **`file://` is unverified.** No network dependency exists yet so it should be fine,
-      but this becomes a real risk at S5.
+      but this becomes a real risk at S6 (OCR).
 - [ ] **`save()` swallows quota failures** in a bare try/catch. Out of scope, but this is
       the feature that makes hitting 5MB plausible.
 
@@ -154,6 +231,10 @@ Walls are measured off the drawing rather than defaulted: 99mm partitions, 174mm
 
 No test runner, so manual in a browser, per AGENTS.md.
 
+- [ ] Living and Foyer arrive as two named rooms with a dashed divider between them, and
+      the floor draws with no wall along it
+- [ ] Delete that divider: the two merge back into one room. Add it again, drag it: the
+      names stay on the rooms they were typed into
 - [ ] Every labelled room within 3 inches of its printed dimension
 - [ ] Console clean on load and through the whole wizard
 - [ ] After commit, drag a wall on an imported room: `tryRoomEdit` must **not** reject with
