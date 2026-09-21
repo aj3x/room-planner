@@ -416,6 +416,15 @@ colour.
 **Top navigation.** Text tabs in the header. The current tab is ink, weight
 600, with a 2px ink underline on the header's bottom edge. Others are ink-2.
 
+**Wizard stepper.** A multi-step modal flow (blueprint import) shows its steps as a
+horizontal row of numbered badges joined by 1px lines, below the modal title. Like
+other navigation state (§2.3), the current step is shown by weight and fill, never
+colour: upcoming steps are an outlined `line-strong` circle with an `ink-3` label; the
+active step is an ink-filled circle with a bold ink label; a completed step shows the
+`check` icon on a `surface-3` circle with an `ink-2` label, and the line after it turns
+`line-strong`. The step list is a plan, not a stepper you can click ahead on — moving
+between steps still goes through the modal's own Back and primary actions.
+
 **Panel.** Surface background with a 1px `line` border on the side facing the
 canvas. A sticky head holds the name (ink-3, `fs-xs`, 600, uppercase, +0.04em
 tracking) and the collapse chevron. When collapsed it becomes a 36px rail with
@@ -466,11 +475,14 @@ longest name needs.
 optional title (ink-3, `fs-xs`). Destructive items have danger text and come
 last, after a divider.
 
-**Modal.** Surface, `r-lg`, `shadow-3`, 480px max width. Title `fs-lg` 600.
-The body scrolls. Footer: an error message (danger, left, grows), then
-Cancel (default) and the action (primary, or danger for destructive ones).
-Enter submits, Esc cancels, and clicking the backdrop cancels. Advanced fields
-sit inside a closed `details.adv` disclosure at the end.
+**Modal.** Surface, `r-lg`, `shadow-3`, 480px max width (a multi-step flow like
+blueprint import may widen to 980 or 1120px, since its two-column stages need the
+room). Title `fs-lg` 600. The body scrolls. Footer: an error message (danger, left,
+grows), then Cancel (default) and the action (primary, or danger for destructive
+ones). In a multi-step flow, that left button reads Back instead and returns to the
+previous step rather than closing the wizard. Enter submits, Esc cancels, and
+clicking the backdrop cancels — both still leave the whole flow, even mid-wizard.
+Advanced fields sit inside a closed `details.adv` disclosure at the end.
 
 **Toast.** An ink-filled pill (surface text), `shadow-2`, top-centre of the
 area it relates to. Visible for `max(1.6s, 60ms × characters)`, capped at 5s.

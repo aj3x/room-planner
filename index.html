@@ -302,10 +302,26 @@ canvas.measuring{cursor:crosshair}
 #modal{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:center;padding:16px;z-index:50;animation:fade var(--dur) var(--ease)}
 #modalCard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);width:min(480px,100%);max-height:min(88vh,760px);display:flex;flex-direction:column;box-shadow:var(--shadow-3);animation:rise var(--dur) var(--ease)}
 #modalCard.wide{width:min(980px,100%)}
+#modalCard.xwide{width:min(1120px,100%)}
 @keyframes fade{from{opacity:0}}
 @keyframes rise{from{opacity:0;transform:translateY(4px) scale(.99)}}
 #moTitle{padding:16px 20px 4px;font-size:var(--fs-lg);font-weight:600;line-height:20px}
 #moBody{padding:12px 20px 16px;overflow:auto}
+/* wizard stepper: numbered badges joined by a line. Navigation state (which step
+   you're on) is shown by weight and fill, never colour, matching DESIGN.md §2.3 */
+#moStepper{padding:4px 20px 0}
+.wizard-steps{list-style:none;display:flex;margin:0;padding:0}
+.wizard-steps li{display:flex;align-items:center;flex:1;min-width:0;gap:8px;font-size:var(--fs-sm);color:var(--ink-3)}
+.wizard-steps li:last-child{flex:none}
+.wizard-steps .num{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line-strong);display:grid;place-items:center;font-weight:600;font-size:var(--fs-xs)}
+.wizard-steps .num .i{width:13px;height:13px}
+.wizard-steps .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wizard-steps li[data-state=active]{color:var(--ink);font-weight:600}
+.wizard-steps li[data-state=active] .num{border-color:var(--ink);color:var(--ink)}
+.wizard-steps li[data-state=done]{color:var(--ink-2)}
+.wizard-steps li[data-state=done] .num{border-color:var(--line-strong);background:var(--surface-3);color:var(--ink-2)}
+.wizard-steps .bar{flex:1;height:1.5px;background:var(--line);margin:0 4px}
+.wizard-steps li[data-state=done] .bar{background:var(--line-strong)}
 #moBody > p:first-child{margin-top:0}
 #moBody p{margin:0 0 8px}
 #moFoot{padding:12px 20px 16px;display:flex;gap:8px;align-items:center;border-top:1px solid var(--line)}
@@ -350,13 +366,23 @@ details.adv .advbody{padding-top:8px}
 .bp-row.mt{margin-top:12px}
 .bp-row .len{width:96px}
 .bp-status{font-size:var(--fs-sm);color:var(--ink-3);min-height:16px;padding:4px 0}
+/* click-to-measure is a temporary mode, not a permanent part of the form, so it
+   gets its own well rather than floating loose among the other fields */
+.bp-measure{margin-top:8px;padding:10px 12px;border-radius:var(--r-md);background:var(--surface-2)}
+.bp-measure .hint{margin:0 0 8px}
+.bp-measure .bp-row{flex-wrap:nowrap}
+.mt{margin-top:12px}
+/* a name that's editable on every row shouldn't look boxed at rest — the border only
+   shows up once it's actually being interacted with */
+input.nm.ghost{border-color:transparent;background:transparent}
+input.nm.ghost:hover{border-color:var(--ink-3)}
+input.nm.ghost:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-soft)}
 .bp-steps{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
 .bp-steps li{display:flex;align-items:center;gap:8px;min-height:20px;font-size:var(--fs-md);color:var(--ink-3)}
 .bp-steps li .i{color:var(--ink-3);opacity:0}
 .bp-steps li[data-done="1"]{color:var(--ink)}
 .bp-steps li[data-done="1"] .i{opacity:1}
 .bp-steps li[data-now="1"]{color:var(--ink-2)}
-.bp-back{margin-bottom:8px}
 .bp-review li.bad .nm,.bp-review li.bad .meta{color:var(--danger)}
 .bp-review .lact{display:flex;align-items:center;gap:4px}
 /* the side column is 320px and these rows carry a length, a kind and a delete, which will
@@ -718,6 +744,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
 <div id="modal" hidden>
   <div id="modalCard" role="dialog" aria-modal="true" aria-labelledby="moTitle">
     <div id="moTitle">Title</div>
+    <div id="moStepper" hidden></div>
     <div id="moBody"></div>
     <div id="moFoot">
       <span id="moErr" role="alert"></span>
@@ -2208,6 +2235,8 @@ let moOkFn=null, moCloseFn=null;
 function openModal(title, bodyHTML, okLabel, onOk, onMount, opts){
   $('moTitle').textContent=title;
   tagInputs.clear();
+  $('moStepper').innerHTML=(opts&&opts.stepper)||'';
+  $('moStepper').hidden=!(opts&&opts.stepper);
   $('moBody').innerHTML=bodyHTML;
   $('moErr').textContent='';
   $('moOk').textContent=okLabel||'Save';
@@ -2215,7 +2244,9 @@ function openModal(title, bodyHTML, okLabel, onOk, onMount, opts){
   $('moOk').disabled = false;
   $('moOk').classList.toggle('danger', !!(opts&&opts.danger));
   $('modalCard').classList.toggle('wide', !!(opts&&opts.wide));
-  $('moCancel').textContent = onOk ? 'Cancel' : 'Close';
+  $('modalCard').classList.toggle('xwide', !!(opts&&opts.xwide));
+  moBackFn=(opts&&opts.onBack)||null;
+  $('moCancel').textContent = moBackFn ? 'Back' : (onOk ? 'Cancel' : 'Close');
   moOkFn=onOk||null;
   moCloseFn=(opts&&opts.onClose)||null;
   mo.hidden=false;
@@ -2225,9 +2256,12 @@ function openModal(title, bodyHTML, okLabel, onOk, onMount, opts){
 }
 /* clear moCloseFn before running it: a handler that opens the next stage of a wizard
    must not have its own close hook fire again on the way in */
-function closeModal(){ const f=moCloseFn; moCloseFn=null; mo.hidden=true; moOkFn=null; if(f) f(); }
+function closeModal(){ const f=moCloseFn; moCloseFn=null; mo.hidden=true; moOkFn=null; moBackFn=null; if(f) f(); }
 const moError = m => { $('moErr').textContent=m; };
-$('moCancel').addEventListener('click', closeModal);
+let moBackFn=null;
+/* a wizard's Back replaces the footer's meaning of "leave" with "go to the previous
+   step" — it must not run the dialog's onClose, unlike Cancel/Esc/backdrop */
+$('moCancel').addEventListener('click', ()=>{ if(moBackFn) moBackFn(); else closeModal(); });
 $('moOk').addEventListener('click', ()=>{ if(!moOkFn) return closeModal(); if(moOkFn()===false) return; closeModal(); });
 mo.addEventListener('click', e=>{ if(e.target===mo) closeModal(); });
 mo.addEventListener('keydown', e=>{
@@ -4760,7 +4794,7 @@ $('btnRoomsMore').addEventListener('click', e=>{
     {label:'New floor', fn:newFloor}
   ], 'Rooms');
 });
-$('btnImportBlueprint').addEventListener('click', ()=>blueprintDialog());
+$('btnImportBlueprint').addEventListener('click', ()=>bpUploadDialog());
 $('btnNewLayout').addEventListener('click', ()=>{
   askText('New room','Name','Room '+(S.layouts.length+1), n=>{
     const l=blankLayout(n,null); S.layouts.push(l); activateLayout(l.id);
@@ -6614,7 +6648,13 @@ function bpDeriveRegions(barrier, w, h, tPart, splits, blocks, prev){
   const inner=new Uint8Array(w*h);
   for(let i=0;i<w*h;i++) inner[i]=(!bar[i] && !out.outside[i])?1:0;
   const rl=bpLabel8(inner,w,h);
-  const minArea=Math.pow(tPart*5,2);
+  /* Matches the width floor below, not a stricter one of its own — a real closet can be
+     exactly as narrow as this pipeline already allows a room to be, just short, and an
+     area threshold a partition-width wider than that (tPart*5) rejects one for its
+     length rather than its width. Confirmed against the real photo: a linen closet and
+     the entry nook beside it both measure a hair over 3*tPart wide and neither reaches
+     5*tPart squared, so a stricter area floor drops both, not just hatching. */
+  const minArea=Math.pow(tPart*3,2);
   const regions=[];
   for(const c of rl.comps){
     /* a room is not eleven inches wide — that is a wall cavity or a hatching gap */
@@ -6723,11 +6763,20 @@ function bpAnalyse(work, opts){
       for(let i=0;i<w*h;i++) encl[i]=(!structure[i] && !outS.outside[i])?1:0;
       const el=bpLabel8(encl,w,h);
       const cavity=new Uint8Array(w*h);
+      const cavStrips=[];
       let frontier=[];
       for(const c of el.comps){
         /* generous, because nothing a person walks into is a foot wide: a strip this
            narrow is glass, hatching or the inside of a stud wall */
-        if(Math.min(c.bw,c.bh) >= tPart*4) continue;
+        const minDim=Math.min(c.bw,c.bh), maxDim=Math.max(c.bw,c.bh);
+        if(minDim >= tPart*4) continue;
+        /* ...but only when it actually reads as a STRIP. A window's gap runs the length
+           of the sash; a fixture's enclosed ink (a toilet bowl, the gap between two
+           burners, a nested sink outline) is squarish, not a strip, and swallowing it
+           punches a fixture-shaped hole clean through the room. Measured on the real
+           blueprint: every window scored at least 7:1, every fixture at most 3.4:1. */
+        if(maxDim < minDim*4) continue;
+        cavStrips.push(c);
         for(let y=c.y0;y<=c.y1;y++) for(let x=c.x0;x<=c.x1;x++){
           const q=y*w+x; if(el.lab[q]===c.id){ cavity[q]=1; frontier.push(q); }
         }
@@ -6756,6 +6805,51 @@ function bpAnalyse(work, opts){
       const barrier=new Uint8Array(w*h);
       for(let i=0;i<w*h;i++) barrier[i]=(wall[i]||skin[i]||cavity[i])?1:0;
       const cuts=bpClassifyCuts(bpCloseGaps(barrier,w,h,lines,tPart), structure, wall, w, h, tPart);
+      /* A window drawn as hairlines too light to clear the wall's own ink threshold never
+         becomes part of `wall`, so no band ever forms for bpWallLines/bpCloseGaps to find
+         a gap in — the strip above already reads it fine, off the low threshold, so
+         anything that qualified there and isn't already a cut is turned into one directly.
+         A three-line sash encloses two strips, not one, so co-located strips (same axis,
+         overlapping run) are merged into a single opening first. */
+      for(const axis of ['h','v']){
+        let strips=cavStrips
+          .filter(c=> (c.bw>=c.bh) === (axis==='h'))
+          .map(c=>({a0:axis==='h'?c.x0:c.y0, a1:axis==='h'?c.x1:c.y1,
+                     s0:axis==='h'?c.y0:c.x0, s1:axis==='h'?c.y1:c.x1}))
+          .sort((p,q)=>p.a0-q.a0);
+        let merged=true;
+        while(merged){
+          merged=false;
+          for(let i=0;i<strips.length-1 && !merged;i++){
+            for(let j=i+1;j<strips.length && !merged;j++){
+              /* Two gaps of the same sash sit almost on top of each other — close along
+                 the wall's own thickness, not just anywhere their long runs overlap. Two
+                 unrelated strips (this window, some fixture three rooms down) can share
+                 an x-range by pure coincidence, so require both. */
+              const ov=Math.min(strips[i].a1,strips[j].a1)-Math.max(strips[i].a0,strips[j].a0);
+              const shorter=Math.min(strips[i].a1-strips[i].a0, strips[j].a1-strips[j].a0);
+              if(ov < shorter*0.5) continue;
+              const sgap=Math.max(strips[i].s0,strips[j].s0)-Math.min(strips[i].s1,strips[j].s1);
+              if(sgap > tExt) continue;
+              strips[i]={a0:Math.min(strips[i].a0,strips[j].a0), a1:Math.max(strips[i].a1,strips[j].a1),
+                         s0:Math.min(strips[i].s0,strips[j].s0), s1:Math.max(strips[i].s1,strips[j].s1)};
+              strips.splice(j,1);
+              merged=true;
+            }
+          }
+        }
+        for(const s of strips){
+          /* A real window spans most of a wall; a stray thin sliver near a fixture
+             (kept round for S5's fixture-boundary fix, harmless as a barrier line) is
+             nowhere near that long and must not be reported as an opening. */
+          if(s.a1-s.a0 < tPart*10) continue;
+          const c=(s.s0+s.s1)/2, t=Math.max(1,s.s1-s.s0);
+          const covered=cuts.some(k=> k.axis===axis && Math.abs(k.c-c) < t*2 &&
+            Math.min(k.a1,s.a1)-Math.max(k.a0,s.a0) > (s.a1-s.a0)*0.4);
+          if(covered) continue;
+          cuts.push({axis, c, t, a0:s.a0, a1:s.a1, widthPx:s.a1-s.a0+1, wide:false, kind:'window', fillRatio:1});
+        }
+      }
 
       /* Derived twice on purpose. The first pass has no dividers in it, and it is what
          says which region each name is standing in; only then is there anything to
@@ -6892,6 +6986,16 @@ function bpEffWall(){
   const mm=st.edits.scale&&st.edits.scale.mmPerPx;
   if(!mm||!st.proposal) return 114;
   return Math.max(50, Math.round((st.proposal.tPart||14)*mm));
+}
+/* same shape as bpEffWall, but the fallback is a real-world default (5¾", a common
+   framed exterior wall) rather than a guess measured off the drawing, since the
+   photo rarely shows the true depth of an outer wall the way it does a partition */
+function bpEffExtWall(){
+  const st=bpState; if(!st||!st.edits) return 146;
+  if(st.edits.extMm) return st.edits.extMm;
+  const mm=st.edits.scale&&st.edits.scale.mmPerPx;
+  if(!mm||!st.proposal) return 146;
+  return Math.max(50, Math.round((st.proposal.tExt||st.proposal.tPart||18)*mm));
 }
 /* Every divider that is still standing, proposal and hand-added alike, with whatever the
    review screen has done to it folded in. The proposal itself is never touched. */
@@ -7032,41 +7136,49 @@ function bpScaleSanity(draft){
   return '';
 }
 
-/* ---- blueprint: stage 1, choose a photo ---- */
-function blueprintDialog(keep, targetFloorId){
+/* ---- blueprint: wizard shell ----
+   Four steps, one badge list. A step already passed (index < active) reads as done;
+   the wizard is strictly linear, including via Back, so nothing can be "done" out of
+   order. */
+const BP_WIZARD_STEPS=['Upload','Crop','Scale','Review'];
+function bpStepperHTML(active){
+  return `<ol class="wizard-steps">${BP_WIZARD_STEPS.map((label,i)=>{
+    const state = i<active ? 'done' : i===active ? 'active' : 'upcoming';
+    const last = i===BP_WIZARD_STEPS.length-1;
+    return `<li data-state="${state}">
+      <span class="num">${state==='done'?svgI('check'):i+1}</span>
+      <span class="lbl">${esc(label)}</span>
+      ${last?'':'<span class="bar"></span>'}
+    </li>`;
+  }).join('')}</ol>`;
+}
+
+/* ---- blueprint: step 1, upload ---- */
+function bpUploadDialog(keep, targetFloorId){
   if(!keep) bpDispose();
   if(!bpState) bpState={file:null,img:null,url:null,full:null,crop:null,cropRect:null,work:null,
                         proposal:null,detectedFor:null,edits:null,draft:null,cal:null,worker:null,
                         regions:null,spans:null,regionsKey:null,addSplit:false,drag:null,
                         targetFloorId:targetFloorId||null};
-  const has=!!bpState.full;
   openModal('Import a blueprint', `
-    <div id="bpPick" ${has?'hidden':''}>
-      <div class="dropzone" id="bpDrop">Drop a photo of a floor plan here<br>
-        <label class="btn sm">Choose photo…<input type="file" id="bpFile" accept="image/*" hidden></label></div>
-      <p class="hint">Or press ${/Mac/.test(navigator.platform)?'⌘V':'Ctrl+V'} to paste a screenshot.</p>
-    </div>
-    <div class="bp-row" id="bpChosen" ${has?'':'hidden'}>
-      <span class="meta" id="bpFileName">${has?esc(bpState.file?bpState.file.name:'Photo'):''}</span>
-      <button type="button" class="btn quiet sm" id="bpChange">Choose a different photo</button>
-    </div>
-    <div class="bp-stage" id="bpCropWrap" ${has?'':'hidden'}><canvas id="bpCrop"></canvas></div>
-    <p class="hint" id="bpCropHint" ${has?'':'hidden'}>Drag the box to cover just the floor plan.</p>
+    <div class="dropzone" id="bpDrop">Drop a photo of a floor plan here<br>
+      <label class="btn sm">Choose photo…<input type="file" id="bpFile" accept="image/*" hidden></label></div>
+    <p class="hint">Supports PNG, JPG, WebP</p>
     <div class="bp-status" id="bpStatus"></div>`,
-    'Find the rooms',
+    'Continue',
     ()=>{
       if(!bpState||!bpState.full){ moError('Choose a photo first'); return false; }
       bpUnbindPaste();
-      bpState.cropRect = bpState.crop || {x:0,y:0,w:bpState.full.width,h:bpState.full.height};
-      bpState.work = bpCropCanvas(bpState.full, bpState.cropRect);
-      bpDetectDialog();
+      bpCropDialog(targetFloorId);
       return false;
     },
-    ()=>bpMountSource(),
-    {wide:has, onClose:bpDispose});
-  if(!has) $('moOk').disabled=true;
+    ()=>bpMountUpload(targetFloorId),
+    {onClose:bpDispose, stepper:bpStepperHTML(0)});
+  /* choosing a photo is itself the confirmation — Continue only exists as a keyboard
+     fallback once a photo is picked, so it stays out of the way until then */
+  $('moOk').hidden=true;
 }
-function bpMountSource(){
+function bpMountUpload(targetFloorId){
   const drop=$('bpDrop'), file=$('bpFile'), status=$('bpStatus');
   const take=f=>{
     status.textContent='Reading the photo…';
@@ -7075,37 +7187,59 @@ function bpMountSource(){
       bpState.file=r.file; bpState.img=r.img; bpState.url=r.url;
       bpState.full=bpFitCanvas(r.img, 2400);
       bpState.crop=null; bpState.proposal=null; bpState.detectedFor=null;
-      status.textContent='';
-      $('modalCard').classList.add('wide');
-      /* the picker has done its job — from here the crop is the whole task */
-      $('bpPick').hidden=true;
-      $('bpFileName').textContent=r.file.name;
-      $('bpChosen').hidden=false;
-      $('bpCropWrap').hidden=false; $('bpCropHint').hidden=false;
-      $('moOk').disabled=false;
-      bpMountCropStage();
+      bpUnbindPaste();
+      bpCropDialog(targetFloorId);
     }).catch(()=>{ status.textContent="That file isn't an image the browser can open."; });
   };
   file.addEventListener('change', ()=>{ if(file.files[0]) take(file.files[0]); });
-  $('bpChange').addEventListener('click', ()=>file.click());
   drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('over'); });
   drop.addEventListener('dragleave', ()=>drop.classList.remove('over'));
   drop.addEventListener('drop', e=>{
     e.preventDefault(); drop.classList.remove('over');
     const f=e.dataTransfer.files[0]; if(f) take(f);
   });
-  /* a screenshot of a listing is the commonest input there is, so paste has to work.
-     Unbound on the way to the next stage as well as on close, because a stage handoff
-     replaces the modal's close hook without ever running it. */
+  /* a screenshot of a listing is the commonest input there is, so paste has to work,
+     even though the hint text no longer spells out the shortcut. Unbound on the way
+     to the next stage as well as on close, because a stage handoff replaces the
+     modal's close hook without ever running it. */
   bpUnbindPaste();
   bpPasteFn=e=>{ const f=e.clipboardData&&e.clipboardData.files[0]; if(f) take(f); };
   document.addEventListener('paste', bpPasteFn);
-  if(bpState.full) bpMountCropStage();
 }
 
-/* ---- blueprint: stage 2, crop ----
+/* ---- blueprint: step 2, crop ----
    The box starts drawn at a small inset rather than empty: a box you adjust reads as
    an invitation, an empty canvas reads as a puzzle. */
+function bpCropDialog(targetFloorId){
+  bpUnbindPaste();
+  openModal('Import a blueprint', `
+    <div class="bp-stage" id="bpCropWrap"><canvas id="bpCrop"></canvas></div>
+    <div class="bp-row">
+      <label class="btn quiet sm">Replace image<input type="file" id="bpChange" accept="image/*" hidden></label>
+    </div>
+    <p class="hint">Drag the box to cover just the floor plan.</p>`,
+    'Confirm crop',
+    ()=>{
+      bpState.cropRect = bpState.crop || {x:0,y:0,w:bpState.full.width,h:bpState.full.height};
+      bpState.work = bpCropCanvas(bpState.full, bpState.cropRect);
+      bpScaleDialog(targetFloorId);
+      return false;
+    },
+    ()=>{
+      bpMountCropStage();
+      $('bpChange').addEventListener('change', e=>{
+        const f=e.target.files[0]; if(!f) return;
+        bpLoadImage(f).then(r=>{
+          if(bpState.url) URL.revokeObjectURL(bpState.url);
+          bpState.file=r.file; bpState.img=r.img; bpState.url=r.url;
+          bpState.full=bpFitCanvas(r.img, 2400);
+          bpState.crop=null; bpState.proposal=null; bpState.detectedFor=null;
+          bpCropDialog(targetFloorId);
+        }).catch(()=>moError("That file isn't an image the browser can open."));
+      });
+    },
+    {xwide:true, onClose:bpDispose, onBack:()=>bpUploadDialog(true, targetFloorId), stepper:bpStepperHTML(1)});
+}
 function bpMountCropStage(){
   const old=$('bpCrop');
   /* re-mounting on the way back from a later stage must not stack a second set of
@@ -7188,14 +7322,27 @@ function bpMountCropStage(){
   paint();
 }
 
-/* ---- blueprint: stage 3, find the rooms ---- */
+/* ---- blueprint: step 3, scale ----
+   Detection runs entirely in pixel space (bpAnalyse never needs a real-world unit),
+   so this step doesn't gate detection — it's the calibration and wall-thickness tool
+   that used to be stranded at the top of the review screen, given its own screen. */
 const BP_STEPS=[['walls','Reading the walls'],['rooms','Finding the rooms'],['text','Reading the text on the plan']];
-function bpDetectDialog(){
-  openModal('Finding the rooms', `
-    <ul class="bp-steps" id="bpSteps">
+function bpScaleDialog(targetFloorId){
+  const st=bpState, ready=!!st.proposal;
+  openModal('Import a blueprint',
+    ready ? `<div class="bp-review">
+      <div class="bp-stage"><canvas id="bpScaleCv"></canvas></div>
+      <div id="bpScaleSide"></div>
+    </div>` : `<ul class="bp-steps" id="bpSteps">
       ${BP_STEPS.map(s=>`<li data-step="${s[0]}">${svgI('check')}<span>${esc(s[1])}</span></li>`).join('')}
     </ul>`,
-    'Finding the rooms…', ()=>false, null, {wide:true, onClose:bpDispose});
+    'Generate layout',
+    ()=>{ if(!st.edits||!st.edits.scale) return false; bpReviewDialog(targetFloorId); return false; },
+    ()=>{ if(ready) bpMountScale(); else bpRunDetection(targetFloorId); },
+    {xwide:true, onClose:bpDispose, onBack:()=>{ bpRunSeq++; bpCropDialog(targetFloorId); }, stepper:bpStepperHTML(2)});
+  $('moOk').disabled = !ready || !st.edits.scale;
+}
+function bpRunDetection(targetFloorId){
   $('moOk').disabled=true;
   const runId=++bpRunSeq;
   bpState.runId=runId;
@@ -7213,32 +7360,150 @@ function bpDetectDialog(){
     /* left null so the draft takes the thickness measured off the drawing */
     bpState.edits={scale:p.scale||null, wallMm:null, extMm:null, spaces:{}, openings:{},
                    items:{}, splits:{}, added:[]};
-    /* detection already derived with the proposed dividers standing, so the review opens
+    /* detection already derived with the proposed dividers standing, so review opens
        without re-deriving anything */
     bpState.regions=p.regions; bpState.spans=p.spans||{}; bpState.regionsKey=bpSplitKey();
-    bpState.addSplit=false; bpState.drag=null;
-    bpReviewDialog();
+    bpState.addSplit=false; bpState.drag=null; bpState.cal=null;
+    bpScaleDialog(targetFloorId);
   });
 }
+function bpMountScale(){
+  const cv2=$('bpScaleCv'), work=bpState.work;
+  cv2.width=work.width; cv2.height=work.height;
+  const at=ev=>{
+    const b=cv2.getBoundingClientRect();
+    return [(ev.clientX-b.left)*(work.width/b.width), (ev.clientY-b.top)*(work.height/b.height)];
+  };
+  cv2.addEventListener('pointerdown', ev=>{
+    const c=bpState.cal; if(!c) return;
+    if(!c.a||c.b){ c.a=at(ev); c.b=null; $('bpCalMsg').textContent='Now click the other end.'; }
+    else { c.b=at(ev); $('bpCalMsg').textContent='How long is that wall?'; $('bpCalLen').focus(); }
+    bpDrawScale();
+  });
+  bpRenderScaleSide();
+  bpDrawScale();
+}
+/* the two ends of a click-to-measure are gathered over several events, so the
+   message shown has three distinct states rather than one static line */
+function bpCalMsg(){
+  const c=bpState.cal;
+  if(!c||!c.a) return 'Click the two ends of a wall you know.';
+  if(!c.b) return 'Now click the other end.';
+  return 'How long is that wall?';
+}
+function bpRenderScaleSide(){
+  const st=bpState, e=st.edits, side=$('bpScaleSide'), measuring=!!st.cal;
+  if(!side) return;
+  const warn=bpScaleSanity(bpRebuild());
+  /* the plan's own size is the only scale reading anyone can actually check — nobody
+     can tell whether 8.2mm per pixel is right, everybody can tell whether 104 m² is */
+  const scaleLine = !e.scale ? `<p class="hint warn">Measure a wall to set the scale.</p>`
+    : `<div class="nm">${e.scale.source==='measured'?'You measured it':'Read from the photo'}</div>
+       ${warn?`<p class="hint warn">${esc(warn)}</p>`:''}`;
+  side.innerHTML = `
+    <div class="group-title">Scale</div>
+    ${scaleLine}
+    <div class="bp-row mt">
+      <button type="button" class="btn sm" id="bpMeasure" aria-pressed="${measuring}">${svgI('ruler')}Measure a known wall</button>
+    </div>
+    ${measuring ? `<div class="bp-measure" id="bpCalRow">
+      <p class="hint" id="bpCalMsg">${esc(bpCalMsg())}</p>
+      <div class="bp-row">
+        <input type="text" class="len" id="bpCalLen" placeholder="${esc(fmtLen(3000,S.unit))}">
+        <button type="button" class="btn sm" id="bpCalOk">Use this length</button>
+        <button type="button" class="btn quiet sm icon" id="bpCalCancel" title="Cancel measuring" aria-label="Cancel measuring">${svgI('close')}</button>
+      </div>
+    </div>` : ''}
+    <div class="group">
+      <div class="field">
+        <label for="bpExtWall" title="Defaults to 5¾″, adjusted automatically once the scale is set from the photo — override if you know the real thickness.">Outer wall</label>
+        <input type="text" class="len" id="bpExtWall" value="${esc(fmtLen(bpEffExtWall(), S.unit))}">
+      </div>
+      <details class="adv">
+        <summary>Advanced</summary>
+        <div class="advbody">
+          <div class="field">
+            <label for="bpWall">Interior wall</label>
+            <input type="text" class="len" id="bpWall" value="${esc(fmtLen(bpEffWall(), S.unit))}">
+          </div>
+        </div>
+      </details>
+    </div>`;
+  $('moOk').disabled=!e.scale;
+  bpBindScaleSide();
+}
+function bpBindScaleSide(){
+  const e=bpState.edits;
+  $('bpMeasure').addEventListener('click', ()=>{
+    bpState.cal={a:null,b:null};
+    bpRenderScaleSide();
+    bpDrawScale();
+  });
+  const calOk=$('bpCalOk');
+  if(calOk) calOk.addEventListener('click', ()=>{
+    const c=bpState.cal;
+    if(!c||!c.a||!c.b){ moError('Click the two ends of a wall first'); return; }
+    const mm=parseLen($('bpCalLen').value, S.unit);
+    if(!mm||mm<=0){ moError('Enter how long that wall really is'); return; }
+    const px=Math.hypot(c.b[0]-c.a[0], c.b[1]-c.a[1]);
+    if(px<4){ moError('Those two points are too close together'); return; }
+    moError('');
+    e.scale={mmPerPx: mm/px, source:'measured'};
+    bpState.cal=null;
+    bpRenderScaleSide();
+    bpDrawScale();
+  });
+  const calCancel=$('bpCalCancel');
+  if(calCancel) calCancel.addEventListener('click', ()=>{
+    bpState.cal=null;
+    bpRenderScaleSide();
+    bpDrawScale();
+  });
+  $('bpExtWall').addEventListener('change', ev=>{
+    const mm=parseLen(ev.target.value, S.unit);
+    if(mm>0){ e.extMm=mm; bpRenderScaleSide(); }
+  });
+  $('bpWall').addEventListener('change', ev=>{
+    const mm=parseLen(ev.target.value, S.unit);
+    if(mm>0){ e.wallMm=mm; bpRenderScaleSide(); }
+  });
+}
+/* the calibration line only — no room fills, no dividers. Those don't exist as
+   editable concepts until Review, and showing them here would spoil the review's
+   own "here's what was found" moment */
+function bpDrawScale(){
+  const cv2=$('bpScaleCv'); if(!cv2||!bpState) return;
+  const x=cv2.getContext('2d'), C=PAL(), work=bpState.work, c=bpState.cal;
+  x.clearRect(0,0,cv2.width,cv2.height);
+  x.drawImage(work,0,0);
+  if(c&&c.a){
+    const r=Math.max(3, work.width/220);
+    x.strokeStyle=C.surface; x.lineWidth=r*1.6;
+    x.beginPath(); x.moveTo(c.a[0],c.a[1]); if(c.b) x.lineTo(c.b[0],c.b[1]); x.stroke();
+    x.strokeStyle=C.ink; x.lineWidth=r*0.6;
+    x.beginPath(); x.moveTo(c.a[0],c.a[1]); if(c.b) x.lineTo(c.b[0],c.b[1]); x.stroke();
+    for(const p of [c.a,c.b]) if(p){ x.beginPath(); x.arc(p[0],p[1],r,0,Math.PI*2); x.fillStyle=C.ink; x.fill(); }
+  }
+}
 
-/* ---- blueprint: stage 4, review ----
+/* ---- blueprint: step 4, review ----
    Detection will be wrong somewhere. This is the screen that makes that survivable,
    so everything it found is listed, named and removable before anything is created. */
-function bpReviewDialog(){
+function bpReviewDialog(targetFloorId){
   const st=bpState;
   st.draft=bpRebuild();
+  if(!st.reviewTab) st.reviewTab='rooms';
   openModal('Review the rooms', `
-    <button type="button" class="btn quiet sm bp-back" id="bpBack">${svgI('chev-l')}Back to crop</button>
     <div class="bp-review">
       <div class="bp-stage"><canvas id="bpRev"></canvas></div>
       <div id="bpSide"></div>
     </div>`,
-    'Create rooms', bpCommit, ()=>bpMountReview(), {wide:true, onClose:bpDispose});
+    'Import to plan', bpCommit, ()=>bpMountReview(),
+    {xwide:true, onClose:bpDispose, onBack:()=>bpScaleDialog(targetFloorId), stepper:bpStepperHTML(3)});
   bpRenderReview();
 }
 function bpMountReview(){
-  $('bpBack').addEventListener('click', ()=>blueprintDialog(true, bpState.targetFloorId));
-  /* Enter anywhere in the modal clicks the primary — which here would create every
+  /* Enter anywhere in the modal clicks the primary — which here would import every
      room the moment someone finished typing a length */
   $('bpSide').addEventListener('keydown', e=>{ if(e.key==='Enter') e.stopPropagation(); });
   bpMountReviewStage();
@@ -7250,36 +7515,20 @@ function bpRenderReview(){
   st.focusRid=null; st.hoverRid=null; st.hoverSid=null;
   const d=st.draft, e=st.edits, side=$('bpSide');
   if(!side) return;
-  const warn=bpScaleSanity(d);
-  /* the plan's own size is the only scale reading anyone can actually check — nobody
-     can tell whether 8.2mm per pixel is right, everybody can tell whether 104 m² is */
-  const scaleLine = !e.scale ? `<p class="hint warn">Set the scale before creating the rooms.</p>`
-    : `<div class="nm">${e.scale.source==='measured'?'You measured it':'Read from the photo'}</div>
-       <div class="meta">That makes this plan ${esc(fmtArea(d.area, S.unit))}.</div>
-       ${warn?`<p class="hint warn">${esc(warn)}</p>`:''}`;
+  const tab=st.reviewTab;
   side.innerHTML = `
-    <div class="group-title">Scale</div>
-    ${scaleLine}
-    <div class="bp-row mt">
-      <button type="button" class="btn sm" id="bpMeasure">Measure a known wall</button>
+    <div class="seg full" id="bpReviewTabs" role="group" aria-label="Review">
+      <button type="button" data-tab="rooms" aria-pressed="${tab==='rooms'}">Rooms</button>
+      <button type="button" data-tab="openings" aria-pressed="${tab==='openings'}">Openings</button>
     </div>
-    <div class="bp-row mt" id="bpCalRow" hidden>
-      <span class="meta" id="bpCalMsg">Click the two ends of a wall you know.</span>
-      <input type="text" class="len" id="bpCalLen" placeholder="${esc(fmtLen(3000,S.unit))}">
-      <button type="button" class="btn sm" id="bpCalOk">Use this length</button>
-    </div>
-    <div class="bp-row mt">
-      <label class="meta" for="bpWall">Wall</label>
-      <input type="text" class="len" id="bpWall" value="${esc(fmtLen(bpEffWall(), S.unit))}">
-    </div>
-    <div class="group">
-      <div class="group-title">${esc(plural(d.layouts.length,'room'))}</div>
+    <div id="bpTabRooms" ${tab==='rooms'?'':'hidden'}>
+      <div class="group-title mt">${esc(plural(d.layouts.length,'room'))}</div>
       <ul class="list" id="bpRooms">${d.layouts.map(l=>{
         const rid=l._bpRegion, ed=e.spaces[rid];
         const b=bbox(l.room.points);
         return `<li data-rid="${esc(rid)}">
           <span class="lmain">
-            <input type="text" class="nm" data-bp="name" value="${esc(ed.name||l.name)}">
+            <input type="text" class="nm ghost" data-bp="name" value="${esc(ed.name||l.name)}">
             <span class="meta">${esc(fmtLen(b.x1-b.x0,S.unit))} × ${esc(fmtLen(b.y1-b.y0,S.unit))} · ${esc(fmtArea(polyArea(l.room.points),S.unit))}</span>
           </span>
           <span class="lact">
@@ -7287,11 +7536,10 @@ function bpRenderReview(){
           </span></li>`;
       }).join('')}</ul>
       ${d.problems.map(p=>`<p class="hint warn">${esc(p.name)}: ${esc(p.why)} — it'll be left out.</p>`).join('')}
+      ${bpSplitListHTML(d)}
     </div>
-    ${bpSplitListHTML(d)}
-    ${bpOpenListHTML(d)}`;
-  $('moOk').textContent='Create '+plural(d.layouts.length,'room');
-  $('moOk').disabled = !d.layouts.length || !e.scale;
+    <div id="bpTabOpenings" ${tab==='openings'?'':'hidden'}>${bpOpenListHTML(d)}</div>`;
+  $('moOk').disabled = !d.layouts.length;
   bpBindReview();
   bpDrawReview();
 }
@@ -7340,7 +7588,6 @@ function bpBindSplits(){
   }
   $('bpAddSplit').addEventListener('click', ()=>{
     st.addSplit=!st.addSplit;
-    if(st.addSplit){ st.cal=null; $('bpCalRow').hidden=true; }
     bpRenderReview();
   });
 }
@@ -7425,28 +7672,9 @@ function bpBindOpens(){
 }
 function bpBindReview(){
   const e=bpState.edits;
-  $('bpMeasure').addEventListener('click', ()=>{
-    bpState.cal={a:null,b:null};
-    $('bpCalRow').hidden=false;
-    $('bpCalMsg').textContent='Click the two ends of a wall you know.';
-    bpDrawReview();
-  });
-  $('bpCalOk').addEventListener('click', ()=>{
-    const c=bpState.cal;
-    if(!c||!c.a||!c.b){ moError('Click the two ends of a wall first'); return; }
-    const mm=parseLen($('bpCalLen').value, S.unit);
-    if(!mm||mm<=0){ moError('Enter how long that wall really is'); return; }
-    const px=Math.hypot(c.b[0]-c.a[0], c.b[1]-c.a[1]);
-    if(px<4){ moError('Those two points are too close together'); return; }
-    moError('');
-    e.scale={mmPerPx: mm/px, source:'measured'};
-    $('bpCalRow').hidden=true;
-    bpRenderReview();
-  });
-  $('bpWall').addEventListener('change', ev=>{
-    const mm=parseLen(ev.target.value, S.unit);
-    if(mm>0){ e.wallMm=mm; bpRenderReview(); }
-  });
+  for(const b of $('bpReviewTabs').querySelectorAll('button')){
+    b.addEventListener('click', ()=>{ bpState.reviewTab=b.dataset.tab; bpRenderReview(); });
+  }
   for(const li of $('bpRooms').querySelectorAll('li')){
     const rid=li.dataset.rid, ed=e.spaces[rid];
     const nameEl=li.querySelector('[data-bp=name]');
@@ -7472,13 +7700,7 @@ function bpMountReviewStage(){
   };
   const zoom=()=>{ const b=cv2.getBoundingClientRect(); return b.width ? work.width/b.width : 1; };
   cv2.addEventListener('pointerdown', ev=>{
-    const p=at(ev), c=bpState.cal;
-    if(c){
-      if(!c.a||c.b){ c.a=p; c.b=null; $('bpCalMsg').textContent='Now click the other end.'; }
-      else { c.b=p; $('bpCalMsg').textContent='How long is that wall?'; $('bpCalLen').focus(); }
-      bpDrawReview();
-      return;
-    }
+    const p=at(ev);
     if(bpState.addSplit){ bpState.addSplit=false; bpAddSplitAt(p); return; }
     const hit=bpSplitAt(p, zoom());
     if(!hit) return;
@@ -7552,15 +7774,6 @@ function bpDrawReview(){
     x.beginPath(); x.moveTo(A[0],A[1]); x.lineTo(B[0],B[1]); x.stroke();
     x.restore();
   }
-  const c=bpState.cal;
-  if(c&&c.a){
-    const r=Math.max(3, work.width/220);
-    x.strokeStyle=C.surface; x.lineWidth=r*1.6;
-    x.beginPath(); x.moveTo(c.a[0],c.a[1]); if(c.b) x.lineTo(c.b[0],c.b[1]); x.stroke();
-    x.strokeStyle=C.ink; x.lineWidth=r*0.6;
-    x.beginPath(); x.moveTo(c.a[0],c.a[1]); if(c.b) x.lineTo(c.b[0],c.b[1]); x.stroke();
-    for(const p of [c.a,c.b]) if(p){ x.beginPath(); x.arc(p[0],p[1],r,0,Math.PI*2); x.fillStyle=C.ink; x.fill(); }
-  }
 }
 
 /* ---- blueprint: commit ----
@@ -7569,10 +7782,9 @@ function bpDrawReview(){
 let bpLastImport=null;
 function bpCommit(){
   const st=bpState, d=bpRebuild();
-  if(!d.layouts.length){ moError('Nothing here could become a room yet — set the scale, or try a tighter crop'); return false; }
+  if(!d.layouts.length){ moError('Nothing here could become a room yet — put at least one back from "Leave out"'); return false; }
   const target=st.targetFloorId ? floorOf(st.targetFloorId) : null;
-  const mmPx=st.edits.scale?st.edits.scale.mmPerPx:0;
-  const extWall=st.edits.extMm || Math.round((st.proposal.tExt||0)*mmPx) || 0;
+  const extWall=bpEffExtWall();
   const floor=target || {id:uid(), name:bpFloorName(), parentId:null, extWall};
   if(!target) S.floors.push(floor);
   const ids=[];
@@ -7585,13 +7797,13 @@ function bpCommit(){
   }
   bpSeedHistory(d.layouts, floor.id);
   bpLastImport={floorId:floor.id, layoutIds:ids, itemIds:[], prevActive:S.active, createdFloor:!target};
-  const report={rooms:ids.length, problems:d.problems.slice(), floorName:floor.name};
+  const left=d.problems.length;
   bpDispose();
   treeOpen.add(floor.id);
   activateLayout(ids[0]);
   setMode('floor');
   renderAll(); save();
-  setTimeout(()=>bpReportDialog(report), 0);
+  flash(`${plural(ids.length,'room')} added to ${floor.name}${left?` — ${plural(left,'room')} left out`:''}.`);
 }
 function bpFloorName(){
   const base='Ground floor';
@@ -7606,14 +7818,6 @@ function bpSeedHistory(created, floorId){
   for(const l of created){ S.active=l.id; histEntry(roomHist,snapRoom); histEntry(furnHist,snapFurn); }
   S.active=keep;
   delete floorHist[floorId];
-}
-function bpReportDialog(r){
-  const lines=[`<p>${esc(plural(r.rooms,'room'))} added to ${esc(r.floorName)}.</p>`];
-  for(const p of r.problems) lines.push(`<p class="hint warn">${esc(p.name)} was left out — ${esc(p.why.toLowerCase())}.</p>`);
-  lines.push(`<div class="row actions" style="margin-top:12px"><button type="button" class="btn danger" id="bpUndo">Undo this import</button></div>`);
-  openModal('Imported', lines.join(''), null, null, ()=>{
-    $('bpUndo').addEventListener('click', ()=>{ closeModal(); bpUndoImport(); });
-  });
 }
 function bpUndoImport(){
   if(!bpLastImport) return;

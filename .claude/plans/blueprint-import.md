@@ -132,24 +132,36 @@ rooms going missing, then a missing opening, then a misclassification.
       `dtype`; the other is downgraded to `'open'` — still punches its own wall so neither
       room shows solid, but draws jambs only, no leaf. Windows are unaffected (only ever
       attach to one room).
-- [ ] **Fixture-adjacent room boundary is cut short.** Three symptoms, likely one cause:
-      the kitchen counter run isn't included in the kitchen's outline, the toilet isn't
-      included in the bathroom's, and the bottom strip of both the foyer and the bathroom
-      (behind the tub) is missing from the room entirely. Region-growing is probably
-      reading a fixture's ink (and whatever wall-like band it sits against) as the room's
-      edge instead of floor, so the polygon stops at the fixture rather than the real wall
-      behind it. Fix in the segmentation step (`bpAnalyse`/region derivation), not per
-      fixture — this is a room-shape bug, not a missing-fixture bug.
-      Confirmed against the real photo, worse than expected: the toilet's own round outline
-      splits the bathroom into two disconnected blobs (a sliver around the fixtures, a
-      separate one around the tub), and the sliver fails `polySimple` outright — so on this
-      photo the toilet doesn't just fail to join the room, the gap where it stood is missing
-      from the floor entirely, "Room was left out — this outline folds over itself."
-- [ ] **Missed closets.** The closet beside the bathroom isn't proposed as a room at all;
-      a previously-known case fails `polySimple` outright (see Known defects). Revisit
-      once the boundary-cutoff fix above lands — a region shrunk by that same bug is a
-      plausible reason a small closet drops below a minimum-area or shape-validity bar.
-- [ ] **Large windows on the north wall aren't detected.** Confirmed against the real
+- [x] **Fixture-adjacent room boundary is cut short.** Traced to the window-cavity
+      absorption in `bpAnalyse` (the block that reads a small enclosed gap as the inside
+      of a window and folds it into `barrier`): it only ever checked the gap's *size*
+      (`min(bw,bh) < tPart*4`, "nothing a person walks into is a foot wide"), never its
+      *shape*, so a squarish enclosed pocket scored exactly like a window strip. A stove's
+      nested burner outlines, a sink's nested rectangle, and the inside of a toilet bowl
+      are all small enclosed pockets — and on the real photo, absorbing them (plus the
+      hairlines the growth step then eats around them) is what carved the stove and sink
+      out of the kitchen's outline and pinched the toilet into its own sliver. Fixed by
+      gating absorption on elongation too: `max(bw,bh) >= min(bw,bh)*4`. Measured on the
+      real photo, every real window scored at least 7:1 and every fixture pocket at most
+      3.4:1, so the cut is clean. Verified against the real photo: the kitchen outline now
+      runs to the true wall behind the stove, the toilet's sliver is a plain 5-vertex
+      rectangle (no longer fails `polySimple`), and a stray self-touching spike that had
+      been showing up in the Living Area / Foyer trace near the kitchen archway is gone
+      too — same mechanism, different corner of the plan.
+- [x] **Missed closets.** Unrelated to the boundary-cutoff fix above — confirmed the
+      closet's own floor component was already clean before and after that fix, same
+      bbox both times. The real cause: `bpDeriveRegions`'s area floor (`(tPart*5)²`) is
+      stricter than its own width floor (`tPart*3`, "a room is not eleven inches wide"),
+      so a room can clear the width check and still be rejected for being short rather
+      than narrow. The linen closet beside the bathroom and the entry nook beside it both
+      measure a hair over `3*tPart` wide but well under `5*tPart` square, so both were
+      dropped outright — not shrunk, not a `polySimple` failure, just never proposed.
+      Fixed by matching the area floor to the width floor: `(tPart*3)²`. Checked the rest
+      of the real photo for anything else that size range would let through — nothing:
+      the closet and the nook are the only two components between the old and new floor,
+      and both are real rooms with their own doors. Verified end to end: 8 rooms import
+      clean (was 6), both new ones are plain rectangles, no console errors.
+- [x] **Large windows on the north wall aren't detected.** Confirmed against the real
       photo: the long window band running the full width of the north wall produces
       **zero** cuts (every cut `bpAnalyse` found was on the west wall or an interior door),
       so this isn't a width/aspect-ratio miss at the margins — that wall's window detection
