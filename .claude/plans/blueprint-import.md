@@ -720,7 +720,8 @@ time this symptom shows up elsewhere:
       rather than leaving it unclaimed, needs some real tie-breaker — not attempted here,
       and **not** the wall's own door/window classification: see the next item.
 - [ ] **`bpClassifyCuts`'s swing-arc search radius can sweep up a neighbour's ink and
-      call it a door.** Found while checking why the sliver above reads as touching a real
+      call it a door — and the wall it's swept from is itself a false read.** Found while
+      checking why the sliver above reads as touching a real
       door on one side — it doesn't. The wall between the sliver and the room beside it
       (not the toilet's own room) was classified `kind:'door'` with `arcN:989`, more than
       double every other door found on this same photo (141–393). Traced to the search
@@ -732,14 +733,81 @@ time this symptom shows up elsewhere:
       sits inside it, only the toilet icon. The opening itself is real (no wall ink there
       before `bpCloseGaps` seals it) — it's the door-with-a-leaf reading, specifically,
       that's wrong; it's more likely a plain, leafless doorway, the same as two other
-      openings nearby that the same pass correctly read as `kind:'doorway'`. Doesn't
-      change `bpAbsorbSlivers`'s own call on the sliver above (that decision never looks
-      at door-vs-doorway, only at which two rooms a sliver touches), but a wrong door
-      swing on the review screen — telling a user which way a door not really there opens
-      — is its own real defect, undiscovered until this session's re-check. Not fixed
-      here: needs the search band scoped to exclude ink that belongs to a component the
-      wall's own two jambs aren't part of, which is more surgery on `bpClassifyCuts` than
-      this session's real-photo pass was for.
+      openings nearby that the same pass correctly read as `kind:'doorway'`.
+      **Reproduced a second time, later, against a different closet on the same photo** —
+      reported by the user as "why is there a barrier in the middle of it" against the
+      linen closet next to the toilet, debug mode on. Checked directly against the raw
+      `structure` mask (sampled every 3rd row across the whole gap): completely empty but
+      for the one row shared with the wall above, confirming again that the opening itself
+      is real and only the door-with-a-leaf reading is wrong — the same contamination,
+      same toilet, this time read at `arcN:981`.
+      **First fix landed only the door-type symptom, not the shape — user correctly called
+      this out** ("its still half the room"). A ceiling on `arcN` — 500, sitting between
+      every genuine arc measured on this photo (141–467) and both confirmed contaminated
+      readings (981, 989) — stops the false `door` reading, falling through to `doorway`
+      instead. But `bpCloseGaps` seals a `doorway` into `barrier` exactly the same as a
+      `door`, so the closet stayed exactly as narrow as before: fixing the label on a wall
+      that shouldn't be there at all was never going to widen the room. Left in (it's still
+      correct, as far as it goes — a real door truly isn't drawn there) but it was never
+      going to be the whole fix, and shouldn't have been reported as one.
+      **Two real fixes were tried against the actual shape, and both were rejected on this
+      same photo before either shipped:**
+      1. Stop `bpWallLines` bridging the two ink fragments into one "wall" at all (the far
+         one is an 11px corner blob, not a wall run). Rejected: the same photo has a
+         genuinely working door whose own far jamb is exactly that short (a 12px segment on
+         the wall at `v c=689`), so a length filter aimed at the corner blob breaks a door
+         that already works.
+      2. Make the wall-line profile orientation-aware — require a pixel to actually run the
+         way the line does (`vR[i]>=hR[i]*0.8` for a vertical line, reusing the same
+         run-length reading `bpAnalyse` already computes for wall thickness) before counting
+         it as that line's own ink, on the theory that the corner blob is really a
+         *horizontal* wall's own straight run crossing the same columns, not a T-junction.
+         This DID remove the false bridge — `v c=736`'s line came back clean, gap-free, with
+         no cut generated at all. Rejected anyway: region count on the same photo dropped
+         from 10 to 5, with LIVING AREA and the foyer missing entirely, meaning the same
+         orientation test rejected real ink on a wall it should never have touched. Not
+         chased further to find out which wall or why — a fix that quietly deletes the two
+         biggest rooms on the plan is not a fix, and finding out *which* real wall it broke
+         doesn't change that the test itself isn't safe to ship.
+      Both confirm the same conclusion the original diagnosis already reached: this needs
+      the stroke classifier (isolating the arc/corner-blob's ink as its own component,
+      separate from whatever it's fused to by the wall's own ragged rind), not a threshold
+      on segment length, orientation, or anything else measured off the profile scan as it
+      exists today.
+      **Root cause pinned down precisely, after the user pushed back a second time** ("why
+      can't you just look at the structure overlay") — a fair question that's worth
+      answering directly rather than re-asserting the same conclusion. Recomputed `bpBands`
+      straight from the stored masks: there is exactly ONE real band at this wall's position
+      (`a0:512, a1:578` — the bifold nook's own wall, nothing else). The contamination isn't
+      two bands getting matched to each other; it's introduced entirely inside
+      `bpLineProfile`'s full-height rescan, which checks raw `wall[y*w+x]` presence with no
+      notion of ORIENTATION — so when a totally unrelated wall's corner happens to cross the
+      same few columns further down the photo, the scan reads it as ten more pixels of THIS
+      line, with nothing in that test able to tell the difference. That's exactly what
+      attempt 2 above targeted (requiring the ink to run the line's own direction, not just
+      occupy its columns) and exactly why it broke two whole rooms instead: at a genuine
+      T-junction — the case `bpLineProfile`'s own comment says it exists to recover, "the
+      pilaster beside a door" — the short stub's own pixels sit right where a much LONGER
+      perpendicular wall crosses, and that perpendicular wall's run length dominates the
+      shared corner pixels. The same orientation test that correctly rejects a false corner
+      93px from anything real also rejects a true one sitting at the base of a real wall,
+      because from a single pixel's own run-length reading, the two are the same shape.
+      Telling them apart needs to know which CONNECTED stroke each pixel belongs to, not
+      just which direction it runs — the stroke classifier, precisely, not a nearer threshold.
+      **What *did* ship: the debug view stopped being part of the confusion.** `bpState.
+      proposal.barrier` was always `wall||skin||cavity` plus every gap `bpCloseGaps` ever
+      stamped shut, rendered as one undifferentiated red — so a real wall and an invented
+      closure looked identical in the one view built for checking detection against the
+      photo, which is exactly how a genuine bug read as the tool "clearly" being wrong about
+      something it had actually reasoned about (correctly, per the earlier sliver
+      investigation — a real doorway does need a barrier even where nothing is drawn).
+      `bpDrawReview`'s "Barrier" mask now tints real ink red and an inferred closure blue,
+      so which is which is visible at a glance instead of requiring a console session to
+      establish. Doesn't change a single pixel of detection — purely making the existing
+      view honest about what it's showing.
+      **Still not fixed: the closet is still narrower than it should be.** Only the door
+      drawn on its wrong wall is no longer drawn wrong, and the debug view now says so
+      itself rather than needing to be debugged from outside it.
 
 ---
 

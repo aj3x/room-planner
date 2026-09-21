@@ -5267,6 +5267,8 @@ function renderOpeningProps(){
   if(!o){ roomSel=null; return renderRoomSel(); }
   const len=wallOf(o.wall).len;
   o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
+  const isDoor=o.kind==='door';
+  const hingeBits = isDoor && (o.dtype==='hinge'||o.dtype==='bifold');
   $('roomSelTitle').textContent=KIND(o);
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="oWall">Wall</label><select id="oWall">${RP().map((_,i)=>wallIsOff(L().room,i)&&i!==o.wall?'':`<option value="${i}" ${i===o.wall?'selected':''}>Wall ${i+1}</option>`).join('')}</select></div>
@@ -5275,8 +5277,24 @@ function renderOpeningProps(){
       <option value="cw" ${o.corner==='cw'?'selected':''}>Near corner</option>
       <option value="ccw" ${o.corner==='ccw'?'selected':''}>Far corner</option></select></div>
     <div class="field"><label for="oOff">Offset</label><input type="text" class="len" id="oOff" value="${esc(fmtLen(openingDispOffset(o,len),S.unit))}"></div>
+    ${isDoor ? `
+      <div class="field"><label for="oType">Type</label><select id="oType">
+        <option value="hinge" ${o.dtype==='hinge'?'selected':''}>Hinged</option>
+        <option value="bifold" ${o.dtype==='bifold'?'selected':''}>Bi-fold</option>
+        <option value="slide" ${o.dtype==='slide'?'selected':''}>Sliding</option>
+        <option value="open" ${o.dtype==='open'?'selected':''}>Open doorway</option></select></div>
+      <div id="oHingeBits" ${hingeBits?'':'hidden'}>
+        <div class="field"><label for="oHinge">Hinge</label><select id="oHinge">
+          <option value="start" ${(o.hinge||'start')==='start'?'selected':''}>Near corner</option>
+          <option value="end" ${o.hinge==='end'?'selected':''}>Far corner</option></select></div>
+        <div class="field"><label for="oSwing">Swings</label><select id="oSwing">
+          <option value="in" ${(o.swing||'in')==='in'?'selected':''}>Into room</option>
+          <option value="out" ${o.swing==='out'?'selected':''}>Out of room</option></select></div>
+      </div>` : `
+      <div class="field"><label for="oSill">Sill height</label><input type="text" class="len" id="oSill" value="${esc(fmtLen(o.sill||900,S.unit))}"></div>
+      <p class="hint">Sill height is a note for you; it doesn't change the plan.</p>`}
     <p class="hint">Wall ${o.wall+1} is ${esc(fmtLen(len,S.unit))} long. Drag the circle in the plan to slide it along, or onto another wall.</p>
-    <div class="row actions"><button class="btn sm" id="oEdit">More options…</button><button class="btn sm danger" id="oDel">Delete</button></div>`;
+    <div class="row actions"><button class="btn sm danger" id="oDel">Delete</button></div>`;
   const go=()=>{
     const wv=parseLen($('oW').value,S.unit);
     o.wall=+$('oWall').value;
@@ -5292,7 +5310,22 @@ function renderOpeningProps(){
   $('oW').addEventListener('change',go);
   $('oCorner').addEventListener('change',go);
   $('oOff').addEventListener('change',go);
-  $('oEdit').addEventListener('click',()=>openingDialog(o.id));
+  if(isDoor){
+    $('oType').addEventListener('change', ()=>{
+      o.dtype=$('oType').value;
+      const hb=$('oHingeBits'); if(hb) hb.hidden = o.dtype!=='hinge' && o.dtype!=='bifold';
+      $('roomSelTitle').textContent=KIND(o);
+      renderOpen(); draw(); save(); commitRoom();
+    });
+    $('oHinge').addEventListener('change', ()=>{ o.hinge=$('oHinge').value; draw(); save(); commitRoom(); });
+    $('oSwing').addEventListener('change', ()=>{ o.swing=$('oSwing').value; draw(); save(); commitRoom(); });
+  } else {
+    $('oSill').addEventListener('change', ()=>{
+      const v=parseLen($('oSill').value,S.unit);
+      o.sill = isFinite(v) ? v : 900;
+      save(); commitRoom();
+    });
+  }
   $('oDel').addEventListener('click',()=>deleteOpening(o.id));
 }
 
@@ -6557,7 +6590,18 @@ function bpClassifyCuts(cuts, structure, wall, w, h, tPart){
     const top=score[0];
     /* a real swing sweeps a quarter turn; under about 55 degrees of the quadrant it is a
        straight line clipping the radius band, not an arc */
-    const isArc = top.n >= Math.max(8, len*0.3) && top.span >= 55;
+    /* Not a real fix for the pollution the comment below already names — that still needs
+       the stroke classifier, and a length-based attempt to separate the two ink sources at
+       the wall-line stage (tried and measured against this same photo) breaks a real door
+       elsewhere on it, whose own far jamb reads a genuinely short segment. This is a
+       narrower backstop: a real arc on this photo never read above 393 ink pixels at any
+       jamb; the two confirmed cases of a fixture's ink getting swept into the count instead
+       (a toilet bowl, both times) read 981 and 989. 500 sits in the gap between those two
+       clusters with room either side, so a reading above it is distrusted as contaminated
+       rather than accepted as an unusually solid arc — it falls through to the plain
+       `doorway` reading below, which this same investigation already concluded is the more
+       likely truth for both confirmed cases anyway. */
+    const isArc = top.n >= Math.max(8, len*0.3) && top.n <= 500 && top.span >= 55;
     if(isArc){
       cut.kind='door';
       cut.hingeAt=top.ji;              // 0 = the a0 end, 1 = the a1 end
@@ -6647,60 +6691,14 @@ function bpRectify(regions, tPart){
   return regions;
 }
 
-/* ---- blueprint: dividers ----
-   An open plan is one region with two names standing in it, so the only thing that can
-   tell a foyer from the living area is a line somebody draws. A divider is a SEED POINT
-   and an axis, never a polygon operation: stamp one pixel of barrier outwards from the
-   seed until it meets the barrier already there, then derive the regions exactly as the
-   first pass did. Deleting one and re-deriving is what merges the rooms back again,
-   which is why there is no polygon union anywhere in this file.
-
-   One pixel, not a wall. The two traced faces come out two pixels apart, bpRectify
-   clusters them onto a single line, and the rooms are therefore created touching.
-   wallOff on both of those edges is then what makes floorSnapCandidates call the pair
-   'open' and floorEdgeDepths draw no wall between them. */
-function bpSplitRun(bar,w,h,axis,x,y){
-  const vert = axis==='v';
-  const c=Math.round(vert?x:y), p=Math.round(vert?y:x);
-  const N = vert ? h : w;
-  if(c<0 || c>=(vert?w:h) || p<0 || p>=N) return null;
-  const at = a => vert ? a*w+c : c*w+a;
-  if(bar[at(p)]) return null;                       // the seed landed inside a wall
-  let a0=p, a1=p;
-  while(a0>0 && !bar[at(a0-1)]) a0--;
-  while(a1<N-1 && !bar[at(a1+1)]) a1++;
-  return {axis, c, a0, a1, at};
-}
-function bpStampSplit(bar,w,h,s){
-  const r=bpSplitRun(bar,w,h,s.axis,s.x,s.y);
-  if(!r) return null;
-  for(let a=r.a0;a<=r.a1;a++) bar[r.at(a)]=1;
-  return {axis:r.axis, c:r.c, a0:r.a0, a1:r.a1};
-}
-const bpCutLen=(bar,w,h,axis,x,y)=>{ const r=bpSplitRun(bar,w,h,axis,x,y); return r ? r.a1-r.a0+1 : Infinity; };
-/* Between two names the cut wants the narrowest neck, which on a real plan is the cased
-   opening between them — that is the one place the two spaces pinch. */
-function bpSeedSplit(bar,w,h,axis,lo,hi,perp){
-  const mid=(lo+hi)/2, step=Math.max(1, Math.round((hi-lo)/120));
-  let best=null;
-  for(let c=Math.round(lo); c<=Math.round(hi); c+=step){
-    const x = axis==='v' ? c : perp, y = axis==='v' ? perp : c;
-    const len=bpCutLen(bar,w,h,axis,x,y);
-    if(!isFinite(len)) continue;
-    const score=len + Math.abs(c-mid)*0.3;
-    if(!best || score<best.score) best={score, x, y};
-  }
-  return best ? {id:uid(), axis, x:best.x, y:best.y} : null;
-}
-
 /* ---- blueprint: name labels ----
-   S5 is what READS these; all a divider needs is where they are. The glyphs are exactly
-   the components the largest-component step throws away, so finding them costs nothing,
-   and the drawing's own median glyph height is the only scale any of it uses.
+   S5 is what READS these. The glyphs are exactly the components the largest-component
+   step throws away, so finding them costs nothing, and the drawing's own median glyph
+   height is the only scale any of it uses.
 
    Words are merged twice: along a baseline into words and lines, then down the page into
    one block per name. A room's name sits above its dimensions, and counting that second
-   line as a second name would propose a split down the middle of every room here. */
+   line as a second name would misread the block as belonging to two different rooms. */
 const bpInkMedian=(vals, wts)=>{
   if(!vals.length) return 0;
   const idx=vals.map((_,i)=>i).sort((a,b)=>vals[a]-vals[b]);
@@ -6759,73 +6757,9 @@ function bpLabelBlocks(comps, pick, tPart){
     .map(b=>({x0:b.x0,y0:b.y0,x1:b.x1,y1:b.y1,cx:(b.x0+b.x1)/2,cy:(b.y0+b.y1)/2,n:b.n}));
   return {blocks, gh, glyphIds};
 }
-/* Recursive bisection on the names, splitting at the widest gap between them each time.
-   Two names all but touching are one name over its own dimension line that failed to
-   merge, not two rooms, so a gap under a few glyph heights proposes nothing. */
-function bpProposeSplits(regions, blocks, bar, w, h, tPart, gh){
-  const out=[];
-  for(const r of regions){
-    const mine=(r.labels||[]).map(i=>blocks[i]);
-    if(mine.length<2) continue;
-    const rec=(set, depth)=>{
-      if(set.length<2 || depth>2) return;
-      const sx=set.map(b=>b.cx), sy=set.map(b=>b.cy);
-      const spread=a=>Math.max.apply(null,a)-Math.min.apply(null,a);
-      const axis = spread(sx)>=spread(sy) ? 'v' : 'h';
-      const sorted=set.slice().sort((p,q)=> axis==='v' ? p.cx-q.cx : p.cy-q.cy);
-      let gi=-1, gbest=-1;
-      for(let i=0;i<sorted.length-1;i++){
-        const g = axis==='v' ? sorted[i+1].x0-sorted[i].x1 : sorted[i+1].y0-sorted[i].y1;
-        if(g>gbest){ gbest=g; gi=i; }
-      }
-      if(gi<0 || gbest < Math.max(gh*4, tPart*6)) return;
-      const A=sorted.slice(0,gi+1), B=sorted.slice(gi+1);
-      const a=A[A.length-1], b=B[0];
-      const s = axis==='v' ? bpSeedSplit(bar,w,h,'v',a.x1,b.x0,(a.cy+b.cy)/2)
-                           : bpSeedSplit(bar,w,h,'h',a.y1,b.y0,(a.cx+b.cx)/2);
-      if(s) out.push(s);
-      rec(A,depth+1); rec(B,depth+1);
-    };
-    rec(mine,0);
-  }
-  return out;
-}
-
-/* ---- blueprint: regions ----
-   The tail of detection, lifted out whole so that moving a divider runs exactly the same
-   code the first pass ran. Nothing here may depend on how it was reached. */
-function bpAnchors(lab,w,c){
-  const hits=[], sy=Math.max(1, Math.floor(c.bh/6)), sx=Math.max(1, Math.floor(c.bw/6));
-  for(let y=c.y0;y<=c.y1;y+=sy)
-    for(let x=c.x0;x<=c.x1;x+=sx)
-      if(lab[y*w+x]===c.id){ hits.push(y*w+x); if(hits.length>=36) return hits; }
-  return hits;
-}
-/* A region's id is what the name typed into it is filed under, so it has to survive a
-   divider being dragged. Each previous region claims whichever new region holds most of
-   its sample points; when one splits in two the bigger half keeps the name and the other
-   half is new. */
-function bpIdentify(regions, lab, prev){
-  const byCid=new Map();
-  for(const r of regions) byCid.set(r.cid, r);
-  const claims=new Map();
-  for(const p of (prev||[])){
-    const tally=new Map();
-    for(const a of (p.anchors||[])){
-      const id=lab[a]; if(!id) continue;
-      const r=byCid.get(id); if(!r) continue;
-      tally.set(r, (tally.get(r)||0)+1);
-    }
-    let bestR=null, bestN=0;
-    tally.forEach((n,r)=>{ if(n>bestN){ bestN=n; bestR=r; } });
-    if(!bestR) continue;
-    const cur=claims.get(bestR);
-    if(!cur || bestN>cur.n || (bestN===cur.n && (p.areaPx||0)>(cur.p.areaPx||0))) claims.set(bestR,{p,n:bestN});
-  }
-  for(const r of regions){
-    const cl=claims.get(r);
-    r.id = cl ? cl.p.id : uid();
-  }
+/* ---- blueprint: regions ---- */
+function bpIdentify(regions){
+  for(const r of regions) r.id=uid();
 }
 /* A component that fails the width/area floor below isn't automatically hatching or a
    wall cavity with nothing on the far side of it. On the real photo, a plumbing chase
@@ -6931,10 +6865,8 @@ function bpAbsorbSlivers(bar, w, h, tPart, rl, accepted){
   }
   return dissolved;
 }
-function bpDeriveRegions(barrier, w, h, tPart, splits, blocks, prev){
-  const bar = (splits && splits.length) ? barrier.slice() : barrier;
-  const spans={};
-  for(const s of (splits||[])){ const sp=bpStampSplit(bar,w,h,s); if(sp) spans[s.id]=sp; }
+function bpDeriveRegions(barrier, w, h, tPart, blocks){
+  const bar = barrier;
   /* Matches the width floor below, not a stricter one of its own — a real closet can be
      exactly as narrow as this pipeline already allows a room to be, just short, and an
      area threshold a partition-width wider than that (tPart*5) rejects one for its
@@ -6965,7 +6897,7 @@ function bpDeriveRegions(barrier, w, h, tPart, splits, blocks, prev){
     const poly=bpOrtho(bpRDP(chain,eps), eps);
     if(poly.length<3) continue;
     regions.push({id:null, cid:c.id, name:'', polyPx:poly, areaPx:c.area,
-                  bboxPx:[c.x0,c.y0,c.x1,c.y1], anchors:bpAnchors(rl.lab,w,c), labels:[]});
+                  bboxPx:[c.x0,c.y0,c.x1,c.y1], labels:[]});
   }
   for(let i=0;i<(blocks||[]).length;i++){
     const b=blocks[i], x=Math.round(b.cx), y=Math.round(b.cy);
@@ -6973,101 +6905,10 @@ function bpDeriveRegions(barrier, w, h, tPart, splits, blocks, prev){
     const id=rl.lab[y*w+x]; if(!id) continue;
     const r=regions.find(q=>q.cid===id); if(r) r.labels.push(i);
   }
-  bpIdentify(regions, rl.lab, prev);
+  bpIdentify(regions);
   bpRectify(regions, tPart);
   regions.sort((a,b)=>b.areaPx-a.areaPx);
-  return {regions, spans, leak:out.frac};
-}
-
-/* ---- blueprint: fixtures ----
-   Free-standing symbols the wall pass already set aside as their own ink component:
-   not the structure blob (bpAnalyse's `pick`), not a label glyph (bpLabelBlocks'
-   `glyphIds`). Scored against a small table of real-world fixture footprints by size,
-   ink density and how many small round marks travel with it — a stove's burners are
-   the one signal nothing else on a plan produces. A fixture drawn touching a wall (or
-   any other structure ink) fuses into the structure component at the labelling step
-   and never becomes a component of its own, so it is never found here. That ceiling —
-   roughly 40-60% precision, not full recall — is accepted rather than chased, because
-   closing it needs the stroke classifier the door-type problem (S5) already flagged,
-   not another threshold on this table. */
-const BP_FIXTURES=[
-  {type:'toilet',       w:[320,440],  d:[580,800], fill:[0.04,0.60], circ:[0,2], item:'fixture/toilet'},
-  {type:'tub',          w:[1350,1950],d:[650,950], fill:[0.02,0.45], circ:[0,1], item:'fixture/tub'},
-  {type:'sink-bath',    w:[380,720],  d:[340,620], fill:[0.05,0.65], circ:[0,1], item:'fixture/sink-bath'},
-  {type:'sink-kitchen', w:[580,970],  d:[480,720], fill:[0.03,0.65], circ:[0,2], item:'fixture/sink-kitchen'},
-  {type:'range',        w:[640,860],  d:[540,720], fill:[0.03,0.65], circ:[3,5], item:'fixture/range'},
-  {type:'fridge',       w:[720,1020], d:[620,880], fill:[0.02,0.50], circ:[0,0], item:'fixture/fridge'},
-];
-const BP_FIXTURE_ITEMS={
-  'fixture/toilet':      {name:'Toilet',        shape:{type:'ellipse', w:380, d:680}, color:'#c9cdd3'},
-  'fixture/tub':          {name:'Bathtub',       shape:{type:'rect', w:1520, d:760}, color:'#c9cdd3'},
-  'fixture/sink-bath':    {name:'Bathroom sink', shape:{type:'rect', w:530, d:460}, color:'#c9cdd3'},
-  'fixture/sink-kitchen': {name:'Kitchen sink',  shape:{type:'rect', w:800, d:560}, color:'#c9cdd3'},
-  'fixture/range':        {name:'Range',         shape:{type:'rect', w:760, d:660}, color:'#7e8c99'},
-  'fixture/fridge':       {name:'Refrigerator',  shape:{type:'rect', w:900, d:750}, color:'#7e8c99'},
-};
-/* a round-ish bbox, not a real circularity test — a bbox aspect near 1:1 is cheap and
-   catches a toilet bowl, a round burner or a round table equally well */
-const bpFixtureRound = c => { const a=Math.min(c.bw,c.bh), b=Math.max(c.bw,c.bh); return b ? a/b>=0.72 : false; };
-function bpScoreFixture(bwMm,bhMm,fill,circ){
-  let best=null;
-  for(const f of BP_FIXTURES){
-    for(const swap of [false,true]){
-      const W=swap?bhMm:bwMm, D=swap?bwMm:bhMm;
-      /* generous outside the table's own range — real fixtures vary by manufacturer —
-         but never past 15%, or every size band starts overlapping its neighbours */
-      if(W<f.w[0]*0.85||W>f.w[1]*1.15||D<f.d[0]*0.85||D>f.d[1]*1.15) continue;
-      const wc=(f.w[0]+f.w[1])/2, dc=(f.d[0]+f.d[1])/2;
-      let err=Math.abs(W-wc)/wc + Math.abs(D-dc)/dc;
-      if(fill<f.fill[0]||fill>f.fill[1]) err+=0.4;
-      if(circ<f.circ[0]||circ>f.circ[1]) err+=0.6;
-      if(!best||err<best.err) best={type:f.type, item:f.item, err, rot:swap?90:0};
-    }
-  }
-  return best && best.err<1.1 ? best : null;
-}
-/* Real-world size only means anything once a scale exists, and OCR frequently doesn't
-   find one (a dimension line too garbled to parse leaves nothing to pool — see
-   bpSolveScale). But a scale can still arrive later, from the user measuring a known
-   wall by hand on the Scale screen — and unlike bpAnalyse, which runs once, bpRebuild
-   (where bpAttachFixtures is called) reruns on every edit with whatever scale currently
-   holds. So the expensive part — finding candidate ink components at all — happens once
-   here in pixel space, scale-free; the cheap part — is 8px×9px a 660mm×740mm toilet or a
-   66mm×74mm speck — happens at attach time in bpScoreFixture, against whatever `mm` is
-   current. A plan the user had to calibrate by hand still gets its fixtures. */
-function bpDetectFixtures(comps, pick, glyphIds, regions, tPart){
-  /* burner-sized round marks, gathered once so counting a candidate's own circle count is
-     a lookup rather than a rescan of every component in the photo. Expressed in tPart —
-     a partition wall's own thickness — rather than millimetres, since that is the only
-     real-world ruler available before a scale exists; tPart runs 60-180mm on plans this
-     pipeline has actually been tested against, which brackets a burner knob well enough
-     to tell it from a whole fixture at one end and a speck of grit at the other. */
-  const small=comps.filter(c=>{
-    const m=Math.max(c.bw,c.bh);
-    return bpFixtureRound(c) && m>=tPart*0.2 && m<=tPart*1.8;
-  });
-  const circCountFor=c=>{
-    const cx=(c.x0+c.x1)/2, cy=(c.y0+c.y1)/2, pad=Math.max(c.bw,c.bh)*0.6;
-    let n=0;
-    for(const s of small){
-      const sx=(s.x0+s.x1)/2, sy=(s.y0+s.y1)/2;
-      if(Math.abs(sx-cx)<=c.bw/2+pad && Math.abs(sy-cy)<=c.bh/2+pad) n++;
-    }
-    return n;
-  };
-  const out=[];
-  for(const c of comps){
-    if(pick && c.id===pick.id) continue;
-    if(glyphIds.has(c.id)) continue;
-    const m=Math.max(c.bw,c.bh);
-    if(m>tPart*24 || m<tPart*2) continue;   // no fixture on a plan is a room, or a speck
-    const cx=(c.x0+c.x1)/2, cy=(c.y0+c.y1)/2;
-    const region=regions.find(r=>pointInPoly([cx,cy], r.polyPx));
-    if(!region) continue;     // not standing inside any traced room
-    out.push({id:uid(), cPx:[cx,cy], bwPx:c.bw, bhPx:c.bh,
-               fill:c.area/(c.bw*c.bh), circ:circCountFor(c)});
-  }
-  return out;
+  return {regions, leak:out.frac};
 }
 
 /* ---- blueprint: detection ----
@@ -7280,18 +7121,10 @@ function bpAnalyse(work, opts){
         }
       }
 
-      /* Derived twice on purpose. The first pass has no dividers in it, and it is what
-         says which region each name is standing in; only then is there anything to
-         propose. The second pass is the one the review screen opens on, so nothing has
-         to be re-derived before the first frame. */
-      const {blocks, gh, glyphIds}=bpLabelBlocks(comps, pick, tPart);
-      const first=bpDeriveRegions(barrier, w, h, tPart, [], blocks, null);
-      const splits=bpProposeSplits(first.regions, blocks, barrier, w, h, tPart, gh);
-      const derived = splits.length
-        ? bpDeriveRegions(barrier, w, h, tPart, splits, blocks, first.regions)
-        : first;
+      const {blocks, gh}=bpLabelBlocks(comps, pick, tPart);
+      const derived=bpDeriveRegions(barrier, w, h, tPart, blocks);
       const regions=derived.regions;
-      const out={frac:first.leak};
+      const out={frac:derived.leak};
       /* Segments, not {wall index, offset}: every edge index is invalidated by winding
          normalisation, short-edge merging and collinear dropping, so hand over geometry
          and let the app layer re-attach to whatever edge survives. */
@@ -7308,12 +7141,9 @@ function bpAnalyse(work, opts){
       step('text');
       const scale=await bpRunOcr(regions, blocks, gh, runId);
       if(runId!==bpRunSeq) return;
-      const fixtures=bpDetectFixtures(comps, pick, glyphIds, regions, tPart);
       res({
-        scale, regions, spans:derived.spans, splits, openings, fixtures,
+        scale, regions, openings,
         cuts, lines, tPart, tExt, labels:blocks, gh,
-        /* kept so a divider can be moved without re-reading the photo; it is a byte per
-           pixel and it never goes near S */
         barrier, w, h,
         /* raw intermediate masks, one byte per pixel each, kept only on bpState.proposal
            (never S) so #bpdebug can render exactly what the pipeline saw at each stage
@@ -7323,7 +7153,7 @@ function bpAnalyse(work, opts){
                structureFill:pick?pick.area/(pick.bw*pick.bh):0, leakFraction:leak.frac,
                tSplit, tPart, tExt, bandCount:bands.length, lineCount:lines.length,
                cutCount:cuts.length, regionCount:regions.length, barrierLeak:out.frac,
-               labelCount:blocks.length, splitCount:splits.length, fixtureCount:fixtures.length}
+               labelCount:blocks.length}
       });
     };
     /* Double rAF so "Finding the rooms" has definitively painted before the main thread
@@ -7559,7 +7389,7 @@ function bpAttachOpenings(layouts, openings, edits, mm, G, wallMm){
          allowance misses every window in a thick exterior shell. */
       let bi=-1, bd=Math.max(wallMm, (o.tPx||0)*mm)*1.35;
       for(let i=0;i<n;i++){
-        if(wallIsOff(l.room,i)) continue;      // a divider has no wall to punch a door through
+        if(wallIsOff(l.room,i)) continue;      // no wall there to punch a door through
         const d=ptSegDist(lm, P[i], P[(i+1)%n]).d;
         if(d<bd){ bd=d; bi=i; }
       }
@@ -7607,36 +7437,6 @@ function bpAttachOpenings(layouts, openings, edits, mm, G, wallMm){
   }
   return where;
 }
-/* Same geometry-only handoff as openings: a fixture is just a point, so it is placed by
-   asking each room "is this point inside you", not by remembering which region it was
-   detected in — a region's own id doesn't survive a divider being redrawn, a room's
-   polygon does. First room whose polygon contains it wins; a fixture standing in no
-   room at all (drawn in a hallway too thin to survive the width floor, say) is dropped. */
-function bpAttachFixtures(layouts, fixtures, edits, mm, G){
-  const where={};
-  for(const l of layouts) l._bpFixtures=[];
-  for(const fx of fixtures){
-    const ed=edits.items[fx.id]||(edits.items[fx.id]={});
-    if(ed.deleted) continue;
-    let item=ed.item, rot=ed.rot;
-    if(!item){
-      const match=bpScoreFixture(fx.bwPx*mm, fx.bhPx*mm, fx.fill, fx.circ);
-      if(!match) continue;   // doesn't read as any known fixture at the current scale
-      item=match.item;
-      if(rot==null) rot=match.rot;
-    }
-    const gx=fx.cPx[0]*mm-G.x0, gy=fx.cPx[1]*mm-G.y0;
-    for(const l of layouts){
-      const off=[l.floorPlace.x, l.floorPlace.y];
-      const lp=[gx-off[0], gy-off[1]];
-      if(!pointInPoly(lp, l.room.points)) continue;
-      l._bpFixtures.push({fxId:fx.id, item, x:lp[0], y:lp[1], rot:rot||0});
-      (where[fx.id]||(where[fx.id]=[])).push(l.name);
-      break;
-    }
-  }
-  return where;
-}
 /* the drawing knows how thick its own walls are; 114 is only a fallback */
 function bpEffWall(){
   const st=bpState; if(!st||!st.edits) return 114;
@@ -7655,103 +7455,14 @@ function bpEffExtWall(){
   if(!mm||!st.proposal) return 146;
   return Math.max(50, Math.round((st.proposal.tExt||st.proposal.tPart||18)*mm));
 }
-/* Every divider that is still standing, proposal and hand-added alike, with whatever the
-   review screen has done to it folded in. The proposal itself is never touched. */
-function bpLiveSplits(){
-  const st=bpState; if(!st||!st.proposal||!st.edits) return [];
-  const ed=st.edits.splits||{}, out=[];
-  for(const s of (st.proposal.splits||[]).concat(st.edits.added||[])){
-    const o=ed[s.id]||{};
-    if(o.deleted) continue;
-    out.push({id:s.id, axis:o.axis||s.axis, x:(o.x!=null?o.x:s.x), y:(o.y!=null?o.y:s.y)});
-  }
-  return out;
-}
-const bpSplitKey=()=>JSON.stringify(bpLiveSplits().map(s=>[s.axis, Math.round(s.x), Math.round(s.y)]));
-/* Re-deriving is a flood fill over the whole image, and bpRebuild runs on every keystroke
-   that changes a length — so it happens only when a divider has actually moved. */
-function bpRegionsNow(){
-  const st=bpState, k=bpSplitKey();
-  if(st.regionsKey!==k){
-    const p=st.proposal;
-    const d=bpDeriveRegions(p.barrier, p.w, p.h, p.tPart, bpLiveSplits(), p.labels, st.regions||p.regions);
-    st.regions=d.regions; st.spans=d.spans; st.regionsKey=k;
-  }
-  return st;
-}
-/* An edge that came off a divider carries no wall. Recognised by geometry, not by index:
-   bpCleanPoly drops collinear vertices and merges short edges after the trace, so any
-   index handed across from detection is stale by the time it arrives.
-
-   A divider is rarely the whole edge. Where a stub of real wall runs on past the opening
-   the two are COLLINEAR, so bpOrtho has already clustered them into one long edge — and
-   switching that edge off would delete a wall somebody drew. The span therefore gets cut
-   out of the edge as an edge of its own, which is the only thing wallOff can address.
-   Both rings are cut in step so l._bpPx keeps pointing at the same corners the room does;
-   inserting a collinear vertex cannot make a simple polygon self-intersect, and no cut is
-   made that would leave either side under the 50mm floor polySimple holds every edge to. */
-function bpMarkSeams(layouts, spans, tPart){
-  const tol=Math.max(3, tPart*0.6), MIN=60;
-  for(const l of layouts){
-    const px=l._bpPx, P=l.room.points, n=P.length;
-    const outPx=[], outP=[], seam=[], owner=[];
-    for(let i=0;i<n;i++){
-      const a=px[i], b=px[(i+1)%n], A=P[i], B=P[(i+1)%n];
-      const dx=b[0]-a[0], dy=b[1]-a[1];
-      const mmLen=Math.hypot(B[0]-A[0], B[1]-A[1]);
-      outPx.push(a.slice()); outP.push(A.slice());
-      let hit=null;
-      if(Math.hypot(dx,dy)>=1) for(const sid in spans){
-        const s=spans[sid], vert=s.axis==='v';
-        const across = vert ? Math.abs(dx) : Math.abs(dy);
-        const along  = vert ? Math.abs(dy) : Math.abs(dx);
-        if(across>tol || along<=across) continue;
-        const c = vert ? (a[0]+b[0])/2 : (a[1]+b[1])/2;
-        if(Math.abs(c-s.c)>tol) continue;
-        const k = vert ? 1 : 0;                        // the coordinate running along the edge
-        const t0=a[k], t1=b[k];
-        const o0=Math.max(Math.min(t0,t1), s.a0), o1=Math.min(Math.max(t0,t1), s.a1);
-        if(o1<=o0 || Math.abs(t1-t0)<1e-6) continue;
-        let fa=(o0-t0)/(t1-t0), fb=(o1-t0)/(t1-t0);
-        if(fa>fb){ const t=fa; fa=fb; fb=t; }
-        if((fb-fa)*mmLen < MIN) continue;              // a nick in the wall, not a way through
-        hit={sid, fa, fb};
-        break;
-      }
-      if(!hit){ seam.push(false); owner.push(null); continue; }
-      const cuts=[];
-      for(const f of [hit.fa, hit.fb]) if(f*mmLen>MIN && (1-f)*mmLen>MIN) cuts.push(f);
-      cuts.sort((p,q)=>p-q);
-      const bounds=[0].concat(cuts,[1]);
-      for(let s=0;s<bounds.length-1;s++){
-        if(s>0){
-          const f=bounds[s];
-          outPx.push([a[0]+dx*f, a[1]+dy*f]);
-          outP.push([A[0]+(B[0]-A[0])*f, A[1]+(B[1]-A[1])*f]);
-        }
-        const mid=(bounds[s]+bounds[s+1])/2;
-        const on = mid>=hit.fa-1e-9 && mid<=hit.fb+1e-9;
-        seam.push(on); owner.push(on?hit.sid:null);
-      }
-    }
-    l._bpPx=outPx; l.room.points=outP;
-    syncWallOff(l.room);
-    l._bpSeams=[];
-    for(let i=0;i<seam.length;i++){
-      l.room.wallOff[i]=seam[i];
-      if(seam[i] && l._bpSeams.indexOf(owner[i])<0) l._bpSeams.push(owner[i]);
-    }
-  }
-}
 function bpRebuild(){
   const st=bpState; if(!st||!st.proposal) return {layouts:[], problems:[], area:0};
   const e=st.edits, mm=e.scale&&e.scale.mmPerPx;
   const out={layouts:[], problems:[], area:0};
   if(!mm) return out;
-  const reg=bpRegionsNow();
   const wall=bpEffWall();
   const built=[];
-  for(const r of reg.regions){
+  for(const r of st.proposal.regions){
     const ed=e.spaces[r.id]||(e.spaces[r.id]={name:'',kind:'room',touched:false});
     if(ed.kind==='skip') continue;
     const P=bpCleanPoly(r.polyPx.map(p=>[p[0]*mm, p[1]*mm]));
@@ -7785,10 +7496,7 @@ function bpRebuild(){
     out.layouts.push(l);
     out.area+=polyArea(l.room.points);
   }
-  /* before the openings, so a door never attaches itself to a divider */
-  bpMarkSeams(out.layouts, reg.spans||{}, st.proposal.tPart);
   out.openingRooms=bpAttachOpenings(out.layouts, st.proposal.openings||[], e, mm, G, wall);
-  out.fixtureRooms=bpAttachFixtures(out.layouts, st.proposal.fixtures||[], e, mm, G);
   for(const l of out.layouts) clampOpenings(l);
   return out;
 }
@@ -7821,7 +7529,6 @@ function bpUploadDialog(keep, targetFloorId){
   if(!keep) bpDispose();
   if(!bpState) bpState={file:null,img:null,url:null,full:null,crop:null,cropRect:null,work:null,
                         proposal:null,detectedFor:null,edits:null,draft:null,cal:null,worker:null,
-                        regions:null,spans:null,regionsKey:null,addSplit:false,drag:null,
                         debugMask:'none',targetFloorId:targetFloorId||null};
   openModal('Import a blueprint', `
     <div class="dropzone" id="bpDrop">Drop a photo of a floor plan here<br>
@@ -8024,16 +7731,12 @@ function bpRunDetection(targetFloorId){
     bpState.proposal=p;
     bpState.detectedFor=JSON.stringify(bpState.cropRect);
     /* left null so the draft takes the thickness measured off the drawing */
-    bpState.edits={scale:p.scale||null, wallMm:null, extMm:null, spaces:{}, openings:{},
-                   items:{}, splits:{}, added:[]};
+    bpState.edits={scale:p.scale||null, wallMm:null, extMm:null, spaces:{}, openings:{}};
     /* pre-filled from whatever OCR read off the plan, so Review opens with names and
        Scale opens already measured rather than racing an async pass against the user */
     for(const r of p.regions) bpState.edits.spaces[r.id]=
       {name:r.ocrName||'', kind:'room', touched:false, dimText:r.ocrDimText||''};
-    /* detection already derived with the proposed dividers standing, so review opens
-       without re-deriving anything */
-    bpState.regions=p.regions; bpState.spans=p.spans||{}; bpState.regionsKey=bpSplitKey();
-    bpState.addSplit=false; bpState.drag=null; bpState.cal=null;
+    bpState.cal=null;
     bpScaleDialog(targetFloorId);
   });
 }
@@ -8142,9 +7845,9 @@ function bpBindScaleSide(){
     if(mm>0){ e.wallMm=mm; bpRenderScaleSide(); }
   });
 }
-/* the calibration line only — no room fills, no dividers. Those don't exist as
-   editable concepts until Review, and showing them here would spoil the review's
-   own "here's what was found" moment */
+/* the calibration line only — no room fills. Those don't exist as an editable concept
+   until Review, and showing them here would spoil the review's own "here's what was
+   found" moment */
 function bpDrawScale(){
   const cv2=$('bpScaleCv'); if(!cv2||!bpState) return;
   const x=cv2.getContext('2d'), C=PAL(), work=bpState.work, c=bpState.cal;
@@ -8200,7 +7903,7 @@ function bpRenderReview(){
   const st=bpState; st.draft=bpRebuild();
   /* the list is rebuilt from innerHTML, so nothing is focused or hovered afterwards and
      a stale highlight would point at the wrong room */
-  st.focusRid=null; st.hoverRid=null; st.hoverSid=null; st.hoverFid=null; st.hoverOid=null;
+  st.focusRid=null; st.hoverRid=null; st.hoverOid=null;
   const d=st.draft, e=st.edits, side=$('bpSide');
   if(!side) return;
   const tab=st.reviewTab, dbg=bpDebugOn();
@@ -8208,7 +7911,6 @@ function bpRenderReview(){
     <div class="seg full" id="bpReviewTabs" role="group" aria-label="Review">
       <button type="button" data-tab="rooms" aria-pressed="${tab==='rooms'}">Rooms</button>
       <button type="button" data-tab="openings" aria-pressed="${tab==='openings'}">Openings</button>
-      <button type="button" data-tab="fixtures" aria-pressed="${tab==='fixtures'}">Fixtures</button>
       ${dbg?`<button type="button" data-tab="debug" aria-pressed="${tab==='debug'}">Debug</button>`:''}
     </div>
     <div id="bpTabRooms" ${tab==='rooms'?'':'hidden'}>
@@ -8226,10 +7928,8 @@ function bpRenderReview(){
           </span></li>`;
       }).join('')}</ul>
       ${d.problems.map(p=>`<p class="hint warn">${esc(p.name)}: ${esc(p.why)} — it'll be left out.</p>`).join('')}
-      ${bpSplitListHTML(d)}
     </div>
     <div id="bpTabOpenings" ${tab==='openings'?'':'hidden'}>${bpOpenListHTML(d)}</div>
-    <div id="bpTabFixtures" ${tab==='fixtures'?'':'hidden'}>${bpFixtureListHTML(d)}</div>
     ${dbg?`<div id="bpTabDebug" ${tab==='debug'?'':'hidden'}>${bpDebugListHTML()}</div>`:''}`;
   $('moOk').disabled = !d.layouts.length;
   bpBindReview();
@@ -8249,7 +7949,10 @@ function bpDebugListHTML(){
     <p class="hint">Rendered as a red tint over the photo. "Wall" is what got treated as
       solid structure when the room boundary was traced; "cavity" is what the window-gap
       absorption pass swallowed into the barrier — a fixture's own linework showing up in
-      either one is the bug.</p>
+      either one is the bug. "Barrier" is red wherever one of those is true, and BLUE
+      wherever nothing is drawn at all but a gap got stamped shut anyway (closing a doorway
+      so it stops leaking one room into the next) — blue with no door or window listed
+      nearby in the Openings tab is the bug.</p>
   </div>
   <div class="group">
     <div class="group-title">Pipeline counts</div>
@@ -8267,81 +7970,6 @@ function bpBindDebug(){
     try{ await navigator.clipboard.writeText(text); flash('Copied the debug report.'); }
     catch(e){ flash("Couldn't copy — see the console instead."); console.log(text); }
   });
-}
-/* One row per divider. The rooms either side are named on the row, because a dashed line
-   over a photo is not by itself an answer to "what did that just do" — and a divider that
-   separates nothing is the one failure this screen has to be able to show. */
-function bpSplitListHTML(d){
-  const st=bpState, e=st.edits;
-  const all=(st.proposal.splits||[]).concat(e.added||[]);
-  const rows=all.map(s=>{
-    const ed=e.splits[s.id]||(e.splits[s.id]={});
-    const gone=!!ed.deleted;
-    const names=d.layouts.filter(l=>(l._bpSeams||[]).indexOf(s.id)>=0).map(l=>l.name);
-    const where = gone ? 'merged back into one room'
-                : names.length>1 ? 'open between '+names.join(' and ')
-                : 'not separating anything — drag it';
-    return `<li data-sid="${esc(s.id)}"${gone||names.length<2?' class="bad"':''}>
-      <span class="lmain"><span class="nm">Divider</span><span class="meta">${esc(where)}</span></span>
-      <span class="lact">
-        <button type="button" class="btn quiet sm" data-bp="sturn"${gone?' disabled':''}>Turn</button>
-        <button type="button" class="btn quiet sm icon" data-bp="sdel" title="${gone?'Divide again':'Merge'}">${svgI(gone?'plus':'close')}</button>
-      </span></li>`;
-  });
-  return `<div class="group">
-    <div class="group-title">${esc(plural(rows.length,'divider'))}</div>
-    ${rows.length?`<ul class="list" id="bpSplits">${rows.join('')}</ul>`:''}
-    <div class="bp-row mt">
-      <button type="button" class="btn sm" id="bpAddSplit" aria-pressed="${st.addSplit?'true':'false'}">${st.addSplit?'Click where to divide':'Add a divider'}</button>
-    </div>
-    <p class="hint">A divider splits one open space into two named rooms with no wall between them. Drag a dashed line to move it.</p>
-  </div>`;
-}
-function bpBindSplits(){
-  const st=bpState, e=st.edits, ul=$('bpSplits');
-  if(ul) for(const li of ul.querySelectorAll('li')){
-    const id=li.dataset.sid, ed=e.splits[id];
-    li.querySelector('[data-bp=sturn]').addEventListener('click', ()=>{
-      const cur=bpLiveSplits().find(s=>s.id===id);
-      if(!cur) return;
-      ed.axis = cur.axis==='v' ? 'h' : 'v';
-      bpRenderReview();
-    });
-    li.querySelector('[data-bp=sdel]').addEventListener('click', ()=>{ ed.deleted=!ed.deleted; bpRenderReview(); });
-    li.addEventListener('pointerenter', ()=>{ st.hoverSid=id; bpDrawReview(); });
-    li.addEventListener('pointerleave', ()=>{ if(st.hoverSid===id){ st.hoverSid=null; bpDrawReview(); } });
-  }
-  $('bpAddSplit').addEventListener('click', ()=>{
-    st.addSplit=!st.addSplit;
-    bpRenderReview();
-  });
-}
-/* The axis is the one that cuts the shorter way across whatever you clicked into, because
-   a divider is a doorway you are standing in and doorways are the narrow way through. */
-function bpAddSplitAt(p){
-  const st=bpState, P=st.proposal;
-  const lv=bpCutLen(P.barrier,P.w,P.h,'v',p[0],p[1]);
-  const lh=bpCutLen(P.barrier,P.w,P.h,'h',p[0],p[1]);
-  if(!isFinite(lv) && !isFinite(lh)){ moError('That is inside a wall — click somewhere inside a room'); return; }
-  moError('');
-  st.edits.added.push({id:uid(), axis: lv<=lh ? 'v' : 'h', x:p[0], y:p[1]});
-  bpRenderReview();
-}
-/* `scale` is image pixels per screen pixel: the stage shrinks a big photo to fit, so a
-   grab radius fixed in image space would be a couple of screen pixels wide on one plan
-   and half a room on another. */
-function bpSplitAt(p, scale){
-  const st=bpState, spans=st.spans||{}, tol=Math.max(6, 11*(scale||1));
-  let best=null;
-  for(const s of bpLiveSplits()){
-    const sp=spans[s.id]; if(!sp) continue;
-    const vert=sp.axis==='v';
-    const along = vert ? p[1] : p[0];
-    if(along<sp.a0-tol || along>sp.a1+tol) continue;
-    const d=Math.abs((vert?p[0]:p[1]) - sp.c);
-    if(d<=tol && (!best||d<best.d)) best={id:s.id, axis:sp.axis, d};
-  }
-  return best;
 }
 /* One row per opening, not one per room, even though a door between two rooms is created
    twice. Two rows for the same door would read as two doors and invite deleting one. */
@@ -8397,58 +8025,6 @@ function bpBindOpens(){
     li.addEventListener('pointerleave', ()=>{ if(bpState.hoverOid===id){ bpState.hoverOid=null; bpDrawReview(); } });
   }
 }
-/* One row per fixture, same shape as the openings list above. This is a 40-60%
-   precision feature by design (see bpDetectFixtures) — the list exists so a wrong guess
-   or a fixture nobody wants placed is one click to fix or drop, not something to hunt
-   for on the floor after import. */
-function bpFixtureListHTML(d){
-  const st=bpState, e=st.edits, raw=st.proposal.fixtures||[];
-  if(!raw.length) return '<p class="hint">No fixtures recognised on this plan.</p>';
-  const mm=e.scale&&e.scale.mmPerPx;
-  /* candidates are found scale-free (bpDetectFixtures); scoring them against a
-     real-world type needs one. In practice this branch is unreachable from the wizard —
-     Scale won't let the user past itself without e.scale set, same as Review's own room
-     sizes — but Fixtures is rendered by the same bpRenderReview as everything else, so it
-     has to degrade the same way rather than assume. */
-  if(!mm) return '<p class="hint">Set a scale first — a fixture can\'t be sized without one.</p>';
-  const scored=raw.map(f=>{
-    const ed=e.items[f.id]||(e.items[f.id]={});
-    const auto=bpScoreFixture(f.bwPx*mm, f.bhPx*mm, f.fill, f.circ);
-    return {f, ed, item: ed.item||(auto&&auto.item)};
-  }).filter(x=>x.item);
-  if(!scored.length) return '<p class="hint">No fixtures recognised on this plan.</p>';
-  const live=scored.filter(x=>!x.ed.deleted);
-  return `<div class="group">
-    <div class="group-title">${esc(plural(live.length,'fixture'))}</div>
-    <ul class="list" id="bpFixtures">${scored.map(({f,ed,item})=>{
-      const rooms=(d.fixtureRooms&&d.fixtureRooms[f.id])||[];
-      const where = rooms.length ? rooms.join(' · ') : 'not inside a traced room';
-      return `<li data-fid="${esc(f.id)}"${ed.deleted?' class="bad"':''}>
-        <span class="lmain">
-          <span class="nm">${esc((BP_FIXTURE_ITEMS[item]||{}).name||'Fixture')}</span>
-          <span class="meta">${esc(where)}${ed.deleted?' · left out':''}</span>
-        </span>
-        <span class="lact">
-          <select data-bp="fitem">${BP_FIXTURES.map(t=>
-            `<option value="${esc(t.item)}"${item===t.item?' selected':''}>${esc(BP_FIXTURE_ITEMS[t.item].name)}</option>`).join('')}
-          </select>
-          <button type="button" class="btn quiet sm icon" data-bp="fdel" title="${ed.deleted?'Put back':'Leave out'}">${svgI(ed.deleted?'plus':'close')}</button>
-        </span></li>`;
-    }).join('')}</ul>
-    <p class="hint">Guessed from size and shape alone — expect some misses and some wrong guesses, especially anything drawn touching a wall.</p>
-  </div>`;
-}
-function bpBindFixtures(){
-  const e=bpState.edits, ul=$('bpFixtures');
-  if(!ul) return;
-  for(const li of ul.querySelectorAll('li')){
-    const id=li.dataset.fid, ed=e.items[id];
-    li.querySelector('[data-bp=fitem]').addEventListener('change', ev=>{ ed.item=ev.target.value; bpRenderReview(); });
-    li.querySelector('[data-bp=fdel]').addEventListener('click', ()=>{ ed.deleted=!ed.deleted; bpRenderReview(); });
-    li.addEventListener('pointerenter', ()=>{ bpState.hoverFid=id; bpDrawReview(); });
-    li.addEventListener('pointerleave', ()=>{ if(bpState.hoverFid===id){ bpState.hoverFid=null; bpDrawReview(); } });
-  }
-}
 function bpBindReview(){
   const e=bpState.edits;
   for(const b of $('bpReviewTabs').querySelectorAll('button')){
@@ -8467,47 +8043,12 @@ function bpBindReview(){
     li.addEventListener('pointerleave', ()=>{ if(bpState.hoverRid===rid){ bpState.hoverRid=null; bpDrawReview(); } });
     li.querySelector('[data-bp=kind]').addEventListener('change', ev=>{ ed.kind=ev.target.value; bpRenderReview(); });
   }
-  bpBindSplits();
   bpBindOpens();
-  bpBindFixtures();
   bpBindDebug();
 }
 function bpMountReviewStage(){
   const cv2=$('bpRev'), work=bpState.work;
   cv2.width=work.width; cv2.height=work.height;
-  const at=ev=>{
-    const b=cv2.getBoundingClientRect();
-    return [(ev.clientX-b.left)*(work.width/b.width), (ev.clientY-b.top)*(work.height/b.height)];
-  };
-  const zoom=()=>{ const b=cv2.getBoundingClientRect(); return b.width ? work.width/b.width : 1; };
-  cv2.addEventListener('pointerdown', ev=>{
-    const p=at(ev);
-    if(bpState.addSplit){ bpState.addSplit=false; bpAddSplitAt(p); return; }
-    const hit=bpSplitAt(p, zoom());
-    if(!hit) return;
-    /* the dashed line follows the pointer, but the regions are only re-derived on the way
-       up — a flood fill per pointermove is a slideshow */
-    bpState.drag={id:hit.id, axis:hit.axis, x:p[0], y:p[1]};
-    try{ cv2.setPointerCapture(ev.pointerId); }catch(e){}
-    bpDrawReview();
-  });
-  cv2.addEventListener('pointermove', ev=>{
-    if(!bpState||!bpState.drag) return;
-    const p=at(ev);
-    bpState.drag.x=p[0]; bpState.drag.y=p[1];
-    bpDrawReview();
-  });
-  const drop=()=>{
-    const d=bpState&&bpState.drag; if(!d) return;
-    bpState.drag=null;
-    const ed=bpState.edits.splits[d.id]||(bpState.edits.splits[d.id]={});
-    /* perpendicular only: the seed keeps its place along the line, so a divider slides
-       across the room it is in and cannot be flicked into the next one */
-    if(d.axis==='v') ed.x=d.x; else ed.y=d.y;
-    bpRenderReview();
-  };
-  cv2.addEventListener('pointerup', drop);
-  cv2.addEventListener('pointercancel', drop);
   bpDrawReview();
 }
 /* every colour here comes from the canvas palette, and doors/windows are told apart
@@ -8520,66 +8061,82 @@ function bpDrawReview(){
   x.globalAlpha=0.55; x.drawImage(work,0,0); x.globalAlpha=1;
   /* #bpdebug only: whichever intermediate mask bpAnalyse classified, tinted red and
      drawn at native resolution — the arrays are exactly work.width x work.height, one
-     byte per pixel, so no scaling is needed */
+     byte per pixel, so no scaling is needed.
+     "Barrier" gets a second colour, because it isn't a mask of ink at all — it's
+     `wall||skin||cavity` PLUS every gap `bpCloseGaps` stamped shut afterwards, and next
+     to a real wall those read identically red even though nothing is drawn at the second
+     one. That read as a genuine wall to a user checking this same view against the photo
+     ("clearly there is no barrier and yet your barrier mode detects it") when what they'd
+     found was a real detection bug, not this view lying to them — but the view wasn't
+     telling them apart either, so there was nothing to see the difference with. Pixels
+     that are also real ink (wall, skin or a window cavity) stay the original red; a pixel
+     that's ONLY there because a gap got closed over it is tinted blue instead, so which
+     one is which is visible before anyone has to read `bpState.proposal.cuts` by hand. */
   if(bpDebugOn() && bpState.debugMask && bpState.debugMask!=='none'){
-    const arr=bpDebugMaskArr(bpState.debugMask);
-    if(arr && arr.length===work.width*work.height){
+    const p=bpState.proposal;
+    if(bpState.debugMask==='barrier' && p && p.barrier && p.masks && p.barrier.length===work.width*work.height){
+      const {wall,skin,cavity}=p.masks, bar=p.barrier;
       const id=x.createImageData(work.width, work.height);
-      for(let i=0;i<arr.length;i++){
-        if(!arr[i]) continue;
-        const o=i*4; id.data[o]=230; id.data[o+1]=40; id.data[o+2]=40; id.data[o+3]=170;
+      for(let i=0;i<bar.length;i++){
+        if(!bar[i]) continue;
+        const o=i*4, real=wall[i]||skin[i]||cavity[i];
+        if(real){ id.data[o]=230; id.data[o+1]=40; id.data[o+2]=40; id.data[o+3]=170; }
+        else { id.data[o]=40; id.data[o+1]=110; id.data[o+2]=230; id.data[o+3]=170; }
       }
       x.putImageData(id,0,0);
+    } else {
+      const arr=bpDebugMaskArr(bpState.debugMask);
+      if(arr && arr.length===work.width*work.height){
+        const id=x.createImageData(work.width, work.height);
+        for(let i=0;i<arr.length;i++){
+          if(!arr[i]) continue;
+          const o=i*4; id.data[o]=230; id.data[o+1]=40; id.data[o+2]=40; id.data[o+3]=170;
+        }
+        x.putImageData(id,0,0);
+      }
     }
   }
   /* the room being named is picked out in green, because a list of five rows all called
      "Room" says nothing about which outline you are about to name. Drawn last so it sits
-     over its neighbours. */
+     over its neighbours. Skipped on the Openings tab — a wall's own room fill would sit
+     right under the blue used there for doors and windows, and the two would be
+     impossible to tell apart. */
   const lw=Math.max(2, work.width/450);
   const lit = bpState.focusRid || bpState.hoverRid || null;
-  const paint=l=>{
-    const on = l._bpRegion===lit;
-    const P=l._bpPx;
-    x.beginPath();
-    P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));
-    x.closePath();
-    x.fillStyle = on ? C.okSoft : C.accentSoft;
-    x.globalAlpha = on ? 0.62 : 0.35; x.fill(); x.globalAlpha=1;
-    if(on){ x.strokeStyle=C.surface; x.lineWidth=lw*2.6; x.stroke(); }
-    x.strokeStyle = on ? C.ok : C.ink;
-    x.lineWidth = on ? lw*1.6 : lw;
-    x.stroke();
-  };
-  for(const l of d.layouts) if(l._bpRegion!==lit) paint(l);
-  for(const l of d.layouts) if(l._bpRegion===lit) paint(l);
-  /* Dividers are dashed because they are not walls, and nothing about them may read as
-     one: after import there is no wall here and the floor runs straight through. */
-  const spans=bpState.spans||{}, drag=bpState.drag;
-  for(const s of bpLiveSplits()){
-    const sp=spans[s.id]; if(!sp) continue;
-    const vert=sp.axis==='v', held = drag&&drag.id===s.id;
-    const c0 = held ? (vert?drag.x:drag.y) : sp.c;
-    const A = vert ? [c0,sp.a0] : [sp.a0,c0], B = vert ? [c0,sp.a1] : [sp.a1,c0];
-    const on = held || bpState.hoverSid===s.id;
-    x.save();
-    x.setLineDash([lw*5, lw*4]);
-    x.strokeStyle=C.surface; x.lineWidth=lw*3.4;
-    x.beginPath(); x.moveTo(A[0],A[1]); x.lineTo(B[0],B[1]); x.stroke();
-    x.strokeStyle = on ? C.ok : C.ink; x.lineWidth = on ? lw*2 : lw*1.4;
-    x.beginPath(); x.moveTo(A[0],A[1]); x.lineTo(B[0],B[1]); x.stroke();
-    x.restore();
+  if(bpState.reviewTab!=='openings'){
+    const paint=l=>{
+      const on = l._bpRegion===lit;
+      const P=l._bpPx;
+      x.beginPath();
+      P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));
+      x.closePath();
+      x.fillStyle = on ? C.okSoft : C.accentSoft;
+      x.globalAlpha = on ? 0.62 : 0.35; x.fill(); x.globalAlpha=1;
+      if(on){ x.strokeStyle=C.surface; x.lineWidth=lw*2.6; x.stroke(); }
+      x.strokeStyle = on ? C.ok : C.ink;
+      x.lineWidth = on ? lw*1.6 : lw;
+      x.stroke();
+    };
+    for(const l of d.layouts) if(l._bpRegion!==lit) paint(l);
+    for(const l of d.layouts) if(l._bpRegion===lit) paint(l);
   }
-  /* a fixture row highlighted the same way a room row is — a box around the ink
-     component it was found from, padded a little since a sink or a toilet is a lot
-     smaller on the page than a room */
-  const hf = bpState.hoverFid && (bpState.proposal.fixtures||[]).find(f=>f.id===bpState.hoverFid);
-  if(hf){
-    const pad=lw*3, x0=hf.cPx[0]-hf.bwPx/2-pad, y0=hf.cPx[1]-hf.bhPx/2-pad, w=hf.bwPx+pad*2, h=hf.bhPx+pad*2;
-    x.save();
-    x.fillStyle=C.okSoft; x.globalAlpha=0.5; x.fillRect(x0,y0,w,h); x.globalAlpha=1;
-    x.strokeStyle=C.surface; x.lineWidth=lw*2.6; x.strokeRect(x0,y0,w,h);
-    x.strokeStyle=C.ok; x.lineWidth=lw*1.6; x.strokeRect(x0,y0,w,h);
-    x.restore();
+  /* on the Openings tab, every door and window is drawn in blue — the same colour the
+     Rooms tab uses for its own fill — so switching tabs swaps which thing reads as
+     "the current subject" instead of leaving both stacked on top of each other. Deleted
+     ("left out") openings are skipped, same as the list beside it. */
+  if(bpState.reviewTab==='openings'){
+    for(const o of bpState.proposal.openings||[]){
+      if((bpState.edits.openings[o.id]||{}).deleted) continue;
+      if(o.id===bpState.hoverOid) continue;
+      x.save();
+      x.lineCap='round';
+      x.strokeStyle=C.surface; x.lineWidth=Math.max(lw*3.4, o.tPx+lw*2.6);
+      x.beginPath(); x.moveTo(o.aPx[0],o.aPx[1]); x.lineTo(o.bPx[0],o.bPx[1]); x.stroke();
+      x.globalAlpha=0.7;
+      x.strokeStyle=C.accent; x.lineWidth=Math.max(lw*2, o.tPx+lw*1.2);
+      x.beginPath(); x.moveTo(o.aPx[0],o.aPx[1]); x.lineTo(o.bPx[0],o.bPx[1]); x.stroke();
+      x.restore();
+    }
   }
   /* an opening row highlighted the same way — a band along the same aPx/bPx segment
      bpAttachOpenings re-attaches from, as wide as the cut itself read off the wall */
@@ -8608,66 +8165,26 @@ function bpCommit(){
   if(!target) S.floors.push(floor);
   const ids=[];
   for(const l of d.layouts){
-    delete l._bpRegion; delete l._bpPx; delete l._bpSeams;
+    delete l._bpRegion; delete l._bpPx;
     l.floorId=floor.id;
     normLayout(l);
     clampOpenings(l);
     S.layouts.push(l); ids.push(l.id);
   }
-  const newItems=[];
-  const fxCount=bpPlaceFixtures(d.layouts, newItems);
   bpSeedHistory(d.layouts, floor.id);
-  bpLastImport={floorId:floor.id, layoutIds:ids, itemIds:newItems, prevActive:S.active, createdFloor:!target};
+  bpLastImport={floorId:floor.id, layoutIds:ids, prevActive:S.active, createdFloor:!target};
   const left=d.problems.length;
   bpDispose();
   treeOpen.add(floor.id);
   activateLayout(ids[0]);
   setMode('floor');
   renderAll(); save();
-  flash(`${plural(ids.length,'room')} added to ${floor.name}${fxCount?`, ${plural(fxCount,'fixture')}`:''}${left?` — ${plural(left,'room')} left out`:''}.`);
+  flash(`${plural(ids.length,'room')} added to ${floor.name}${left?` — ${plural(left,'room')} left out`:''}.`);
 }
 function bpFloorName(){
   const base='Ground floor';
   let n=base, i=2;
   while(S.floors.some(f=>f.name===n)) n=base+' '+(i++);
-  return n;
-}
-/* The catalog entry is created once, on first use, and reused by every later import — a
-   stable id (`bp/`+the BP_FIXTURES key) means a second blueprint's toilets land on the
-   same library item as the first's rather than growing a duplicate per import. `created`
-   collects only the ids actually added here, so an undo can try to remove them: an item
-   that already existed before this import is never this import's to remove. */
-function bpEnsureFixtureItem(key, created){
-  const proto=BP_FIXTURE_ITEMS[key]; if(!proto) return null;
-  const id='bp/'+key;
-  if(!S.inventory.some(i=>i.id===id)){
-    S.inventory.push(normItem(Object.assign({id, passThrough:false, count:1, tags:['fixture']}, clone(proto))));
-    created.push(id);
-  }
-  return id;
-}
-/* Placed after the layouts are already in S.layouts and each has its own S.active turn,
-   because validate() (the real one furniture placement uses, not a fixture-shaped
-   approximation of it) reads the active layout — insideRoom/collides both call L(). A
-   fixture that doesn't validate (drawn a few pixels into a wall by the rectify pass, say)
-   is silently dropped rather than placed wrong; the review list already told the user
-   this is a 40-60% precision feature, so a quiet miss here is the expected shape of one. */
-function bpPlaceFixtures(layouts, created){
-  const keep=S.active;
-  let n=0;
-  for(const l of layouts){
-    const drafts=l._bpFixtures||[]; delete l._bpFixtures;
-    if(!drafts.length) continue;
-    S.active=l.id;
-    for(const d of drafts){
-      const itemId=bpEnsureFixtureItem(d.item, created);
-      const it=itemId && itemOf(itemId);
-      if(!it) continue;
-      const inst={id:uid(), itemId, x:d.x, y:d.y, rot:d.rot};
-      if(validate(inst, worldPoly(inst,it)).ok){ l.placed.push(inst); n++; }
-    }
-  }
-  S.active=keep;
   return n;
 }
 /* each imported room needs its own pristine baseline, or undo inside it has nowhere
@@ -8689,14 +8206,6 @@ function bpUndoImport(){
       S.layouts=S.layouts.filter(l=>!kill.has(l.id));
       if(imp.createdFloor) S.floors=S.floors.filter(f=>f.id!==imp.floorId);
       for(const id of kill){ delete roomHist[id]; delete furnHist[id]; }
-      /* a fixture item this import created and nothing else ever placed goes with it;
-         one it merely reused (another import's toilets, say) stays in the library */
-      if(imp.itemIds&&imp.itemIds.length){
-        const stillUsed=new Set();
-        for(const l of S.layouts) for(const p of l.placed) stillUsed.add(p.itemId);
-        const drop=new Set(imp.itemIds.filter(id=>!stillUsed.has(id)));
-        if(drop.size) S.inventory=S.inventory.filter(i=>!drop.has(i.id));
-      }
       delete floorHist[imp.floorId];
       treeOpen.delete(imp.floorId);
       if(!S.layouts.length) S.layouts=[blankLayout()];
