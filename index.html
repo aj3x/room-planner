@@ -562,6 +562,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
           <div class="sec-head"><h2>Rooms</h2>
             <div class="sec-act">
               <button class="btn quiet sm icon" id="btnRoomsMore" title="More actions" aria-label="More actions"><svg class="i"><use href="#i-more"/></svg></button>
+              <button class="btn quiet sm icon" id="btnImportBlueprint" title="Import a blueprint" aria-label="Import a blueprint"><svg class="i"><use href="#i-photo"/></svg></button>
               <button class="btn quiet sm icon" id="btnNewLayout" title="New room" aria-label="New room"><svg class="i"><use href="#i-plus"/></svg></button>
             </div>
           </div>
@@ -2452,8 +2453,8 @@ function resize(){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   scheduleDraw();
 }
-function fitBBox(b){
-  const pad=72;
+function fitBBox(b,pad){
+  pad = pad==null ? 175 : pad;
   const s=Math.min((W-pad*2)/Math.max(b.w,1),(H-pad*2)/Math.max(b.h,1));
   view.scale = s>0 ? s : .05;
   view.ox = (W-b.w*view.scale)/2 - b.x0*view.scale;
@@ -2467,7 +2468,7 @@ function fit(){
     const fl=floorOf(L().floorId), b=fl&&floorBBox(fl.id);
     if(b){
       let pad=0; for(const l of floorLayouts(fl.id)) pad=Math.max(pad, l.room.wall||0);
-      fitBBox({x0:b.x0-pad, y0:b.y0-pad, w:b.w+pad*2, h:b.h+pad*2});
+      fitBBox({x0:b.x0-pad, y0:b.y0-pad, w:b.w+pad*2, h:b.h+pad*2}, 72);
       return;
     }
   }
@@ -4358,7 +4359,8 @@ const layoutRowHTML = (l,depth) =>
    back under its folder, so it is only ever in the tree once */
 function floorRowHTML(fl,depth){
   const open=treeOpen.has(fl.id), rooms=floorLayouts(fl.id);
-  let html=`<div class="tree-row floor-row" data-floor="${fl.id}" style="padding-left:${depth*12+4}px" aria-expanded="${open}">
+  const active=floorMode() && curFloorId()===fl.id;
+  let html=`<div class="tree-row floor-row ${active?'active':''}" data-floor="${fl.id}" style="padding-left:${depth*12+4}px" aria-expanded="${open}" ${active?'aria-current="true"':''}>`+`
       <button type="button" class="caret" data-act="toggle" aria-label="${open?'Collapse':'Expand'}">${svgI(open?'chev-d':'chev-r')}</button>
       <span class="ico">${svgI('floor')}</span><span class="nm">${esc(fl.name)}</span>
       <span class="tagchip">${rooms.length} room${rooms.length===1?'':'s'}</span>
@@ -4393,8 +4395,20 @@ function renderTree(){ $('layoutTree').innerHTML=renderTreeLevel(null,0); }
 const treeBox=$('layoutTree');
 const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layout="'+id+'"],[data-floor="'+id+'"]');
 
+/* clicking a floor switches the canvas to that floor's arrangement, not just the tree
+   row — Floor mode has no floor id of its own (see curFloorId), so the anchor is
+   whichever room on it is already active, or its first room otherwise */
+function enterFloor(id){
+  const rooms=floorLayouts(id);
+  if(!rooms.length){ flash('Add a room to this floor first'); return; }
+  if(curFloorId()!==id) activateLayout(rooms.find(l=>l.id===S.active)?.id || rooms[0].id);
+  setMode('floor');
+  renderAll(); save();
+}
+
 treeBox.addEventListener('click', e=>{
   const more=e.target.closest('[data-act=more]');
+  const caret=e.target.closest('[data-act=toggle]');
   const fRow=e.target.closest('.folder-row');
   const lRow=e.target.closest('.layout-row');
   const flRow=e.target.closest('.floor-row');
@@ -4405,10 +4419,17 @@ treeBox.addEventListener('click', e=>{
     else if(lRow) layoutMenu(lRow.dataset.layout, more);
     return;
   }
+  if(caret){
+    cancelSingleClick();
+    const id = flRow ? flRow.dataset.floor : fRow.dataset.folder;
+    treeOpen.has(id)?treeOpen.delete(id):treeOpen.add(id);
+    renderTree();
+    return;
+  }
   // held back briefly so a second click can turn into a rename instead
   if(flRow){
     const id=flRow.dataset.floor;
-    singleClick(()=>{ treeOpen.has(id)?treeOpen.delete(id):treeOpen.add(id); renderTree(); });
+    singleClick(()=>{ enterFloor(id); });
     return;
   }
   if(fRow){
@@ -4418,7 +4439,7 @@ treeBox.addEventListener('click', e=>{
   }
   if(lRow){
     const id=lRow.dataset.layout;
-    singleClick(()=>{ activateLayout(id); renderAll(); fit(); save(); });
+    singleClick(()=>{ activateLayout(id); setMode('room'); renderAll(); fit(); save(); });
   }
 });
 treeBox.addEventListener('dblclick', e=>{
@@ -4736,11 +4757,10 @@ const newFolder = () =>
 $('btnRoomsMore').addEventListener('click', e=>{
   openMenu(e.currentTarget, [
     {label:'New folder', fn:newFolder},
-    {label:'New floor', fn:newFloor},
-    {sep:true},
-    {label:'Import a blueprint…', fn:()=>blueprintDialog()}
+    {label:'New floor', fn:newFloor}
   ], 'Rooms');
 });
+$('btnImportBlueprint').addEventListener('click', ()=>blueprintDialog());
 $('btnNewLayout').addEventListener('click', ()=>{
   askText('New room','Name','Room '+(S.layouts.length+1), n=>{
     const l=blankLayout(n,null); S.layouts.push(l); activateLayout(l.id);
@@ -6409,6 +6429,220 @@ function bpRectify(regions, tPart){
   return regions;
 }
 
+/* ---- blueprint: dividers ----
+   An open plan is one region with two names standing in it, so the only thing that can
+   tell a foyer from the living area is a line somebody draws. A divider is a SEED POINT
+   and an axis, never a polygon operation: stamp one pixel of barrier outwards from the
+   seed until it meets the barrier already there, then derive the regions exactly as the
+   first pass did. Deleting one and re-deriving is what merges the rooms back again,
+   which is why there is no polygon union anywhere in this file.
+
+   One pixel, not a wall. The two traced faces come out two pixels apart, bpRectify
+   clusters them onto a single line, and the rooms are therefore created touching.
+   wallOff on both of those edges is then what makes floorSnapCandidates call the pair
+   'open' and floorEdgeDepths draw no wall between them. */
+function bpSplitRun(bar,w,h,axis,x,y){
+  const vert = axis==='v';
+  const c=Math.round(vert?x:y), p=Math.round(vert?y:x);
+  const N = vert ? h : w;
+  if(c<0 || c>=(vert?w:h) || p<0 || p>=N) return null;
+  const at = a => vert ? a*w+c : c*w+a;
+  if(bar[at(p)]) return null;                       // the seed landed inside a wall
+  let a0=p, a1=p;
+  while(a0>0 && !bar[at(a0-1)]) a0--;
+  while(a1<N-1 && !bar[at(a1+1)]) a1++;
+  return {axis, c, a0, a1, at};
+}
+function bpStampSplit(bar,w,h,s){
+  const r=bpSplitRun(bar,w,h,s.axis,s.x,s.y);
+  if(!r) return null;
+  for(let a=r.a0;a<=r.a1;a++) bar[r.at(a)]=1;
+  return {axis:r.axis, c:r.c, a0:r.a0, a1:r.a1};
+}
+const bpCutLen=(bar,w,h,axis,x,y)=>{ const r=bpSplitRun(bar,w,h,axis,x,y); return r ? r.a1-r.a0+1 : Infinity; };
+/* Between two names the cut wants the narrowest neck, which on a real plan is the cased
+   opening between them — that is the one place the two spaces pinch. */
+function bpSeedSplit(bar,w,h,axis,lo,hi,perp){
+  const mid=(lo+hi)/2, step=Math.max(1, Math.round((hi-lo)/120));
+  let best=null;
+  for(let c=Math.round(lo); c<=Math.round(hi); c+=step){
+    const x = axis==='v' ? c : perp, y = axis==='v' ? perp : c;
+    const len=bpCutLen(bar,w,h,axis,x,y);
+    if(!isFinite(len)) continue;
+    const score=len + Math.abs(c-mid)*0.3;
+    if(!best || score<best.score) best={score, x, y};
+  }
+  return best ? {id:uid(), axis, x:best.x, y:best.y} : null;
+}
+
+/* ---- blueprint: name labels ----
+   S5 is what READS these; all a divider needs is where they are. The glyphs are exactly
+   the components the largest-component step throws away, so finding them costs nothing,
+   and the drawing's own median glyph height is the only scale any of it uses.
+
+   Words are merged twice: along a baseline into words and lines, then down the page into
+   one block per name. A room's name sits above its dimensions, and counting that second
+   line as a second name would propose a split down the middle of every room here. */
+const bpInkMedian=(vals, wts)=>{
+  if(!vals.length) return 0;
+  const idx=vals.map((_,i)=>i).sort((a,b)=>vals[a]-vals[b]);
+  let tot=0; for(const w of wts) tot+=w;
+  let acc=0;
+  for(const i of idx){ acc+=wts[i]; if(acc>=tot/2) return vals[i]; }
+  return vals[idx[idx.length-1]];
+};
+function bpLabelBlocks(comps, pick, tPart){
+  const cand=comps.filter(c=> (!pick||c.id!==pick.id) && c.area>=6 && Math.max(c.bw,c.bh)<=tPart*6);
+  /* a plan with this many loose marks on it is hatching, not lettering; proposing
+     nothing leaves the rooms exactly as they came out, which is the safe answer */
+  if(cand.length<2 || cand.length>1500) return {blocks:[], gh:tPart};
+  /* Weighted by ink, because a plain median counts a dimension tick the same as a letter
+     and there are more ticks, hatching dashes and stray specks on a drawing than there
+     are glyphs. Unweighted, the test plan's median glyph is four pixels tall and the
+     filter below then throws away every actual letter. */
+  const gh=bpInkMedian(cand.map(c=>c.bh), cand.map(c=>c.area)) || tPart;
+  const glyphs=cand.filter(c=> c.bh>=gh*0.4 && c.bh<=gh*2.2 && c.bw<=gh*3);
+  if(glyphs.length<2) return {blocks:[], gh};
+  /* One pairwise sweep and a union-find, not merge-and-restart: growing a box and
+     rescanning is O(n²) PER MERGE, which is a quarter of a second of the detection
+     budget spent on lettering nobody is going to read until S5. */
+  const group=(boxes, gap, along)=>{
+    const par=boxes.map((_,i)=>i);
+    const find=i=>{ while(par[i]!==i){ par[i]=par[par[i]]; i=par[i]; } return i; };
+    for(let i=0;i<boxes.length;i++)
+      for(let j=i+1;j<boxes.length;j++){
+        const a=boxes[i], b=boxes[j];
+        const d=along==='x' ? Math.max(0, Math.max(a.x0,b.x0)-Math.min(a.x1,b.x1))
+                            : Math.max(0, Math.max(a.y0,b.y0)-Math.min(a.y1,b.y1));
+        if(d>gap) continue;
+        const ov=along==='x' ? Math.min(a.y1,b.y1)-Math.max(a.y0,b.y0)
+                             : Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0);
+        const need=along==='x' ? 0.4*Math.min(a.y1-a.y0, b.y1-b.y0)
+                               : 0.3*Math.min(a.x1-a.x0, b.x1-b.x0);
+        if(ov<need) continue;
+        const ra=find(i), rb=find(j);
+        if(ra!==rb) par[ra]=rb;
+      }
+    const by=new Map();
+    for(let i=0;i<boxes.length;i++){
+      const b=boxes[i], r=find(i), g=by.get(r);
+      if(!g) by.set(r, {x0:b.x0, y0:b.y0, x1:b.x1, y1:b.y1, n:b.n});
+      else { g.x0=Math.min(g.x0,b.x0); g.y0=Math.min(g.y0,b.y0);
+             g.x1=Math.max(g.x1,b.x1); g.y1=Math.max(g.y1,b.y1); g.n+=b.n; }
+    }
+    return Array.from(by.values());
+  };
+  let boxes=group(glyphs.map(c=>({x0:c.x0,y0:c.y0,x1:c.x1,y1:c.y1,n:1})), gh*0.9, 'x');
+  boxes=group(boxes, gh*2.0, 'y');       // a name and the dimensions under it are one block
+  const blocks=boxes.filter(b=> b.n>=3 && b.x1-b.x0 >= gh*1.5)
+    .map(b=>({x0:b.x0,y0:b.y0,x1:b.x1,y1:b.y1,cx:(b.x0+b.x1)/2,cy:(b.y0+b.y1)/2,n:b.n}));
+  return {blocks, gh};
+}
+/* Recursive bisection on the names, splitting at the widest gap between them each time.
+   Two names all but touching are one name over its own dimension line that failed to
+   merge, not two rooms, so a gap under a few glyph heights proposes nothing. */
+function bpProposeSplits(regions, blocks, bar, w, h, tPart, gh){
+  const out=[];
+  for(const r of regions){
+    const mine=(r.labels||[]).map(i=>blocks[i]);
+    if(mine.length<2) continue;
+    const rec=(set, depth)=>{
+      if(set.length<2 || depth>2) return;
+      const sx=set.map(b=>b.cx), sy=set.map(b=>b.cy);
+      const spread=a=>Math.max.apply(null,a)-Math.min.apply(null,a);
+      const axis = spread(sx)>=spread(sy) ? 'v' : 'h';
+      const sorted=set.slice().sort((p,q)=> axis==='v' ? p.cx-q.cx : p.cy-q.cy);
+      let gi=-1, gbest=-1;
+      for(let i=0;i<sorted.length-1;i++){
+        const g = axis==='v' ? sorted[i+1].x0-sorted[i].x1 : sorted[i+1].y0-sorted[i].y1;
+        if(g>gbest){ gbest=g; gi=i; }
+      }
+      if(gi<0 || gbest < Math.max(gh*4, tPart*6)) return;
+      const A=sorted.slice(0,gi+1), B=sorted.slice(gi+1);
+      const a=A[A.length-1], b=B[0];
+      const s = axis==='v' ? bpSeedSplit(bar,w,h,'v',a.x1,b.x0,(a.cy+b.cy)/2)
+                           : bpSeedSplit(bar,w,h,'h',a.y1,b.y0,(a.cx+b.cx)/2);
+      if(s) out.push(s);
+      rec(A,depth+1); rec(B,depth+1);
+    };
+    rec(mine,0);
+  }
+  return out;
+}
+
+/* ---- blueprint: regions ----
+   The tail of detection, lifted out whole so that moving a divider runs exactly the same
+   code the first pass ran. Nothing here may depend on how it was reached. */
+function bpAnchors(lab,w,c){
+  const hits=[], sy=Math.max(1, Math.floor(c.bh/6)), sx=Math.max(1, Math.floor(c.bw/6));
+  for(let y=c.y0;y<=c.y1;y+=sy)
+    for(let x=c.x0;x<=c.x1;x+=sx)
+      if(lab[y*w+x]===c.id){ hits.push(y*w+x); if(hits.length>=36) return hits; }
+  return hits;
+}
+/* A region's id is what the name typed into it is filed under, so it has to survive a
+   divider being dragged. Each previous region claims whichever new region holds most of
+   its sample points; when one splits in two the bigger half keeps the name and the other
+   half is new. */
+function bpIdentify(regions, lab, prev){
+  const byCid=new Map();
+  for(const r of regions) byCid.set(r.cid, r);
+  const claims=new Map();
+  for(const p of (prev||[])){
+    const tally=new Map();
+    for(const a of (p.anchors||[])){
+      const id=lab[a]; if(!id) continue;
+      const r=byCid.get(id); if(!r) continue;
+      tally.set(r, (tally.get(r)||0)+1);
+    }
+    let bestR=null, bestN=0;
+    tally.forEach((n,r)=>{ if(n>bestN){ bestN=n; bestR=r; } });
+    if(!bestR) continue;
+    const cur=claims.get(bestR);
+    if(!cur || bestN>cur.n || (bestN===cur.n && (p.areaPx||0)>(cur.p.areaPx||0))) claims.set(bestR,{p,n:bestN});
+  }
+  for(const r of regions){
+    const cl=claims.get(r);
+    r.id = cl ? cl.p.id : uid();
+  }
+}
+function bpDeriveRegions(barrier, w, h, tPart, splits, blocks, prev){
+  const bar = (splits && splits.length) ? barrier.slice() : barrier;
+  const spans={};
+  for(const s of (splits||[])){ const sp=bpStampSplit(bar,w,h,s); if(sp) spans[s.id]=sp; }
+  const out=bpLeak(bar,w,h);
+  const inner=new Uint8Array(w*h);
+  for(let i=0;i<w*h;i++) inner[i]=(!bar[i] && !out.outside[i])?1:0;
+  const rl=bpLabel8(inner,w,h);
+  const minArea=Math.pow(tPart*5,2);
+  const regions=[];
+  for(const c of rl.comps){
+    /* a room is not eleven inches wide — that is a wall cavity or a hatching gap */
+    if(c.area<minArea || Math.min(c.bw,c.bh)<tPart*3) continue;
+    let start=-1;
+    for(let y=c.y0;y<=c.y1 && start<0;y++)
+      for(let x=c.x0;x<=c.x1;x++) if(rl.lab[y*w+x]===c.id){ start=y*w+x; break; }
+    if(start<0) continue;
+    const chain=bpTrace(rl.lab,c.id,w,h,start, 8*(c.bw+c.bh)+64);
+    if(chain.length<8) continue;
+    const eps=Math.max(1.5, tPart*0.35);
+    const poly=bpOrtho(bpRDP(chain,eps), eps);
+    if(poly.length<3) continue;
+    regions.push({id:null, cid:c.id, name:'', polyPx:poly, areaPx:c.area,
+                  bboxPx:[c.x0,c.y0,c.x1,c.y1], anchors:bpAnchors(rl.lab,w,c), labels:[]});
+  }
+  for(let i=0;i<(blocks||[]).length;i++){
+    const b=blocks[i], x=Math.round(b.cx), y=Math.round(b.cy);
+    if(x<0||y<0||x>=w||y>=h) continue;
+    const id=rl.lab[y*w+x]; if(!id) continue;
+    const r=regions.find(q=>q.cid===id); if(r) r.labels.push(i);
+  }
+  bpIdentify(regions, rl.lab, prev);
+  bpRectify(regions, tPart);
+  regions.sort((a,b)=>b.areaPx-a.areaPx);
+  return {regions, spans, leak:out.frac};
+}
+
 /* ---- blueprint: detection ----
    Component labelling comes FIRST, on the raw ink, before any thickness work. Text is
    removed by topology, not by stroke weight: bold label glyphs carry the same 9-13px
@@ -6523,28 +6757,18 @@ function bpAnalyse(work, opts){
       for(let i=0;i<w*h;i++) barrier[i]=(wall[i]||skin[i]||cavity[i])?1:0;
       const cuts=bpClassifyCuts(bpCloseGaps(barrier,w,h,lines,tPart), structure, wall, w, h, tPart);
 
-      const out=bpLeak(barrier,w,h);
-      const inner=new Uint8Array(w*h);
-      for(let i=0;i<w*h;i++) inner[i]=(!barrier[i] && !out.outside[i])?1:0;
-      const rl=bpLabel8(inner,w,h);
-      const minArea=Math.pow(tPart*5,2);
-      const regions=[];
-      for(const c of rl.comps){
-        /* a room is not eleven inches wide — that is a wall cavity or a hatching gap */
-        if(c.area<minArea || Math.min(c.bw,c.bh)<tPart*3) continue;
-        let start=-1;
-        for(let y=c.y0;y<=c.y1 && start<0;y++)
-          for(let x=c.x0;x<=c.x1;x++) if(rl.lab[y*w+x]===c.id){ start=y*w+x; break; }
-        if(start<0) continue;
-        const chain=bpTrace(rl.lab,c.id,w,h,start, 8*(c.bw+c.bh)+64);
-        if(chain.length<8) continue;
-        const eps=Math.max(1.5, tPart*0.35);
-        let poly=bpOrtho(bpRDP(chain,eps), eps);
-        if(poly.length<3) continue;
-        regions.push({id:uid(), name:'', polyPx:poly, areaPx:c.area, bboxPx:[c.x0,c.y0,c.x1,c.y1]});
-      }
-      bpRectify(regions, tPart);
-      regions.sort((a,b)=>b.areaPx-a.areaPx);
+      /* Derived twice on purpose. The first pass has no dividers in it, and it is what
+         says which region each name is standing in; only then is there anything to
+         propose. The second pass is the one the review screen opens on, so nothing has
+         to be re-derived before the first frame. */
+      const {blocks, gh}=bpLabelBlocks(comps, pick, tPart);
+      const first=bpDeriveRegions(barrier, w, h, tPart, [], blocks, null);
+      const splits=bpProposeSplits(first.regions, blocks, barrier, w, h, tPart, gh);
+      const derived = splits.length
+        ? bpDeriveRegions(barrier, w, h, tPart, splits, blocks, first.regions)
+        : first;
+      const regions=derived.regions;
+      const out={frac:first.leak};
       /* Segments, not {wall index, offset}: every edge index is invalidated by winding
          normalisation, short-edge merging and collinear dropping, so hand over geometry
          and let the app layer re-attach to whatever edge survives. */
@@ -6560,12 +6784,16 @@ function bpAnalyse(work, opts){
 
       step('text');
       res({
-        scale:null, regions, splits:cuts.filter(c=>c.kind==='divider'), openings, fixtures:[],
-        cuts, lines, tPart, tExt,
+        scale:null, regions, spans:derived.spans, splits, openings, fixtures:[],
+        cuts, lines, tPart, tExt, labels:blocks, gh,
+        /* kept so a divider can be moved without re-reading the photo; it is a byte per
+           pixel and it never goes near S */
+        barrier, w, h,
         debug:{w, h, thresholds:th, compCount:comps.length, structureArea:pick?pick.area:0,
                structureFill:pick?pick.area/(pick.bw*pick.bh):0, leakFraction:leak.frac,
                tSplit, tPart, tExt, bandCount:bands.length, lineCount:lines.length,
-               cutCount:cuts.length, regionCount:regions.length, barrierLeak:out.frac}
+               cutCount:cuts.length, regionCount:regions.length, barrierLeak:out.frac,
+               labelCount:blocks.length, splitCount:splits.length}
       });
     };
     /* Double rAF so "Finding the rooms" has definitively painted before the main thread
@@ -6604,6 +6832,7 @@ function bpAttachOpenings(layouts, openings, edits, mm, G, wallMm){
          allowance misses every window in a thick exterior shell. */
       let bi=-1, bd=Math.max(wallMm, (o.tPx||0)*mm)*1.35;
       for(let i=0;i<n;i++){
+        if(wallIsOff(l.room,i)) continue;      // a divider has no wall to punch a door through
         const d=ptSegDist(lm, P[i], P[(i+1)%n]).d;
         if(d<bd){ bd=d; bi=i; }
       }
@@ -6652,14 +6881,103 @@ function bpEffWall(){
   if(!mm||!st.proposal) return 114;
   return Math.max(50, Math.round((st.proposal.tPart||14)*mm));
 }
+/* Every divider that is still standing, proposal and hand-added alike, with whatever the
+   review screen has done to it folded in. The proposal itself is never touched. */
+function bpLiveSplits(){
+  const st=bpState; if(!st||!st.proposal||!st.edits) return [];
+  const ed=st.edits.splits||{}, out=[];
+  for(const s of (st.proposal.splits||[]).concat(st.edits.added||[])){
+    const o=ed[s.id]||{};
+    if(o.deleted) continue;
+    out.push({id:s.id, axis:o.axis||s.axis, x:(o.x!=null?o.x:s.x), y:(o.y!=null?o.y:s.y)});
+  }
+  return out;
+}
+const bpSplitKey=()=>JSON.stringify(bpLiveSplits().map(s=>[s.axis, Math.round(s.x), Math.round(s.y)]));
+/* Re-deriving is a flood fill over the whole image, and bpRebuild runs on every keystroke
+   that changes a length — so it happens only when a divider has actually moved. */
+function bpRegionsNow(){
+  const st=bpState, k=bpSplitKey();
+  if(st.regionsKey!==k){
+    const p=st.proposal;
+    const d=bpDeriveRegions(p.barrier, p.w, p.h, p.tPart, bpLiveSplits(), p.labels, st.regions||p.regions);
+    st.regions=d.regions; st.spans=d.spans; st.regionsKey=k;
+  }
+  return st;
+}
+/* An edge that came off a divider carries no wall. Recognised by geometry, not by index:
+   bpCleanPoly drops collinear vertices and merges short edges after the trace, so any
+   index handed across from detection is stale by the time it arrives.
+
+   A divider is rarely the whole edge. Where a stub of real wall runs on past the opening
+   the two are COLLINEAR, so bpOrtho has already clustered them into one long edge — and
+   switching that edge off would delete a wall somebody drew. The span therefore gets cut
+   out of the edge as an edge of its own, which is the only thing wallOff can address.
+   Both rings are cut in step so l._bpPx keeps pointing at the same corners the room does;
+   inserting a collinear vertex cannot make a simple polygon self-intersect, and no cut is
+   made that would leave either side under the 50mm floor polySimple holds every edge to. */
+function bpMarkSeams(layouts, spans, tPart){
+  const tol=Math.max(3, tPart*0.6), MIN=60;
+  for(const l of layouts){
+    const px=l._bpPx, P=l.room.points, n=P.length;
+    const outPx=[], outP=[], seam=[], owner=[];
+    for(let i=0;i<n;i++){
+      const a=px[i], b=px[(i+1)%n], A=P[i], B=P[(i+1)%n];
+      const dx=b[0]-a[0], dy=b[1]-a[1];
+      const mmLen=Math.hypot(B[0]-A[0], B[1]-A[1]);
+      outPx.push(a.slice()); outP.push(A.slice());
+      let hit=null;
+      if(Math.hypot(dx,dy)>=1) for(const sid in spans){
+        const s=spans[sid], vert=s.axis==='v';
+        const across = vert ? Math.abs(dx) : Math.abs(dy);
+        const along  = vert ? Math.abs(dy) : Math.abs(dx);
+        if(across>tol || along<=across) continue;
+        const c = vert ? (a[0]+b[0])/2 : (a[1]+b[1])/2;
+        if(Math.abs(c-s.c)>tol) continue;
+        const k = vert ? 1 : 0;                        // the coordinate running along the edge
+        const t0=a[k], t1=b[k];
+        const o0=Math.max(Math.min(t0,t1), s.a0), o1=Math.min(Math.max(t0,t1), s.a1);
+        if(o1<=o0 || Math.abs(t1-t0)<1e-6) continue;
+        let fa=(o0-t0)/(t1-t0), fb=(o1-t0)/(t1-t0);
+        if(fa>fb){ const t=fa; fa=fb; fb=t; }
+        if((fb-fa)*mmLen < MIN) continue;              // a nick in the wall, not a way through
+        hit={sid, fa, fb};
+        break;
+      }
+      if(!hit){ seam.push(false); owner.push(null); continue; }
+      const cuts=[];
+      for(const f of [hit.fa, hit.fb]) if(f*mmLen>MIN && (1-f)*mmLen>MIN) cuts.push(f);
+      cuts.sort((p,q)=>p-q);
+      const bounds=[0].concat(cuts,[1]);
+      for(let s=0;s<bounds.length-1;s++){
+        if(s>0){
+          const f=bounds[s];
+          outPx.push([a[0]+dx*f, a[1]+dy*f]);
+          outP.push([A[0]+(B[0]-A[0])*f, A[1]+(B[1]-A[1])*f]);
+        }
+        const mid=(bounds[s]+bounds[s+1])/2;
+        const on = mid>=hit.fa-1e-9 && mid<=hit.fb+1e-9;
+        seam.push(on); owner.push(on?hit.sid:null);
+      }
+    }
+    l._bpPx=outPx; l.room.points=outP;
+    syncWallOff(l.room);
+    l._bpSeams=[];
+    for(let i=0;i<seam.length;i++){
+      l.room.wallOff[i]=seam[i];
+      if(seam[i] && l._bpSeams.indexOf(owner[i])<0) l._bpSeams.push(owner[i]);
+    }
+  }
+}
 function bpRebuild(){
   const st=bpState; if(!st||!st.proposal) return {layouts:[], problems:[], area:0};
   const e=st.edits, mm=e.scale&&e.scale.mmPerPx;
   const out={layouts:[], problems:[], area:0};
   if(!mm) return out;
+  const reg=bpRegionsNow();
   const wall=bpEffWall();
   const built=[];
-  for(const r of st.proposal.regions){
+  for(const r of reg.regions){
     const ed=e.spaces[r.id]||(e.spaces[r.id]={name:'',kind:'room',touched:false});
     if(ed.kind==='skip') continue;
     const P=bpCleanPoly(r.polyPx.map(p=>[p[0]*mm, p[1]*mm]));
@@ -6689,6 +7007,8 @@ function bpRebuild(){
     out.layouts.push(l);
     out.area+=polyArea(l.room.points);
   }
+  /* before the openings, so a door never attaches itself to a divider */
+  bpMarkSeams(out.layouts, reg.spans||{}, st.proposal.tPart);
   out.openingRooms=bpAttachOpenings(out.layouts, st.proposal.openings||[], e, mm, G, wall);
   for(const l of out.layouts) clampOpenings(l);
   return out;
@@ -6705,6 +7025,7 @@ function blueprintDialog(keep, targetFloorId){
   if(!keep) bpDispose();
   if(!bpState) bpState={file:null,img:null,url:null,full:null,crop:null,cropRect:null,work:null,
                         proposal:null,detectedFor:null,edits:null,draft:null,cal:null,worker:null,
+                        regions:null,spans:null,regionsKey:null,addSplit:false,drag:null,
                         targetFloorId:targetFloorId||null};
   const has=!!bpState.full;
   openModal('Import a blueprint', `
@@ -6878,7 +7199,12 @@ function bpDetectDialog(){
     bpState.proposal=p;
     bpState.detectedFor=JSON.stringify(bpState.cropRect);
     /* left null so the draft takes the thickness measured off the drawing */
-    bpState.edits={scale:p.scale||null, wallMm:null, extMm:null, spaces:{}, openings:{}, items:{}};
+    bpState.edits={scale:p.scale||null, wallMm:null, extMm:null, spaces:{}, openings:{},
+                   items:{}, splits:{}, added:[]};
+    /* detection already derived with the proposed dividers standing, so the review opens
+       without re-deriving anything */
+    bpState.regions=p.regions; bpState.spans=p.spans||{}; bpState.regionsKey=bpSplitKey();
+    bpState.addSplit=false; bpState.drag=null;
     bpReviewDialog();
   });
 }
@@ -6909,7 +7235,7 @@ function bpRenderReview(){
   const st=bpState; st.draft=bpRebuild();
   /* the list is rebuilt from innerHTML, so nothing is focused or hovered afterwards and
      a stale highlight would point at the wrong room */
-  st.focusRid=null; st.hoverRid=null;
+  st.focusRid=null; st.hoverRid=null; st.hoverSid=null;
   const d=st.draft, e=st.edits, side=$('bpSide');
   if(!side) return;
   const warn=bpScaleSanity(d);
@@ -6950,11 +7276,88 @@ function bpRenderReview(){
       }).join('')}</ul>
       ${d.problems.map(p=>`<p class="hint warn">${esc(p.name)}: ${esc(p.why)} — it'll be left out.</p>`).join('')}
     </div>
+    ${bpSplitListHTML(d)}
     ${bpOpenListHTML(d)}`;
   $('moOk').textContent='Create '+plural(d.layouts.length,'room');
   $('moOk').disabled = !d.layouts.length || !e.scale;
   bpBindReview();
   bpDrawReview();
+}
+/* One row per divider. The rooms either side are named on the row, because a dashed line
+   over a photo is not by itself an answer to "what did that just do" — and a divider that
+   separates nothing is the one failure this screen has to be able to show. */
+function bpSplitListHTML(d){
+  const st=bpState, e=st.edits;
+  const all=(st.proposal.splits||[]).concat(e.added||[]);
+  const rows=all.map(s=>{
+    const ed=e.splits[s.id]||(e.splits[s.id]={});
+    const gone=!!ed.deleted;
+    const names=d.layouts.filter(l=>(l._bpSeams||[]).indexOf(s.id)>=0).map(l=>l.name);
+    const where = gone ? 'merged back into one room'
+                : names.length>1 ? 'open between '+names.join(' and ')
+                : 'not separating anything — drag it';
+    return `<li data-sid="${esc(s.id)}"${gone||names.length<2?' class="bad"':''}>
+      <span class="lmain"><span class="nm">Divider</span><span class="meta">${esc(where)}</span></span>
+      <span class="lact">
+        <button type="button" class="btn quiet sm" data-bp="sturn"${gone?' disabled':''}>Turn</button>
+        <button type="button" class="btn quiet sm icon" data-bp="sdel" title="${gone?'Divide again':'Merge'}">${svgI(gone?'plus':'close')}</button>
+      </span></li>`;
+  });
+  return `<div class="group">
+    <div class="group-title">${esc(plural(rows.length,'divider'))}</div>
+    ${rows.length?`<ul class="list" id="bpSplits">${rows.join('')}</ul>`:''}
+    <div class="bp-row mt">
+      <button type="button" class="btn sm" id="bpAddSplit" aria-pressed="${st.addSplit?'true':'false'}">${st.addSplit?'Click where to divide':'Add a divider'}</button>
+    </div>
+    <p class="hint">A divider splits one open space into two named rooms with no wall between them. Drag a dashed line to move it.</p>
+  </div>`;
+}
+function bpBindSplits(){
+  const st=bpState, e=st.edits, ul=$('bpSplits');
+  if(ul) for(const li of ul.querySelectorAll('li')){
+    const id=li.dataset.sid, ed=e.splits[id];
+    li.querySelector('[data-bp=sturn]').addEventListener('click', ()=>{
+      const cur=bpLiveSplits().find(s=>s.id===id);
+      if(!cur) return;
+      ed.axis = cur.axis==='v' ? 'h' : 'v';
+      bpRenderReview();
+    });
+    li.querySelector('[data-bp=sdel]').addEventListener('click', ()=>{ ed.deleted=!ed.deleted; bpRenderReview(); });
+    li.addEventListener('pointerenter', ()=>{ st.hoverSid=id; bpDrawReview(); });
+    li.addEventListener('pointerleave', ()=>{ if(st.hoverSid===id){ st.hoverSid=null; bpDrawReview(); } });
+  }
+  $('bpAddSplit').addEventListener('click', ()=>{
+    st.addSplit=!st.addSplit;
+    if(st.addSplit){ st.cal=null; $('bpCalRow').hidden=true; }
+    bpRenderReview();
+  });
+}
+/* The axis is the one that cuts the shorter way across whatever you clicked into, because
+   a divider is a doorway you are standing in and doorways are the narrow way through. */
+function bpAddSplitAt(p){
+  const st=bpState, P=st.proposal;
+  const lv=bpCutLen(P.barrier,P.w,P.h,'v',p[0],p[1]);
+  const lh=bpCutLen(P.barrier,P.w,P.h,'h',p[0],p[1]);
+  if(!isFinite(lv) && !isFinite(lh)){ moError('That is inside a wall — click somewhere inside a room'); return; }
+  moError('');
+  st.edits.added.push({id:uid(), axis: lv<=lh ? 'v' : 'h', x:p[0], y:p[1]});
+  bpRenderReview();
+}
+/* `scale` is image pixels per screen pixel: the stage shrinks a big photo to fit, so a
+   grab radius fixed in image space would be a couple of screen pixels wide on one plan
+   and half a room on another. */
+function bpSplitAt(p, scale){
+  const st=bpState, spans=st.spans||{}, tol=Math.max(6, 11*(scale||1));
+  let best=null;
+  for(const s of bpLiveSplits()){
+    const sp=spans[s.id]; if(!sp) continue;
+    const vert=sp.axis==='v';
+    const along = vert ? p[1] : p[0];
+    if(along<sp.a0-tol || along>sp.a1+tol) continue;
+    const d=Math.abs((vert?p[0]:p[1]) - sp.c);
+    if(d<=tol && (!best||d<best.d)) best={id:s.id, axis:sp.axis, d};
+  }
+  return best;
 }
 /* One row per opening, not one per room, even though a door between two rooms is created
    twice. Two rows for the same door would read as two doors and invite deleting one. */
@@ -7045,19 +7448,51 @@ function bpBindReview(){
     li.addEventListener('pointerleave', ()=>{ if(bpState.hoverRid===rid){ bpState.hoverRid=null; bpDrawReview(); } });
     li.querySelector('[data-bp=kind]').addEventListener('change', ev=>{ ed.kind=ev.target.value; bpRenderReview(); });
   }
+  bpBindSplits();
   bpBindOpens();
 }
 function bpMountReviewStage(){
   const cv2=$('bpRev'), work=bpState.work;
   cv2.width=work.width; cv2.height=work.height;
-  cv2.addEventListener('pointerdown', ev=>{
-    const c=bpState.cal; if(!c) return;
+  const at=ev=>{
     const b=cv2.getBoundingClientRect();
-    const p=[(ev.clientX-b.left)*(work.width/b.width), (ev.clientY-b.top)*(work.height/b.height)];
-    if(!c.a||c.b){ c.a=p; c.b=null; $('bpCalMsg').textContent='Now click the other end.'; }
-    else { c.b=p; $('bpCalMsg').textContent='How long is that wall?'; $('bpCalLen').focus(); }
+    return [(ev.clientX-b.left)*(work.width/b.width), (ev.clientY-b.top)*(work.height/b.height)];
+  };
+  const zoom=()=>{ const b=cv2.getBoundingClientRect(); return b.width ? work.width/b.width : 1; };
+  cv2.addEventListener('pointerdown', ev=>{
+    const p=at(ev), c=bpState.cal;
+    if(c){
+      if(!c.a||c.b){ c.a=p; c.b=null; $('bpCalMsg').textContent='Now click the other end.'; }
+      else { c.b=p; $('bpCalMsg').textContent='How long is that wall?'; $('bpCalLen').focus(); }
+      bpDrawReview();
+      return;
+    }
+    if(bpState.addSplit){ bpState.addSplit=false; bpAddSplitAt(p); return; }
+    const hit=bpSplitAt(p, zoom());
+    if(!hit) return;
+    /* the dashed line follows the pointer, but the regions are only re-derived on the way
+       up — a flood fill per pointermove is a slideshow */
+    bpState.drag={id:hit.id, axis:hit.axis, x:p[0], y:p[1]};
+    try{ cv2.setPointerCapture(ev.pointerId); }catch(e){}
     bpDrawReview();
   });
+  cv2.addEventListener('pointermove', ev=>{
+    if(!bpState||!bpState.drag) return;
+    const p=at(ev);
+    bpState.drag.x=p[0]; bpState.drag.y=p[1];
+    bpDrawReview();
+  });
+  const drop=()=>{
+    const d=bpState&&bpState.drag; if(!d) return;
+    bpState.drag=null;
+    const ed=bpState.edits.splits[d.id]||(bpState.edits.splits[d.id]={});
+    /* perpendicular only: the seed keeps its place along the line, so a divider slides
+       across the room it is in and cannot be flicked into the next one */
+    if(d.axis==='v') ed.x=d.x; else ed.y=d.y;
+    bpRenderReview();
+  };
+  cv2.addEventListener('pointerup', drop);
+  cv2.addEventListener('pointercancel', drop);
   bpDrawReview();
 }
 /* every colour here comes from the canvas palette, and doors/windows are told apart
@@ -7088,6 +7523,23 @@ function bpDrawReview(){
   };
   for(const l of d.layouts) if(l._bpRegion!==lit) paint(l);
   for(const l of d.layouts) if(l._bpRegion===lit) paint(l);
+  /* Dividers are dashed because they are not walls, and nothing about them may read as
+     one: after import there is no wall here and the floor runs straight through. */
+  const spans=bpState.spans||{}, drag=bpState.drag;
+  for(const s of bpLiveSplits()){
+    const sp=spans[s.id]; if(!sp) continue;
+    const vert=sp.axis==='v', held = drag&&drag.id===s.id;
+    const c0 = held ? (vert?drag.x:drag.y) : sp.c;
+    const A = vert ? [c0,sp.a0] : [sp.a0,c0], B = vert ? [c0,sp.a1] : [sp.a1,c0];
+    const on = held || bpState.hoverSid===s.id;
+    x.save();
+    x.setLineDash([lw*5, lw*4]);
+    x.strokeStyle=C.surface; x.lineWidth=lw*3.4;
+    x.beginPath(); x.moveTo(A[0],A[1]); x.lineTo(B[0],B[1]); x.stroke();
+    x.strokeStyle = on ? C.ok : C.ink; x.lineWidth = on ? lw*2 : lw*1.4;
+    x.beginPath(); x.moveTo(A[0],A[1]); x.lineTo(B[0],B[1]); x.stroke();
+    x.restore();
+  }
   const c=bpState.cal;
   if(c&&c.a){
     const r=Math.max(3, work.width/220);
@@ -7113,7 +7565,7 @@ function bpCommit(){
   if(!target) S.floors.push(floor);
   const ids=[];
   for(const l of d.layouts){
-    delete l._bpRegion; delete l._bpPx;
+    delete l._bpRegion; delete l._bpPx; delete l._bpSeams;
     l.floorId=floor.id;
     normLayout(l);
     clampOpenings(l);
