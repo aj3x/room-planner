@@ -921,14 +921,36 @@ function uniqueId(base, taken){
 const clone = v => JSON.parse(JSON.stringify(v));
 const rectPts = (w,d) => [[0,0],[w,0],[w,d],[0,d]];
 
-function blankLayout(name,folderId){
-  return {id:uid(), name:name||'My room', folderId:folderId||null,
-    room:{points:rectPts(4270,3660), wall:114, floor:'#f5f3ee', trimOn:false, trim:19, pillars:[], iwalls:[]},
-    openings:[], placed:[], measures:[]};
+/* A "room" owns identity, folder placement and geometry. A "layout" is a furniture
+   variant of a room (openings/placed/measures) — most rooms have exactly one.
+   A layout's letter (A/B/C…) is derived from its position among S.layouts sharing
+   its roomId, not stored. */
+function blankVariant(roomId){
+  return {id:uid(), roomId, openings:[], placed:[], measures:[]};
 }
+function blankRoom(name,folderId){
+  const r={id:uid(), name:name||'My room', folderId:folderId||null,
+    room:{points:rectPts(4270,3660), wall:114, floor:'#f5f3ee', trimOn:false, trim:19, pillars:[], iwalls:[]},
+    activeLayoutId:null};
+  const v=blankVariant(r.id);
+  r.activeLayoutId=v.id;
+  return {room:r, variant:v};
+}
+function addBlankRoom(name,folderId){
+  const {room,variant}=blankRoom(name,folderId);
+  S.rooms.push(room); S.layouts.push(variant);
+  return variant;
+}
+const roomsInFolder = (pid) => S.rooms.filter(r=>(r.folderId||null)===(pid||null));
+const variantsOf = roomId => S.layouts.filter(l=>l.roomId===roomId);
+const variantLetter = id => {
+  const l=S.layouts.find(x=>x.id===id); if(!l) return '';
+  const sibs=variantsOf(l.roomId);
+  return sibs.length>1 ? String.fromCharCode(65+sibs.indexOf(l)) : '';
+};
 let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true, showWalk:false, showMeasure:true, mode:'furniture',
          planMode:'furniture', // the Room/Furniture mode to go back to when returning to the Plan screen
-         inventory:[], layouts:[blankLayout()], active:null,
+         inventory:[], rooms:[], layouts:[], active:null,
          folders:[],          // {id, name, parentId(null=root), tags:[...]}
          tagFilter:[],        // active tag chips in the Things pane
          untaggedOnly:false,  // the "Untagged" chip in the Things pane
@@ -944,7 +966,7 @@ let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true,
          marketSubs:[],        // subscribed remote marketplaces: {id, url, name, version, addedAt}
          defaultMarketDismissed:false, // user removed the built-in default marketplace subscription; don't re-add it
          uiLib:{tab:'library', libFolderId:null, marketFolderId:null}};
-S.active = S.layouts[0].id;
+S.active = addBlankRoom().id;
 
 let selSet = new Set(); // placed furniture ids (multi-select), source of truth
 let sel = null;         // last-added/primary placed furniture id; null when selSet is empty
@@ -958,14 +980,15 @@ function selectSet(ids){ selSet = new Set(ids); sel = ids.length ? ids[ids.lengt
 function selectClear(){ selSet.clear(); sel = null; }
 
 const L = () => S.layouts.find(l=>l.id===S.active) || S.layouts[0];
-const RP = () => L().room.points;
+const CR = () => S.rooms.find(r=>r.id===L().roomId) || S.rooms[0];
+const RP = () => CR().room.points;
 const itemOf = id => S.inventory.find(i=>i.id===id);
 const instOf = id => L().placed.find(p=>p.id===id);
 const openOf = id => L().openings.find(o=>o.id===id);
 const roomMode = () => S.mode==='room';
 const folderOf = id => id ? S.folders.find(f=>f.id===id) : null;
 const childFolders = pid => S.folders.filter(f=>(f.parentId||null)===(pid||null));
-const childLayouts = pid => S.layouts.filter(l=>(l.folderId||null)===(pid||null));
+const childLayouts = pid => roomsInFolder(pid);
 /* ---- how far a thing's stock reaches ----
    A folder can be marked a Floor (folder.type==='floor'): every room inside it,
    and inside any of its subfolders, shares one stock pool. A room with no Floor
@@ -977,12 +1000,16 @@ function folderChain(id){ // a folder and each of its ancestors, nearest first
 }
 const nearestFloor = fid => folderChain(fid).find(f=>f.type==='floor') || null;
 function folderUnderFloor(fid, floorId){ return folderChain(fid).some(f=>f.id===floorId); }
-/* the rooms whose placements count against stock right now */
+/* the layouts (variants) whose placements count against stock right now.
+   The room you have open always counts by its open variant, regardless of which
+   variant is marked active — editing one variant, the others don't exist. Every
+   other room in scope counts by whichever variant IT has marked active. */
 function scopeLayouts(){
-  const cur=L(); if(!cur) return [];
-  const floor=nearestFloor(cur.folderId||null);
+  const cur=L(), curRoom=CR(); if(!cur||!curRoom) return [];
+  const floor=nearestFloor(curRoom.folderId||null);
   if(!floor) return [cur];
-  return S.layouts.filter(l=>folderUnderFloor(l.folderId||null, floor.id));
+  const rooms=S.rooms.filter(r=>folderUnderFloor(r.folderId||null, floor.id));
+  return rooms.map(r=>r.id===curRoom.id ? cur : S.layouts.find(l=>l.id===r.activeLayoutId)).filter(Boolean);
 }
 function usedCount(itemId){
   let n=0;
@@ -1028,7 +1055,7 @@ function activateLayout(id){
   S.active=id; sel=null; roomSel=null;
   resetMeasureState();
   seedHistFor();
-  const fid = L() ? (L().folderId||null) : null;
+  const fid = L() ? (CR().folderId||null) : null;
   if(fid !== S.lastFolderId){ S.tagFilter = (folderOf(fid)?.tags||[]).slice(); S.untaggedOnly=false; }
   S.lastFolderId = fid;
 }
@@ -1058,7 +1085,7 @@ function tryRoomEdit(fn){
   const before = JSON.stringify(RP());
   fn();
   if(!polySimple(RP())){
-    L().room.points = JSON.parse(before);
+    CR().room.points = JSON.parse(before);
     flash('That would fold the room over itself');
     return false;
   }
@@ -1091,8 +1118,8 @@ function nearestOnWalls(pt){
    though each segment is its own independent record — same as the room's own
    corners and walls are independent points with no separate "this wall is
    connected to that one" flag. */
-const pillarOf = id => L().room.pillars.find(p=>p.id===id);
-const iwallOf = id => L().room.iwalls.find(w=>w.id===id);
+const pillarOf = id => CR().room.pillars.find(p=>p.id===id);
+const iwallOf = id => CR().room.iwalls.find(w=>w.id===id);
 function iwallGeom(w){
   const dx=w.b[0]-w.a[0], dy=w.b[1]-w.a[1], len=Math.hypot(dx,dy)||1e-9;
   const dir=[dx/len,dy/len];
@@ -1128,8 +1155,8 @@ function setIWallEndDist(w,end,dist){
    kept off everything else it might bump into */
 function obstaclePolys(){
   const out=[];
-  for(const pl of L().room.pillars) out.push({poly:worldPoly(pl,pl), name:'a pillar'});
-  for(const w of L().room.iwalls) out.push({poly:iwallPoly(w), name:'a wall'});
+  for(const pl of CR().room.pillars) out.push({poly:worldPoly(pl,pl), name:'a pillar'});
+  for(const w of CR().room.iwalls) out.push({poly:iwallPoly(w), name:'a wall'});
   return out;
 }
 /* world-space radius a drag should snap within, so pillars/wall ends catch
@@ -1143,11 +1170,11 @@ function snapWallPoint(raw, excludeId, magnetic){
     const R=snapRadius(); let best=null;
     const consider=c=>{ const d=Math.hypot(c[0]-raw[0],c[1]-raw[1]); if(d<=R&&(!best||d<best.d)) best={pt:c,d}; };
     for(const v of RP()) consider(v);
-    for(const w of L().room.iwalls){ if(w.id===excludeId) continue; consider(w.a); consider(w.b); }
+    for(const w of CR().room.iwalls){ if(w.id===excludeId) continue; consider(w.a); consider(w.b); }
     if(best) return best.pt.slice();
     const nb=nearestOnWalls(raw);
     if(nb && nb.d<=R){ const w=wallOf(nb.i); return [w.a[0]+w.dir[0]*nb.t*w.len, w.a[1]+w.dir[1]*nb.t*w.len]; }
-    for(const w of L().room.iwalls){
+    for(const w of CR().room.iwalls){
       if(w.id===excludeId) continue;
       const r=ptSegDist(raw,w.a,w.b);
       if(r.d<=R) return [w.a[0]+(w.b[0]-w.a[0])*r.t, w.a[1]+(w.b[1]-w.a[1])*r.t];
@@ -1166,7 +1193,7 @@ function isRectRoom(){
 }
 function setRectSize(w,d){
   const b=bbox(RP());
-  return tryRoomEdit(()=>{ L().room.points = RP().map(([x,y])=>[
+  return tryRoomEdit(()=>{ CR().room.points = RP().map(([x,y])=>[
     b.w>1 ? b.x0+(x-b.x0)/b.w*w : x,
     b.h>1 ? b.y0+(y-b.y0)/b.h*d : y]); });
 }
@@ -1226,7 +1253,7 @@ function blockedOpenings(){
 
 /* ------------------------- validity ------------------------- */
 function insideRoom(poly){
-  const R=RP(), t=L().room.trimOn ? L().room.trim : 0;
+  const R=RP(), t=CR().room.trimOn ? CR().room.trim : 0;
   for(const v of poly) if(!pointInPoly(v,R)) return false;
   for(let i=0;i<poly.length;i++){
     const a=poly[i], b=poly[(i+1)%poly.length];
@@ -1338,7 +1365,7 @@ function openConflicts(){
 let conflictsCache=null;
 function getConflicts(){
   const l=L();
-  const key=l.id+':'+(l._rev||0)+':'+l.room.points.length+':'+l.placed.length;
+  const key=l.id+':'+(l._rev||0)+':'+CR().room.points.length+':'+l.placed.length;
   if(conflictsCache && conflictsCache.key===key) return conflictsCache;
   conflictsCache={key, bad:conflictSet(), openBad:openConflicts()};
   return conflictsCache;
@@ -1420,7 +1447,7 @@ function doorLeafPoly(o){
   const g=openGeom(o);
   if(!g.hinge) return null;
   const dx=g.open[0]-g.hinge[0], dy=g.open[1]-g.hinge[1], len=Math.hypot(dx,dy)||1;
-  const ux=dx/len, uy=dy/len, nx=-uy, ny=ux, th=Math.min(40,(L().room.wall||114)*.4)/2;
+  const ux=dx/len, uy=dy/len, nx=-uy, ny=ux, th=Math.min(40,(CR().room.wall||114)*.4)/2;
   return [
     [g.hinge[0]+nx*th, g.hinge[1]+ny*th],
     [g.open[0]+nx*th, g.open[1]+ny*th],
@@ -1486,7 +1513,7 @@ function openingsKey(l){
   return l.openings.map(o=>[o.id,o.kind,o.wall,o.offset,o.width,o.dtype,o.hinge,o.swing].join(':')).join(',');
 }
 function walkGrid(){
-  const l=L(), key=l.id+':'+(l._rev||0)+':'+l.room.points.length+':'+l.placed.length+':'+l.room.pillars.length+':'+l.room.iwalls.length+':'+openingsKey(l);
+  const l=L(), r=CR().room, key=l.id+':'+(l._rev||0)+':'+r.points.length+':'+l.placed.length+':'+r.pillars.length+':'+r.iwalls.length+':'+openingsKey(l);
   if(walkGridCache && walkGridCache.key===key) return walkGridCache;
   walkGridCache={key, ...buildWalkGrid()};
   return walkGridCache;
@@ -1810,9 +1837,11 @@ function save(){ clearTimeout(saveT); saveT=setTimeout(()=>Store.set(KEY,JSON.st
    layout's history is seeded with a pristine baseline (before any edits)
    the moment it becomes active, so undo can always get back to "untouched". */
 const roomHist={}, furnHist={};
-const snapRoom = () => JSON.stringify({room:L().room, openings:L().openings});
+const snapRoom = () => JSON.stringify({room:CR().room, openings:L().openings});
 const snapFurn = () => JSON.stringify({placed:L().placed});
-function histEntry(map,snapFn){ const id=L().id; if(!map[id]) map[id]={stack:[snapFn()], idx:0}; return map[id]; }
+/* room geometry is shared by every variant of a room, so its undo history is keyed
+   by the room's id — every variant shares one stack. Furniture history is per variant. */
+function histEntry(map,snapFn){ const id=(map===roomHist)?CR().id:L().id; if(!map[id]) map[id]={stack:[snapFn()], idx:0}; return map[id]; }
 function seedHistFor(){ histEntry(roomHist,snapRoom); histEntry(furnHist,snapFurn); }
 function commit(map,snapFn){
   const h=histEntry(map,snapFn);
@@ -1834,7 +1863,7 @@ function stepHist(map,snapFn,applyFn,dir){
   updateHistButtons();
 }
 function applyRoomSnap(s){
-  L().room=s.room; L().openings=s.openings; roomSel=null; bumpRev();
+  CR().room=s.room; L().openings=s.openings; roomSel=null; bumpRev();
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save();
 }
 function applyFurnSnap(s){
@@ -1855,19 +1884,18 @@ function updateHistButtons(){
 /* older saves used a width/depth rectangle, N/E/S/W doors, tagless/countless items, and no folders.
    normLayout/normItem are split out so the importer can clean up one room or one thing
    lifted out of a file without pushing a whole state object through migrate(). */
-function normLayout(l){
-  l.id = l.id || uid();
-  l.name = l.name || 'My room';
-  l.room = l.room || {};
-  if(!Array.isArray(l.room.points)){
-    l.room.points = rectPts(l.room.w||4270, l.room.d||3660);
-    delete l.room.w; delete l.room.d;
+/* ---- a room's own shape: walls, pillars, interior walls, floor/trim ---- */
+function normRoomGeom(room){
+  room = room || {};
+  if(!Array.isArray(room.points)){
+    room.points = rectPts(room.w||4270, room.d||3660);
+    delete room.w; delete room.d;
   }
-  l.room.wall = l.room.wall||114;
-  l.room.floor = normHex(l.room.floor)||'#f5f3ee';
-  l.room.trim = l.room.trim||19;
-  if(!Array.isArray(l.room.pillars)) l.room.pillars=[];
-  for(const pl of l.room.pillars){
+  room.wall = room.wall||114;
+  room.floor = normHex(room.floor)||'#f5f3ee';
+  room.trim = room.trim||19;
+  if(!Array.isArray(room.pillars)) room.pillars=[];
+  for(const pl of room.pillars){
     pl.id = pl.id||uid();
     if(!pl.shape || !['rect','ellipse'].includes(pl.shape.type)) pl.shape={type:'rect',w:300,d:300};
     pl.shape.w = Math.max(10, pl.shape.w||300);
@@ -1876,48 +1904,76 @@ function normLayout(l){
     pl.y = isFinite(pl.y)?pl.y:0;
     pl.rot = isFinite(pl.rot)?pl.rot:0;
   }
-  if(!Array.isArray(l.room.iwalls)) l.room.iwalls=[];
-  for(const w of l.room.iwalls){
+  if(!Array.isArray(room.iwalls)) room.iwalls=[];
+  for(const w of room.iwalls){
     w.id = w.id||uid();
     if(!Array.isArray(w.a)||w.a.length<2) w.a=[0,0];
     if(!Array.isArray(w.b)||w.b.length<2) w.b=[300,0];
-    w.t = Math.max(10, w.t||l.room.wall);
+    w.t = Math.max(10, w.t||room.wall);
   }
-  if(!Array.isArray(l.openings)){
+  return room;
+}
+/* ---- a layout: one furniture variant of a room (openings/placed/measures), checked
+   against its room's geometry (`room`, the geometry object, not the wrapping record) ---- */
+function normVariant(v, room){
+  v.id = v.id || uid();
+  if(!Array.isArray(v.openings)){
     const map={N:0,E:1,S:2,W:3};
-    l.openings = (l.doors||[]).map(d=>({
+    v.openings = (v.doors||[]).map(d=>({
       id:d.id||uid(), kind:'door', wall:map[d.wall]??0, offset:d.offset||0, width:d.width||813,
       dtype:d.type||'hinge', hinge:d.hinge||'start', swing:d.swing||'in'
     }));
-    delete l.doors;
+    delete v.doors;
   }
-  for(const o of l.openings) o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
-  l.placed = Array.isArray(l.placed) ? l.placed.filter(p=>p&&p.itemId) : [];
-  for(const p of l.placed) if(!p.id) p.id=uid();
-  if(!Array.isArray(l.measures)) l.measures=[];
-  pruneMeasures(l);
-  if(l.folderId===undefined) l.folderId=null;
-  return l;
+  for(const o of v.openings) o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
+  v.placed = Array.isArray(v.placed) ? v.placed.filter(p=>p&&p.itemId) : [];
+  for(const p of v.placed) if(!p.id) p.id=uid();
+  if(!Array.isArray(v.measures)) v.measures=[];
+  pruneMeasures(v, room);
+  return v;
+}
+function normRoomRecord(r){
+  r.id = r.id || uid();
+  r.name = r.name || 'My room';
+  if(r.folderId===undefined) r.folderId=null;
+  r.room = normRoomGeom(r.room);
+  return r;
 }
 /* a measurement's ends point at things by id (a room wall by its index); drop any whose
    end is malformed or no longer exists. While editing, a missing end is only skipped when
    drawing, so undoing the removal of an item brings its measurements back with it. */
-function pruneMeasures(l){
-  const ids={item:l.placed, open:l.openings, pillar:l.room.pillars, iwall:l.room.iwalls};
+function pruneMeasures(v, room){
+  const ids={item:v.placed, open:v.openings, pillar:room.pillars, iwall:room.iwalls};
   const has={}; for(const k in ids) has[k]=new Set(ids[k].map(x=>x.id));
   const ok = a => !!a && typeof a==='object' &&
     (a.part==='whole' || (a.part==='swing' && a.k==='open') || ((a.part==='side'||a.part==='corner') && Number.isInteger(a.n) && a.n>=0)) &&
-    (a.k==='wall' ? Number.isInteger(a.id) && a.id>=0 && a.id<l.room.points.length : !!has[a.k] && has[a.k].has(a.id));
-  l.measures = l.measures.filter(m=>m && ok(m.a) && ok(m.b));
-  for(const m of l.measures) m.id = m.id||uid();
+    (a.k==='wall' ? Number.isInteger(a.id) && a.id>=0 && a.id<room.points.length : !!has[a.k] && has[a.k].has(a.id));
+  v.measures = v.measures.filter(m=>m && ok(m.a) && ok(m.b));
+  for(const m of v.measures) m.id = m.id||uid();
 }
-/* things in a copied or imported room get new ids; `map` is {kind: {oldId: newId}} */
-function remapMeasures(l, map){
-  for(const m of l.measures) for(const a of [m.a,m.b]){
+/* things in a copied or imported layout get new ids; `map` is {kind: {oldId: newId}} */
+function remapMeasures(v, map, room){
+  for(const m of v.measures) for(const a of [m.a,m.b]){
     const n = map[a.k] && map[a.k][a.id];
     if(n) a.id=n;
   }
-  pruneMeasures(l);
+  pruneMeasures(v, room);
+}
+/* ---- pre-split save format: one flat entry per room, geometry+furniture together.
+   Used to migrate old localStorage saves and old export files into rooms+layouts. ---- */
+function normLegacyFlat(l){
+  l.id = l.id || uid();
+  l.name = l.name || 'My room';
+  l.room = normRoomGeom(l.room);
+  normVariant(l, l.room);
+  if(l.folderId===undefined) l.folderId=null;
+  return l;
+}
+function splitFlat(l){
+  const room={id:l.id, name:l.name, folderId:l.folderId, room:l.room, activeLayoutId:null};
+  const variant={id:uid(), roomId:room.id, openings:l.openings, placed:l.placed, measures:l.measures};
+  room.activeLayoutId=variant.id;
+  return {room, variant};
 }
 function normItem(it){
   it.id = it.id || uid();
@@ -1930,7 +1986,30 @@ function normItem(it){
 }
 function migrate(st){
   if(!st||!Array.isArray(st.layouts)||!st.layouts.length) return null;
-  for(const l of st.layouts) normLayout(l);
+  if(!Array.isArray(st.rooms)){
+    // pre-split save/import: each layout was a flat room+furniture blob. Split each
+    // into a room record (geometry+identity) plus one layout variant (furniture).
+    const rooms=[], newLayouts=[]; let newActive=st.active;
+    for(const l of st.layouts){
+      normLegacyFlat(l);
+      const {room,variant}=splitFlat(l);
+      rooms.push(room); newLayouts.push(variant);
+      if(st.active===l.id) newActive=variant.id;
+    }
+    st.rooms=rooms; st.layouts=newLayouts; st.active=newActive;
+  } else {
+    for(const r of st.rooms) normRoomRecord(r);
+    for(const v of st.layouts){
+      const r=st.rooms.find(x=>x.id===v.roomId);
+      if(r) normVariant(v, r.room);
+    }
+    const roomIds=new Set(st.rooms.map(r=>r.id));
+    st.layouts=st.layouts.filter(v=>roomIds.has(v.roomId)); // drop variants of a room that didn't survive
+    const withVariant=new Set(st.layouts.map(v=>v.roomId));
+    st.rooms=st.rooms.filter(r=>withVariant.has(r.id)); // drop rooms left with no variant
+    for(const r of st.rooms) if(!st.layouts.some(v=>v.id===r.activeLayoutId)) r.activeLayoutId=st.layouts.find(v=>v.roomId===r.id).id;
+    if(!st.rooms.length) return null;
+  }
   st.inventory = st.inventory||[];
   for(const it of st.inventory) normItem(it);
   if(!Array.isArray(st.folders)) st.folders=[];
@@ -1949,7 +2028,8 @@ function migrate(st){
   if(!isCanvasMode(st.planMode)) st.planMode = isCanvasMode(st.mode) ? st.mode : 'furniture';
   if(!st.layouts.some(l=>l.id===st.active)) st.active=st.layouts[0].id;
   const fl=st.layouts.find(l=>l.id===st.active);
-  st.lastFolderId = fl ? (fl.folderId||null) : null;
+  const fr=fl ? st.rooms.find(r=>r.id===fl.roomId) : null;
+  st.lastFolderId = fr ? (fr.folderId||null) : null;
   if(!Array.isArray(st.itemFolders)) st.itemFolders=[];
   if(!Array.isArray(st.marketFolders)) st.marketFolders=[];
   if(!Array.isArray(st.marketListings)) st.marketListings=[];
@@ -2280,7 +2360,7 @@ function cancelCustomDraw(){
 }
 function finishCustomDraw(){
   if(!drawState||drawState.pts.length<3){ flash('Add at least 3 corners first'); return; }
-  L().room.points=drawState.pts.map(p=>p.slice());
+  CR().room.points=drawState.pts.map(p=>p.slice());
   clampOpenings(); roomSel=null;
   drawState=null; $('drawHint').hidden=true;
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
@@ -2319,8 +2399,8 @@ function startWallDraw(){
 }
 function cancelWallDraw(){ wallDrawState=null; draw(); }
 function finishWallDraw(a,b){
-  const w={id:uid(), a, b, t:L().room.wall};
-  L().room.iwalls.push(w);
+  const w={id:uid(), a, b, t:CR().room.wall};
+  CR().room.iwalls.push(w);
   wallDrawState=null;
   roomSel={kind:'iwall', id:w.id};
   renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
@@ -2371,7 +2451,7 @@ function addPoly(p){
 function pathPoly(p){ ctx.beginPath(); addPoly(p); }
 
 function draw(){
-  const r=L().room, P=RP(), C=PAL();
+  const r=CR().room, P=RP(), C=PAL();
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle=C.stage; ctx.fillRect(0,0,W,H);
 
@@ -2437,7 +2517,7 @@ function drawGrid(P){
 }
 /* walls sit outside the measured face: stroke double width, clipped to outside the polygon */
 function drawWalls(){
-  const r=L().room, P=RP(), t=Math.max(2,r.wall*view.scale);
+  const r=CR().room, P=RP(), t=Math.max(2,r.wall*view.scale);
   ctx.save();
   ctx.beginPath();
   ctx.rect(-20,-20,W+40,H+40);
@@ -2456,7 +2536,7 @@ function drawWalls(){
   ctx.restore();
 }
 function drawIWalls(){
-  for(const w of L().room.iwalls){
+  for(const w of CR().room.iwalls){
     const C=PAL();
     pathPoly(iwallPoly(w));
     ctx.fillStyle=C.wall; ctx.fill();
@@ -2464,7 +2544,7 @@ function drawIWalls(){
   }
 }
 function drawPillars(){
-  for(const pl of L().room.pillars){
+  for(const pl of CR().room.pillars){
     const C=PAL();
     pathPoly(worldPoly(pl,pl));
     ctx.fillStyle=C.pillar; ctx.fill();
@@ -2488,7 +2568,7 @@ function drawWallDrawOverlay(){
   ctx.restore();
 }
 function drawOpening(o,blocked){
-  const r=L().room, g=openGeom(o), t=Math.max(2,r.wall*view.scale);
+  const r=CR().room, g=openGeom(o), t=Math.max(2,r.wall*view.scale);
   const C=PAL();
   // jambs
   ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(1.5,t*.35);
@@ -2692,7 +2772,7 @@ function drawWallLabels(){
   for(let i=0;i<P.length;i++){
     const w=wallOf(i);
     if(w.len*view.scale<26) continue;
-    const off=L().room.wall*view.scale+13;
+    const off=CR().room.wall*view.scale+13;
     const x=sx(w.mid[0])-w.nrm[0]*off, y=sy(w.mid[1])-w.nrm[1]*off;
     let a=Math.atan2(w.dir[1],w.dir[0]);
     if(a>Math.PI/2||a<-Math.PI/2) a+=Math.PI;
@@ -2705,7 +2785,7 @@ function drawWallLabels(){
   }
 }
 function drawHandles(){
-  const P=RP(), C=PAL(), r=L().room;
+  const P=RP(), C=PAL(), r=CR().room;
   const pl=roomSel&&roomSel.kind==='pillar'&&r.pillars.find(q=>q.id===roomSel.id);
   if(pl){
     pathPoly(worldPoly(pl,pl));
@@ -2784,7 +2864,7 @@ const anchorKey = a => a ? [a.k,a.id,a.part,a.n==null?'':a.n].join(':') : '';
 
 /* everything that can be measured, top-most first, each with the anchors it offers */
 function measureObjs(){
-  const l=L(), r=l.room, out=[];
+  const l=L(), r=CR().room, out=[];
   const solid = (k,id,poly,center,angular) => ({k, id, center, whole:{pts:poly, area:true},
     corners: angular ? poly : [],
     sides: angular ? poly.map((p,i)=>[p,poly[(i+1)%poly.length]]) : []});
@@ -3059,7 +3139,7 @@ $('measureBar').addEventListener('click', e=>{
   else if(b.dataset.act==='remove' && measureSel) removeMeasure(measureSel);
   else if(b.dataset.act==='clear'){
     const n=liveMeasures().length;
-    askConfirm('Clear measurements', 'Remove '+(n===1?'the measurement':'all '+n+' measurements')+' from '+L().name+'?', 'Clear measurements', ()=>{
+    askConfirm('Clear measurements', 'Remove '+(n===1?'the measurement':'all '+n+' measurements')+' from '+CR().name+'?', 'Clear measurements', ()=>{
       L().measures=[]; resetMeasureState(); renderMeasureBar(); draw(); save();
     });
   }
@@ -3121,11 +3201,11 @@ function bringToFront(ids){
 }
 function pickRoom(px,py){
   const P=RP(), pt=[wx(px),wy(py)];
-  for(let i=L().room.pillars.length-1;i>=0;i--){
-    const pl=L().room.pillars[i];
+  for(let i=CR().room.pillars.length-1;i>=0;i--){
+    const pl=CR().room.pillars[i];
     if(pointInPoly(pt, worldPoly(pl,pl))) return {kind:'pillar', id:pl.id};
   }
-  for(const w of L().room.iwalls){
+  for(const w of CR().room.iwalls){
     if(Math.hypot(px-sx(w.a[0]),py-sy(w.a[1]))<11) return {kind:'iwall', id:w.id, end:'a'};
     if(Math.hypot(px-sx(w.b[0]),py-sy(w.b[1]))<11) return {kind:'iwall', id:w.id, end:'b'};
     if(pointInPoly(pt, iwallPoly(w))) return {kind:'iwall', id:w.id, end:null};
@@ -3394,7 +3474,7 @@ function cancelDrag(){
   if(drag.mode==='pan'||drag.mode==='marquee'){ if(drag.mode==='pan'){ view.ox=drag.ox; view.oy=drag.oy; } }
   else if(drag.snap){
     const s=JSON.parse(drag.snap);
-    if(ROOM_DRAGS.includes(drag.mode)){ L().room=s.room; L().openings=s.openings; }
+    if(ROOM_DRAGS.includes(drag.mode)){ CR().room=s.room; L().openings=s.openings; }
     else L().placed=s.placed;
     bumpRev();
   }
@@ -3718,11 +3798,24 @@ function renderTreeLevel(parentId,depth){
     </div>`;
     if(open) html+=renderTreeLevel(f.id,depth+1);
   }
-  for(const l of childLayouts(parentId)){
-    html+=`<div class="tree-row layout-row ${l.id===S.active?'active':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*12+26}px" ${l.id===S.active?'aria-current="true"':''}>
-      <span class="ico">${svgI('room')}</span><span class="nm">${esc(l.name)}</span>
+  for(const r of childLayouts(parentId)){
+    const vs=variantsOf(r.id), multi=vs.length>1;
+    const vkey='rv:'+r.id, vopen=multi && treeOpen.has(vkey);
+    const isCur = !multi && vs[0] && vs[0].id===S.active;
+    html+=`<div class="tree-row layout-row ${isCur?'active':''}" draggable="true" data-layout="${r.id}" style="padding-left:${depth*12+26}px" ${isCur?'aria-current="true"':''}>
+      ${multi?`<button type="button" class="caret" data-act="toggle-variants" aria-label="${vopen?'Collapse':'Expand'}">${svgI(vopen?'chev-d':'chev-r')}</button>`:''}
+      <span class="ico">${svgI('room')}</span><span class="nm">${esc(r.name)}</span>
       ${moreBtn('tree-more')}
     </div>`;
+    if(multi && vopen){
+      for(const v of vs){
+        const letter=variantLetter(v.id), isActiveVariant=v.id===r.activeLayoutId, cur=v.id===S.active;
+        html+=`<div class="tree-row variant-row ${cur?'active':''}" data-variant="${v.id}" data-room="${r.id}" style="padding-left:${depth*12+48}px" ${cur?'aria-current="true"':''}>
+          <span class="ico variant-letter">${letter}</span><span class="nm">Layout ${letter}${isActiveVariant?` <span class="tagchip" title="Shown in previews and counted for stock">Active</span>`:''}</span>
+          ${moreBtn('tree-more')}
+        </div>`;
+      }
+    }
   }
   if(depth>0 && !childFolders(parentId).length && !childLayouts(parentId).length){
     html+=`<div class="tree-empty" style="padding-left:${depth*12+26}px">Empty</div>`;
@@ -3731,16 +3824,26 @@ function renderTreeLevel(parentId,depth){
 }
 function renderTree(){ $('layoutTree').innerHTML=renderTreeLevel(null,0); }
 const treeBox=$('layoutTree');
-const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layout="'+id+'"]');
+const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layout="'+id+'"],[data-variant="'+id+'"]');
 
 treeBox.addEventListener('click', e=>{
   const more=e.target.closest('[data-act=more]');
+  const toggleV=e.target.closest('[data-act="toggle-variants"]');
   const fRow=e.target.closest('.folder-row');
   const lRow=e.target.closest('.layout-row');
+  const vRow=e.target.closest('.variant-row');
   if(more){
     cancelSingleClick();
     if(fRow) folderMenu(fRow.dataset.folder, more);
-    else if(lRow) layoutMenu(lRow.dataset.layout, more);
+    else if(vRow) variantMenu(vRow.dataset.variant, more);
+    else if(lRow) roomMenu(lRow.dataset.layout, more);
+    return;
+  }
+  if(toggleV){
+    cancelSingleClick();
+    const key='rv:'+lRow.dataset.layout;
+    treeOpen.has(key)?treeOpen.delete(key):treeOpen.add(key);
+    renderTree();
     return;
   }
   // held back briefly so a second click can turn into a rename instead
@@ -3749,9 +3852,25 @@ treeBox.addEventListener('click', e=>{
     singleClick(()=>{ treeOpen.has(id)?treeOpen.delete(id):treeOpen.add(id); renderTree(); });
     return;
   }
+  if(vRow){
+    const id=vRow.dataset.variant;
+    singleClick(()=>{ activateLayout(id); renderAll(); fit(); save(); });
+    return;
+  }
   if(lRow){
     const id=lRow.dataset.layout;
-    singleClick(()=>{ activateLayout(id); renderAll(); fit(); save(); });
+    const room=S.rooms.find(r=>r.id===id); if(!room) return;
+    const vs=variantsOf(id);
+    singleClick(()=>{
+      if(vs.length>1){
+        const key='rv:'+id, willOpen=!treeOpen.has(key);
+        willOpen?treeOpen.add(key):treeOpen.delete(key);
+        if(willOpen && !vs.some(v=>v.id===S.active)){ activateLayout(room.activeLayoutId||vs[0].id); renderAll(); fit(); save(); }
+        renderTree();
+      } else {
+        activateLayout(vs[0].id); renderAll(); fit(); save();
+      }
+    });
   }
 });
 treeBox.addEventListener('dblclick', e=>{
@@ -3759,24 +3878,25 @@ treeBox.addEventListener('dblclick', e=>{
   if(e.target.closest('button')) return;
   const row=e.target.closest('.tree-row'); if(!row) return;
   if(row.dataset.folder) renameFolder(row.dataset.folder);
-  else renameLayout(row.dataset.layout);
+  else if(row.dataset.layout) renameRoom(row.dataset.layout);
 });
 function renameFolder(id){
   const f=folderOf(id), row=treeRowEl(id);
   if(!f||!row) return;
   inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderTree(); });
 }
-function renameLayout(id){
-  const l=S.layouts.find(x=>x.id===id), row=treeRowEl(id);
-  if(!l||!row) return;
-  inlineEdit(row.querySelector('.nm'), l.name, v=>{ if(v){ l.name=v; save(); } renderTree(); });
+function renameRoom(id){
+  const r=S.rooms.find(x=>x.id===id), row=treeRowEl(id);
+  if(!r||!row) return;
+  inlineEdit(row.querySelector('.nm'), r.name, v=>{ if(v){ r.name=v; save(); } renderTree(); });
 }
 
 /* ---- drag a room or folder to move it: onto a folder puts it inside, on the
-        upper/lower edge of a row drops it beside that row ---- */
+        upper/lower edge of a row drops it beside that row. Layout variants aren't
+        draggable \u2014 reordering/moving a single furniture variant isn't supported yet. ---- */
 let dragTree=null;
 treeBox.addEventListener('dragstart', e=>{
-  const row=e.target.closest('.tree-row'); if(!row) return;
+  const row=e.target.closest('.tree-row'); if(!row||!row.draggable) return;
   cancelSingleClick(); closeMenu();
   dragTree = row.dataset.folder ? {kind:'folder',id:row.dataset.folder} : {kind:'layout',id:row.dataset.layout};
   row.classList.add('dragging');
@@ -3794,6 +3914,7 @@ function treeDropSpot(e){
   if(!row) return {mode:'root'};
   const isFolder=!!row.dataset.folder;
   const id=isFolder?row.dataset.folder:row.dataset.layout;
+  if(!id) return null; // variant rows aren't drop targets
   if(isFolder && dragTree.kind==='folder' && id===dragTree.id) return null;
   const t=dropHalf(e,row);
   if(isFolder && t>=0.3 && t<=0.7) return {mode:'into',id,isFolder,row};
@@ -3816,7 +3937,7 @@ treeBox.addEventListener('drop', e=>{
   let parent=null, targetId=null, after=false;
   if(spot.mode==='into'){ parent=spot.id; treeOpen.add(parent); }
   else if(spot.mode!=='root'){
-    const t = spot.isFolder ? folderOf(spot.id) : S.layouts.find(x=>x.id===spot.id);
+    const t = spot.isFolder ? folderOf(spot.id) : S.rooms.find(x=>x.id===spot.id);
     if(!t) return;
     parent = (spot.isFolder ? t.parentId : t.folderId) || null;
     // folders and rooms are kept in separate lists, so only order against your own kind
@@ -3828,9 +3949,9 @@ treeBox.addEventListener('drop', e=>{
     f.parentId=parent;
     moveBefore(S.folders, d.id, targetId, after);
   } else {
-    const l=S.layouts.find(x=>x.id===d.id); if(!l) return;
-    l.folderId=parent;
-    moveBefore(S.layouts, d.id, targetId, after);
+    const r=S.rooms.find(x=>x.id===d.id); if(!r) return;
+    r.folderId=parent;
+    moveBefore(S.rooms, d.id, targetId, after);
   }
   dragTree=null;
   renderTree(); renderInv(); save();
@@ -3850,7 +3971,7 @@ function folderMenu(id, anchor){
   openMenu(anchor, [
     {label:'Rename', fn:()=>renameFolder(id)},
     {label:'Add a room here', fn:()=>askText('New room','Name','Room', n=>{
-      const l=blankLayout(n,id); S.layouts.push(l); treeOpen.add(id); activateLayout(l.id);
+      const v=addBlankRoom(n,id); treeOpen.add(id); activateLayout(v.id);
       renderAll(); fit(); save();
     })},
     {label:'Add a subfolder', fn:()=>askText('New folder','Name','Folder', n=>{
@@ -3864,16 +3985,30 @@ function folderMenu(id, anchor){
     {label:'Delete folder\u2026', danger:true, fn:()=>deleteFolder(id)},
   ], f.name);
 }
-function layoutMenu(id, anchor){
-  const l=S.layouts.find(x=>x.id===id); if(!l) return;
+function roomMenu(id, anchor){
+  const r=S.rooms.find(x=>x.id===id); if(!r) return;
+  const vs=variantsOf(id);
   openMenu(anchor, [
-    {label:'Open', fn:()=>{ activateLayout(id); renderAll(); fit(); save(); }},
-    {label:'Rename', fn:()=>renameLayout(id)},
-    {label:'Duplicate', fn:()=>duplicateLayout(id)},
+    {label:'Open', fn:()=>{
+      const target=vs.some(v=>v.id===S.active) ? S.active : (r.activeLayoutId||vs[0].id);
+      activateLayout(target); renderAll(); fit(); save();
+    }},
+    {label:'Rename', fn:()=>renameRoom(id)},
+    {label:'Duplicate', fn:()=>duplicateRoom(id)},
+    {label:'Create alternate layout', fn:()=>createVariant(id)},
     {label:'Move to folder\u2026', fn:()=>moveDialog('layout',id)},
     {sep:true},
-    {label:'Delete room\u2026', danger:true, fn:()=>deleteLayout(id)},
-  ], l.name);
+    {label:'Delete room\u2026', danger:true, fn:()=>deleteRoom(id)},
+  ], r.name);
+}
+function variantMenu(id, anchor){
+  const v=S.layouts.find(x=>x.id===id); if(!v) return;
+  const r=S.rooms.find(x=>x.id===v.roomId); if(!r) return;
+  const letter=variantLetter(id);
+  const items=[{label:'Open', fn:()=>{ activateLayout(id); renderAll(); fit(); save(); }}];
+  if(r.activeLayoutId!==id) items.push({label:'Set active', fn:()=>{ r.activeLayoutId=id; renderTree(); renderInv(); save(); }});
+  items.push({sep:true},{label:'Delete this layout\u2026', danger:true, fn:()=>deleteVariant(id)});
+  openMenu(anchor, items, 'Layout '+letter);
 }
 function folderTagsDialog(id){
   const f=folderOf(id);
@@ -3889,6 +4024,7 @@ function folderTagsDialog(id){
     ()=>{ mountTagField('fTags', f.tags||[]); });
 }
 /* every folder and room under `id`, deepest last */
+/* every folder and room under `id`, deepest last (`layouts` here means rooms) */
 function folderContents(id){
   const folders=[], layouts=[];
   (function walk(pid){
@@ -3900,29 +4036,31 @@ function folderContents(id){
 function deleteFolder(id){
   const f=folderOf(id); if(!f) return;
   const up = folderOf(f.parentId) ? '\u201c'+folderOf(f.parentId).name+'\u201d' : 'the top level';
-  const {folders,layouts}=folderContents(id);
+  const {folders,layouts:rooms}=folderContents(id);
   const drop=keep=>{
     if(keep){
       for(const sub of childFolders(id)) sub.parentId=f.parentId;
-      for(const l of childLayouts(id)) l.folderId=f.parentId;
+      for(const r of childLayouts(id)) r.folderId=f.parentId;
     } else {
-      const killF=new Set(folders.map(x=>x.id)), killL=new Set(layouts.map(x=>x.id));
-      S.layouts=S.layouts.filter(l=>!killL.has(l.id));
+      const killF=new Set(folders.map(x=>x.id)), killR=new Set(rooms.map(x=>x.id));
+      const killV=new Set(S.layouts.filter(v=>killR.has(v.roomId)).map(v=>v.id));
+      S.layouts=S.layouts.filter(v=>!killV.has(v.id));
+      S.rooms=S.rooms.filter(r=>!killR.has(r.id));
       S.folders=S.folders.filter(x=>!killF.has(x.id));
       for(const k of killF) treeOpen.delete(k);
     }
     S.folders=S.folders.filter(x=>x.id!==id);
     treeOpen.delete(id);
-    if(!S.layouts.length) S.layouts=[blankLayout()];
-    if(!S.layouts.some(l=>l.id===S.active)) activateLayout(S.layouts[0].id);
+    if(!S.rooms.length) addBlankRoom();
+    if(!S.layouts.some(l=>l.id===S.active)) activateLayout(S.rooms[0].activeLayoutId);
     renderAll(); fit(); save();
   };
-  if(!folders.length && !layouts.length){
+  if(!folders.length && !rooms.length){
     askConfirm('Delete this folder?', '\u201c'+f.name+'\u201d is empty.', 'Delete folder', ()=>drop(false));
     return;
   }
   const bits=[];
-  if(layouts.length) bits.push(layouts.length+' room'+(layouts.length>1?'s':''));
+  if(rooms.length) bits.push(rooms.length+' room'+(rooms.length>1?'s':''));
   if(folders.length) bits.push(folders.length+' folder'+(folders.length>1?'s':''));
   openModal('Delete \u201c'+f.name+'\u201d?', `
     <p>It holds ${esc(bits.join(' and '))}. Deleting the folder deletes all of that too.</p>
@@ -3930,33 +4068,73 @@ function deleteFolder(id){
     <p class="hint">Your library is never touched, only the rooms themselves.</p>`,
     'Delete folder', ()=>drop($('keepKids').checked), null, {danger:true});
 }
-function duplicateLayout(id){
-  const src=S.layouts.find(x=>x.id===id); if(!src) return;
-  const c=JSON.parse(JSON.stringify(src));
-  c.id=uid(); c.name=c.name+' copy';
+/* "Duplicate" makes a fully independent room: new geometry ids, one variant (whichever
+   is currently open, or the room's first). "Create alternate layout" instead adds a new
+   furniture variant to the SAME room \u2014 geometry stays shared, only openings/placed/measures fork. */
+function duplicateRoom(id){
+  const src=S.rooms.find(x=>x.id===id); if(!src) return;
+  const srcVariant=variantsOf(id).find(v=>v.id===S.active) || variantsOf(id)[0]; if(!srcVariant) return;
+  const room=JSON.parse(JSON.stringify(src));
+  room.id=uid(); room.name=room.name+' copy';
+  const variant=JSON.parse(JSON.stringify(srcVariant));
+  variant.id=uid(); variant.roomId=room.id;
   const map={open:{}, item:{}, pillar:{}, iwall:{}};
   const renew = (k,x) => { const id=uid(); map[k][x.id]=id; x.id=id; };
-  c.openings.forEach(o=>renew('open',o));
-  c.placed.forEach(p=>renew('item',p));
-  c.room.pillars.forEach(p=>renew('pillar',p));
-  c.room.iwalls.forEach(w=>renew('iwall',w));
-  remapMeasures(c, map);
-  S.layouts.splice(S.layouts.indexOf(src)+1, 0, c);
-  activateLayout(c.id);
+  variant.openings.forEach(o=>renew('open',o));
+  variant.placed.forEach(p=>renew('item',p));
+  room.room.pillars.forEach(p=>renew('pillar',p));
+  room.room.iwalls.forEach(w=>renew('iwall',w));
+  remapMeasures(variant, map, room.room);
+  room.activeLayoutId=variant.id;
+  S.rooms.splice(S.rooms.indexOf(src)+1, 0, room);
+  S.layouts.splice(S.layouts.indexOf(srcVariant)+1, 0, variant);
+  activateLayout(variant.id);
   renderAll(); save();
 }
-function deleteLayout(id){
-  if(S.layouts.length===1){ flash('You need at least one room'); return; }
-  const l=S.layouts.find(x=>x.id===id); if(!l) return;
-  askConfirm('Delete this room?', '\u201c'+l.name+'\u201d will be removed. Your library stays.', 'Delete', ()=>{
+function createVariant(roomId){
+  const room=S.rooms.find(x=>x.id===roomId); if(!room) return;
+  const vs=variantsOf(roomId);
+  const src=vs.find(v=>v.id===S.active) || vs[0]; if(!src) return;
+  const variant=JSON.parse(JSON.stringify(src));
+  variant.id=uid(); variant.roomId=roomId;
+  const map={open:{}, item:{}};
+  const renew = (k,x) => { const id=uid(); map[k][x.id]=id; x.id=id; };
+  variant.openings.forEach(o=>renew('open',o));
+  variant.placed.forEach(p=>renew('item',p));
+  remapMeasures(variant, map, room.room);
+  S.layouts.splice(S.layouts.indexOf(src)+1, 0, variant);
+  treeOpen.add('rv:'+roomId);
+  activateLayout(variant.id);
+  renderAll(); save();
+}
+function deleteRoom(id){
+  if(S.rooms.length===1){ flash('You need at least one room'); return; }
+  const r=S.rooms.find(x=>x.id===id); if(!r) return;
+  const vs=variantsOf(id);
+  askConfirm('Delete this room?', '\u201c'+r.name+'\u201d will be removed. Your library stays.', 'Delete', ()=>{
+    const vids=new Set(vs.map(v=>v.id));
+    S.layouts=S.layouts.filter(x=>!vids.has(x.id));
+    S.rooms=S.rooms.filter(x=>x.id!==id);
+    if(vids.has(S.active)) activateLayout(S.rooms[0].activeLayoutId);
+    renderAll(); fit(); save();
+  });
+}
+function deleteVariant(id){
+  const v=S.layouts.find(x=>x.id===id); if(!v) return;
+  const room=S.rooms.find(r=>r.id===v.roomId); if(!room) return;
+  const vs=variantsOf(room.id);
+  if(vs.length<=1){ deleteRoom(room.id); return; }
+  const letter=variantLetter(id);
+  askConfirm('Delete layout '+letter+'?', 'This furniture arrangement will be removed. The room and its other layouts stay.', 'Delete', ()=>{
     S.layouts=S.layouts.filter(x=>x.id!==id);
-    if(S.active===id) activateLayout(S.layouts[0].id);
+    if(room.activeLayoutId===id) room.activeLayoutId=variantsOf(room.id)[0].id;
+    if(S.active===id) activateLayout(room.activeLayoutId);
     renderAll(); fit(); save();
   });
 }
 /* the menu's long way round to what dragging does */
 function moveDialog(kind,id){
-  const obj = kind==='folder' ? folderOf(id) : S.layouts.find(x=>x.id===id);
+  const obj = kind==='folder' ? folderOf(id) : S.rooms.find(x=>x.id===id);
   if(!obj) return;
   const cur = (kind==='folder' ? obj.parentId : obj.folderId) || '';
   let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
@@ -3980,14 +4158,14 @@ $('btnNewFolder').addEventListener('click', ()=>{
   askText('New folder','Name','Folder', n=>{ S.folders.push({id:uid(),name:n,parentId:null,tags:[]}); renderTree(); save(); });
 });
 $('btnNewLayout').addEventListener('click', ()=>{
-  askText('New room','Name','Room '+(S.layouts.length+1), n=>{
-    const l=blankLayout(n,null); S.layouts.push(l); activateLayout(l.id);
+  askText('New room','Name','Room '+(S.rooms.length+1), n=>{
+    const v=addBlankRoom(n,null); activateLayout(v.id);
     renderTree(); renderAll(); fit(); save();
   });
 });
 
 function renderRoom(){
-  const r=L().room;
+  const r=CR().room;
   const box=$('rectDims');
   if(isRectRoom()){
     const b=bbox(RP());
@@ -4033,7 +4211,7 @@ function renderWalls(){
 const sizeLabelShape = sh => fmtLen(sh.w,S.unit)+' × '+fmtLen(sh.d,S.unit);
 const emptyRow = msg => `<li class="list-empty"><div class="empty">${msg}</div></li>`;
 function renderObstacles(){
-  const ul=$('structList'), room=L().room;
+  const ul=$('structList'), room=CR().room;
   let pn=0, wn=0;
   const rows=[
     ...room.pillars.map(pl=>({kind:'pillar', id:pl.id, label:'Pillar '+(++pn), dim:sizeLabelShape(pl.shape)})),
@@ -4081,17 +4259,17 @@ function addPillar(){
   if(!roomMode()) setMode('room');
   const b=bbox(RP()), c=centroid(RP())||[(b.x0+b.x1)/2,(b.y0+b.y1)/2];
   const pl={id:uid(), x:c[0], y:c[1], rot:0, shape:{type:'rect',w:300,d:300}};
-  L().room.pillars.push(pl);
+  CR().room.pillars.push(pl);
   roomSel={kind:'pillar', id:pl.id};
   renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
 }
 function deletePillar(id){
-  L().room.pillars=L().room.pillars.filter(p=>p.id!==id);
+  CR().room.pillars=CR().room.pillars.filter(p=>p.id!==id);
   if(roomSel&&roomSel.kind==='pillar'&&roomSel.id===id) roomSel=null;
   renderRoomSel(); renderWalls(); draw(); save(); commitRoom();
 }
 function deleteIWall(id){
-  L().room.iwalls=L().room.iwalls.filter(w=>w.id!==id);
+  CR().room.iwalls=CR().room.iwalls.filter(w=>w.id!==id);
   if(roomSel&&roomSel.kind==='iwall'&&roomSel.id===id) roomSel=null;
   renderRoomSel(); renderWalls(); draw(); save(); commitRoom();
 }
@@ -4365,7 +4543,7 @@ $('invSearch').addEventListener('input', e=>{ S.invSearch=e.target.value; render
 function renderInv(){
   $('onlyAvail').checked = S.onlyAvailable;
   if($('invSearch').value !== (S.invSearch||'')) $('invSearch').value = S.invSearch||'';
-  const curFloor = L() ? nearestFloor(L().folderId||null) : null;
+  const curFloor = L() ? nearestFloor(CR().folderId||null) : null;
   const sc = curFloor
     ? {suffix:'on '+curFloor.name, hint:'Every room on '+curFloor.name+' shares one pool. Rooms outside it keep their own stock.'}
     : {suffix:'in this room', hint:'Every room starts with full stock. Only this room’s placements count.'};
@@ -4594,9 +4772,9 @@ function bindLen(id,set){
     renderRoom(); renderWalls(); draw(); save(); commitRoom();
   });
 }
-bindLen('wallT', v=>{ L().room.wall=v; });
-bindLen('trimD', v=>{ L().room.trim=v; });
-function setFloorColor(hex){ L().room.floor=hex; $('floorCol').value=hex; draw(); save(); }
+bindLen('wallT', v=>{ CR().room.wall=v; });
+bindLen('trimD', v=>{ CR().room.trim=v; });
+function setFloorColor(hex){ CR().room.floor=hex; $('floorCol').value=hex; draw(); save(); }
 $('floorCol').addEventListener('input', e=>{ setFloorColor(e.target.value); $('floorHex').value=e.target.value; $('floorHex').classList.remove('bad'); });
 $('floorCol').addEventListener('change', ()=>commitRoom());
 $('floorHex').addEventListener('input', e=>{
@@ -4605,9 +4783,9 @@ $('floorHex').addEventListener('input', e=>{
   if(c) setFloorColor(c);
 });
 /* typing an unfinished/bad code leaves the plan alone — snap the box back on the way out */
-$('floorHex').addEventListener('change', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); commitRoom(); });
-$('floorHex').addEventListener('blur', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); });
-$('trimOn').addEventListener('change', e=>{ L().room.trimOn=e.target.checked; renderRoom(); draw(); save(); commitRoom(); });
+$('floorHex').addEventListener('change', e=>{ e.target.value=CR().room.floor; e.target.classList.remove('bad'); commitRoom(); });
+$('floorHex').addEventListener('blur', e=>{ e.target.value=CR().room.floor; e.target.classList.remove('bad'); });
+$('trimOn').addEventListener('change', e=>{ CR().room.trimOn=e.target.checked; renderRoom(); draw(); save(); commitRoom(); });
 
 $('btnPreRect').addEventListener('click', ()=>{
   const b=bbox(RP());
@@ -4618,7 +4796,7 @@ $('btnPreRect').addEventListener('click', ()=>{
     'Use this shape', ()=>{
       const w=parseLen($('pW').value,S.unit), d=parseLen($('pD').value,S.unit);
       if(!isFinite(w)||!isFinite(d)||w<500||d<500){ moError('Give a width and depth of at least 500 mm'); return false; }
-      L().room.points=rectPts(w,d);
+      CR().room.points=rectPts(w,d);
       clampOpenings(); roomSel=null;
       renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
     });
@@ -4638,7 +4816,7 @@ $('btnPreL').addEventListener('click', ()=>{
       const cw=parseLen($('pCW').value,S.unit), cd=parseLen($('pCD').value,S.unit);
       if(![w,d,cw,cd].every(v=>isFinite(v)&&v>100)){ moError('Fill in all four measurements'); return false; }
       if(cw>=w-100||cd>=d-100){ moError('The notch has to be smaller than the room'); return false; }
-      L().room.points=shapePoly({type:'lshape',w,d,cw,cd,corner:$('pC').value}).map(([x,y])=>[x+w/2,y+d/2]);
+      CR().room.points=shapePoly({type:'lshape',w,d,cw,cd,corner:$('pC').value}).map(([x,y])=>[x+w/2,y+d/2]);
       clampOpenings(); roomSel=null;
       renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
     });
@@ -4667,7 +4845,7 @@ function savePlanImage(){
   const url=cv.toDataURL('image/png');
   forceLightCanvas=false; draw();
   const a=document.createElement('a');
-  a.download=fileSlug(L().name)+'.png';
+  a.download=fileSlug(CR().name)+'.png';
   a.href=url;
   a.click();
 }
@@ -4962,22 +5140,24 @@ function ancestorFolderIds(folders, id){
 /* ------------------------- export ------------------------- */
 const PREF_KEYS=['unit','snap','showSwing','showDims','showOpen','showWalk','showMeasure','onlyAvailable','zoomSpeed'];
 function exportPayload(roomIds, itemIds, withPrefs){
-  const layouts=S.layouts.filter(l=>roomIds.includes(l.id)).map(clone);
+  const rooms=S.rooms.filter(r=>roomIds.includes(r.id)).map(clone);
+  const roomIdSet=new Set(rooms.map(r=>r.id));
+  const layouts=S.layouts.filter(l=>roomIdSet.has(l.roomId)).map(clone); // every variant of each picked room
   const keep=new Set();
-  for(const l of layouts) for(const id of ancestorFolderIds(S.folders, l.folderId)) keep.add(id);
+  for(const r of rooms) for(const id of ancestorFolderIds(S.folders, r.folderId)) keep.add(id);
   const out={
-    app:'room-planner', version:2, exported:new Date().toISOString(),
+    app:'room-planner', version:3, exported:new Date().toISOString(),
     folders:S.folders.filter(f=>keep.has(f.id)).map(clone),
-    layouts,
+    rooms, layouts,
     inventory:S.inventory.filter(i=>itemIds.includes(i.id)).map(clone)
   };
   if(withPrefs) for(const k of PREF_KEYS) out[k]=S[k];
   if(layouts.some(l=>l.id===S.active)) out.active=S.active;
   return out;
 }
-function exportName(layouts, itemIds){
-  if(!layouts.length) return 'room-planner-items.json';
-  if(layouts.length===1) return 'room-planner-'+fileSlug(layouts[0].name)+'.json';
+function exportName(rooms, itemIds){
+  if(!rooms.length) return 'room-planner-items.json';
+  if(rooms.length===1) return 'room-planner-'+fileSlug(rooms[0].name)+'.json';
   if(!itemIds.length) return 'room-planner-rooms.json';
   return 'room-planner.json';
 }
@@ -4990,11 +5170,11 @@ function downloadJSON(obj, name){
   setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
 function exportDialog(){
-  const rooms=S.layouts.map(l=>({value:l.id, label:l.name, sub:folderLine(l), checked:true}));
+  const rooms=S.rooms.map(r=>({value:r.id, label:r.name, sub:folderLine(r), checked:true}));
   const things=S.inventory.map(i=>({value:i.id, label:i.name, sub:i.id, checked:true}));
   const img = isCanvasMode(S.mode) ? `<div class="export-img">
       <span class="ico">${svgI('room')}</span>
-      <div class="grow"><div class="nm">Image of “${esc(L().name)}”</div><div class="dim">PNG of the plan as it's framed now</div></div>
+      <div class="grow"><div class="nm">Image of “${esc(CR().name)}”</div><div class="dim">PNG of the plan as it's framed now</div></div>
       <button type="button" class="btn sm" id="xPng">Save image</button></div>
     <p class="group-title">Project file</p>` : '';
   openModal('Export', `
@@ -5008,14 +5188,14 @@ function exportDialog(){
     ()=>{
       const roomIds=pickValues('xRooms'), itemIds=pickValues('xThings');
       if(!roomIds.length && !itemIds.length){ moError('Tick at least one room or item'); return false; }
-      const picked=S.layouts.filter(l=>roomIds.includes(l.id));
+      const picked=S.rooms.filter(r=>roomIds.includes(r.id));
       downloadJSON(exportPayload(roomIds,itemIds,$('xPrefs').checked), exportName(picked,itemIds));
     },
     ()=>{
       /* a room is no use without the things standing in it, so picking a room locks those on */
       const syncUsed=()=>{
         const picked=new Set(pickValues('xRooms')), need=new Set();
-        for(const l of S.layouts) if(picked.has(l.id)) for(const p of l.placed) need.add(p.itemId);
+        for(const l of S.layouts) if(picked.has(l.roomId)) for(const p of l.placed) need.add(p.itemId);
         for(const c of $('xThings').querySelectorAll('input[type=checkbox]')){
           const must=need.has(c.value);
           c.disabled=must;
@@ -5039,7 +5219,23 @@ $('btnExport').addEventListener('click', exportDialog);
    or rooms-only export is a perfectly good file */
 function readImport(data){
   if(!data || typeof data!=='object') return null;
-  const layouts = (Array.isArray(data.layouts)?data.layouts:[]).filter(l=>l&&typeof l==='object').map(l=>normLayout(clone(l)));
+  let rooms, layouts;
+  if(Array.isArray(data.rooms)){
+    rooms = data.rooms.filter(r=>r&&typeof r==='object').map(r=>normRoomRecord(clone(r)));
+    const roomIds=new Set(rooms.map(r=>r.id));
+    layouts = (Array.isArray(data.layouts)?data.layouts:[]).filter(l=>l&&typeof l==='object'&&roomIds.has(l.roomId)).map(l=>{
+      const c=clone(l), r=rooms.find(x=>x.id===c.roomId);
+      return normVariant(c, r.room);
+    });
+    const withVariant=new Set(layouts.map(l=>l.roomId));
+    rooms = rooms.filter(r=>withVariant.has(r.id));
+    for(const r of rooms) if(!layouts.some(l=>l.id===r.activeLayoutId)) r.activeLayoutId=layouts.find(l=>l.roomId===r.id).id;
+  } else {
+    // pre-split export file: one flat entry per room
+    const flat = (Array.isArray(data.layouts)?data.layouts:[]).filter(l=>l&&typeof l==='object').map(l=>normLegacyFlat(clone(l)));
+    rooms=[]; layouts=[];
+    for(const l of flat){ const {room,variant}=splitFlat(l); rooms.push(room); layouts.push(variant); }
+  }
   const inventory = (Array.isArray(data.inventory)?data.inventory:[]).filter(i=>i&&typeof i==='object'&&i.shape).map(i=>normItem(clone(i)));
   const folders = (Array.isArray(data.folders)?data.folders:[]).filter(f=>f&&f.id).map(f=>{
     const c=clone(f);
@@ -5048,16 +5244,16 @@ function readImport(data){
     if(!Array.isArray(c.tags)) c.tags=[];
     return c;
   });
-  if(!layouts.length && !inventory.length) return null;
+  if(!rooms.length && !inventory.length) return null;
   const prefs={};
   for(const k of PREF_KEYS) if(data[k]!==undefined) prefs[k]=data[k];
   if(prefs.unit && !['ftin','in','cm','mm','m'].includes(prefs.unit)) delete prefs.unit;
   if(prefs.snap!==undefined) prefs.snap=String(prefs.snap);
   for(const k of ['showSwing','showDims','showOpen','showWalk','showMeasure','onlyAvailable']) if(prefs[k]!==undefined) prefs[k]=!!prefs[k];
-  return {layouts, folders, inventory, active:data.active, prefs:Object.keys(prefs).length?prefs:null};
+  return {rooms, layouts, folders, inventory, active:data.active, prefs:Object.keys(prefs).length?prefs:null};
 }
 function importDialog(inc){
-  const rooms=inc.layouts.map(l=>({value:l.id, label:l.name, sub:folderLine(l,inc.folders), checked:true}));
+  const rooms=inc.rooms.map(r=>({value:r.id, label:r.name, sub:folderLine(r,inc.folders), checked:true}));
   const things=inc.inventory.map(i=>({value:i.id, label:i.name, sub:i.id, checked:true}));
   openModal('Import', `
     <div class="field"><label for="imHow">Mode</label><select id="imHow">
@@ -5098,17 +5294,19 @@ function importDialog(inc){
     });
 }
 function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
-  const layouts=inc.layouts.filter(l=>roomIds.includes(l.id)).map(clone);
+  const rooms=inc.rooms.filter(r=>roomIds.includes(r.id)).map(clone);
+  const roomIdSet=new Set(rooms.map(r=>r.id));
+  const layouts=inc.layouts.filter(l=>roomIdSet.has(l.roomId)).map(clone);
   const items=inc.inventory.filter(i=>itemIds.includes(i.id)).map(clone);
   const keep=new Set();
-  for(const l of layouts) for(const id of ancestorFolderIds(inc.folders, l.folderId)) keep.add(id);
+  for(const r of rooms) for(const id of ancestorFolderIds(inc.folders, r.folderId)) keep.add(id);
   const folders=inc.folders.filter(f=>keep.has(f.id)).map(clone);
 
   if(replace){
     const st={
       mode:'furniture', tagFilter:[], untaggedOnly:false,
       leftOpen:S.leftOpen, rightOpen:S.rightOpen, secClosed:S.secClosed.slice(),
-      inventory:items, folders, layouts
+      inventory:items, folders, rooms, layouts
     };
     for(const k of PREF_KEYS) st[k]=S[k];
     if(wantPrefs && inc.prefs) Object.assign(st, inc.prefs);
@@ -5126,7 +5324,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     $('unitSel').value=S.unit;
     $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure; $('zoomSpeedSel').value=S.zoomSpeed;
     renderSnap(); applyPanes(); applySections(); renderAll(); fit(); save();
-    flash('Replaced your project with '+plural(S.layouts.length,'room')+' and '+plural(S.inventory.length,'item'));
+    flash('Replaced your project with '+plural(S.rooms.length,'room')+' and '+plural(S.inventory.length,'item'));
     return;
   }
 
@@ -5164,11 +5362,25 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     f.parentId = f.parentId ? (folderMap[f.parentId]||null) : null;
     S.folders.push(f);
   }
+  const takenRooms=new Set(S.rooms.map(r=>r.id));
+  const roomMap={};
+  for(const r of rooms){
+    const oldId=r.id;
+    if(takenRooms.has(r.id)) r.id=uid();
+    roomMap[oldId]=r.id;
+    takenRooms.add(r.id);
+    r.folderId = r.folderId ? (folderMap[r.folderId]||null) : null;
+    S.rooms.push(r);
+  }
   const takenLayouts=new Set(S.layouts.map(l=>l.id));
+  const variantMap={};
   for(const l of layouts){
+    const oldId=l.id;
     if(takenLayouts.has(l.id)) l.id=uid();
+    variantMap[oldId]=l.id;
     takenLayouts.add(l.id);
-    l.folderId = l.folderId ? (folderMap[l.folderId]||null) : null;
+    l.roomId = roomMap[l.roomId] || l.roomId;
+    const room=S.rooms.find(r=>r.id===l.roomId);
     const placedMap={};
     l.placed = l.placed.filter(p=>{
       // the thing came in with the room, or one of yours already answers to that id
@@ -5178,9 +5390,10 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
       const id=uid(); placedMap[p.id]=id; p.id=id;
       return true;
     });
-    remapMeasures(l, {item:placedMap});
+    if(room) remapMeasures(l, {item:placedMap}, room.room);
     S.layouts.push(l);
   }
+  for(const r of rooms) r.activeLayoutId = variantMap[r.activeLayoutId] || r.activeLayoutId;
   if(wantPrefs && inc.prefs){
     Object.assign(S, inc.prefs);
     $('unitSel').value=S.unit;
@@ -5188,7 +5401,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     renderSnap();
   }
   renderAll(); save();
-  flash('Added '+plural(layouts.length,'room')+' and '+plural(addedItems,'item'));
+  flash('Added '+plural(rooms.length,'room')+' and '+plural(addedItems,'item'));
 }
 $('btnImport').addEventListener('click',()=>$('fileIn').click());
 $('fileIn').addEventListener('change', e=>{
