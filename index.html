@@ -624,13 +624,6 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
 
         <section data-sec="stock" class="for-furn">
           <div class="sec-head"><h2>Stock</h2></div>
-          <div class="field"><label for="invScope">Count</label>
-            <select id="invScope">
-              <option value="project">Across all rooms</option>
-              <option value="folder">Within each folder</option>
-              <option value="room">Per room</option>
-            </select>
-          </div>
           <p class="hint" id="invScopeHint"></p>
         </section>
 
@@ -941,7 +934,6 @@ let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true,
          untaggedOnly:false,  // the "Untagged" chip in the Things pane
          invSearch:'',        // search text in the Things pane
          onlyAvailable:false, // "only show things I still have stock of"
-         invScope:'project',  // how far a thing's stock reaches: 'project' | 'folder' | 'room'
          zoomSpeed:1,         // trackpad/wheel zoom speed multiplier
          leftOpen:true, rightOpen:true,  // side panels open on wide screens
          secClosed:[],        // data-sec keys of the sections folded shut
@@ -975,27 +967,22 @@ const folderOf = id => id ? S.folders.find(f=>f.id===id) : null;
 const childFolders = pid => S.folders.filter(f=>(f.parentId||null)===(pid||null));
 const childLayouts = pid => S.layouts.filter(l=>(l.folderId||null)===(pid||null));
 /* ---- how far a thing's stock reaches ----
-   'project': one pool for everything — placing a sofa anywhere spends it.
-   'folder' : the rooms sitting DIRECTLY in a folder share a pool. A subfolder
-              keeps its own pool; it never draws on the folder above it.
-   'room'   : every room starts with the full stock of every thing. */
-const INV_SCOPES = {
-  project:{suffix:'across your rooms',
-           hint:'One pool for every room: placing an item anywhere takes it out of stock everywhere.'},
-  folder :{suffix:'in this folder',
-           hint:'Rooms directly in the same folder share a pool. A subfolder keeps its own stock.'},
-  room   :{suffix:'in this room',
-           hint:'Every room starts with full stock. Only this room’s placements count.'}
-};
+   A folder can be marked a Floor (folder.type==='floor'): every room inside it,
+   and inside any of its subfolders, shares one stock pool. A room with no Floor
+   ancestor counts on its own — every room starts with full stock by default. */
+function folderChain(id){ // a folder and each of its ancestors, nearest first
+  const out=[]; let f=folderOf(id);
+  while(f){ out.push(f); f=f.parentId?folderOf(f.parentId):null; }
+  return out;
+}
+const nearestFloor = fid => folderChain(fid).find(f=>f.type==='floor') || null;
+function folderUnderFloor(fid, floorId){ return folderChain(fid).some(f=>f.id===floorId); }
 /* the rooms whose placements count against stock right now */
 function scopeLayouts(){
-  const cur=L();
-  if(S.invScope==='room') return cur?[cur]:[];
-  if(S.invScope==='folder'){
-    const fid=cur?(cur.folderId||null):null;
-    return S.layouts.filter(l=>(l.folderId||null)===fid);
-  }
-  return S.layouts;
+  const cur=L(); if(!cur) return [];
+  const floor=nearestFloor(cur.folderId||null);
+  if(!floor) return [cur];
+  return S.layouts.filter(l=>folderUnderFloor(l.folderId||null, floor.id));
 }
 function usedCount(itemId){
   let n=0;
@@ -1947,13 +1934,13 @@ function migrate(st){
   st.inventory = st.inventory||[];
   for(const it of st.inventory) normItem(it);
   if(!Array.isArray(st.folders)) st.folders=[];
+  for(const f of st.folders) if(f.type!=='floor') f.type=undefined;
   if(!Array.isArray(st.tagFilter)) st.tagFilter=[];
   if(st.untaggedOnly==null) st.untaggedOnly=false;
   if(typeof st.invSearch!=='string') st.invSearch='';
   if(st.onlyAvailable==null) st.onlyAvailable=false;
   if(st.showOpen==null) st.showOpen=true;
   if(st.showMeasure==null) st.showMeasure=true;
-  if(!INV_SCOPES[st.invScope]) st.invScope='project';
   if(typeof st.zoomSpeed!=='number' || !isFinite(st.zoomSpeed) || st.zoomSpeed<=0) st.zoomSpeed=1;
   if(st.leftOpen==null) st.leftOpen=true;
   if(st.rightOpen==null) st.rightOpen=true;
@@ -3716,7 +3703,8 @@ document.addEventListener('keydown', e=>{
 /* ------------------------- layout tree (folders + rooms) ------------------------- */
 function folderLabel(f){
   const tags=(f.tags&&f.tags.length) ? `<span class="tagchip" title="Tag filter: ${esc(f.tags.join(', '))}">${esc(f.tags[0])}${f.tags.length>1?' +'+(f.tags.length-1):''}</span>` : '';
-  return `<span class="nm">${esc(f.name)}</span>${tags}`;
+  const floor=f.type==='floor' ? `<span class="tagchip" title="Rooms here share one stock pool">Floor</span>` : '';
+  return `<span class="nm">${esc(f.name)}</span>${floor}${tags}`;
 }
 const moreBtn = (cls,label) => `<button type="button" class="btn quiet sm icon ${cls}" data-act="more" title="${label||'More actions'}" aria-label="${label||'More actions'}">${svgI('more')}</button>`;
 function renderTreeLevel(parentId,depth){
@@ -3848,6 +3836,15 @@ treeBox.addEventListener('drop', e=>{
   renderTree(); renderInv(); save();
 });
 
+function toggleFloor(id){
+  const f=folderOf(id); if(!f) return;
+  if(f.type==='floor'){ f.type=undefined; }
+  else {
+    if(nearestFloor(f.parentId||null)){ flash('A Floor can\u2019t sit inside another Floor'); return; }
+    f.type='floor';
+  }
+  renderTree(); renderInv(); save();
+}
 function folderMenu(id, anchor){
   const f=folderOf(id); if(!f) return;
   openMenu(anchor, [
@@ -3860,6 +3857,7 @@ function folderMenu(id, anchor){
       S.folders.push({id:uid(),name:n,parentId:id,tags:[]}); treeOpen.add(id); renderTree(); save();
     })},
     {sep:true},
+    {label: f.type==='floor' ? 'Unmark as Floor' : 'Mark as Floor', fn:()=>toggleFloor(id)},
     {label:'Move to folder\u2026', fn:()=>moveDialog('folder',id)},
     {label:'Edit tag filter\u2026', fn:()=>folderTagsDialog(id)},
     {sep:true},
@@ -4367,8 +4365,10 @@ $('invSearch').addEventListener('input', e=>{ S.invSearch=e.target.value; render
 function renderInv(){
   $('onlyAvail').checked = S.onlyAvailable;
   if($('invSearch').value !== (S.invSearch||'')) $('invSearch').value = S.invSearch||'';
-  const sc = INV_SCOPES[S.invScope] || INV_SCOPES.project;
-  $('invScope').value = S.invScope;
+  const curFloor = L() ? nearestFloor(L().folderId||null) : null;
+  const sc = curFloor
+    ? {suffix:'on '+curFloor.name, hint:'Every room on '+curFloor.name+' shares one pool. Rooms outside it keep their own stock.'}
+    : {suffix:'in this room', hint:'Every room starts with full stock. Only this room’s placements count.'};
   $('invScopeHint').textContent = sc.hint;
   renderTagChips();
   const ul=$('invList'), empty=!S.inventory.length;
@@ -4398,7 +4398,6 @@ function renderInv(){
       </span></li>`;
   }).join('');
 }
-$('invScope').addEventListener('change', e=>{ S.invScope=e.target.value; renderInv(); save(); });
 
 const invBox=$('invList');
 invBox.addEventListener('click', e=>{
@@ -4961,7 +4960,7 @@ function ancestorFolderIds(folders, id){
 }
 
 /* ------------------------- export ------------------------- */
-const PREF_KEYS=['unit','snap','showSwing','showDims','showOpen','showWalk','showMeasure','invScope','onlyAvailable','zoomSpeed'];
+const PREF_KEYS=['unit','snap','showSwing','showDims','showOpen','showWalk','showMeasure','onlyAvailable','zoomSpeed'];
 function exportPayload(roomIds, itemIds, withPrefs){
   const layouts=S.layouts.filter(l=>roomIds.includes(l.id)).map(clone);
   const keep=new Set();
@@ -5053,7 +5052,6 @@ function readImport(data){
   const prefs={};
   for(const k of PREF_KEYS) if(data[k]!==undefined) prefs[k]=data[k];
   if(prefs.unit && !['ftin','in','cm','mm','m'].includes(prefs.unit)) delete prefs.unit;
-  if(prefs.invScope && !INV_SCOPES[prefs.invScope]) delete prefs.invScope;
   if(prefs.snap!==undefined) prefs.snap=String(prefs.snap);
   for(const k of ['showSwing','showDims','showOpen','showWalk','showMeasure','onlyAvailable']) if(prefs[k]!==undefined) prefs[k]=!!prefs[k];
   return {layouts, folders, inventory, active:data.active, prefs:Object.keys(prefs).length?prefs:null};

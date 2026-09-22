@@ -28,29 +28,30 @@ Today each room ("layout") is independent; folders are purely organizational
 rooms into a real floor plan — a bigger, multi-part feature. Not started;
 captured here to scope before building any of it.
 
-### 1. Floor plan folders ("unit" folders)
+### 1. Floor plan folders ("Floor" folders)
 
-- A folder can be flagged as a **unit/floor plan folder**. Unlike a plain
+- A folder can be flagged as a **Floor** (floor plan folder). Unlike a plain
   folder, it gets a **floor plan preview + editor**: rooms placed and
   connected spatially, not just listed.
-- **Puzzle-piecing rooms together**, using doors as anchor points — align two
-  rooms by snapping a door in one to a door in another.
-  - Shortcut keys to rotate a room before placing it, when connecting.
-  - Open question: alternative/complementary mechanism where an arrow key on
-    an existing door **extends outward into a brand-new room file**, seeded
-    with that door already placed — i.e. "grow the house" from a doorway
-    instead of placing two existing rooms next to each other. Not decided
-    whether this replaces or supplements manual puzzle-piecing.
+- **Rooms connect through doors ("doorway room-growing")** — this is the
+  mechanism, not manual puzzle-piecing of independently-placed rooms. An
+  arrow key on an existing door extends outward into a **brand-new room
+  file**, seeded with that same door already placed at the matching spot —
+  i.e. you grow the house outward from a doorway, rather than placing two
+  existing rooms next to each other and aligning them by hand.
+  - Shortcut keys to rotate the new room before it's placed, if needed.
   - Doors currently must be duplicated across two rooms to represent a shared
-    opening — the connecting mechanism should remove that duplication.
+    opening — this mechanism removes that duplication (one door, shared by
+    construction).
 - **Auto interior wall thickness** — infer/standardize thickness for interior
   walls instead of manual entry (flagged by the user as a priority: "pls I
   beg").
 - Edits made inside an individual room's editor should be reflected live in
   the floor plan preview.
-- Open question: should rooms be directly editable **from** floor plan mode,
-  or only viewable there (edits happen by drilling into the room)? Leaning
-  toward view-only in floor plan mode, not decided.
+- Whether rooms are directly editable from floor plan mode itself, vs.
+  view-only there (edits happen by drilling into the room): leaving this
+  unresolved for now — only worth deciding once the rest of floor plan mode
+  is built and it's clear whether it's actually needed.
 - Double-clicking a room in the floor plan preview should jump straight into
   that room's individual editor.
 - Toggleable view options for rooms/furniture in the properties panel while
@@ -60,30 +61,28 @@ captured here to scope before building any of it.
 
 Today `S.invScope` (`project` / `folder` / `room`) is a global setting the
 user picks manually. Proposal: remove that manual toggle (judged to be
-unnecessary mental load) and instead derive counting behavior from **folder
-type**:
+unnecessary mental load) and instead derive counting behavior from where a
+room sits in the tree, using a fixed hierarchy:
 
-- **Normal folder** — pure organization, doesn't change counting (stays
-  count-per-room, the default).
-- **Unit/floor plan folder** — count-within-folder. Doubles as the floor plan
-  editor/viewer described in section 1. Cannot contain another folder that
-  also counts-within-folder (no nested unit folders).
-- **"Master" folder** (name a placeholder — needs a real name) —
-  count-within-folder, *can* contain unit folders inside it. Does **not**
-  itself get floor-plan editing/viewing (unit folders inside it keep theirs).
-  Lets you pool inventory across multiple separate floor plans (e.g. several
-  buildings on one property) without merging them into a single connected
-  floor plan.
-- Subfolder behavior is "transparent" to its parent's counting rule:
-  - subfolder of a normal folder → stays count-per-room (default);
-  - subfolder of a unit folder → counted into the unit's shared pool, and
-    does not keep separate stock of its own;
-  - subfolder of a master folder → same as above; a unit folder nested under
-    a master folder keeps its own floor-plan viewer/editor.
-- Net effect: normal folders for general organizing, unit folders for an
-  actual connected floor plan, master folders for a controlled cross-unit
-  pool while still allowing unrelated rooms/layouts outside it to place
-  items without being locked out.
+```
+Home                    (top-level, plain organizational folder)
+  Floor                 (= a floor plan / unit folder, e.g. "1A", "1B" for
+                          two floor plan options of the same building level)
+    Room                (a room; can have alternate layouts, see §3)
+```
+
+- **Home** — pure organization, doesn't change counting (stays
+  count-per-room, the default). Can hold multiple Floors (e.g. separate
+  buildings, or separate levels).
+- **Floor** — a floor-plan/unit folder: count-within-folder, and this is the
+  level that gets the floor plan preview/editor from section 1. Two floors
+  can represent alternate plans of the same physical level (e.g. "1A"/"1B")
+  the same way rooms get alternate layouts in section 3.
+- **Room** — sits inside a Floor; its alternate layouts (§3) are what gets
+  swapped/toggled at the Floor level above it.
+- This replaces the earlier "master folder" idea — no longer needed now that
+  Home is just a plain organizational top level and Floors are the only
+  count-within-folder unit.
 
 ### 3. Alternate room layouts ("snapshots", like Lightroom)
 
@@ -101,7 +100,7 @@ others.
 - Variants are lettered (A, B, C, …) for identification.
 - Only the variant marked **active** (eye icon / checkbox) is shown in the
   floor plan preview and counted toward inventory, when the room sits inside
-  a unit/master folder.
+  a Floor.
 - Variants support: set-active, drag-to-reorder, permanent delete. That's it
   — no other folder-like behavior.
 - You don't need an active variant selected in order to edit any of them.
@@ -125,9 +124,9 @@ instead of requiring navigation through the folder tree:
   BEDROOM 2   [A] [B]
   BATHROOM
   ```
-- A **unit-wide inventory list** — name + color only, no measurements, no
+- A **floor-wide inventory list** — name + color only, no measurements, no
   editing/placing from here — just a quick scan of what's used across the
-  whole unit.
+  whole floor.
   - Default sort: **errors first, then in-use, then not-in-use.**
   - Filter for unused furniture.
 
@@ -142,7 +141,7 @@ layouts are both currently active).
   blocked — this case is specifically about a conflict that only appears
   once alt-layout toggles combine.
 - Surface it as: a colored/patterned overlay on the offending item(s) in the
-  floor plan preview, plus a warning icon next to that item in the unit
+  floor plan preview, plus a warning icon next to that item in the floor
   inventory list (section 4).
 - The same overlay should also appear inside an individual room's editor if
   that room holds one of the conflicting placements and its layout is the
