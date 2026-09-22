@@ -7667,14 +7667,14 @@ async function bpRunOcr(regions, blocks, gh, runId){
    walls of the same physical opening draws two doors on top of each other. The other
    side still gets its own rec (still punches its own wall), just downgraded to a plain
    doorway. */
-function bpAttachOpenings(layouts, openings, edits, mm, G, wallMm){
+function bpAttachOpenings(layouts, openings, edits, mmX, mmY, G, wallMm){
   const where={};
   for(const l of layouts) l.openings=[];
   for(const o of openings){
     const ed=edits.openings[o.id]||(edits.openings[o.id]={});
     if(ed.deleted) continue;
-    const A=[o.aPx[0]*mm-G.x0, o.aPx[1]*mm-G.y0];
-    const B=[o.bPx[0]*mm-G.x0, o.bPx[1]*mm-G.y0];
+    const A=[o.aPx[0]*mmX-G.x0, o.aPx[1]*mmY-G.y0];
+    const B=[o.bPx[0]*mmX-G.x0, o.bPx[1]*mmY-G.y0];
     const mid=[(A[0]+B[0])/2, (A[1]+B[1])/2];
     const recs=[];
     for(const l of layouts){
@@ -7684,7 +7684,7 @@ function bpAttachOpenings(layouts, openings, edits, mm, G, wallMm){
       /* An opening is found on the wall's CENTRELINE, so how far that sits from the room's
          inner face depends on how thick this particular wall is. A fixed partition-sized
          allowance misses every window in a thick exterior shell. */
-      let bi=-1, bd=Math.max(wallMm, (o.tPx||0)*mm)*1.35;
+      let bi=-1, bd=Math.max(wallMm, (o.tPx||0)*(mmX+mmY)/2)*1.35;
       for(let i=0;i<n;i++){
         if(wallIsOff(l.room,i)) continue;      // no wall there to punch a door through
         const d=ptSegDist(lm, P[i], P[(i+1)%n]).d;
@@ -7709,7 +7709,7 @@ function bpAttachOpenings(layouts, openings, edits, mm, G, wallMm){
         }
       }
       else if(rec.dtype==='hinge' && o.hingePx){
-        const hp=[o.hingePx[0]*mm-G.x0-off[0], o.hingePx[1]*mm-G.y0-off[1]];
+        const hp=[o.hingePx[0]*mmX-G.x0-off[0], o.hingePx[1]*mmY-G.y0-off[1]];
         const p0=[wl.a[0]+wl.dir[0]*rec.offset, wl.a[1]+wl.dir[1]*rec.offset];
         const p1=[p0[0]+wl.dir[0]*rec.width, p0[1]+wl.dir[1]*rec.width];
         rec.hinge = Math.hypot(hp[0]-p0[0],hp[1]-p0[1]) <= Math.hypot(hp[0]-p1[0],hp[1]-p1[1]) ? 'start' : 'end';
@@ -7735,10 +7735,30 @@ function bpAttachOpenings(layouts, openings, edits, mm, G, wallMm){
   return where;
 }
 /* the drawing knows how thick its own walls are; 114 is only a fallback */
+/* the live mm-per-pixel for each axis: derived fresh from the manual measurements
+   (bpBindScaleSide) so editing or removing one takes effect immediately, rather than
+   a value baked in when the measurement was first added. The most recent measurement
+   along an axis wins; an axis with no measurement of its own borrows the other's, so
+   a single measurement still fully calibrates the plan. Falls back to the OCR-pooled
+   reading when nothing's been measured by hand at all. */
+function bpScaleXY(sc){
+  if(!sc) return null;
+  const ms=(sc.source==='measured'&&sc.measurements) || [];
+  if(ms.length){
+    const per={};
+    for(const m of ms) per[m.axis]=m.mm/Math.hypot(m.b[0]-m.a[0], m.b[1]-m.a[1]);
+    if(per.x==null && per.y==null) return null;
+    return {x:per.x!=null?per.x:per.y, y:per.y!=null?per.y:per.x};
+  }
+  return sc.source==='read' ? {x:sc.x, y:sc.y} : null;
+}
+/* the scale can differ per axis, but a wall's drawn thickness isn't tied to either one
+   in particular, so thickness math just splits the difference */
+function bpScaleMm(sc){ const xy=bpScaleXY(sc); return xy ? (xy.x+xy.y)/2 : 0; }
 function bpEffWall(){
   const st=bpState; if(!st||!st.edits) return 114;
   if(st.edits.wallMm) return st.edits.wallMm;
-  const mm=st.edits.scale&&st.edits.scale.mmPerPx;
+  const mm=bpScaleMm(st.edits.scale);
   if(!mm||!st.proposal) return 114;
   return Math.max(50, Math.round((st.proposal.tPart||14)*mm));
 }
@@ -7748,26 +7768,32 @@ function bpEffWall(){
 function bpEffExtWall(){
   const st=bpState; if(!st||!st.edits) return 146;
   if(st.edits.extMm) return st.edits.extMm;
-  const mm=st.edits.scale&&st.edits.scale.mmPerPx;
+  const mm=bpScaleMm(st.edits.scale);
   if(!mm||!st.proposal) return 146;
   return Math.max(50, Math.round((st.proposal.tExt||st.proposal.tPart||18)*mm));
 }
 function bpRebuild(){
   const st=bpState; if(!st||!st.proposal) return {layouts:[], problems:[], area:0};
-  const e=st.edits, mm=e.scale&&e.scale.mmPerPx;
+  const e=st.edits, xy=bpScaleXY(e.scale), mmX=xy&&xy.x, mmY=xy&&xy.y;
   const out={layouts:[], problems:[], area:0};
-  if(!mm) return out;
+  if(!mmX||!mmY) return out;
   const wall=bpEffWall();
   const built=[];
   for(const r of st.proposal.regions){
     const ed=e.spaces[r.id]||(e.spaces[r.id]={name:'',kind:'room',touched:false});
     if(ed.kind==='skip') continue;
-    const P=bpCleanPoly(r.polyPx.map(p=>[p[0]*mm, p[1]*mm]));
-    const name=ed.name||r.name||'Room';
+    /* walls trace axis-aligned in pixel space (bpOrtho), so scaling x and y by
+       independent factors still lands every corner at a right angle */
+    const P=bpCleanPoly(r.polyPx.map(p=>[p[0]*mmX, p[1]*mmY]));
+    const named=ed.name||r.name||'';
     if(P.length<3 || !polySimple(P)){
-      out.problems.push({id:r.id, name, why:P.length<3 ? 'Too small to be a room' : "This outline folds over itself"});
+      out.problems.push({id:r.id, name:named||'Room', why:P.length<3 ? 'Too small to be a room' : "This outline folds over itself"});
       continue;
     }
+    /* nothing in the app treats a room differently for being a closet — it's purely a
+       naming default, so a name typed or read off the plan always wins over it.
+       92903.04 is the mm² in a square foot, same constant fmtArea uses. */
+    const name=named || (polyArea(P) < 10*92903.04 ? 'Closet' : 'Room');
     built.push({rid:r.id, name, kind:ed.kind, points:P, dimText:ed.dimText||''});
   }
   if(!built.length) return out;
@@ -7789,11 +7815,11 @@ function bpRebuild(){
     if(b.dimText) l.dimLabel=b.dimText;
     /* the same outline back in the photo's own pixels, so the overlay draws exactly
        what will be created rather than something reconstructed from it */
-    l._bpPx=b.points.map(p=>[p[0]/mm, p[1]/mm]);
+    l._bpPx=b.points.map(p=>[p[0]/mmX, p[1]/mmY]);
     out.layouts.push(l);
     out.area+=polyArea(l.room.points);
   }
-  out.openingRooms=bpAttachOpenings(out.layouts, st.proposal.openings||[], e, mm, G, wall);
+  out.openingRooms=bpAttachOpenings(out.layouts, st.proposal.openings||[], e, mmX, mmY, G, wall);
   for(const l of out.layouts) clampOpenings(l);
   return out;
 }
@@ -8027,8 +8053,11 @@ function bpRunDetection(targetFloorId){
     if(runId!==bpRunSeq||!bpState) return;
     bpState.proposal=p;
     bpState.detectedFor=JSON.stringify(bpState.cropRect);
-    /* left null so the draft takes the thickness measured off the drawing */
-    bpState.edits={scale:p.scale||null, wallMm:null, extMm:null, spaces:{}, openings:{}};
+    /* left null so the draft takes the thickness measured off the drawing. OCR only
+       ever yields one pooled reading, so it seeds both axes equally — a manual
+       measurement (see bpBindScaleSide) can then override just one of them. */
+    bpState.edits={scale:p.scale ? {x:p.scale.mmPerPx, y:p.scale.mmPerPx, source:'read', n:p.scale.n, spread:p.scale.spread} : null,
+      wallMm:null, extMm:null, spaces:{}, openings:{}};
     /* pre-filled from whatever OCR read off the plan, so Review opens with names and
        Scale opens already measured rather than racing an async pass against the user */
     for(const r of p.regions) bpState.edits.spaces[r.id]=
@@ -8044,75 +8073,97 @@ function bpMountScale(){
     const b=cv2.getBoundingClientRect();
     return [(ev.clientX-b.left)*(work.width/b.width), (ev.clientY-b.top)*(work.height/b.height)];
   };
+  /* no "start measuring" button — a click on the photo just is the start (or the next
+     step) of a measurement. A pair that's already complete and waiting on a length
+     (or nothing in progress at all) means this click begins a fresh one; a lone first
+     point means this click is its second end. */
   cv2.addEventListener('pointerdown', ev=>{
-    const c=bpState.cal; if(!c) return;
-    if(!c.a||c.b){ c.a=at(ev); c.b=null; $('bpCalMsg').textContent='Now click the other end.'; }
-    else { c.b=at(ev); $('bpCalMsg').textContent='How long is that wall?'; $('bpCalLen').focus(); }
+    const c=bpState.cal;
+    if(!c || (c.a && c.b)) bpState.cal={a:at(ev), b:null};
+    else c.b=at(ev);
+    bpRenderScaleSide();
     bpDrawScale();
+    if(bpState.cal.b){ const len=$('bpCalLen'); if(len) len.focus(); }
   });
   bpRenderScaleSide();
   bpDrawScale();
 }
+/* every manual measurement made so far, oldest first — [] once nothing's been measured
+   (including right after OCR, before the person has touched Scale at all) */
+function bpMeasurements(){
+  const sc=bpState.edits&&bpState.edits.scale;
+  return (sc&&sc.source==='measured'&&sc.measurements) || [];
+}
+/* which axes a manual measurement has already pinned down */
+function bpAxesDone(){
+  const ms=bpMeasurements();
+  return {x:ms.some(m=>m.axis==='x'), y:ms.some(m=>m.axis==='y')};
+}
 /* the two ends of a click-to-measure are gathered over several events, so the
-   message shown has three distinct states rather than one static line */
+   message shown has three distinct states rather than one static line. One measurement
+   is enough to generate a layout, but it assumes the photo scales the same in both
+   directions — a second measurement across a wall running the other way corrects that,
+   so once one axis is pinned down the prompt steers toward the other one. */
 function bpCalMsg(){
   const c=bpState.cal;
-  if(!c||!c.a) return 'Click the two ends of a wall you know.';
+  if(!c||!c.a){
+    const done=bpAxesDone();
+    if(done.x||done.y) return `Click the two ends of another wall, running ${done.x?'up and down':'side to side'} this time — it sharpens the other dimension.`;
+    return 'Click the two ends of a wall you know.';
+  }
   if(!c.b) return 'Now click the other end.';
   return 'How long is that wall?';
 }
 function bpRenderScaleSide(){
-  const st=bpState, e=st.edits, side=$('bpScaleSide'), measuring=!!st.cal;
+  const st=bpState, e=st.edits, side=$('bpScaleSide'), c=st.cal, picking=!!(c&&c.a);
   if(!side) return;
-  const warn=bpScaleSanity(bpRebuild());
+  const xy=bpScaleXY(e.scale), warn=bpScaleSanity(bpRebuild());
+  const ms=bpMeasurements();
   /* the plan's own size is the only scale reading anyone can actually check — nobody
      can tell whether 8.2mm per pixel is right, everybody can tell whether 104 m² is */
   const readNote = e.scale && e.scale.source==='read'
-    ? `Read off ${esc(plural(e.scale.n,'printed dimension'))}` : 'Read from the photo';
-  const scaleLine = !e.scale ? `<p class="hint warn">Measure a wall to set the scale.</p>`
-    : `<div class="nm">${e.scale.source==='measured'?'You measured it':readNote}</div>
-       ${e.scale.source==='read' && e.scale.spread>0.12
-         ? `<p class="hint warn">Those printed dimensions don't fully agree with each other — worth measuring a wall to be sure.</p>` : ''}
-       ${warn?`<p class="hint warn">${esc(warn)}</p>`:''}`;
+    ? `<div class="nm">Read off ${esc(plural(e.scale.n,'printed dimension'))}</div>
+       ${e.scale.spread>0.12 ? `<p class="hint warn">Those printed dimensions don't fully agree with each other — worth adding a measurement to be sure.</p>` : ''}` : '';
+  const measureRows = ms.map((m,i)=>`
+    <li data-mi="${i}">
+      <span class="lmain"><span class="nm">Measurement ${i+1}</span></span>
+      <span class="lact">
+        <input type="text" class="len" data-bp="mlen" value="${esc(fmtLen(m.mm,S.unit))}">
+        <button type="button" class="btn quiet sm icon" data-bp="mdel" title="Remove this measurement" aria-label="Remove this measurement">${svgI('close')}</button>
+      </span>
+    </li>`).join('');
+  const scaleLine = `
+    ${readNote}
+    ${ms.length ? `<ul class="list mt" id="bpMeasureList">${measureRows}</ul>` : ''}
+    ${ms.length===1 && !picking ? `<p class="hint">Add a second measurement across a wall running the other way for a more accurate fit.</p>` : ''}
+    ${warn?`<p class="hint warn">${esc(warn)}</p>`:''}`;
   side.innerHTML = `
     <div class="group-title">Scale</div>
     ${scaleLine}
-    <div class="bp-row mt">
-      <button type="button" class="btn sm" id="bpMeasure" aria-pressed="${measuring}">${svgI('ruler')}Measure a known wall</button>
-    </div>
-    ${measuring ? `<div class="bp-measure" id="bpCalRow">
+    <div class="bp-measure mt" id="bpCalRow">
       <p class="hint" id="bpCalMsg">${esc(bpCalMsg())}</p>
-      <div class="bp-row">
-        <input type="text" class="len" id="bpCalLen" placeholder="${esc(fmtLen(3000,S.unit))}">
-        <button type="button" class="btn sm" id="bpCalOk">Use this length</button>
-        <button type="button" class="btn quiet sm icon" id="bpCalCancel" title="Cancel measuring" aria-label="Cancel measuring">${svgI('close')}</button>
-      </div>
-    </div>` : ''}
-    <div class="group">
+      ${picking ? `<div class="bp-row">
+        ${c.b ? `<input type="text" class="len" id="bpCalLen" placeholder="${esc(fmtLen(3000,S.unit))}">
+        <button type="button" class="btn sm" id="bpCalOk">Use this length</button>` : ''}
+        <button type="button" class="btn quiet sm icon" id="bpCalCancel" title="Cancel this measurement" aria-label="Cancel this measurement">${svgI('close')}</button>
+      </div>` : ''}
+    </div>
+    <div class="group mt">
+      <div class="group-title">Set wall widths</div>
       <div class="field">
         <label for="bpExtWall" title="Defaults to 5¾″, adjusted automatically once the scale is set from the photo — override if you know the real thickness.">Outer wall</label>
         <input type="text" class="len" id="bpExtWall" value="${esc(fmtLen(bpEffExtWall(), S.unit))}">
       </div>
-      <details class="adv">
-        <summary>Advanced</summary>
-        <div class="advbody">
-          <div class="field">
-            <label for="bpWall">Interior wall</label>
-            <input type="text" class="len" id="bpWall" value="${esc(fmtLen(bpEffWall(), S.unit))}">
-          </div>
-        </div>
-      </details>
+      <div class="field">
+        <label for="bpWall">Interior wall</label>
+        <input type="text" class="len" id="bpWall" value="${esc(fmtLen(bpEffWall(), S.unit))}">
+      </div>
     </div>`;
-  $('moOk').disabled=!e.scale;
+  $('moOk').disabled=!xy;
   bpBindScaleSide();
 }
 function bpBindScaleSide(){
   const e=bpState.edits;
-  $('bpMeasure').addEventListener('click', ()=>{
-    bpState.cal={a:null,b:null};
-    bpRenderScaleSide();
-    bpDrawScale();
-  });
   const calOk=$('bpCalOk');
   if(calOk) calOk.addEventListener('click', ()=>{
     const c=bpState.cal;
@@ -8122,7 +8173,10 @@ function bpBindScaleSide(){
     const px=Math.hypot(c.b[0]-c.a[0], c.b[1]-c.a[1]);
     if(px<4){ moError('Those two points are too close together'); return; }
     moError('');
-    e.scale={mmPerPx: mm/px, source:'measured'};
+    /* traced walls are always axis-aligned in pixel space (bpOrtho), so which way this
+       click ran tells us cleanly which axis it calibrates — no need to ask. */
+    const axis = Math.abs(c.b[0]-c.a[0]) >= Math.abs(c.b[1]-c.a[1]) ? 'x' : 'y';
+    e.scale = {source:'measured', measurements:[...bpMeasurements(), {axis, a:c.a, b:c.b, mm}]};
     bpState.cal=null;
     bpRenderScaleSide();
     bpDrawScale();
@@ -8133,6 +8187,19 @@ function bpBindScaleSide(){
     bpRenderScaleSide();
     bpDrawScale();
   });
+  const list=$('bpMeasureList');
+  if(list) for(const li of list.querySelectorAll('li')){
+    const i=+li.dataset.mi;
+    li.querySelector('[data-bp=mlen]').addEventListener('change', ev=>{
+      const mm=parseLen(ev.target.value, S.unit);
+      if(mm>0){ e.scale.measurements[i].mm=mm; bpRenderScaleSide(); bpDrawScale(); }
+    });
+    li.querySelector('[data-bp=mdel]').addEventListener('click', ()=>{
+      e.scale.measurements.splice(i,1);
+      bpRenderScaleSide();
+      bpDrawScale();
+    });
+  }
   $('bpExtWall').addEventListener('change', ev=>{
     const mm=parseLen(ev.target.value, S.unit);
     if(mm>0){ e.extMm=mm; bpRenderScaleSide(); }
@@ -8142,22 +8209,35 @@ function bpBindScaleSide(){
     if(mm>0){ e.wallMm=mm; bpRenderScaleSide(); }
   });
 }
-/* the calibration line only — no room fills. Those don't exist as an editable concept
+/* the calibration line(s) only — no room fills. Those don't exist as an editable concept
    until Review, and showing them here would spoil the review's own "here's what was
-   found" moment */
+   found" moment. Every measurement made so far stays drawn in red with its own length
+   label, so the photo always matches the editable list beside it; the one still being
+   clicked is drawn the same way, just without a label until a length is entered. */
 function bpDrawScale(){
   const cv2=$('bpScaleCv'); if(!cv2||!bpState) return;
-  const x=cv2.getContext('2d'), C=PAL(), work=bpState.work, c=bpState.cal;
+  const x=cv2.getContext('2d'), C=PAL(), work=bpState.work, c=bpState.cal, red=C.danger;
   x.clearRect(0,0,cv2.width,cv2.height);
   x.drawImage(work,0,0);
-  if(c&&c.a){
-    const r=Math.max(3, work.width/220);
+  const r=Math.max(3, work.width/220);
+  const seg=(a,b,label)=>{
     x.strokeStyle=C.surface; x.lineWidth=r*1.6;
-    x.beginPath(); x.moveTo(c.a[0],c.a[1]); if(c.b) x.lineTo(c.b[0],c.b[1]); x.stroke();
-    x.strokeStyle=C.ink; x.lineWidth=r*0.6;
-    x.beginPath(); x.moveTo(c.a[0],c.a[1]); if(c.b) x.lineTo(c.b[0],c.b[1]); x.stroke();
-    for(const p of [c.a,c.b]) if(p){ x.beginPath(); x.arc(p[0],p[1],r,0,Math.PI*2); x.fillStyle=C.ink; x.fill(); }
-  }
+    x.beginPath(); x.moveTo(a[0],a[1]); if(b) x.lineTo(b[0],b[1]); x.stroke();
+    x.strokeStyle=red; x.lineWidth=r*0.6;
+    x.beginPath(); x.moveTo(a[0],a[1]); if(b) x.lineTo(b[0],b[1]); x.stroke();
+    for(const p of [a,b]) if(p){ x.beginPath(); x.arc(p[0],p[1],r,0,Math.PI*2); x.fillStyle=red; x.fill(); }
+    if(!label || !b) return;
+    const cx=(a[0]+b[0])/2, cy=(a[1]+b[1])/2;
+    x.font='600 '+Math.max(12,Math.round(work.width/85))+'px ui-sans-serif,-apple-system,system-ui,sans-serif';
+    const w=x.measureText(label).width+14, h=Math.max(20,Math.round(work.width/48));
+    x.beginPath();
+    if(x.roundRect) x.roundRect(cx-w/2,cy-h/2,w,h,h/2); else x.rect(cx-w/2,cy-h/2,w,h);
+    x.fillStyle=C.surface; x.globalAlpha=.94; x.fill(); x.globalAlpha=1;
+    x.fillStyle=red; x.textAlign='center'; x.textBaseline='middle';
+    x.fillText(label,cx,cy);
+  };
+  for(const m of bpMeasurements()) seg(m.a, m.b, fmtLen(m.mm,S.unit));
+  if(c&&c.a) seg(c.a, c.b, null);
 }
 
 /* ---- blueprint: debug mask viewer ----
@@ -8281,7 +8361,7 @@ function bpOpenListHTML(d){
       const kind=ed.kind||o.kind;
       const dt=ed.dtype||o.dtype||'open';
       const rooms=(d.openingRooms&&d.openingRooms[o.id])||[];
-      const wMm=ed.widthMm || Math.round(o.widthPx*(e.scale?e.scale.mmPerPx:0));
+      const wMm=ed.widthMm || Math.round(o.widthPx*bpScaleMm(e.scale));
       const where = rooms.length ? rooms.join(' · ') : 'not on a wall yet';
       return `<li data-oid="${esc(o.id)}"${ed.deleted?' class="bad"':''}>
         <span class="lmain">
