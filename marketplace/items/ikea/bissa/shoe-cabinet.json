@@ -1,0 +1,12 @@
+{
+  "app": "room-planner-item",
+  "version": 1,
+  "id": "ikea/bissa/shoe-cabinet",
+  "name": "Bissa Shoe Cabinet",
+  "shape": { "type": "rect", "w": 790, "d": 280 },
+  "color": "#6e8b7a",
+  "tags": ["ikea", "storage", "entryway"],
+  "count": 1,
+  "passthrough": false,
+  "open": { "top": 0, "bottom": 400, "left": 0, "right": 0 }
+}

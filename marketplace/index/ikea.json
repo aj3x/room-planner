@@ -611,6 +611,11 @@
       ]
     },
     {
+      "id": "ikea/bissa/shoe-cabinet",
+      "name": "Bissa Shoe Cabinet",
+      "tags": ["ikea", "storage", "entryway"]
+    },
+    {
       "id": "ikea/bjorksnas-nightstand",
       "name": "IKEA Bj\u00f6rksn\u00e4s Nightstand",
       "tags": [
