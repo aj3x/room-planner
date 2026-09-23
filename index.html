@@ -1677,23 +1677,7 @@ let clickT=null;
 function singleClick(fn){ clearTimeout(clickT); clickT=setTimeout(()=>{ clickT=null; fn(); }, 190); }
 function cancelSingleClick(){ clearTimeout(clickT); clickT=null; }
 
-/* ------------------------- drag to reorder ------------------------- */
-function moveBefore(arr, movedId, targetId, after){
-  const i=arr.findIndex(x=>x.id===movedId); if(i<0) return;
-  const [o]=arr.splice(i,1);
-  const j=targetId ? arr.findIndex(x=>x.id===targetId) : -1;
-  if(j<0) arr.push(o); else arr.splice(after?j+1:j, 0, o);
-}
-function clearDropMarks(root){
-  const box=root||document;
-  for(const el of box.querySelectorAll('.drop-into,.drop-before,.drop-after'))
-    el.classList.remove('drop-into','drop-before','drop-after');
-  if(root) root.classList.remove('drop-root');
-}
-function dropHalf(e,el){
-  const r=el.getBoundingClientRect();
-  return (e.clientY-r.top)/Math.max(1,r.height);
-}
+import {moveBefore, clearDropMarks, dropHalf} from './src/ui/dnd.js';
 
 /* ------------------------- tag input: chips + autocomplete -------------------------
    Tags are shown as chips, the way they read elsewhere in the app. Tab or comma
