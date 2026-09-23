@@ -39,7 +39,16 @@ const GLOBALS = [
   'parseLen', 'fmtLen', 'migrate', 'normLayout', 'normItem',
 ];
 
+/* A binding that has moved into src/ is out of index.html's scope, so the
+ * epilogue cannot name it directly any more. Where a test still needs one, the
+ * epilogue imports it the ordinary way -- this text is appended INSIDE the
+ * app's own module, so a bare `import` resolves exactly as index.html's own do
+ * (and hoists, so "use strict" keeps its place at the top). CANVAS went this
+ * way when canvas/draw.js took the palette: index.html itself no longer
+ * references it, only visual.spec.js does.
+ */
 export const EPILOGUE = `
+;import {CANVAS} from './src/canvas/draw.js';
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },
