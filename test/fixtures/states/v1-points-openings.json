@@ -1,0 +1,45 @@
+{
+  "_comment": "Mid-era shape: room.points and openings already exist, folders exist, items carry tags/count — but there are no floors, no measures, no dimLabel, no floorPlace, no pillars/iwalls, no itemFolders and no marketplace state. Exercises the 'fill in everything added since' half of migrate(), and the item.manualTags backfill from item.tags.",
+  "layouts": [
+    {
+      "id": "room-a",
+      "name": "Studio",
+      "folderId": "fold-home",
+      "room": {
+        "points": [[0, 0], [5000, 0], [5000, 4000], [2500, 4000], [2500, 2500], [0, 2500]],
+        "wall": 114,
+        "floor": "#e8e2d5",
+        "trimOn": true,
+        "trim": 19
+      },
+      "openings": [
+        { "id": "op-1", "kind": "door", "wall": 0, "offset": 800, "width": 813, "dtype": "hinge", "hinge": "start", "swing": "in" },
+        { "id": "op-2", "kind": "window", "wall": 2, "offset": 400, "width": 1200, "dtype": "open" }
+      ],
+      "placed": [
+        { "id": "p1", "itemId": "sofa", "x": 1500, "y": 800, "rot": 0 },
+        { "id": "p2", "itemId": "rug", "x": 3200, "y": 2000, "rot": 45 }
+      ]
+    },
+    {
+      "id": "room-b",
+      "name": "Hall",
+      "folderId": null,
+      "room": { "points": [[0, 0], [2000, 0], [2000, 6000], [0, 6000]], "wall": 90, "floor": "#ccc" },
+      "openings": [],
+      "placed": []
+    }
+  ],
+  "inventory": [
+    { "id": "sofa", "name": "Sofa", "shape": { "type": "rect", "w": 2130, "d": 910 }, "color": "#6e8b7a", "tags": ["seating", "living"], "count": 1 },
+    { "id": "rug", "name": "Rug 5x8", "shape": { "type": "rect", "w": 1520, "d": 2440 }, "color": "#a8735a", "tags": [], "count": 3, "passThrough": true },
+    { "id": "lamp", "name": "Floor lamp", "shape": { "type": "ellipse", "w": 400, "d": 400 }, "color": "#5c7a99" }
+  ],
+  "folders": [
+    { "id": "fold-home", "name": "Home", "parentId": null }
+  ],
+  "active": "room-a",
+  "unit": "cm",
+  "snap": "10",
+  "mode": "room"
+}

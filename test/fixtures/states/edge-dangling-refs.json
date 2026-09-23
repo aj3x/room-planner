@@ -1,0 +1,52 @@
+{
+  "_comment": "Every repair branch in migrate()/normLayout()/pruneMeasures() fired at once: an active id that names no layout, a floorId whose floor was deleted, out-of-range enums (mode/invScope/unit), a non-finite zoomSpeed, malformed pillars and iwalls, a placement with no itemId, measures pointing at things that no longer exist, an unparseable colour, an all-zero open box, and a marketSub with no id. Nothing here should throw; everything should be repaired in place.",
+  "layouts": [
+    {
+      "name": "No id room",
+      "floorId": "floor-deleted",
+      "floorPlace": { "x": "nope", "y": null, "rot": 450 },
+      "room": {
+        "points": [[0, 0], [3000, 0], [3000, 3000], [0, 3000]],
+        "floor": "not-a-colour",
+        "pillars": [
+          { "shape": { "type": "triangle", "w": 5, "d": -20 } },
+          { "id": "pil-ok", "shape": { "type": "ellipse", "w": 400, "d": 400 }, "x": "x", "y": 10, "rot": null }
+        ],
+        "iwalls": [
+          { "a": [1], "b": null },
+          { "id": "iw-ok", "a": [100, 100], "b": [900, 100], "t": 2 }
+        ]
+      },
+      "openings": [
+        { "id": "op-1", "kind": "door", "wall": 0, "offset": 100, "width": 800, "dtype": "hinge", "corner": "sideways" }
+      ],
+      "placed": [
+        { "id": "p1", "itemId": "chair", "x": 0, "y": 0, "rot": 0 },
+        { "id": "p-bad" },
+        null
+      ],
+      "measures": [
+        { "id": "m-live", "a": { "k": "wall", "id": 0, "part": "side", "n": 0 }, "b": { "k": "item", "id": "p1", "part": "whole" } },
+        { "id": "m-dead-item", "a": { "k": "item", "id": "vanished", "part": "whole" }, "b": { "k": "wall", "id": 1, "part": "side", "n": 0 } },
+        { "id": "m-wall-oob", "a": { "k": "wall", "id": 99, "part": "side", "n": 0 }, "b": { "k": "item", "id": "p1", "part": "whole" } },
+        { "id": "m-malformed", "a": null, "b": { "k": "item", "id": "p1", "part": "whole" } },
+        { "id": "m-bad-part", "a": { "k": "item", "id": "p1", "part": "elbow" }, "b": { "k": "wall", "id": 0, "part": "side", "n": 0 } }
+      ]
+    }
+  ],
+  "inventory": [
+    { "id": "chair", "name": "Chair", "shape": { "type": "rect", "w": 450, "d": 450 }, "color": "#ABC", "open": { "top": 0, "bottom": 0, "left": 0, "right": 0 } },
+    { "id": "ghost", "shape": { "type": "rect", "w": 100, "d": 100 }, "count": null, "tags": "not-an-array" }
+  ],
+  "folders": "not-an-array",
+  "floors": [{ "id": "floor-real", "name": "Upstairs", "extWall": -5 }],
+  "marketSubs": [{ "url": "https://example.invalid/market.json", "name": "Idless" }],
+  "active": "no-such-layout",
+  "unit": "furlongs",
+  "mode": "spelunking",
+  "planMode": "marketplace",
+  "invScope": "galaxy",
+  "zoomSpeed": "fast",
+  "secClosed": "nope",
+  "uiLib": "not-an-object"
+}

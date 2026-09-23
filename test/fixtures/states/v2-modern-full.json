@@ -1,0 +1,85 @@
+{
+  "_comment": "Current-era shape with every subsystem populated: floors + floorPlace, measures, pillars, iwalls, itemFolders with inherited tags, ad hoc market listings/folders and a subscribed marketplace. migrate() should be very close to a no-op here — which is exactly what makes it a good regression detector.",
+  "layouts": [
+    {
+      "id": "room-a",
+      "name": "Living area",
+      "folderId": "fold-home",
+      "floorId": "floor-1",
+      "floorPlace": { "x": 0, "y": 0, "rot": 0 },
+      "dimLabel": "16' x 13'",
+      "room": {
+        "points": [[0, 0], [4880, 0], [4880, 3960], [0, 3960]],
+        "wall": 114,
+        "wallOff": [0, 0, 0, 0],
+        "floor": "#f5f3ee",
+        "trimOn": false,
+        "trim": 19,
+        "pillars": [
+          { "id": "pil-1", "shape": { "type": "rect", "w": 300, "d": 300 }, "x": 2400, "y": 1980, "rot": 0 }
+        ],
+        "iwalls": [
+          { "id": "iw-1", "a": [3000, 0], "b": [3000, 1500], "t": 90 }
+        ]
+      },
+      "openings": [
+        { "id": "op-1", "kind": "door", "wall": 3, "offset": 1000, "width": 813, "dtype": "hinge", "hinge": "start", "swing": "in", "corner": "cw" }
+      ],
+      "placed": [
+        { "id": "p1", "itemId": "ikea/kallax/4x2", "x": 600, "y": 400, "rot": 0 },
+        { "id": "p2", "itemId": "sofa", "x": 2400, "y": 2800, "rot": 180 }
+      ],
+      "measures": [
+        { "id": "m-1", "a": { "k": "wall", "id": 0, "part": "side", "n": 0 }, "b": { "k": "item", "id": "p1", "part": "whole" } },
+        { "id": "m-2", "a": { "k": "pillar", "id": "pil-1", "part": "whole" }, "b": { "k": "iwall", "id": "iw-1", "part": "whole" } }
+      ]
+    },
+    {
+      "id": "room-b",
+      "name": "Bedroom",
+      "folderId": "fold-home",
+      "floorId": "floor-1",
+      "floorPlace": { "x": 5200, "y": 0, "rot": 90 },
+      "room": { "points": [[0, 0], [3400, 0], [3400, 3000], [0, 3000]], "wall": 114, "floor": "#efe9dc", "pillars": [], "iwalls": [] },
+      "openings": [],
+      "placed": [],
+      "measures": []
+    }
+  ],
+  "inventory": [
+    {
+      "id": "ikea/kallax/4x2", "name": "Kallax 4x2", "folderId": "if-ikea",
+      "shape": { "type": "rect", "w": 1470, "d": 390 }, "color": "#b8975a",
+      "tags": ["ikea", "storage"], "manualTags": ["storage"], "count": 2,
+      "open": { "top": 0, "bottom": 400, "left": 0, "right": 0 }
+    },
+    {
+      "id": "sofa", "name": "Sofa", "folderId": null,
+      "shape": { "type": "rect", "w": 2130, "d": 910 }, "color": "#6e8b7a",
+      "tags": ["seating"], "manualTags": ["seating"], "count": 1
+    }
+  ],
+  "folders": [{ "id": "fold-home", "name": "Home", "parentId": null, "tags": [] }],
+  "floors": [{ "id": "floor-1", "name": "Ground floor", "parentId": null, "extWall": 200 }],
+  "itemFolders": [{ "id": "if-ikea", "name": "IKEA", "parentId": null, "tags": ["ikea"] }],
+  "marketFolders": [{ "id": "mf-1", "name": "Shared", "parentId": null }],
+  "marketListings": [{ "id": "ml-1", "name": "A bundle", "parentId": "mf-1", "kind": "link", "url": "https://example.invalid/items.json" }],
+  "marketSubs": [{ "id": "ms-1", "url": "https://example.invalid/market.json", "name": "Example market", "version": 1, "itemURL": "https://example.invalid/items/" }],
+  "active": "room-a",
+  "unit": "m",
+  "snap": "100",
+  "showSwing": true,
+  "showDims": true,
+  "showOpen": true,
+  "showWalk": false,
+  "showMeasure": true,
+  "invScope": "folder",
+  "onlyAvailable": true,
+  "zoomSpeed": 1.5,
+  "leftOpen": true,
+  "rightOpen": false,
+  "secClosed": ["walls"],
+  "mode": "furniture",
+  "planMode": "furniture",
+  "uiLib": { "tab": "library", "libFolderId": "if-ikea", "marketFolderId": null }
+}
