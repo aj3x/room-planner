@@ -1532,8 +1532,7 @@ mo.addEventListener('keydown', e=>{
   if(e.key==='Enter' && e.target.tagName!=='TEXTAREA'){ e.preventDefault(); $('moOk').click(); }
 });
 import {askText, askConfirm, showShortcuts, svgI} from './src/ui/modal.js';
-/* long enough to read: ~60ms a character, never under 1.6s or over 5s */
-const readTime = msg => Math.max(1600, Math.min(5000, String(msg).length*60));
+import {readTime} from './src/ui/flash.js';
 
 import {menuEl, closeMenu, openMenu, menuAtPoint} from './src/ui/menu.js';
 document.addEventListener('pointerdown', e=>{ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }, true);
@@ -8473,14 +8472,7 @@ $('fileIn').addEventListener('change', e=>{
   e.target.value='';
 });
 
-/* ------------------------- library flash (Inventory/Marketplace tabs) ------------------------- */
-let libFlashT=null;
-function libFlash(msg,warn){
-  if(!msg) return;
-  const el=$('libFlash');
-  el.textContent=msg; el.classList.toggle('warn',!!warn); el.classList.add('on');
-  clearTimeout(libFlashT); libFlashT=setTimeout(()=>el.classList.remove('on'),readTime(msg));
-}
+import {libFlash} from './src/ui/flash.js';
 
 /* ------------------------- item folders: the Inventory tab's tree, tags inherited onto everything inside ------------------------- */
 const childItemFolders = pid => S.itemFolders.filter(f=>(f.parentId||null)===(pid||null));
