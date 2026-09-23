@@ -1298,26 +1298,7 @@ function drawWalkOverlay(){
   for(const path of walkPaths()) drawWalkPath(path,C);
 }
 
-/* ------------------------- storage ------------------------- */
-const KEY='room-planner:v2';
-const Store=(()=>{
-  const api=(typeof window!=='undefined'&&window.storage&&typeof window.storage.get==='function')?window.storage:null;
-  const mem={};
-  return {
-    async get(k){
-      if(api){ try{ const r=await api.get(k); if(r&&r.value!==undefined) return r.value; }catch(e){} }
-      try{ const v=localStorage.getItem(k); if(v!==null) return v; }catch(e){}
-      return mem[k]??null;
-    },
-    async set(k,v){
-      mem[k]=v;
-      if(api){ try{ await api.set(k,v); return; }catch(e){} }
-      try{ localStorage.setItem(k,v); }catch(e){}
-    }
-  };
-})();
-let saveT=null;
-function save(){ clearTimeout(saveT); saveT=setTimeout(()=>Store.set(KEY,JSON.stringify(S)),350); }
+import {KEY, Store, save} from './src/core/store.js';
 
 /* ------------------------- undo / redo -------------------------
    Room edits (walls, doors, windows, floor/trim) and Things edits (placed
