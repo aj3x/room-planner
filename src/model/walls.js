@@ -6,25 +6,20 @@
    only line added.
 
    Six functions of this region could NOT come along in the model/ round,
-   because each reached into a phase that had not run yet. Four of them came
-   back in the canvas/ round, once flash() reached ui/flash.js:
+   because each reached into a phase that had not run yet. All six came home in
+   the canvas/ round, in two commits: tryRoomEdit / setWallAngle / setWallLen /
+   setRectSize once flash() reached ui/flash.js, then snapRadius (reads view)
+   and snapWallPoint (calls snapPt) once both landed in canvas/view.js. This
+   file is whole again.
 
-     tryRoomEdit          calls flash()      -> ui/flash.js      [here now]
-     setWallAngle, setWallLen, setRectSize   call tryRoomEdit    [here now]
-
-   Two are still in index.html, in place:
-
-     snapRadius           reads view         -> canvas/view.js
-     snapWallPoint        calls snapPt()     -> canvas/snap.js
-
-   They belong here and should join this file once those two land. The rest had
-   to go in the model/ round regardless: model/openings.js and
-   model/validity.js both need wallOf and obstaclePolys, and neither can import
-   from index.html. */
+   snapRadius has no caller outside this module and so is not exported back to
+   index.html -- the same thing that happened to MM and BARE in the units
+   pilot. It stays in the export list for canvas/snap.js, which wants it. */
 
 import {norm360, pointInPoly, ptSegDist, worldPoly, bbox, polySimple} from '../core/geometry.js';
 import {L, RP} from '../core/state.js';
 import {flash} from '../ui/flash.js';
+import {view, snapPt} from '../canvas/view.js';
 
 /* ------------------------- walls ------------------------- */
 /* ---- walls you can take away ----
@@ -173,6 +168,29 @@ function tryRoomEdit(fn){
   clampOpenings();
   return true;
 }
+/* world-space radius a drag should snap within, so pillars/wall ends catch
+   onto a nearby corner, wall or other wall end regardless of zoom */
+const snapRadius = () => 14/Math.max(view.scale,1e-6);
+/* where a wall's end should land: magnetic onto a room corner, a room wall's
+   face, or another interior wall's end or run (so two walls "connect" by
+   simply sharing a point) — falling back to the ordinary grid snap */
+function snapWallPoint(raw, excludeId, magnetic){
+  if(magnetic){
+    const R=snapRadius(); let best=null;
+    const consider=c=>{ const d=Math.hypot(c[0]-raw[0],c[1]-raw[1]); if(d<=R&&(!best||d<best.d)) best={pt:c,d}; };
+    for(const v of RP()) consider(v);
+    for(const w of L().room.iwalls){ if(w.id===excludeId) continue; consider(w.a); consider(w.b); }
+    if(best) return best.pt.slice();
+    const nb=nearestOnWalls(raw);
+    if(nb && nb.d<=R){ const w=wallOf(nb.i); return [w.a[0]+w.dir[0]*nb.t*w.len, w.a[1]+w.dir[1]*nb.t*w.len]; }
+    for(const w of L().room.iwalls){
+      if(w.id===excludeId) continue;
+      const r=ptSegDist(raw,w.a,w.b);
+      if(r.d<=R) return [w.a[0]+(w.b[0]-w.a[0])*r.t, w.a[1]+(w.b[1]-w.a[1])*r.t];
+    }
+  }
+  return snapPt(raw);
+}
 function setRectSize(w,d){
   const b=bbox(RP());
   return tryRoomEdit(()=>{ L().room.points = RP().map(([x,y])=>[
@@ -184,4 +202,5 @@ export {syncWallOff, wallIsOff, wallRuns, wallOf, wallAngle, clampOpenings,
         nearestOnWalls, pillarOf, iwallOf, iwallGeom, iwallPoly, iwallLen,
         iwallAngle, setIWallLen, setIWallAngle, setIWallEndDist, obstaclePolys,
         isRectRoom,
-        setWallAngle, setWallLen, tryRoomEdit, setRectSize};
+        setWallAngle, setWallLen, tryRoomEdit, snapRadius, snapWallPoint,
+        setRectSize};

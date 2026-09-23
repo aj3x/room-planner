@@ -849,29 +849,7 @@ import {syncWallOff, wallIsOff, wallRuns, wallOf, wallAngle, clampOpenings,
         iwallAngle, setIWallLen, setIWallAngle, setIWallEndDist, obstaclePolys,
         isRectRoom} from './src/model/walls.js';
 import {setWallAngle, setWallLen, tryRoomEdit} from './src/model/walls.js';
-/* world-space radius a drag should snap within, so pillars/wall ends catch
-   onto a nearby corner, wall or other wall end regardless of zoom */
-const snapRadius = () => 14/Math.max(view.scale,1e-6);
-/* where a wall's end should land: magnetic onto a room corner, a room wall's
-   face, or another interior wall's end or run (so two walls "connect" by
-   simply sharing a point) — falling back to the ordinary grid snap */
-function snapWallPoint(raw, excludeId, magnetic){
-  if(magnetic){
-    const R=snapRadius(); let best=null;
-    const consider=c=>{ const d=Math.hypot(c[0]-raw[0],c[1]-raw[1]); if(d<=R&&(!best||d<best.d)) best={pt:c,d}; };
-    for(const v of RP()) consider(v);
-    for(const w of L().room.iwalls){ if(w.id===excludeId) continue; consider(w.a); consider(w.b); }
-    if(best) return best.pt.slice();
-    const nb=nearestOnWalls(raw);
-    if(nb && nb.d<=R){ const w=wallOf(nb.i); return [w.a[0]+w.dir[0]*nb.t*w.len, w.a[1]+w.dir[1]*nb.t*w.len]; }
-    for(const w of L().room.iwalls){
-      if(w.id===excludeId) continue;
-      const r=ptSegDist(raw,w.a,w.b);
-      if(r.d<=R) return [w.a[0]+(w.b[0]-w.a[0])*r.t, w.a[1]+(w.b[1]-w.a[1])*r.t];
-    }
-  }
-  return snapPt(raw);
-}
+import {snapWallPoint} from './src/model/walls.js';
 import {setRectSize} from './src/model/walls.js';
 
 import {openingDispOffset, setOpeningDispOffset, openGeom,
