@@ -294,12 +294,29 @@ Stated plainly, because this is the part worth knowing:
   (`canvas/snap.js`, ~730 lines), drag handling and the corner editor are driven
   through state, not through synthetic pointer events. This is the largest
   untested surface in the app.
+- **`smoke › an edit survives a reload through localStorage` is flaky.** It
+  failed once during Phase 2.5 and twice more during the `core/`+`model/`
+  extraction, in `dist-light` twice and `chromium-light` once, and passed on
+  every re-run — including re-runs where nothing at all had changed since a
+  green run. So it is the test, not the code. Treat a single failure of *this
+  one test* as unconfirmed and re-run; treat two failures in a row, or any
+  other test failing, as real. It is worth a proper fix (the reload race, not
+  the assertion) before CI lands in Phase 4, because a flake in a
+  characterization baseline costs exactly the trust the baseline exists to
+  provide.
+
 - **Marketplace fetching is not covered** beyond the boot-time requests being
   observed. Subscriptions, index shards and the item cache all need network or
   an HTTP mock.
-- **`migrate()` is not a pure function.** It ends by assigning `S = st` so that
+- **`migrate()` is not a pure function.** It ends by assigning `S` so that
   `reconcileTags()` can read `S.itemFolders`. Every caller reassigns `S` from
   the return value anyway, so it is invisible in practice — but a module split
   must keep that assignment wired to the same live binding, or tag inheritance
   stops working on load with no error. Pinned explicitly in
   `migrate.golden.test.js`.
+
+  Phase 3 moved `S` into `src/core/state.js`, and you cannot assign to an
+  imported binding, so the write is now `setS(st)` — a setter exported beside
+  the declaration. The binding is still live and `reconcileTags()` still reads
+  the new object on the same tick; `setS` does exactly what the assignment did.
+  The epilogue's `set S(v)` goes through it too.

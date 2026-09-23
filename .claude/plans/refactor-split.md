@@ -300,7 +300,8 @@ unresolvable. Extraction must go **leaves first**: `core/` → `model/` → `ui/
 is A3f → A3a, the reverse of the roster. Line numbers still shift, which is why
 rule 2 (anchor on banner text) matters more, not less.
 
-**B. `core/state.js` is the hard one, and it is not move-only.** `S` is a `let`
+**B. `core/state.js` is the hard one, and it is not move-only.** *(Resolved —
+see "Phase 3 progress" below.)* `S` is a `let`
 that is *reassigned* from outside its own region — `S=st` at the end of
 `migrate()` and `S=done` in the import path. You cannot assign to an imported
 binding: both become a TypeError the moment `S` lives in another module. The
@@ -320,6 +321,59 @@ unextracted dependency along with it is a bug.
 **D. `MM` and `BARE` turned out to be used only inside the units region** — 2
 references each, both internal. Several other "shared" helpers will be the same.
 Import back only what is really referenced; let the rest become module-private.
+
+### Phase 3 progress — `core/` and `model/` (the leaves)
+
+Done, one commit each, all move-only unless marked, baseline green between every one:
+
+| module | note |
+|---|---|
+| `core/units.js` | Phase 2.5 pilot; `unitWord` rejoined it once `state.js` existed |
+| `core/geometry.js` | the `open state` sub-block sat inside it and had to follow separately |
+| `core/ids.js` | `retagItem`/`rehomeItemId` are not here — they are in `library/` |
+| `core/state.js` | **preceded by one non-move-only commit**: every `S = …` became `setS(…)` |
+| `core/open-state.js` | needed `state.js` first (`openSizeLabel` reads `S.unit`) |
+| `core/floor-space.js` | needed the `S` accessors, which moved into `state.js` |
+| `core/store.js` | `KEY`, `Store`, `save` only |
+| `model/walls.js` | **splits**: six functions stayed, see below |
+| `model/openings.js` | whole region |
+| `model/validity.js` | the walk-paths half of its §3 range stayed |
+| `model/measures.js` | movable after all; the canvas half of the Measure tool stayed |
+
+**Finding B is settled.** `S` moved, and the three writers (`migrate`,
+`applyImport`, boot) plus the epilogue's `set S(v)` now call `setS(v)`, a setter
+exported beside the declaration. The binding stays live, which is what
+`migrate()` needs when `reconcileTags()` reads `S.itemFolders`. That change
+landed in its own commit, *before* the move, so the move itself stayed a move.
+
+**§3's file list needed one addition.** The `S` accessors — `L`, `RP`, `itemOf`,
+`instOf`, `openOf`, `roomMode`, `furnMode`, `floorMode`, `folderOf`,
+`childFolders`, `childLayouts`, `floorOf`, `childFloors`, `floorLayouts` — have
+no file in §3 but had to move, because `core/floor-space.js` cannot resolve
+without them. They are in `core/state.js`: pure lookups over `S`, needing
+nothing else, so the module is still a leaf that imports nothing.
+
+**Left behind for later phases**, each blocked on code that has not moved:
+
+- `core/history.js` — `applyRoomSnap`/`applyFurnSnap`/`applyFloorSnap` call
+  `draw()` and six `render*()` functions; `updateHistButtons` uses `$()`. Needs
+  `ui/` and `canvas/`. Also touches `roomSel`/`selectClear`, which are still in
+  the monolith.
+- `model/walkpaths.js` — half of it draws (`ctx`, `cv`, `PAL`, `view`). Behind
+  `canvas/`.
+- `migrate`/`normLayout`/`normItem`/`pruneMeasures`/`remapMeasures` — `migrate()`
+  calls `reconcileTags()`, in `library/item-folders.js`. So `core/store.js`
+  landed as `KEY`/`Store`/`save` only, and the rest of §3's store.js follows
+  `library/`.
+- Six of `model/walls.js`: `tryRoomEdit` (calls `flash()`), `setWallAngle`,
+  `setWallLen`, `setRectSize` (call `tryRoomEdit`), `snapRadius` (reads `view`),
+  `snapWallPoint` (calls `snapPt()`). Listed at the top of `src/model/walls.js`.
+- **The selection lets** — `sel`, `selSet`, `roomSel`, `floorSel`, `mergeSel`,
+  `floorGuides`, `floorSnapNote`, `alignGuides`, `alignNote`, `treeOpen`. These
+  are finding B all over again, ten times: each is reassigned from dozens of
+  sites spread across regions that have not moved, so each needs either a setter
+  or all its writers moved in with it. Whoever moves `canvas/` will hit this
+  first and should budget for it the way `setS` was budgeted.
 
 ### SCSS rules
 1. Split is a **rename + cut**. SCSS is a superset of CSS; compiled output must be
