@@ -1521,7 +1521,8 @@ import {tagFieldHTML, mountTagField, tagFieldValue} from './src/ui/tag-input.js'
 
 /* ------------------------- view ------------------------- */
 const cv=$('cv'), ctx=cv.getContext('2d');
-let view={scale:.1,ox:0,oy:0}, W=0, H=0;
+let view={scale:.1,ox:0,oy:0};
+let W=0, H=0;
 function resize(){
   const r=cv.parentElement.getBoundingClientRect();
   const dpr=Math.min(window.devicePixelRatio||1,2.5);
