@@ -1520,8 +1520,8 @@ import {moveBefore, clearDropMarks, dropHalf} from './src/ui/dnd.js';
 import {tagFieldHTML, mountTagField, tagFieldValue} from './src/ui/tag-input.js';
 
 /* ------------------------- view ------------------------- */
-const cv=$('cv'), ctx=cv.getContext('2d');
-let view={scale:.1,ox:0,oy:0};
+import {cv, ctx} from './src/canvas/view.js';
+import {view} from './src/canvas/view.js';
 let W=0, H=0;
 function resize(){
   const r=cv.parentElement.getBoundingClientRect();
@@ -1552,24 +1552,14 @@ function fit(){
   }
   fitBBox(bbox(RP()));
 }
-const sx=x=>view.ox+x*view.scale, sy=y=>view.oy+y*view.scale;
-const wx=p=>(p-view.ox)/view.scale, wy=p=>(p-view.oy)/view.scale;
+import {sx, sy, wx, wy} from './src/canvas/view.js';
 function zoomAt(f,px,py){
   const bx=wx(px),by=wy(py);
   view.scale=Math.max(.004,Math.min(3,view.scale*f));
   view.ox=px-bx*view.scale; view.oy=py-by*view.scale;
   scheduleDraw();
 }
-const snapMM = () => parseFloat(S.snap)||0;
-function snapPt(p){
-  const g=snapMM();
-  return g>0 ? [Math.round(p[0]/g)*g, Math.round(p[1]/g)*g] : p;
-}
-/* lock a point onto the horizontal or vertical line through `a`, whichever the cursor is closer to */
-function axisLockFrom(a,pt){
-  const dx=pt[0]-a[0], dy=pt[1]-a[1];
-  return Math.abs(dx)>=Math.abs(dy) ? [pt[0],a[1]] : [a[0],pt[1]];
-}
+import {snapMM, snapPt, axisLockFrom} from './src/canvas/view.js';
 
 /* ------------------------- custom room drawing (walls may cross) ------------------------- */
 let drawState=null, drawCursor=null;
