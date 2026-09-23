@@ -71,6 +71,30 @@ every later phase is unverifiable.
 Vite, Sass, Vitest, Playwright, ESLint. `index.html` still monolithic; it just builds now.
 Phase 1 tests must still pass, both in dev and against `dist/index.html`.
 
+### Phase 2.5 — Port Suite A off jsdom (blocking)
+Found during Phase 2, not budgeted for in the original plan. Suite A (180 unit tests) reads
+the `<script>` body out of `index.html` and evaluates it as a **classic** script in jsdom.
+That works only while the code is one blob: **jsdom does not run ES modules**, so the first
+real `import`/`export` in `src/` breaks `test/harness.js` outright.
+
+This must land **before A3a**, not be discovered during it — the whole point of the baseline
+is that it stays green across every extraction commit, and a harness that cannot load the
+code under test cannot do that.
+
+Options, in preference order:
+1. Run Suite A under Vitest's browser mode or a Vite-transformed environment, so real ESM
+   loads natively and the tests import modules directly.
+2. Keep jsdom but have Vitest transform `src/` through Vite first (`vitest` already uses Vite
+   internally, so importing `src/*.js` from a test may need no harness at all — the
+   concatenate-and-eval trick exists only because the source is one inline script).
+
+Expect option 2 to mostly dissolve the harness: once the code is modules, a test imports what
+it needs. The harness earns its keep only for the *pre*-extraction snapshot, which is exactly
+what makes this a transition task rather than a permanent fixture.
+
+Also note: `GLOBALS` in `test/epilogue.js` is now a maintained list of 16 entry points that
+Suite B drives the app through. Any extraction moving one of those must keep it exported.
+
 ### Phase 3 — Extraction (serial)
 JS, then SCSS, then HTML partials. One agent at a time. Details in §4.
 
@@ -272,6 +296,7 @@ Serial unless marked parallel.
 | A0 | **Merge** | 0 | `feat/blueprint-uploader` → `main`; branch `refactor/modularize` |
 | A1 | **Baseline** | 1 | Tier 1 characterization suite against current `index.html` |
 | A2 | **Scaffold** | 2 | Vite + singlefile + Sass + Vitest + Playwright + ESLint; A1 green in dev *and* against `dist/` |
+| A2.5 | **Port Suite A off jsdom** | 2.5 | Suite A loads real ESM; harness reduced or retired |
 | A3a | **Extract: library + io + router + boot** | 3 | lines 9214–10891 |
 | A3b | **Extract: blueprint** | 3 | lines 6770–9213 (own directory) |
 | A3c | **Extract: plan + corners** | 3 | lines 5113–6769 |
