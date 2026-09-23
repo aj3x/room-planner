@@ -1288,16 +1288,21 @@ function setOpeningDispOffset(o,len,val){
   o.offset = o.corner==='ccw' ? (len-o.width-val) : val;
   o.offset = Math.max(0, Math.min(o.offset, len-o.width));
 }
-function openGeom(o, poly){
+function openGeom(o, poly, room){
   const w = wallOf(o.wall, poly);
   const p0=[w.a[0]+w.dir[0]*o.offset, w.a[1]+w.dir[1]*o.offset];
   const p1=[w.a[0]+w.dir[0]*(o.offset+o.width), w.a[1]+w.dir[1]*(o.offset+o.width)];
   const g={p0,p1,dir:w.dir,nrm:w.nrm,mid:[(p0[0]+p1[0])/2,(p0[1]+p1[1])/2]};
   if(o.kind==='door' && o.dtype==='hinge'){
     const atStart = o.hinge!=='end';
-    g.hinge = atStart ? p0 : p1;
+    // p0/p1 sit on the interior face; a door swinging out is hung on the
+    // frame's exterior face instead, so its hinge/leaf attach there
+    const outward = o.swing==='out';
+    const faceThick = outward ? (room||L().room).wall : 0;
+    const face = p=>[p[0]-w.nrm[0]*faceThick, p[1]-w.nrm[1]*faceThick];
+    g.hinge = atStart ? face(p0) : face(p1);
     const v = atStart ? [w.dir[0]*o.width, w.dir[1]*o.width] : [-w.dir[0]*o.width, -w.dir[1]*o.width];
-    const want = o.swing==='out' ? [-w.nrm[0],-w.nrm[1]] : w.nrm;
+    const want = outward ? [-w.nrm[0],-w.nrm[1]] : w.nrm;
     const rA=[-v[1],v[0]], rB=[v[1],-v[0]];
     const open = (rA[0]*want[0]+rA[1]*want[1])>0 ? rA : rB;
     g.a0=Math.atan2(v[1],v[0]); g.a1=Math.atan2(open[1],open[0]);
@@ -2653,7 +2658,7 @@ function drawFloor(){
   members.forEach((m,mi)=>{
     for(const o of m.l.openings){
       if(wallIsOff(m.l.room,o.wall)) continue;
-      const g=openGeom(o,m.P);
+      const g=openGeom(o,m.P,m.l.room);
       const d=depths[mi][o.wall] != null ? depths[mi][o.wall] : (m.l.room.wall||0);
       ctx.strokeStyle = o.kind==='window' ? C.glass : m.l.room.floor;
       ctx.lineWidth=Math.max(2,d*view.scale)*2+2;
@@ -2904,7 +2909,7 @@ function drawFloorLabel(m){
   let anchor=centroid(m.P);
   if(!anchor||!pointInPoly(anchor,m.P)) anchor=[(b.x0+b.x1)/2,(b.y0+b.y1)/2];
   const own=bbox(m.l.room.points);
-  const dims=m.l.dimLabel || (fmtLen(own.w)+' × '+fmtLen(own.h));
+  const dims=m.l.dimLabel || (fmtLen(own.w,S.unit)+' × '+fmtLen(own.h,S.unit));
   const cxp=sx(anchor[0]), cyp=sy(anchor[1]);
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.font='600 12px ui-sans-serif,system-ui,sans-serif';
@@ -3019,7 +3024,7 @@ function drawWallDrawOverlay(){
 }
 /* `room`/`poly` let a floor draw a door on a room other than the active one */
 function drawOpening(o,blocked,room,poly){
-  const r=room||L().room, g=openGeom(o,poly), t=Math.max(2,r.wall*view.scale);
+  const r=room||L().room, g=openGeom(o,poly,r), t=Math.max(2,r.wall*view.scale);
   const C=PAL();
   // jambs
   ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(1.5,t*.35);
@@ -3740,17 +3745,17 @@ cv.addEventListener('pointerdown', e=>{
     const hit=pickRoom(px,py);
     if(hit){
       roomSel=hit; selectClear();
-      if(hit.kind==='opening') drag={mode:'open', id:hit.id};
-      else if(hit.kind==='corner') drag={mode:'corner', i:hit.i};
+      if(hit.kind==='opening') drag={mode:'open', id:hit.id, ox:px, oy:py, armed:false};
+      else if(hit.kind==='corner') drag={mode:'corner', i:hit.i, ox:px, oy:py, armed:false};
       else if(hit.kind==='pillar'){
         const pl=pillarOf(hit.id);
-        drag={mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y};
+        drag={mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y, ox:px, oy:py, armed:false};
       }
       else if(hit.kind==='iwall'){
-        if(hit.end) drag={mode:'iwall-end', id:hit.id, end:hit.end};
-        else { const w=iwallOf(hit.id); drag={mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1]}; }
+        if(hit.end) drag={mode:'iwall-end', id:hit.id, end:hit.end, ox:px, oy:py, armed:false};
+        else { const w=iwallOf(hit.id); drag={mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1], ox:px, oy:py, armed:false}; }
       }
-      else drag={mode:'wall', i:hit.i, last:[wx(px),wy(py)]};
+      else drag={mode:'wall', i:hit.i, last:[wx(px),wy(py)], ox:px, oy:py, armed:false};
       renderRoomSel(); renderWalls(); renderOpen(); draw();
       return;
     }
@@ -3809,8 +3814,14 @@ cv.addEventListener('pointerdown', e=>{
   }
 });
 let lastPX=null, lastPY=null, lastMods={shiftKey:false,altKey:false};
+const DEADZONE_MODES=['open','corner','pillar','iwall','iwall-end','wall'];
+const DEADZONE_PX=4;
 function applyDragAt(px,py,mods){
   if(!drag) return;
+  if(!drag.armed && DEADZONE_MODES.includes(drag.mode)){
+    if(Math.hypot(px-drag.ox, py-drag.oy)<DEADZONE_PX) return;   // ignore tiny jitter so a click on the point doesn't nudge it
+    drag.armed=true;
+  }
   const pt=[wx(px),wy(py)];
   const floorDrag = drag.mode==='floor-room'||drag.mode==='floor-rot';
   // nothing has moved yet: remember how things stood so Escape can put them back
@@ -4874,19 +4885,19 @@ function renderFloorSel(){
   const p=l.floorPlace, own=bbox(l.room.points);
   t.textContent=l.name;
   box.innerHTML=`
-    <div class="field"><label for="flX">From left</label><input type="text" class="len" id="flX" value="${esc(fmtLen(p.x+own.x0))}"></div>
-    <div class="field"><label for="flY">From top</label><input type="text" class="len" id="flY" value="${esc(fmtLen(p.y+own.y0))}"></div>
+    <div class="field"><label for="flX">From left</label><input type="text" class="len" id="flX" value="${esc(fmtLen(p.x+own.x0,S.unit))}"></div>
+    <div class="field"><label for="flY">From top</label><input type="text" class="len" id="flY" value="${esc(fmtLen(p.y+own.y0,S.unit))}"></div>
     <div class="field"><label for="flRot">Angle</label><input type="text" id="flRot" value="${trimNum(p.rot,1)}"><span class="unit">°</span>
       <button class="btn quiet sm icon" id="flRotL" title="Turn left 90°" aria-label="Turn left 90 degrees">${svgI('rot-l')}</button>
       <button class="btn quiet sm icon" id="flRotR" title="Turn right 90°" aria-label="Turn right 90 degrees">${svgI('rot-r')}</button></div>
-    <div class="field"><label for="flDim">Label</label><input type="text" id="flDim" value="${esc(l.dimLabel||'')}" placeholder="${esc(fmtLen(own.w)+' × '+fmtLen(own.h))}"></div>
+    <div class="field"><label for="flDim">Label</label><input type="text" id="flDim" value="${esc(l.dimLabel||'')}" placeholder="${esc(fmtLen(own.w,S.unit)+' × '+fmtLen(own.h,S.unit))}"></div>
     <div class="row actions">
       <button class="btn sm" id="flEdit">Edit this room</button>
       <button class="btn sm quiet" id="flOff">Take off floor</button>
     </div>`;
   const move=(k,v)=>{ if(v==null||!isFinite(v)) return; l.floorPlace[k]=v-(k==='x'?own.x0:own.y0); commitFloor(); renderFloorSel(); draw(); save(); };
-  $('flX').addEventListener('change',e=>move('x',parseLen(e.target.value)));
-  $('flY').addEventListener('change',e=>move('y',parseLen(e.target.value)));
+  $('flX').addEventListener('change',e=>move('x',parseLen(e.target.value,S.unit)));
+  $('flY').addEventListener('change',e=>move('y',parseLen(e.target.value,S.unit)));
   $('flRot').addEventListener('change',e=>{
     const v=parseFloat(e.target.value);
     if(isFinite(v)){ l.floorPlace.rot=norm360(v); commitFloor(); renderFloorSel(); draw(); save(); }
@@ -4911,12 +4922,12 @@ function renderFloorProps(){
   const n=floorLayouts(fl.id).length;
   box.innerHTML=`
     <div class="field"><label for="flName">Name</label><input type="text" id="flName" value="${esc(fl.name)}"></div>
-    <div class="field"><label for="flExt">Outer wall</label><input type="text" class="len" id="flExt" value="${fl.extWall?esc(fmtLen(fl.extWall)):''}" placeholder="Same as each room"></div>
+    <div class="field"><label for="flExt">Outer wall</label><input type="text" class="len" id="flExt" value="${fl.extWall?esc(fmtLen(fl.extWall,S.unit)):''}" placeholder="Same as each room"></div>
     <p class="hint">${plural(n,'room')} on this floor. Drag one against another and it clicks to a shared wall.</p>
     <div class="row actions"><button class="btn sm quiet" id="flFit">Fit floor</button></div>`;
   $('flName').addEventListener('change',e=>{ const v=e.target.value.trim(); if(v){ fl.name=v; renderTree(); save(); } });
   $('flExt').addEventListener('change',e=>{
-    const raw=e.target.value.trim(), v=raw?parseLen(raw):0;
+    const raw=e.target.value.trim(), v=raw?parseLen(raw,S.unit):0;
     fl.extWall = raw && isFinite(v) && v>0 ? v : 0;
     renderFloorProps(); draw(); save();
   });
