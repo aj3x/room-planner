@@ -1,19 +1,37 @@
 # AGENTS.md
 
 ## What this is
-Room Planner is a client-only web app with no build step, no package.json, no bundler, no dependencies, and no test suite. Open a file directly in a browser (or serve the folder statically) to run/test changes — there is no `npm install` or `npm run` step.
+Room Planner is a client-only web app with **zero runtime dependencies**. What ships is still one self-contained HTML file you can open off disk — that deployment model is not negotiable — but as of the `refactor/modularize` branch it is *built* rather than hand-maintained:
 
-Everything lives in the single file **[index.html](index.html)**: all its HTML, CSS and JS, no modules, no build step. The header nav (`#navSeg`) switches between three **places**: **Plan** (the canvas + side panels), **Library** and **Marketplace** (a full-width library UI, `#paneLibrary`, that swaps in for `<main>` when active — see `isCanvasMode()`/`applyLayoutMode()`). Inside Plan, the **Room | Furniture** mode switch (`#modeSeg`) sits on the canvas itself. `S.mode` is one of `'room'|'furniture'|'inventory'|'marketplace'`; `S.planMode` remembers which canvas mode to return to from the header. `setMode()` toggles between the canvas layout and the library layout and, for the latter, calls `renderLibAll()` instead of `draw()`.
+```sh
+npm install && npx playwright install chromium   # once
+npm run dev        # Vite dev server on http://127.0.0.1:5173, HMR on save
+npm run build      # -> dist/index.html, one file, everything inlined
+npm test           # 185 Vitest + 72 Playwright, ~25s
+npm run lint       # ESLint, correctness rules only
+```
+
+`dist/` is **never committed** — a generated 547 KB file touched by every PR conflicts on every merge, which is the exact problem this refactor exists to solve.
+
+Two consequences worth knowing before you touch anything:
+
+- **`index.html`'s one `<script>` is now `type="module"`** (a Vite entry point). The code inside it is unchanged, but the source file no longer runs from `file://` — module scripts are fetched under CORS rules an opaque `file://` origin cannot satisfy. Open `dist/index.html` for that, which is what actually ships.
+- **All tooling is a devDependency.** `dependencies` in `package.json` is empty and must stay that way.
+
+Everything still lives in the single file **[index.html](index.html)** — all its HTML, CSS and JS, one `<style>` and one `<script>`. Phase 3 of the refactor splits that into `src/`; it has not happened yet, so treat the monolith as the source of truth. The header nav (`#navSeg`) switches between three **places**: **Plan** (the canvas + side panels), **Library** and **Marketplace** (a full-width library UI, `#paneLibrary`, that swaps in for `<main>` when active — see `isCanvasMode()`/`applyLayoutMode()`). Inside Plan, the **Room | Furniture** mode switch (`#modeSeg`) sits on the canvas itself. `S.mode` is one of `'room'|'furniture'|'inventory'|'marketplace'`; `S.planMode` remembers which canvas mode to return to from the header. `setMode()` toggles between the canvas layout and the library layout and, for the latter, calls `renderLibAll()` instead of `draw()`.
 
 **Design rules live in [DESIGN.md](DESIGN.md)** — tokens, components, wording ("item", "Library", never "thing"/"inventory" in UI copy) and a review checklist. Read it before adding UI; all colours, sizes, radii and shadows come from the CSS custom properties at the top of `<style>`, never literals.
 
-To preview: `open index.html` or serve the folder with any static server, e.g. `python3 -m http.server`.
+To preview: `npm run dev`, or `npm run build && open dist/index.html` to check the shipped artifact.
 
 ## Verifying changes
-There is no automated test suite or linter. After editing, manually verify in a browser:
-- Reload `index.html` and check the browser console for errors.
-- Exercise the area you changed (e.g. draw/resize a room, place furniture, undo/redo, switch units) since there's no test coverage to catch regressions.
-- Watch for `get_errors` diagnostics on `index.html` (it's plain JS inside `<script>`, so real syntax errors will surface there).
+`npm test` is the gate. It is a **characterization baseline** — a recording of how the app behaved before the module split, whose job is to prove the split changed nothing — so read [`test/README.md`](test/README.md) before touching anything under `test/`. The short version: **a red test during this refactor means the refactor is wrong, not that the test is stale.**
+
+- `npm run test:unit` (~3s) — Vitest + jsdom: the data model, migrations, units, import/export round-trips, plus the build-pipeline tests.
+- `npm run test:e2e` (~20s) — builds, then Playwright + Chromium against **both** the dev server and `dist/index.html`, sharing one set of screenshot baselines so the build cannot move a pixel unnoticed.
+- `npm run lint` — ESLint, correctness rules only. No Prettier and no formatting rules, deliberately: the dense style here is a decision, and reformatting 10k lines would destroy `git blame`. `no-undef` is the rule that earns its keep.
+
+Still worth doing by hand for anything visual: `npm run dev` and exercise the area you changed (draw/resize a room, place furniture, undo/redo, switch units).
 
 ## Architecture (all inside index.html)
 - **Units/geometry helpers** (top of `<script>`): everything is stored internally in **millimetres**; `parseLen`/`fmtLen` convert to/from the user's display unit (ft+in, in, cm, mm, m). Don't introduce a second unit system — always store mm and format at render time.
@@ -42,6 +60,7 @@ There is no automated test suite or linter. After editing, manually verify in a 
 - **Open state**: an inventory item may carry `item.open = {top,bottom,left,right}` (mm out past its own footprint, in the item's unrotated frame). `openPoly(inst,item)` is that footprint in world space and `openConflicts()` reports, per placed id, what it runs into. This is deliberately kept **out** of `validate()` — an open footprint never makes a placement illegal, it only warns — so don't fold it into the validity path.
 
 ## Conventions
-- No semicolon-free style, no modules/imports — everything is plain script-tag JS (`"use strict"`), ES2017-ish, no build tooling. Keep new code consistent with this (no TypeScript, no ESM imports).
-- Keep everything in `index.html` unless the user explicitly asks to split files — splitting changes the "open the file and it works" deployment model.
+- No semicolon-free style; ES2017-ish, `"use strict"`, no TypeScript. Keep new code consistent with the surrounding style.
+- **`index.html` is still one monolithic file, and splitting it is Phase 3's job**, under move-only rules (see [`.claude/plans/refactor-split.md`](.claude/plans/refactor-split.md)). Until then, keep everything in `index.html`. The build exists; the split has not happened yet.
+- `function` declarations stay `function` declarations — never rewritten as `const f = () => {}`. ESM tolerates import cycles for hoisted function declarations but not for `const` bindings read during module evaluation, and this graph is dense and almost certainly cyclic.
 - Angles: 0° points right, 90° points up (screen-plan convention), see `wallAngle`/`setWallAngle`.
