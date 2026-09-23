@@ -1626,27 +1626,7 @@ function finishWallDraw(a,b){
    ends the user can drop as many interior points as they like, bending the cut
    into a polyline; each one must stay strictly inside the room. */
 let splitDrawState=null;   // {pts:[hit, ...world points]} — pts[0] is always a boundary hit
-/* is `pt` (already snapped) essentially exactly on the room's own outline? Returns
-   the room-wall hit {i,t,len,pt} if so, else null — used to accept/reject each click. */
-function boundaryHit(pt){
-  const nb=nearestOnWalls(pt);
-  if(!nb || nb.d>1) return null;
-  return {i:nb.i, t:nb.t, len:nb.len, pt:pt.slice()};
-}
-/* Straight lines are common enough while cutting a room in two that they deserve
-   an easy, largely automatic snap — not just a Shift-held hard lock like the
-   freestanding-wall tool's axis lock. Held within SPLIT_ANGLE_TOL of a 45°
-   multiple off the previous point, the point magnet-snaps there; Shift forces it
-   regardless of how far off the raw angle actually is. */
-const SPLIT_ANGLE_STEP=Math.PI/4, SPLIT_ANGLE_TOL=6*Math.PI/180;
-function splitAngleSnap(prev, raw, hard){
-  const dx=raw[0]-prev[0], dy=raw[1]-prev[1], dist=Math.hypot(dx,dy);
-  if(dist<1) return raw;
-  const ang=Math.atan2(dy,dx), snapAng=Math.round(ang/SPLIT_ANGLE_STEP)*SPLIT_ANGLE_STEP;
-  const diff=Math.abs(Math.atan2(Math.sin(ang-snapAng), Math.cos(ang-snapAng)));
-  if(!hard && diff>SPLIT_ANGLE_TOL) return raw;
-  return [prev[0]+Math.cos(snapAng)*dist, prev[1]+Math.sin(snapAng)*dist];
-}
+import {boundaryHit, splitAngleSnap} from './src/canvas/split-room.js';
 function startSplitRoom(id){
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
   if(!polySimple(l.room.points)){ flash("Straighten this room's outline before splitting it"); return; }
