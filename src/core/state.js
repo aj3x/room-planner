@@ -56,4 +56,26 @@ S.active = S.layouts[0].id;
    when reconcileTags reads S.itemFolders. */
 function setS(v){ S = v; }
 
-export {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS};
+/* The accessors that read S. Moved here after S itself: they are pure lookups
+   over the state object, they need nothing else, and core/floor-space.js could
+   not move without them. Byte-identical to index.html; §3 did not name a file
+   for this block. */
+const L = () => S.layouts.find(l=>l.id===S.active) || S.layouts[0];
+const RP = () => L().room.points;
+const itemOf = id => S.inventory.find(i=>i.id===id);
+const instOf = id => L().placed.find(p=>p.id===id);
+const openOf = id => L().openings.find(o=>o.id===id);
+const roomMode = () => S.mode==='room';
+const furnMode = () => S.mode==='furniture';
+const floorMode = () => S.mode==='floor';
+const folderOf = id => id ? S.folders.find(f=>f.id===id) : null;
+const childFolders = pid => S.folders.filter(f=>(f.parentId||null)===(pid||null));
+const childLayouts = pid => S.layouts.filter(l=>(l.folderId||null)===(pid||null));
+const floorOf = id => id ? S.floors.find(f=>f.id===id) : null;
+const childFloors = pid => S.floors.filter(f=>(f.parentId||null)===(pid||null));
+/* rooms standing on a floor, in S.layouts order — that order is also their z-order */
+const floorLayouts = fid => fid ? S.layouts.filter(l=>l.floorId===fid) : [];
+
+export {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS,
+        L, RP, itemOf, instOf, openOf, roomMode, furnMode, floorMode,
+        folderOf, childFolders, childLayouts, floorOf, childFloors, floorLayouts};

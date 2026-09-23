@@ -776,7 +776,9 @@ import {parseLen, trimNum, unitWord, fmtLen, fmtArea, SNAPS} from './src/core/un
 import {EPS, norm360, shapePoly, bbox, worldPoly, shrink, pointInPoly, segHit, polyHit, ptSegDist, segDist, centroid, signedArea, polyArea, bbHit, polySimple} from './src/core/geometry.js';
 import {normOpen, hasOpen, openLocalBox, openPoly, openSizeLabel} from './src/core/open-state.js';
 
-import {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS} from './src/core/state.js';
+import {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS,
+        L, RP, itemOf, instOf, openOf, roomMode, furnMode, floorMode,
+        folderOf, childFolders, childLayouts, floorOf, childFloors, floorLayouts} from './src/core/state.js';
 
 import {idParts, idFolder, idLeaf, idProblem, uniqueId} from './src/core/ids.js';
 
@@ -797,21 +799,6 @@ function selectToggle(id){ if(selSet.has(id)){ selSet.delete(id); sel=[...selSet
 function selectSet(ids){ selSet = new Set(ids); sel = ids.length ? ids[ids.length-1] : null; }
 function selectClear(){ selSet.clear(); sel = null; }
 
-const L = () => S.layouts.find(l=>l.id===S.active) || S.layouts[0];
-const RP = () => L().room.points;
-const itemOf = id => S.inventory.find(i=>i.id===id);
-const instOf = id => L().placed.find(p=>p.id===id);
-const openOf = id => L().openings.find(o=>o.id===id);
-const roomMode = () => S.mode==='room';
-const furnMode = () => S.mode==='furniture';
-const floorMode = () => S.mode==='floor';
-const folderOf = id => id ? S.folders.find(f=>f.id===id) : null;
-const childFolders = pid => S.folders.filter(f=>(f.parentId||null)===(pid||null));
-const childLayouts = pid => S.layouts.filter(l=>(l.folderId||null)===(pid||null));
-const floorOf = id => id ? S.floors.find(f=>f.id===id) : null;
-const childFloors = pid => S.floors.filter(f=>(f.parentId||null)===(pid||null));
-/* rooms standing on a floor, in S.layouts order — that order is also their z-order */
-const floorLayouts = fid => fid ? S.layouts.filter(l=>l.floorId===fid) : [];
 /* ---- floor space ----
    A room keeps drawing itself in its own mm space. Standing it on a floor is one
    rigid move: spin about its own bbox centre, then shift. The matrix is worldPoly's,
