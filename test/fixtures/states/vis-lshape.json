@@ -1,0 +1,29 @@
+{
+  "_comment": "Visual fixture 2 — an L-shaped room in Room mode, with a pillar, an interior wall, and two measurements. Exercises the non-convex polygon path, wall labels and the measure overlay all at once.",
+  "layouts": [{
+    "id": "vl", "name": "L-shape", "folderId": null, "floorId": null,
+    "floorPlace": {"x":0,"y":0,"rot":0}, "dimLabel": "",
+    "room": {
+      "points":[[0,0],[6000,0],[6000,3000],[3000,3000],[3000,5500],[0,5500]],
+      "wall":140,"floor":"#e8e2d5","trimOn":true,"trim":19,
+      "pillars":[{"id":"pl1","shape":{"type":"rect","w":400,"d":400},"x":3000,"y":1500,"rot":0}],
+      "iwalls":[{"id":"iw1","a":[3000,3000],"b":[3000,5500],"t":100}]
+    },
+    "openings": [
+      {"id":"o1","kind":"door","wall":0,"offset":1200,"width":900,"dtype":"hinge","hinge":"start","swing":"in","corner":"cw"},
+      {"id":"o2","kind":"window","wall":1,"offset":600,"width":1200,"dtype":"open","corner":"cw"}
+    ],
+    "placed": [],
+    "measures": [
+      {"id":"m1","a":{"k":"wall","id":0,"part":"side","n":0},"b":{"k":"pillar","id":"pl1","part":"whole"}},
+      {"id":"m2","a":{"k":"pillar","id":"pl1","part":"whole"},"b":{"k":"iwall","id":"iw1","part":"whole"}}
+    ]
+  }],
+  "inventory": [],
+  "folders": [], "floors": [], "itemFolders": [], "marketFolders": [], "marketListings": [], "marketSubs": [],
+  "active": "vl", "unit": "m", "snap": "100", "mode": "room", "planMode": "room",
+  "showSwing": true, "showDims": true, "showOpen": true, "showWalk": false, "showMeasure": true,
+  "invScope": "project", "onlyAvailable": false, "zoomSpeed": 1,
+  "leftOpen": true, "rightOpen": true, "secClosed": [],
+  "uiLib": {"tab":"library","libFolderId":null,"marketFolderId":null}
+}

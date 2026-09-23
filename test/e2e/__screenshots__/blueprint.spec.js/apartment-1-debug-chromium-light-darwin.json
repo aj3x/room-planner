@@ -1,0 +1,22 @@
+{
+  "w": 933,
+  "h": 1009,
+  "thresholds": {
+    "hi": 135,
+    "lo": 213,
+    "bg": 255
+  },
+  "compCount": 51,
+  "structureArea": 134759,
+  "structureFill": 0.1546,
+  "leakFraction": 0.1105,
+  "tSplit": 5,
+  "tPart": 12,
+  "tExt": 21,
+  "bandCount": 23,
+  "lineCount": 15,
+  "cutCount": 16,
+  "regionCount": 9,
+  "barrierLeak": 0.1049,
+  "labelCount": 4
+}

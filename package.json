@@ -9,8 +9,8 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:update": "playwright test --update-snapshots",
-    "test:fast": "vitest run"
+    "test:e2e:offline": "playwright test --grep-invert @network",
+    "test:e2e:update": "playwright test --update-snapshots"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

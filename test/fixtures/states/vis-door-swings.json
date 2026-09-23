@@ -1,0 +1,28 @@
+{
+  "_comment": "Visual fixture 3 — door swings, the Phase 0 risk area. One wide room carrying every swing combination on wall 0: hinge in/start, hinge in/end, hinge out/start, hinge out/end, plus a bifold, a slider and a plain doorway for contrast, and a window on the opposite wall. swingPoly() gained a room parameter just before this branch, so this is the fixture that proves the geometry did not move.",
+  "layouts": [{
+    "id": "vs", "name": "Swings", "folderId": null, "floorId": null,
+    "floorPlace": {"x":0,"y":0,"rot":0}, "dimLabel": "",
+    "room": {"points":[[0,0],[9000,0],[9000,4000],[0,4000]],"wall":114,"floor":"#f5f3ee","trimOn":false,"trim":19,"pillars":[],"iwalls":[]},
+    "openings": [
+      {"id":"d1","kind":"door","wall":0,"offset":300,"width":813,"dtype":"hinge","hinge":"start","swing":"in","corner":"cw"},
+      {"id":"d2","kind":"door","wall":0,"offset":1500,"width":813,"dtype":"hinge","hinge":"end","swing":"in","corner":"cw"},
+      {"id":"d3","kind":"door","wall":0,"offset":2700,"width":813,"dtype":"hinge","hinge":"start","swing":"out","corner":"cw"},
+      {"id":"d4","kind":"door","wall":0,"offset":3900,"width":813,"dtype":"hinge","hinge":"end","swing":"out","corner":"cw"},
+      {"id":"d5","kind":"door","wall":0,"offset":5100,"width":900,"dtype":"bifold","hinge":"start","swing":"in","corner":"cw"},
+      {"id":"d6","kind":"door","wall":0,"offset":6300,"width":900,"dtype":"slide","hinge":"start","swing":"in","corner":"cw"},
+      {"id":"d7","kind":"door","wall":0,"offset":7500,"width":900,"dtype":"open","corner":"cw"},
+      {"id":"d8","kind":"door","wall":2,"offset":1000,"width":813,"dtype":"hinge","hinge":"start","swing":"in","corner":"cw"},
+      {"id":"d9","kind":"door","wall":2,"offset":3000,"width":813,"dtype":"hinge","hinge":"start","swing":"out","corner":"cw"},
+      {"id":"w1","kind":"window","wall":2,"offset":5500,"width":1600,"dtype":"open","corner":"cw"}
+    ],
+    "placed": [], "measures": []
+  }],
+  "inventory": [],
+  "folders": [], "floors": [], "itemFolders": [], "marketFolders": [], "marketListings": [], "marketSubs": [],
+  "active": "vs", "unit": "ftin", "snap": "25.4", "mode": "room", "planMode": "room",
+  "showSwing": true, "showDims": false, "showOpen": true, "showWalk": false, "showMeasure": true,
+  "invScope": "project", "onlyAvailable": false, "zoomSpeed": 1,
+  "leftOpen": true, "rightOpen": true, "secClosed": [],
+  "uiLib": {"tab":"library","libFolderId":null,"marketFolderId":null}
+}

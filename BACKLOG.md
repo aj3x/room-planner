@@ -160,3 +160,65 @@ layouts are both currently active).
   introduced by the blueprint merge); found during the Phase 0 merge audit.
   Every other path uses the `selectOnly`/`selectAdd`/`selectToggle`/
   `selectSet`/`selectClear` helpers that keep both in step.
+
+- **`isFinite(null)` is `true`, so `null` coordinates survive normalisation.**
+  `normLayout()` guards its numeric fields with `isFinite(p.y) ? p.y : 0`
+  (`index.html` ~2168 for `floorPlace`, ~2136 for pillar `x`/`y`/`rot`). `null`
+  coerces to `0`, so `isFinite(null)` is `true` and a `null` passes straight
+  through, while a genuinely bad value like the string `"nope"` is correctly
+  repaired to `0`. The result is a `floorPlace.y` or `pillar.rot` of `null`
+  sitting in geometry code that expects a number. It mostly behaves as `0`
+  downstream because `null` coerces again in arithmetic, which is exactly why
+  it has gone unnoticed. `Number.isFinite` would reject it, as would an
+  explicit `typeof x === 'number'` test. Found while writing the Phase 1
+  characterization baseline; pinned by
+  `test/unit/boot.test.js` ("edge: every dangling reference is repaired…" and
+  "edge: the same isFinite(null) hole shows up on pillars").
+
+- **A negative ft+in length does not survive a `fmtLen` → `parseLen` round
+  trip.** `fmtLen` renders the sign once, on the front of the whole string
+  (`-3' 6"`), but `parseLen` sums each term with its own sign, so it reads that
+  back as −3ft **plus** 6in = −762mm rather than −1066.8mm. Every other unit
+  round-trips correctly; ft+in is the only compound one and so the only one
+  affected. A fix would have to either bracket the whole ft+in string or carry
+  the sign onto every term. Pinned by `test/unit/units.test.js`
+  ("a negative ft+in length does NOT round-trip (known defect)").
+
+- **`migrate()` never validates `S.unit`.** It range-checks `mode`, `planMode`,
+  `invScope` and `zoomSpeed`, but a saved state carrying a nonsense `unit`
+  keeps it forever. `readImport()` *does* validate the same field
+  (`index.html` ~9374), so the import path is stricter than the load path. The
+  two halves of the unit system then disagree: `fmtLen` falls through to its
+  ft+in `default:` branch while `parseLen`, finding no `BARE` entry, reads bare
+  numbers as millimetres — so the app displays feet and inches but silently
+  interprets typed numbers as mm. Only reachable through corrupt or hand-edited
+  storage, since import filters it. Pinned by
+  `test/unit/migrate.golden.test.js` ("migrate() does not validate S.unit").
+
+- **The Library folder tree does not survive export/import.**
+  `exportPayload()` writes the *layout* folder tree (`S.folders`) and the floors,
+  but never `S.itemFolders` — the Inventory tab's own folder tree — while still
+  writing each item's `item.folderId`. `readImport()`/`applyImport()` have no
+  notion of it either, and `ITEM_SCHEMA.md` has no slot for it, so the Library
+  tab's own Export has the same hole. Two things follow on import:
+  (1) `item.folderId` is a dangling reference in the receiving project; and
+  (2) `reconcileTags()` cannot explain the folder-inherited half of `item.tags`,
+  so it folds those tags into `manualTags`, permanently promoting an inherited
+  tag to a hand-picked one — after which re-filing the item no longer removes
+  it. Replace-mode import does this immediately; merge-mode defers it to the
+  next load, but it is equally permanent. Pinned by
+  `test/unit/io-roundtrip.test.js` ("the Library folder tree does not survive
+  export/import").
+
+- **The app is not request-free on `file://`.** `ensureDefaultMarket()` runs
+  during boot and fetches the built-in marketplace subscription from
+  `raw.githubusercontent.com` (one manifest plus one index shard per
+  marketplace — 4 requests today), on `file://` as much as over http. The app
+  degrades gracefully when they fail, so it still *works* offline with no page
+  error, but `.claude/plans/refactor-split.md` §5 states the deployment
+  contract as "`dist/index.html` opened via `file://` works with **zero network
+  requests**", and that is not true today — it was already untrue before this
+  refactor branch. Either the plan's wording or the default subscription needs
+  to change; whichever it is, it should be decided deliberately rather than
+  discovered as an apparent Phase 2 regression. Pinned by
+  `test/e2e/smoke.spec.js` ("index.html boots and paints straight off disk").

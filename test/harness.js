@@ -24,6 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSDOM, VirtualConsole } from 'jsdom';
+import { EPILOGUE } from './epilogue.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '..');
@@ -167,50 +168,6 @@ function mediaPrelude({ dark = false, narrow = false } = {}) {
 })();
 `;
 }
-
-/* ---- the capture epilogue --------------------------------------------- */
-
-/* Appended to the in-memory copy of the script body ONLY. Every name here is a
-   top-level let/const in index.html that would otherwise be unreachable.
-   Getters, not values, because several of these are rebound (S = migrate(...)). */
-const EPILOGUE = `
-;globalThis.__rp = {
-  get S(){ return S; },        set S(v){ S = v; },
-  get sel(){ return sel; },
-  get selSet(){ return selSet; },
-  get roomSel(){ return roomSel; },
-  get floorSel(){ return floorSel; },
-  get mergeSel(){ return mergeSel; },
-  get view(){ return view; },
-  get nav(){ return nav; },
-  get measureOn(){ return measureOn; },
-  get bpState(){ return bpState; },
-  get bpLastImport(){ return bpLastImport; },
-  roomHist: roomHist,
-  furnHist: furnHist,
-  /* const-declared helpers: real functions, but arrow consts, so unlike the
-     function declarations above they never reach globalThis on their own. */
-  fmtArea: fmtArea,
-  uid: uid,
-  clone: clone,
-  rectPts: rectPts,
-  idFolder: idFolder,
-  idLeaf: idLeaf,
-  hasOpen: hasOpen,
-  pickValues: pickValues,
-  fileSlug: fileSlug,
-  snapRoom: snapRoom,
-  KEY: KEY,
-  Store: Store,
-  MM: MM,
-  BARE: BARE,
-  PREF_KEYS: PREF_KEYS,
-  INV_SCOPES: INV_SCOPES,
-  PALETTE: PALETTE,
-  ctx: ctx,
-  cv: cv
-};
-`;
 
 /* ---- boot ------------------------------------------------------------- */
 
