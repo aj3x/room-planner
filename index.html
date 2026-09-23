@@ -3996,27 +3996,7 @@ $('navSeg').addEventListener('click', e=>{
   else if(n!==S.mode) setMode(n);
 });
 
-/* ------------------------- collapsing the side panels -------------------------
-   Only on wide screens: narrow ones already swap the panels with the tab bar,
-   so collapsing there would leave nothing to look at. */
-const wideLayout = () => !window.matchMedia('(max-width:900px)').matches;
-function applyPanes(){
-  const wide=wideLayout(), m=document.querySelector('main');
-  const lShut = wide && !S.leftOpen, rShut = wide && !S.rightOpen;
-  $('paneRoom').classList.toggle('collapsed', lShut);
-  $('paneStuff').classList.toggle('collapsed', rShut);
-  m.classList.toggle('lc', lShut);
-  m.classList.toggle('rc', rShut);
-  // the head is the button; its chevron always points the way the panel would move
-  const set=(headId,chevId,shut,isLeft,name)=>{
-    const h=$(headId), label=(shut?'Show ':'Hide ')+name;
-    $(chevId).innerHTML = svgI((shut===isLeft) ? 'chev-r' : 'chev-l');
-    h.title=label; h.setAttribute('aria-label',label);
-    h.setAttribute('aria-expanded', String(!shut));
-  };
-  set('headLeft', 'tglLeft', lShut, true, 'the plan panel');
-  set('headRight', 'tglRight', rShut, false, 'the properties panel');
-}
+import {wideLayout, applyPanes} from './src/ui/panels.js';
 function togglePane(side){
   if(!wideLayout()) return;
   if(side==='left') S.leftOpen=!S.leftOpen; else S.rightOpen=!S.rightOpen;
