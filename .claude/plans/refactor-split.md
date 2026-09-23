@@ -81,19 +81,34 @@ This must land **before A3a**, not be discovered during it — the whole point o
 is that it stays green across every extraction commit, and a harness that cannot load the
 code under test cannot do that.
 
-Options, in preference order:
-1. Run Suite A under Vitest's browser mode or a Vite-transformed environment, so real ESM
-   loads natively and the tests import modules directly.
-2. Keep jsdom but have Vitest transform `src/` through Vite first (`vitest` already uses Vite
-   internally, so importing `src/*.js` from a test may need no harness at all — the
-   concatenate-and-eval trick exists only because the source is one inline script).
+**Done.** Neither option as written survived contact. Importing `src/*.js` from a Vitest test
+(option 2) evaluates module code in **Node's** realm, where `document` and `window` are the
+wrong ones or absent — harmless for `core/units.js`, fatal by the time `ui/` and `canvas/`
+move. What the harness does instead: it hands `index.html`'s script body plus the epilogue to
+**Vite as a virtual entry module**, and evaluates the resulting classic **IIFE** in jsdom. Same
+bundler as the shipped artifact, `./src/...` resolves exactly as in `npm run build`,
+tree-shaking and minification off, ~60ms per test file, nothing written to disk. The whole app
+— monolith and modules — runs in one realm, the jsdom one.
 
-Expect option 2 to mostly dissolve the harness: once the code is modules, a test imports what
-it needs. The harness earns its keep only for the *pre*-extraction snapshot, which is exactly
-what makes this a transition task rather than a permanent fixture.
+Not one of the 180 tests changed, which was the point: they are the behavioural contract.
+
+The harness did not dissolve, and will not. What dissolved was the *classic-script assumption*
+inside it. It keeps earning its keep: it is what supplies jsdom, the seeded PRNG, the frozen
+clock and the recording canvas context, none of which Phase 3 removes. What shrinks instead is
+`test/epilogue.js` — every binding that moves into `src/` leaves its scope, so `__rp` loses an
+entry and tests reach that symbol by importing the module (`MM`/`BARE` went this way with the
+pilot). See "How to extract a region" in §4, step 4.
+
+Side effect worth having: inside an IIFE, function declarations are closure-scoped, exactly as
+the browser has scoped them since the `type="module"` tag. Suite A now reaches entry points
+through `GLOBALS` the same way Suite B does, so the scoping divergence between the suites is
+gone and a name that goes missing during extraction fails in **both**.
 
 Also note: `GLOBALS` in `test/epilogue.js` is now a maintained list of 16 entry points that
-Suite B drives the app through. Any extraction moving one of those must keep it exported.
+Suite B drives the app through. Any extraction moving one of those must keep it in scope.
+
+Phase 2.5 also landed the **pilot extraction**, `src/core/units.js`, under Phase 3's rules —
+which is where the findings in §4 came from.
 
 ### Phase 3 — Extraction (serial)
 JS, then SCSS, then HTML partials. One agent at a time. Details in §4.
@@ -238,6 +253,73 @@ runtime-injected markup, which is a behaviour change.
 10. **Never run a destructive recovery command** — `git merge --abort`, `git reset --hard`,
    `git checkout -- <file>`, `git stash`. If the tree is not what you expected, STOP and
    report. Uncommitted work is unrecoverable; a stalled phase is not.
+
+### How to extract a region (the mechanical recipe)
+
+Proved end-to-end by the `core/units.js` pilot in Phase 2.5. Follow it literally.
+
+1. **Create `src/<dir>/<name>.js`.** Paste the region's lines in, byte-identical,
+   comments and banner included. The *only* line you add is a single
+   `export {a, b, c};` at the very end. Do **not** write `export const` /
+   `export function` on the declarations themselves — that edits the moved lines
+   and stops the diff being a pure move.
+2. **Import back into `index.html`** at the exact spot the code left, as one
+   line: `import {a, b} from './src/<dir>/<name>.js';`. Import only what the
+   *remaining* monolith actually references — an unused import is a
+   `no-unused-vars` warning and a lie about the dependency graph. `no-undef`
+   will name anything you forgot.
+3. **`"use strict";` stays the first statement of the script.** Put imports
+   after it. (They hoist anyway; this is about not demoting the directive to an
+   expression statement.)
+4. **Check `test/epilogue.js`.** If the region owned a name the epilogue
+   captures, that name is no longer in `index.html`'s scope and the epilogue
+   will throw a `ReferenceError` on every boot in both suites. Either the
+   monolith still imports it (so it stays in scope, fine) or you delete it from
+   `__rp` — tests that want it import the module directly, which is better. The
+   `GLOBALS` list is subject to the same rule.
+5. **Verify, in this order:** `npm run lint` (0 errors, and no new `no-undef`) →
+   `npm run test:unit` → `npm run build` → `npm run test:e2e`. Then
+   `git diff index.html` and read it: it must show your region removed and one
+   import line added, and nothing else.
+6. **Prove the move was a move:** diff the moved lines against the previous
+   commit's copy, e.g.
+   `git show HEAD:index.html | sed -n 'A,Bp' | diff - <(sed -n 'X,Yp' src/…)`.
+   Byte-identical or it is not an extraction.
+7. **One commit per region.**
+
+### Findings from the `core/units.js` pilot — read before starting
+
+**A. The extraction order in §6 is backwards, and A3a cannot run first.**
+ESM has no way for `src/foo.js` to import from `index.html`'s inline script.
+So a region may only move once everything it *calls* has already moved, or
+still lives in the monolith and is not needed by it. Extracting bottom-up by
+line number (A3a: `library/` + `io/`) moves the code that depends on nearly
+everything, while the helpers it calls are still trapped in the monolith —
+unresolvable. Extraction must go **leaves first**: `core/` → `model/` → `ui/` →
+`canvas/` → `plan/` → `blueprint/` → `library/`+`io/` → `router`/`boot`. That
+is A3f → A3a, the reverse of the roster. Line numbers still shift, which is why
+rule 2 (anchor on banner text) matters more, not less.
+
+**B. `core/state.js` is the hard one, and it is not move-only.** `S` is a `let`
+that is *reassigned* from outside its own region — `S=st` at the end of
+`migrate()` and `S=done` in the import path. You cannot assign to an imported
+binding: both become a TypeError the moment `S` lives in another module. The
+capture epilogue has the same problem (`set S(v){ S = v; }`). Extracting `S`
+therefore needs a setter (`setS(v)`) or all writers moved in with it — a real
+code change, the only one this refactor is likely to need. Budget it, do it in
+its own commit, and state it in the commit message. Everything downstream of
+`core/state.js` is blocked on it.
+
+**C. Line ranges in §3 are approximations, not boundaries.** The units region
+is 773–830, but `unitWord` sits in the middle of it and reads `S.unit`, so it
+could not go. Expect this: check every symbol in your range for references to
+things that have not moved yet, and leave the stragglers behind with a one-line
+comment saying why. A region that splits is normal; a region that drags an
+unextracted dependency along with it is a bug.
+
+**D. `MM` and `BARE` turned out to be used only inside the units region** — 2
+references each, both internal. Several other "shared" helpers will be the same.
+Import back only what is really referenced; let the rest become module-private.
 
 ### SCSS rules
 1. Split is a **rename + cut**. SCSS is a superset of CSS; compiled output must be

@@ -56,8 +56,6 @@ export const EPILOGUE = `
   furnHist: furnHist,
   KEY: KEY,
   Store: Store,
-  MM: MM,
-  BARE: BARE,
   PREF_KEYS: PREF_KEYS,
   INV_SCOPES: INV_SCOPES,
   PALETTE: PALETTE,
@@ -94,6 +92,13 @@ export const EPILOGUE = `
 };
 ${GLOBALS.map((n) => `try{ globalThis.${n} = ${n}; }catch(e){}`).join('\n')}
 `;
+
+/* A binding that has moved into src/ is no longer in index.html's scope, so it
+ * cannot be captured here — MM and BARE left with core/units.js. That is not a
+ * loss: a module's own exports are reachable the ordinary way, by importing the
+ * module from the test. Capture here is only for what is still closure-scoped
+ * inside index.html, and this list shrinks as Phase 3 proceeds.
+ */
 
 /** Append the epilogue to a full index.html source string, in memory. */
 export function injectEpilogue(html) {

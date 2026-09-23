@@ -87,6 +87,14 @@ sloppy mode and invalidate the entire baseline.
 If a future test needs another internal, add it to `epilogue.js`. Do not add an
 export to `index.html`.
 
+The converse, as Phase 3 proceeds: a binding that **moves into `src/`** is no
+longer in `index.html`'s scope, so `epilogue.js` cannot capture it any more and
+will throw a `ReferenceError` on every boot if it tries. Delete it from `__rp`
+and let tests import the module directly — which is strictly better, and is what
+`MM`/`BARE` did when `core/units.js` moved. The capture lists shrink as the
+monolith does. The recipe an extraction agent follows is in
+[`.claude/plans/refactor-split.md`](../.claude/plans/refactor-split.md) §4.
+
 ### What Phase 2 changed about that, and why
 
 Phase 2 made the one `<script>` a `type="module"` tag so Vite has an entry point.

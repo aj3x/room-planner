@@ -71,20 +71,20 @@ export default [
   },
 
   /* ---- the app ---------------------------------------------------------
-     index.html is one <script>. Until Phase 3 it is a single shared scope, so
-     it is linted as a script rather than a module: `no-undef` then means
-     "references something nothing in this file defines", which is exactly the
-     question worth asking of it. The `type="module"` tag it now carries is a
-     build-entry marker; it does not change how the code is written yet, and
-     linting it as a module would only add noise about a scope that has no
-     imports or exports in it. Phase 3 flips this entry to `sourceType: module`
-     at the same commit that gives the file imports. */
+     index.html is linted as a **module**. Phase 3 has begun moving code into
+     `src/`, so the file now carries `import` declarations and `sourceType:
+     'script'` would refuse to parse them.
+
+     `no-undef` still asks the question worth asking of it — "references
+     something neither this file nor its imports define" — and now it also
+     catches the characteristic extraction failure: a symbol moved out of here
+     and never imported back. */
   {
     files: ['**/*.html'],
     plugins: { html },
     languageOptions: {
       ecmaVersion: 2022,
-      sourceType: 'script',
+      sourceType: 'module',
       globals: { ...globals.browser },
     },
     rules: { ...js.configs.recommended.rules, ...RELAXED },
