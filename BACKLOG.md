@@ -150,3 +150,13 @@ layouts are both currently active).
 - Resolving any one of the conflicting placements (deleting/moving it) should
   clear the warning once the count is back within stock (partially, if more
   than one duplicate exists beyond stock).
+
+## Known defects
+
+- **`sel = null` does not clear `selSet`.** Three sites assign `sel = null`
+  directly (`index.html` ~1176, ~4205, ~9446) without going through
+  `selectClear()`, so the multi-select set can survive a clear of the primary
+  selection and leave the two out of sync. Pre-existing on `main` (not
+  introduced by the blueprint merge); found during the Phase 0 merge audit.
+  Every other path uses the `selectOnly`/`selectAdd`/`selectToggle`/
+  `selectSet`/`selectClear` helpers that keep both in step.
