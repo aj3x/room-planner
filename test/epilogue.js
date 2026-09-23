@@ -41,7 +41,7 @@ const GLOBALS = [
 
 export const EPILOGUE = `
 ;globalThis.__rp = {
-  get S(){ return S; },        set S(v){ S = v; },
+  get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },
   get selSet(){ return selSet; },
   get roomSel(){ return roomSel; },

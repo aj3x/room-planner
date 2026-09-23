@@ -851,6 +851,12 @@ let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true,
          defaultMarketDismissed:false, // user removed the built-in default marketplace subscription; don't re-add it
          uiLib:{tab:'library', libFolderId:null, marketFolderId:null}};
 S.active = S.layouts[0].id;
+/* S is reassigned wholesale on load and on import. Once it lives in a module
+   of its own those writers cannot assign to it — an imported binding is
+   read-only — so every write goes through this setter instead. The binding is
+   still live: importers see the new object, which is what migrate() relies on
+   when reconcileTags reads S.itemFolders. */
+function setS(v){ S = v; }
 
 let selSet = new Set(); // placed furniture ids (multi-select), source of truth
 let sel = null;         // last-added/primary placed furniture id; null when selSet is empty
@@ -2051,7 +2057,7 @@ function migrate(st){
   for(const f of st.marketFolders) f.parentId=f.parentId||null;
   for(const l of st.marketListings) l.parentId=l.parentId||null;
   for(const s of st.marketSubs) s.id=s.id||uid();
-  S=st;   // reconcileTags below reads S.itemFolders; every caller assigns S=migrate(...) anyway
+  setS(st);   // reconcileTags below reads S.itemFolders; every caller assigns S=migrate(...) anyway
   for(const it of st.inventory) reconcileTags(it);
   return st;
 }
@@ -9249,7 +9255,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     st.active = st.layouts.some(l=>l.id===inc.active) ? inc.active : st.layouts[0].id;
     const done=migrate(st);
     if(!done){ flash("There was nothing in that file to import"); return; }
-    S=done;
+    setS(done);
     ensureDefaultMarket().then(()=>{ if(!isCanvasMode(S.mode)) renderLibAll(); });
     sel=null; roomSel=null;
     for(const k of Object.keys(roomHist)) delete roomHist[k];
@@ -10679,7 +10685,7 @@ window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
     const raw=await Store.get(KEY);
     if(raw){
       const data=migrate(JSON.parse(raw));
-      if(data){ S=data; if(!S.layouts.some(l=>l.id===S.active)) S.active=S.layouts[0].id; }
+      if(data){ setS(data); if(!S.layouts.some(l=>l.id===S.active)) S.active=S.layouts[0].id; }
     }
   }catch(e){}
   const pm=paramMode();
