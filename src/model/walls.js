@@ -5,20 +5,26 @@
    byte-identical to what stood there, and the `export` block at the end is the
    only line added.
 
-   Six functions of this region could NOT come along, because each reaches into
-   a phase that has not run yet. They stay in index.html, in place:
+   Six functions of this region could NOT come along in the model/ round,
+   because each reached into a phase that had not run yet. Four of them came
+   back in the canvas/ round, once flash() reached ui/flash.js:
 
-     tryRoomEdit          calls flash()      -> ui/flash.js
-     setWallAngle, setWallLen, setRectSize   call tryRoomEdit
+     tryRoomEdit          calls flash()      -> ui/flash.js      [here now]
+     setWallAngle, setWallLen, setRectSize   call tryRoomEdit    [here now]
+
+   Two are still in index.html, in place:
+
      snapRadius           reads view         -> canvas/view.js
      snapWallPoint        calls snapPt()     -> canvas/snap.js
 
-   They belong here and should join this file once ui/ and canvas/ have moved.
-   The rest had to go now regardless: model/openings.js and model/validity.js
-   both need wallOf and obstaclePolys, and neither can import from index.html. */
+   They belong here and should join this file once those two land. The rest had
+   to go in the model/ round regardless: model/openings.js and
+   model/validity.js both need wallOf and obstaclePolys, and neither can import
+   from index.html. */
 
-import {norm360, pointInPoly, ptSegDist, worldPoly} from '../core/geometry.js';
+import {norm360, pointInPoly, ptSegDist, worldPoly, bbox, polySimple} from '../core/geometry.js';
 import {L, RP} from '../core/state.js';
+import {flash} from '../ui/flash.js';
 
 /* ------------------------- walls ------------------------- */
 /* ---- walls you can take away ----
@@ -145,7 +151,37 @@ function isRectRoom(){
   return true;
 }
 
+function setWallAngle(i,deg){
+  const P=RP(), n=P.length, w=wallOf(i), r=-deg*Math.PI/180;
+  return tryRoomEdit(()=>{ P[(i+1)%n]=[w.a[0]+Math.cos(r)*w.len, w.a[1]+Math.sin(r)*w.len]; });
+}
+function setWallLen(i,len){
+  const P=RP(), n=P.length, w=wallOf(i);
+  return tryRoomEdit(()=>{ P[(i+1)%n]=[w.a[0]+w.dir[0]*len, w.a[1]+w.dir[1]*len]; });
+}
+/* every room edit is applied, checked, and rolled back if it breaks the polygon */
+function tryRoomEdit(fn){
+  const before = JSON.stringify(RP());
+  fn();
+  if(!polySimple(RP())){
+    L().room.points = JSON.parse(before);
+    flash('That would fold the room over itself');
+    syncWallOff(L().room);
+    return false;
+  }
+  syncWallOff(L().room);
+  clampOpenings();
+  return true;
+}
+function setRectSize(w,d){
+  const b=bbox(RP());
+  return tryRoomEdit(()=>{ L().room.points = RP().map(([x,y])=>[
+    b.w>1 ? b.x0+(x-b.x0)/b.w*w : x,
+    b.h>1 ? b.y0+(y-b.y0)/b.h*d : y]); });
+}
+
 export {syncWallOff, wallIsOff, wallRuns, wallOf, wallAngle, clampOpenings,
         nearestOnWalls, pillarOf, iwallOf, iwallGeom, iwallPoly, iwallLen,
         iwallAngle, setIWallLen, setIWallAngle, setIWallEndDist, obstaclePolys,
-        isRectRoom};
+        isRectRoom,
+        setWallAngle, setWallLen, tryRoomEdit, setRectSize};

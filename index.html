@@ -848,28 +848,7 @@ import {syncWallOff, wallIsOff, wallRuns, wallOf, wallAngle, clampOpenings,
         nearestOnWalls, pillarOf, iwallOf, iwallPoly, iwallLen,
         iwallAngle, setIWallLen, setIWallAngle, setIWallEndDist, obstaclePolys,
         isRectRoom} from './src/model/walls.js';
-function setWallAngle(i,deg){
-  const P=RP(), n=P.length, w=wallOf(i), r=-deg*Math.PI/180;
-  return tryRoomEdit(()=>{ P[(i+1)%n]=[w.a[0]+Math.cos(r)*w.len, w.a[1]+Math.sin(r)*w.len]; });
-}
-function setWallLen(i,len){
-  const P=RP(), n=P.length, w=wallOf(i);
-  return tryRoomEdit(()=>{ P[(i+1)%n]=[w.a[0]+w.dir[0]*len, w.a[1]+w.dir[1]*len]; });
-}
-/* every room edit is applied, checked, and rolled back if it breaks the polygon */
-function tryRoomEdit(fn){
-  const before = JSON.stringify(RP());
-  fn();
-  if(!polySimple(RP())){
-    L().room.points = JSON.parse(before);
-    flash('That would fold the room over itself');
-    syncWallOff(L().room);
-    return false;
-  }
-  syncWallOff(L().room);
-  clampOpenings();
-  return true;
-}
+import {setWallAngle, setWallLen, tryRoomEdit} from './src/model/walls.js';
 /* world-space radius a drag should snap within, so pillars/wall ends catch
    onto a nearby corner, wall or other wall end regardless of zoom */
 const snapRadius = () => 14/Math.max(view.scale,1e-6);
@@ -893,12 +872,7 @@ function snapWallPoint(raw, excludeId, magnetic){
   }
   return snapPt(raw);
 }
-function setRectSize(w,d){
-  const b=bbox(RP());
-  return tryRoomEdit(()=>{ L().room.points = RP().map(([x,y])=>[
-    b.w>1 ? b.x0+(x-b.x0)/b.w*w : x,
-    b.h>1 ? b.y0+(y-b.y0)/b.h*d : y]); });
-}
+import {setRectSize} from './src/model/walls.js';
 
 import {openingDispOffset, setOpeningDispOffset, openGeom,
         swingPoly, blockedOpenings} from './src/model/openings.js';
