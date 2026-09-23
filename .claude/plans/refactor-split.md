@@ -110,6 +110,34 @@ Suite B drives the app through. Any extraction moving one of those must keep it 
 Phase 2.5 also landed the **pilot extraction**, `src/core/units.js`, under Phase 3's rules —
 which is where the findings in §4 came from.
 
+### Phase 3.5 — Pointer coverage before the `draw()` move (blocking)
+Added after the `canvas/` round, which established two things that together force it:
+
+- **`draw()` is one connected component of ~1,500 lines**, spanning the drawing, measuring,
+  split-room, walk-path and interaction regions. It cannot be cut into green intermediate
+  commits, so it lands as a single large commit — the one place in this refactor where
+  bisection does not help.
+- **That component contains the least-tested code in the app.** `test/README.md` says the
+  ~730-line alignment magnet is driven through state, not synthetic pointer events, so a
+  green suite is weak evidence there. The `canvas/` agent said the same unprompted.
+
+A 1,500-line unbisectable move of the least-covered code, validated by a suite that does not
+exercise it, is the highest-risk step in the project. So before it: **drive the real thing
+with real pointer events.** Playwright already has a browser; the gap is that nothing uses
+`mouse.down`/`move`/`up`.
+
+Target the behaviour the move could break, not line coverage:
+- drag a corner, with and without the magnet, and with Shift (`alignRadius`/`Infinity`)
+- drag a placed item until it snaps to a wall, an edge, and another item
+- the deadzone (`DEADZONE_MODES`/`DEADZONE_PX`, `armed:false` → armed)
+- draw a room, draw a freestanding wall, split a room along a divider
+- measure between two anchors
+- the guide readouts (`alignGuides`/`alignNote`, `floorGuides`/`floorSnapNote`) — these are
+  nine of the ten selection lets, and nothing currently asserts them at all
+
+These are characterization tests like the rest: capture what the app **does today**, before
+the move, defects included. A test that pins current behaviour is the point.
+
 ### Phase 3 — Extraction (serial)
 JS, then SCSS, then HTML partials. One agent at a time. Details in §4.
 
