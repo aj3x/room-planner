@@ -132,7 +132,7 @@ test.describe('smoke', () => {
       window.__rp.S.layouts[0].name = 'Persisted room';
       window.save();
     });
-    const written = await flushSave(app);
+    const written = await flushSave(app, (s) => s.layouts[0].name === 'Persisted room');
     expect(written.layouts[0].name).toBe('Persisted room');
 
     await app.goto(`${baseURL}/index.html`);

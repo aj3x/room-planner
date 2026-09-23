@@ -187,7 +187,7 @@ Nothing here may depend on wall-clock time, random ids or animation timing.
 | `uid()` → `Math.random` | seeded mulberry32 installed before any app code runs |
 | `exportPayload()` → `new Date()` | clock frozen at 2024-01-01T00:00:00Z |
 | ids appearing in snapshots | normalised to ordinals by `stableIds()` — identity is still proven, since the same id maps to the same ordinal everywhere |
-| `save()`'s 350ms debounce | `flushSave()` waits it out and reads storage, rather than sleeping arbitrarily |
+| `save()`'s 350ms debounce | `flushSave()` **polls** storage until the write lands (pass a predicate when a *particular* write must be seen). It used to sleep 450ms, a 100ms margin a loaded machine ate — that was the reload flake. |
 | rAF-scheduled repaints | `settle()` awaits two frames before any screenshot |
 | viewport / DPR | fixed at 1280×800, `deviceScaleFactor: 1` — `fit()` derives the zoom from the canvas box, so the viewport is an input to every screenshot |
 
@@ -294,16 +294,16 @@ Stated plainly, because this is the part worth knowing:
   (`canvas/snap.js`, ~730 lines), drag handling and the corner editor are driven
   through state, not through synthetic pointer events. This is the largest
   untested surface in the app.
-- **`smoke › an edit survives a reload through localStorage` is flaky.** It
-  failed once during Phase 2.5 and twice more during the `core/`+`model/`
-  extraction, in `dist-light` twice and `chromium-light` once, and passed on
-  every re-run — including re-runs where nothing at all had changed since a
-  green run. So it is the test, not the code. Treat a single failure of *this
-  one test* as unconfirmed and re-run; treat two failures in a row, or any
-  other test failing, as real. It is worth a proper fix (the reload race, not
-  the assertion) before CI lands in Phase 4, because a flake in a
-  characterization baseline costs exactly the trust the baseline exists to
-  provide.
+- ~~**`smoke › an edit survives a reload through localStorage` is flaky.**~~
+  **Fixed.** It failed three times across Phase 2.5 and the `core/`+`model/`
+  extraction, always passing on re-run — the test, not the code. Cause:
+  `flushSave()` slept a flat 450ms against `save()`'s 350ms debounce, and a
+  loaded machine ate the 100ms margin. It now polls for the write and takes an
+  optional predicate so a test can demand that a *particular* write landed.
+  Verified with three consecutive full e2e runs, 72/72 each.
+
+  **There is no longer a sanctioned flaky test in this suite.** A failure here
+  means the refactor is wrong. Do not re-run until green — investigate.
 
 - **Marketplace fetching is not covered** beyond the boot-time requests being
   observed. Subscriptions, index shards and the item cache all need network or

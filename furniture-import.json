@@ -1,0 +1,94 @@
+{
+  "inventory": [
+    {
+      "id": "piano",
+      "name": "Piano",
+      "shape": { "type": "rect", "w": 673, "d": 457 },
+      "open": { "top": 0, "bottom": 0, "left": 0, "right": 648 },
+      "tags": ["music", "living room"]
+    },
+    {
+      "id": "dining-table",
+      "name": "Dining Table",
+      "shape": { "type": "rect", "w": 1000, "d": 572 },
+      "open": { "top": 0, "bottom": 429, "left": 0, "right": 143 },
+      "tags": ["dining room", "table"]
+    },
+    {
+      "id": "sofa",
+      "name": "Sofa",
+      "shape": { "type": "rect", "w": 2146, "d": 1003 },
+      "tags": ["seating", "living room"]
+    },
+    {
+      "id": "simplehuman-trash",
+      "name": "Simplehuman Trash",
+      "shape": { "type": "rect", "w": 406, "d": 330 },
+      "tags": ["kitchen", "storage"]
+    },
+    {
+      "id": "gobbo",
+      "name": "Gobbo",
+      "shape": { "type": "ellipse", "w": 356, "d": 356 },
+      "tags": ["decor", "lighting"]
+    },
+    {
+      "id": "gobbo-house",
+      "name": "Gobbo House",
+      "shape": { "type": "rect", "w": 476, "d": 343 },
+      "tags": ["decor", "lighting"]
+    },
+    {
+      "id": "doormat",
+      "name": "Doormat",
+      "shape": { "type": "rect", "w": 892, "d": 892 },
+      "passThrough": true,
+      "tags": ["entryway", "rug"]
+    },
+    {
+      "id": "amp",
+      "name": "Amp",
+      "shape": { "type": "rect", "w": 340, "d": 203 },
+      "tags": ["audio", "living room"]
+    },
+    {
+      "id": "subwoofer",
+      "name": "Subwoofer",
+      "shape": { "type": "rect", "w": 406, "d": 222 },
+      "tags": ["audio", "living room"]
+    },
+    {
+      "id": "weights",
+      "name": "Weights",
+      "shape": { "type": "rect", "w": 210, "d": 432 },
+      "count": 2,
+      "tags": ["exercise", "gym"]
+    },
+    {
+      "id": "yoga-mat",
+      "name": "Yoga Mat",
+      "shape": { "type": "rect", "w": 664, "d": 2153 },
+      "passThrough": true,
+      "tags": ["exercise", "gym", "rug"]
+    },
+    {
+      "id": "standing-desk",
+      "name": "My Standing Desk",
+      "shape": { "type": "rect", "w": 1200, "d": 679 },
+      "tags": ["office", "desk"]
+    },
+    {
+      "id": "rollie-stool",
+      "name": "Rollie Stool",
+      "shape": { "type": "ellipse", "w": 470, "d": 470 },
+      "tags": ["seating", "office"]
+    },
+    {
+      "id": "ikea/bissa/shoe-cabinet",
+      "name": "Bissa Shoe Cabinet",
+      "shape": { "type": "rect", "w": 790, "d": 280 },
+      "open": { "top": 0, "bottom": 400, "left": 0, "right": 0 },
+      "tags": ["ikea", "storage", "entryway"]
+    }
+  ]
+}

@@ -118,12 +118,33 @@ export async function settle(page) {
 export const readS = (page) => page.evaluate(() => JSON.parse(JSON.stringify(window.__rp.S)));
 
 /** Flush the debounced save() and read back what landed in storage. */
-export async function flushSave(page) {
-  await page.waitForTimeout(450);
-  return page.evaluate((k) => {
-    const raw = localStorage.getItem(k);
-    return raw === null ? null : JSON.parse(raw);
-  }, APP_KEY);
+/* save() debounces at 350ms. Waiting a fixed 450ms for it leaves a 100ms
+   margin, which a loaded machine eats: a parallel worker or a Vite rebuild is
+   enough to read localStorage before the timer has fired. That is what made
+   this helper flaky. So poll for the write instead of sleeping through it.
+
+   `want` is an optional predicate on the parsed state. Pass one whenever the
+   assertion depends on a *particular* write having landed — without it, a
+   value left by an earlier save satisfies the non-null check and the race is
+   still there, just quieter. */
+export async function flushSave(page, want) {
+  const handle = await page.waitForFunction(
+    ({ k, src }) => {
+      const raw = localStorage.getItem(k);
+      if (raw === null) return null;
+      let parsed;
+      try { parsed = JSON.parse(raw); } catch { return null; }
+      if (src) {
+        // eslint-disable-next-line no-new-func
+        const pred = new Function('return (' + src + ')')();
+        if (!pred(parsed)) return null;
+      }
+      return { parsed };
+    },
+    { k: APP_KEY, src: want ? want.toString() : null },
+    { timeout: 5000 },
+  );
+  return (await handle.jsonValue()).parsed;
 }
 
 /* Ids are an implementation detail; see the note on stableIds in the jsdom
