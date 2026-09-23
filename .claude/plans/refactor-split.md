@@ -255,8 +255,11 @@ Pure logic, unusually testable already:
 - Smoke: draw room → place item → undo/redo → export → re-import.
 - Blueprint: upload fixture → crop → scale → review → commit → "Undo this import".
 - Split a room, merge two rooms, add/remove a corner.
-- `dist/index.html` opened via `file://` works with zero network requests (the deployment
-  model's actual contract).
+- `dist/index.html` opened via `file://` boots and paints off disk. **Not** "zero network
+  requests": `ensureDefaultMarket()` fetches 4 URLs from raw.githubusercontent.com at boot
+  today, pre-refactor, and they simply fail harmlessly under `file://`. The contract is that
+  the app works regardless. Whether the default marketplace should be bundled or lazily
+  fetched is a real question, but a behaviour change — not this branch's business.
 
 ---
 
