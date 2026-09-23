@@ -4150,9 +4150,7 @@ function place(itemId){
 }
 
 /* ------------------------- panels ------------------------- */
-function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-/* strip diacritics so "a" also finds "ä", "café" also finds "cafe", etc. */
-function normSearch(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+import {esc, normSearch} from './src/ui/panels.js';
 function renderAll(){
   renderTree(); renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
   renderInv(); renderSel(); renderFloorSel(); renderSnap(); renderMode(); renderMeasureBar(); updateHistButtons(); draw();
@@ -4241,20 +4239,7 @@ for(const [headId,side] of [['headLeft','left'],['headRight','right']]){
   });
 }
 
-/* ------------------------- collapsing sections ------------------------- */
-function applySections(){
-  for(const sec of document.querySelectorAll('.pane-body section[data-sec]')){
-    const shut=S.secClosed.includes(sec.dataset.sec);
-    sec.classList.toggle('collapsed', shut);
-    const h=sec.querySelector('.sec-head h2');
-    if(h){ h.tabIndex=0; h.setAttribute('role','button'); h.setAttribute('aria-expanded', String(!shut)); }
-  }
-}
-function toggleSection(h){
-  const k=h.closest('section[data-sec]').dataset.sec;
-  S.secClosed = S.secClosed.includes(k) ? S.secClosed.filter(x=>x!==k) : S.secClosed.concat(k);
-  applySections(); save();
-}
+import {applySections, toggleSection} from './src/ui/panels.js';
 document.addEventListener('click', e=>{
   const h=e.target.closest('.pane-body section[data-sec] > .sec-head > h2');
   if(h) toggleSection(h);
