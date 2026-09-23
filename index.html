@@ -1532,7 +1532,6 @@ mo.addEventListener('keydown', e=>{
   if(e.key==='Enter' && e.target.tagName!=='TEXTAREA'){ e.preventDefault(); $('moOk').click(); }
 });
 import {askText, askConfirm, showShortcuts, svgI} from './src/ui/modal.js';
-import {readTime} from './src/ui/flash.js';
 
 import {menuEl, closeMenu, openMenu, menuAtPoint} from './src/ui/menu.js';
 document.addEventListener('pointerdown', e=>{ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }, true);
@@ -3202,15 +3201,9 @@ $('measureBar').addEventListener('click', e=>{
 
 /* ------------------------- interaction ------------------------- */
 let drag=null;
-let flashT=null;
 let spaceDown=false; // held to force pan mode (Space+drag pans; Space+scroll still zooms)
 const ROOM_DRAGS=['corner','wall','open','pillar','iwall','iwall-end'];
-function flash(msg){
-  if(!msg) return;
-  const el=$('flash');
-  el.textContent=msg; el.classList.add('on');
-  clearTimeout(flashT); flashT=setTimeout(()=>el.classList.remove('on'),readTime(msg));
-}
+import {flash} from './src/ui/flash.js';
 /* ------------------------- the alignment magnet -------------------------
    A dragged point used to land wherever the grid allowed, which is hopeless on a plan
    whose other corners are not on the grid themselves (anything imported or drawn
