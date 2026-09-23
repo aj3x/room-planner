@@ -1,0 +1,20 @@
+# ---- test tooling (added in the Phase 1 characterization baseline) ----
+node_modules/
+
+# build output — never committed; a generated 547 KB file conflicts on every merge,
+# which is the exact problem the modularization refactor exists to solve
+dist/
+
+# Playwright artifacts
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+test/e2e/**/*-actual.png
+test/e2e/**/*-diff.png
+
+# vitest
+coverage/
+
+# OS noise
+.DS_Store
