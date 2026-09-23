@@ -96,10 +96,38 @@ monolith does. The recipe an extraction agent follows is in
 [`.claude/plans/refactor-split.md`](../.claude/plans/refactor-split.md) §4.
 
 The `ui/` round cost the epilogue nothing — it captures no modal, menu, tag,
-drag or toast binding — but the next one will: `ctx` and `cv` are both on the
-`__rp` list and both belong to `canvas/view.js`, as do the `sel`/`selSet`/
-`roomSel`/`floorSel`/`mergeSel` getters. `snapRoom`, `commitRoom`/`commitFurn`
-and the six undo/redo entry points go with `core/history.js`.
+drag or toast binding. The `canvas/` round cost it one entry and taught it a
+new trick.
+
+`ctx` and `cv` did move, into `src/canvas/view.js`, but the epilogue did not
+have to change for them: `index.html` still imports both, so both are still in
+its scope and `__rp` captures them exactly as before. That is the first of the
+two outcomes §4 step 4 allows, and it is the cheap one.
+
+`CANVAS` was the other. It left with the palette into `src/canvas/draw.js`, and
+`index.html` stopped referencing it entirely — so importing it back would have
+been an unused import and a lie about the dependency graph, while dropping it
+from `__rp` would have broken `visual.spec.js`, which asserts the dark palette
+numerically. **So the epilogue imports it.** The epilogue text is appended
+*inside* the app's own module, which means a bare
+
+```js
+import {CANVAS} from './src/canvas/draw.js';
+```
+
+resolves exactly as `index.html`'s own specifiers do, and hoists, so
+`"use strict"` keeps its place. Verified in Suite A and in all four Suite B
+projects, the built `dist-*` pair included.
+
+This is strictly better than a capture and it is the tool to reach for from now
+on: when a moved binding is still needed by a test but no longer by the
+monolith, **import it in the epilogue** rather than importing it back into
+`index.html` just to keep `__rp` fed.
+
+Still ahead: the `sel`/`selSet`/`roomSel`/`floorSel`/`mergeSel` getters go when
+the selection lets move (they did *not* move in the `canvas/` round — see the
+plan for why), and `snapRoom`, `commitRoom`/`commitFurn` and the six undo/redo
+entry points go with `core/history.js`.
 
 ### What Phase 2 changed about that, and why
 
@@ -300,6 +328,16 @@ Stated plainly, because this is the part worth knowing:
   (`canvas/snap.js`, ~730 lines), drag handling and the corner editor are driven
   through state, not through synthetic pointer events. This is the largest
   untested surface in the app.
+
+  **It is also still in `index.html`.** The `canvas/` round moved nothing out of
+  the alignment magnet or the interaction region except `flash()` and the
+  `flashT` half of `let drag=null, flashT=null;`, both from the interaction
+  region's head, precisely because a green suite is weak evidence here. Three
+  dependency-free helpers inside the magnet (`lineProject`, `lineCross`,
+  `isSquare`) were verified movable and deliberately left, since moving them
+  would have fragmented the region for no unblocking. Whoever does move this
+  code should assume the suite will not catch a mistake in it and review by
+  hand.
 - ~~**`smoke › an edit survives a reload through localStorage` is flaky.**~~
   **Fixed.** It failed three times across Phase 2.5 and the `core/`+`model/`
   extraction, always passing on re-run — the test, not the code. Cause:

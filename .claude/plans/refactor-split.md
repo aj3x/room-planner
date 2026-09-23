@@ -431,6 +431,91 @@ nothing else, so the module is still a leaf that imports nothing.
   `isCanvasMode`, `setMode`, `renderMode` and the `#navSeg`/`#modeSeg`
   listeners, all of which call `draw()` and every `render*()`.
 
+### Phase 3 progress — the `canvas/` round
+
+Done, baseline green between every commit. Three of the eleven are **declared
+code changes**, each in its own commit, each stated in its message.
+
+| commit | kind | note |
+|---|---|---|
+| split `let drag=null, flashT=null;` | **not move-only** | one line; unblocked five functions |
+| `ui/flash.js` ← `flash()` | move-only | the file is whole |
+| `model/walls.js` ← `tryRoomEdit`, `setWallAngle`, `setWallLen`, `setRectSize` | move-only | paid for by the line above |
+| split `let view=…, W=0, H=0;` | **not move-only** | one line; `view` is never reassigned, W/H are |
+| `canvas/view.js` | move-only | cv, ctx, view, sx/sy/wx/wy, snapMM, snapPt, axisLockFrom |
+| `model/walls.js` ← `snapRadius`, `snapWallPoint` | move-only | the file is whole |
+| `setForceLightCanvas()` | **not move-only** | 2 writers, both in `savePlanImage` |
+| `canvas/draw.js` instalment 1 | move-only | the palette: CANVAS, darkMQ, PAL |
+| `canvas/merge-rooms.js` | move-only | the polygon weld, + PARALLEL_TOL |
+| `canvas/split-room.js` instalment 1 | move-only | `boundaryHit`, `splitAngleSnap` |
+| `canvas/draw.js` instalment 2 | move-only | addPoly, pathPoly, clip, normHex, hexA, pickText |
+
+`index.html`: 9,797 → 9,564 lines. `src/`: 18 → 22 modules.
+
+**The big one — `draw()` — did not move, and this is the round's main finding.**
+
+**The ten selection setters were budgeted for and deliberately not spent.** The
+brief expected `sel`/`selSet`/`roomSel`/`floorSel`/`mergeSel`/`floorGuides`/
+`floorSnapNote`/`alignGuides`/`alignNote`/`treeOpen` to be the gate on this
+round. They are not. Converting all ten (98 assignment sites, 33 for `roomSel`
+alone, many of them inside the least-tested code in the app) would have
+unblocked **nothing that could then have landed**, because every region that
+reads them *also* calls `draw()` or the `render*()` functions. Rule: only
+convert a binding when the move it unblocks can actually land in the same
+round. The one setter this round did need was `setForceLightCanvas`, which is
+not on the list at all.
+
+**`draw()` is the keystone, and its blockers are these, exhaustively:**
+
+- the nine selection lets above (it reads all of them);
+- five interaction lets — `drag`, `drawState`, `drawCursor`, `wallDrawState`,
+  `wallDrawShift`;
+- `W` and `H`, which are behind `resize()` → `scheduleDraw()` → `draw()` itself;
+- four `draw*()` helpers filed in other regions — `drawMeasures` (measuring),
+  `drawSplitOverlay` (split-room), `drawDimension`, and `drawWalkOverlay`,
+  which is in `model/walkpaths.js` and is itself blocked.
+
+So `draw()` is not one region. It is a single connected component spanning the
+drawing, measuring, split-room, walk-path and interaction regions, roughly
+1,500 lines, and it cannot be cut into green intermediate commits. **Whoever
+takes it should plan to move that whole component in one commit**, after
+converting the fourteen lets, rather than trying to land it in pieces. That is
+the honest shape of the work and it is why this round stopped where it did.
+
+**Everything downstream is still blocked on `draw()`**, and this was verified,
+not assumed: `canvas/room-draw.js`, the rest of `canvas/split-room.js`, the UI
+half of `canvas/merge-rooms.js`, `canvas/corners.js` (which is only
+`splitWall` + `deleteCorner`; §3's 5973–6316 range is mostly `plan/`),
+`canvas/interaction.js`, `canvas/snap.js`, the rest of `canvas/view.js`,
+`core/history.js` (re-checked: needs `draw` and seven `render*`), and
+`togglePane` (needs `resize`).
+
+**Three further notes.**
+
+- **`cv` and `ctx` moved.** `const cv=$('cv'), ctx=cv.getContext('2d')` is in
+  `canvas/view.js`, with the reasoning in a comment above it. Short version:
+  `getContext('2d')` is a memoising lazy accessor, not a mutation — no
+  listener, no scheduled work, no paint, no app state read — so the only thing
+  that changes is that it runs at module-evaluation time. `#cv` exists by then
+  in all three targets, and the jsdom harness installs its recording
+  `getContext` in a *prelude*, ahead of the bundle. Leaving it behind would
+  have pinned all of `canvas/` to the monolith. The `darkMQ` `change` listener
+  next to it stayed in `index.html`, per the `ui/` convention.
+- **§3's line ranges misfile several things**, as finding C predicted.
+  `PAL`/`CANVAS` fall inside §3's `split-room.js` range but belong to
+  `draw.js`; `corners.js`'s range is mostly `plan/`; `PARALLEL_TOL` belongs to
+  `arranging` (→ `draw.js`) but had to lead `merge-rooms.js` because nothing in
+  `src/` can import from `index.html`. Anchor on banners and on what the code
+  *is*.
+- **The epilogue can `import`.** `CANVAS` left `index.html`'s scope with the
+  palette and `index.html` no longer references it, so importing it back would
+  have been an unused import. `test/epilogue.js` imports it directly instead —
+  the appended text sits inside the app's own module, so a bare `import`
+  resolves as index.html's own do and hoists clear of `"use strict"`. Verified
+  in Suite A and in all four Suite B projects, built artifact included. This is
+  the better tool for every future case where a test needs a moved binding the
+  monolith has stopped using.
+
 ### SCSS rules
 1. Split is a **rename + cut**. SCSS is a superset of CSS; compiled output must be
    byte-identical to today's CSS on the first commit. Verify with a diff of compiled output.
