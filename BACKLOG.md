@@ -221,4 +221,19 @@ layouts are both currently active).
   refactor branch. Either the plan's wording or the default subscription needs
   to change; whichever it is, it should be decided deliberately rather than
   discovered as an apparent Phase 2 regression. Pinned by
-  `test/e2e/smoke.spec.js` ("index.html boots and paints straight off disk").
+  `test/e2e/smoke.spec.js` ("dist/index.html boots and paints straight off disk").
+
+- **Dead code the linter found.** ESLint (added in Phase 2, correctness rules
+  only) reports seven unused bindings and dead stores in `index.html`. None is a
+  behaviour bug; all are noise that will be carried into a module for no reason
+  when Phase 3 extracts the regions they sit in, so they are worth clearing in a
+  follow-up — not during extraction, which is move-only.
+  - `folderPath` (~1162) and `walkTrace` (~1767): top-level functions with no
+    caller anywhere in the file.
+  - unused parameters: `len` (~3423), `tPart` (~7449).
+  - dead stores: `a` (~7210), `inc` (~9535), `raw` (~10762) — each assigned and
+    then overwritten or never read.
+  They are reported as ESLint **warnings** rather than errors, deliberately:
+  Phase 2 may not edit application code, and a lint that fails the build over
+  findings nobody is allowed to fix would just get switched off. `no-undef`,
+  the rule that matters for the extraction, is an error and is clean.
