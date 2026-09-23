@@ -815,48 +815,9 @@ function openSizeLabel(it){
   return b ? fmtLen(b.x1-b.x0,S.unit)+' × '+fmtLen(b.y1-b.y0,S.unit) : '';
 }
 
-/* ------------------------- state ------------------------- */
-const PALETTE=['#6e8b7a','#a8735a','#5c7a99','#b8975a','#8a6e96','#4f6b63','#a55b57','#7e8c99','#6b7f4e','#9c6b8e','#57707d','#8c8577'];
-const uid = () => Math.random().toString(36).slice(2,10);
+import {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS} from './src/core/state.js';
 
 import {idParts, idFolder, idLeaf, idProblem, uniqueId} from './src/core/ids.js';
-const clone = v => JSON.parse(JSON.stringify(v));
-const rectPts = (w,d) => [[0,0],[w,0],[w,d],[0,d]];
-
-function blankFloorPlace(){ return {x:0, y:0, rot:0}; }
-function blankLayout(name,folderId){
-  return {id:uid(), name:name||'My room', folderId:folderId||null,
-    floorId:null, floorPlace:blankFloorPlace(),
-    room:{points:rectPts(4270,3660), wall:114, floor:'#f5f3ee', trimOn:false, trim:19, pillars:[], iwalls:[]},
-    openings:[], placed:[], measures:[]};
-}
-let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true, showWalk:false, showMeasure:true, mode:'furniture',
-         planMode:'furniture', // the Room/Furniture mode to go back to when returning to the Plan screen
-         inventory:[], layouts:[blankLayout()], active:null,
-         folders:[],          // {id, name, parentId(null=root), tags:[...]}
-         floors:[],           // {id, name, parentId(null=root)} — an arrangement of rooms; see l.floorId / l.floorPlace
-         tagFilter:[],        // active tag chips in the Things pane
-         untaggedOnly:false,  // the "Untagged" chip in the Things pane
-         invSearch:'',        // search text in the Things pane
-         onlyAvailable:false, // "only show things I still have stock of"
-         invScope:'project',  // how far a thing's stock reaches: 'project' | 'folder' | 'room'
-         zoomSpeed:1,         // trackpad/wheel zoom speed multiplier
-         leftOpen:true, rightOpen:true,  // side panels open on wide screens
-         secClosed:[],        // data-sec keys of the sections folded shut
-         lastFolderId:undefined,
-         itemFolders:[],       // Inventory tab folder tree: {id, name, parentId, tags:[...]}
-         marketFolders:[],     // Marketplace tab folder tree, for ad hoc listings only
-         marketListings:[],    // ad hoc listings: {id, name, parentId, kind:'file'|'link'|'paste', ...}
-         marketSubs:[],        // subscribed remote marketplaces: {id, url, name, version, addedAt}
-         defaultMarketDismissed:false, // user removed the built-in default marketplace subscription; don't re-add it
-         uiLib:{tab:'library', libFolderId:null, marketFolderId:null}};
-S.active = S.layouts[0].id;
-/* S is reassigned wholesale on load and on import. Once it lives in a module
-   of its own those writers cannot assign to it — an imported binding is
-   read-only — so every write goes through this setter instead. The binding is
-   still live: importers see the new object, which is what migrate() relies on
-   when reconcileTags reads S.itemFolders. */
-function setS(v){ S = v; }
 
 let selSet = new Set(); // placed furniture ids (multi-select), source of truth
 let sel = null;         // last-added/primary placed furniture id; null when selSet is empty
