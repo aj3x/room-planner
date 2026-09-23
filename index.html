@@ -1311,9 +1311,9 @@ function openGeom(o, poly, room){
   }
   return g;
 }
-function swingPoly(o, poly){
+function swingPoly(o, poly, room){
   if(o.kind!=='door'||o.dtype!=='hinge') return null;
-  const g=openGeom(o, poly), pts=[g.hinge.slice()], N=14;
+  const g=openGeom(o, poly, room), pts=[g.hinge.slice()], N=14;
   let diff=g.a1-g.a0;
   while(diff>Math.PI) diff-=Math.PI*2;
   while(diff<-Math.PI) diff+=Math.PI*2;
@@ -3044,7 +3044,7 @@ function drawOpening(o,blocked,room,poly){
     }
   } else if(o.dtype==='hinge'){
     if(S.showSwing){
-      const sp=swingPoly(o,poly), bad=blocked.includes(o.id);
+      const sp=swingPoly(o,poly,r), bad=blocked.includes(o.id);
       pathPoly(sp);
       ctx.fillStyle = bad?'rgba('+C.dangerRGB+',.16)':C.swing; ctx.fill();
       ctx.strokeStyle = bad?'rgba('+C.dangerRGB+',.7)':C.swingLine;
