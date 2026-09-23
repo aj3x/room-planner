@@ -1945,6 +1945,7 @@ const CANVAS={
 };
 const darkMQ=window.matchMedia('(prefers-color-scheme: dark)');
 let forceLightCanvas=false;
+function setForceLightCanvas(v){ forceLightCanvas = v; }
 const PAL = () => (!forceLightCanvas && darkMQ.matches) ? CANVAS.dark : CANVAS.light;
 darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>scheduleDraw());
 
@@ -5375,9 +5376,9 @@ $('btnZoomOut').addEventListener('click',()=>zoomAt(1/1.25,W/2,H/2));
 $('btnFit').addEventListener('click',fit);
 /* a saved image is for printing and sharing, so it is always drawn in the light palette */
 function savePlanImage(){
-  forceLightCanvas=true; draw();
+  setForceLightCanvas(true); draw();
   const url=cv.toDataURL('image/png');
-  forceLightCanvas=false; draw();
+  setForceLightCanvas(false); draw();
   const a=document.createElement('a');
   a.download=fileSlug(L().name)+'.png';
   a.href=url;
