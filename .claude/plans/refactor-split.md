@@ -322,7 +322,7 @@ unextracted dependency along with it is a bug.
 references each, both internal. Several other "shared" helpers will be the same.
 Import back only what is really referenced; let the rest become module-private.
 
-### Phase 3 progress — `core/` and `model/` (the leaves)
+### Phase 3 progress — `core/` and `model/` (the leaves), then `ui/`
 
 Done, one commit each, all move-only unless marked, baseline green between every one:
 
@@ -339,6 +339,12 @@ Done, one commit each, all move-only unless marked, baseline green between every
 | `model/openings.js` | whole region |
 | `model/validity.js` | the walk-paths half of its §3 range stayed |
 | `model/measures.js` | movable after all; the canvas half of the Measure tool stayed |
+| `ui/dnd.js` | whole region |
+| `ui/inline-edit.js` | whole region |
+| `ui/panels.js` | **two commits**: `esc`/`normSearch` + section collapse first, `applyPanes` once `modal.js` existed |
+| `ui/modal.js` + `ui/tag-input.js` | **one commit** — they import each other, see below |
+| `ui/menu.js` | picked up `moreBtn` from the layout-tree region, per §3 |
+| `ui/flash.js` | `readTime` + `libFlash` only; `flash()` could not come |
 
 **Finding B is settled.** `S` moved, and the three writers (`migrate`,
 `applyImport`, boot) plus the epilogue's `set S(v)` now call `setS(v)`, a setter
@@ -353,12 +359,49 @@ no file in §3 but had to move, because `core/floor-space.js` cannot resolve
 without them. They are in `core/state.js`: pure lookups over `S`, needing
 nothing else, so the module is still a leaf that imports nothing.
 
+**Findings from the `ui/` round.**
+
+- **No setter was needed.** None of the ten selection `let`s is touched by any
+  region that moved, so the sanctioned `setX()` budget went unspent. The
+  reassigned bindings inside `ui/` (`moOkFn`, `moCloseFn`, `moBackFn`, `menuEl`,
+  `clickT`, `libFlashT`) are each written only from inside their own region, so
+  they moved as ordinary `let`s. `canvas/` will not be so lucky.
+- **`ui/modal.js` and `ui/tag-input.js` had to land in one commit.** They import
+  each other: `openModal()` calls `tagInputs.clear()`, and `mountTagField()`
+  calls `$()`, which is declared at the head of the modal region. There is no
+  order in which they split, so rule 9 ("one commit per region") gave way to
+  keeping every commit green. Both uses are inside function bodies, so nothing
+  is read during module evaluation and the cycle never reaches a TDZ.
+- **`esc` is the gate on everything above `ui/`.** It is a pure two-line
+  function filed under `ui/panels.js` in §3, and every region that builds HTML
+  calls it. It had to move before `ui/modal.js` could, and nothing in `plan/`,
+  `library/`, `io/` or `blueprint/` could have moved while it sat in the
+  monolith. It is out now.
+- **Top-level side effects were left behind, deliberately.** `ui/` is where the
+  DOM lives, and the listener registrations that trail the modal, menu, pane and
+  section regions — eleven of them — all stayed in `index.html` at the exact
+  spot they were. Registering them at import time would break rule 6 *and*
+  reorder them ahead of every other listener in the file, which is a real
+  behaviour risk, not a stylistic one. They read `mo`, `moOkFn`, `moBackFn`,
+  `menuEl`, `closeMenu`, `toggleSection`, `wideLayout` and `applyPanes` as live
+  imported bindings, which works.
+- **One top-level DOM read did move**: `const mo = $('modal')` in
+  `ui/modal.js`. It is a lookup, not a mutation and not a listener; the bundle
+  still runs after the document is parsed, so it resolves exactly as it did
+  inline. `canvas/view.js` will face the same call with
+  `const cv=$('cv'), ctx=cv.getContext('2d')` — that one takes a context, so it
+  is a step further from harmless, and the epilogue captures both `cv` and
+  `ctx`.
+
 **Left behind for later phases**, each blocked on code that has not moved:
 
-- `core/history.js` — `applyRoomSnap`/`applyFurnSnap`/`applyFloorSnap` call
-  `draw()` and six `render*()` functions; `updateHistButtons` uses `$()`. Needs
-  `ui/` and `canvas/`. Also touches `roomSel`/`selectClear`, which are still in
-  the monolith.
+- `core/history.js` — **re-checked after `ui/`, still blocked.** `$()` has moved,
+  so `updateHistButtons` is free, but it is the only one of the region's twenty
+  symbols that is: `applyRoomSnap`/`applyFurnSnap`/`applyFloorSnap` call `draw()`
+  and six `render*()` functions and touch `roomSel`/`selectClear`. Extracting
+  `updateHistButtons` alone would give `core/history.js` none of the history
+  state §3 names it for, while five functions that stay would import it back.
+  Needs `canvas/` and `plan/`.
 - `model/walkpaths.js` — half of it draws (`ctx`, `cv`, `PAL`, `view`). Behind
   `canvas/`.
 - `migrate`/`normLayout`/`normItem`/`pruneMeasures`/`remapMeasures` — `migrate()`
@@ -368,12 +411,25 @@ nothing else, so the module is still a leaf that imports nothing.
 - Six of `model/walls.js`: `tryRoomEdit` (calls `flash()`), `setWallAngle`,
   `setWallLen`, `setRectSize` (call `tryRoomEdit`), `snapRadius` (reads `view`),
   `snapWallPoint` (calls `snapPt()`). Listed at the top of `src/model/walls.js`.
+  **Still blocked after `ui/`, and the reason moved.** `flash()` did not come
+  with `ui/flash.js`: its timer handle is declared `let drag=null, flashT=null;`
+  at the head of the interaction region, sharing one declarator list with `drag`,
+  which is reassigned from all over `canvas/`. Separating `flashT` from `drag`
+  would edit a line of `index.html` rather than move it, so `flash()` — and with
+  it all four `tryRoomEdit` functions — waits for `canvas/interaction.js`. The
+  canvas agent gets all four back for the price of one declarator.
 - **The selection lets** — `sel`, `selSet`, `roomSel`, `floorSel`, `mergeSel`,
   `floorGuides`, `floorSnapNote`, `alignGuides`, `alignNote`, `treeOpen`. These
   are finding B all over again, ten times: each is reassigned from dozens of
   sites spread across regions that have not moved, so each needs either a setter
   or all its writers moved in with it. Whoever moves `canvas/` will hit this
-  first and should budget for it the way `setS` was budgeted.
+  first and should budget for it the way `setS` was budgeted. `ui/` did not need
+  a single one of them, so all ten are still untouched.
+- **From `ui/` itself**: `flash()` (above); `togglePane` and the two pane-head
+  listeners (`togglePane` calls `resize()`, `canvas/view.js`); and the rest of
+  the `panels` banner — `renderAll`, `paramMode`, `syncModeParam`,
+  `isCanvasMode`, `setMode`, `renderMode` and the `#navSeg`/`#modeSeg`
+  listeners, all of which call `draw()` and every `render*()`.
 
 ### SCSS rules
 1. Split is a **rename + cut**. SCSS is a superset of CSS; compiled output must be

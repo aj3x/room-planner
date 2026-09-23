@@ -95,6 +95,12 @@ and let tests import the module directly — which is strictly better, and is wh
 monolith does. The recipe an extraction agent follows is in
 [`.claude/plans/refactor-split.md`](../.claude/plans/refactor-split.md) §4.
 
+The `ui/` round cost the epilogue nothing — it captures no modal, menu, tag,
+drag or toast binding — but the next one will: `ctx` and `cv` are both on the
+`__rp` list and both belong to `canvas/view.js`, as do the `sel`/`selSet`/
+`roomSel`/`floorSel`/`mergeSel` getters. `snapRoom`, `commitRoom`/`commitFurn`
+and the six undo/redo entry points go with `core/history.js`.
+
 ### What Phase 2 changed about that, and why
 
 Phase 2 made the one `<script>` a `type="module"` tag so Vite has an entry point.
