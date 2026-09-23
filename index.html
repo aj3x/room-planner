@@ -3201,7 +3201,8 @@ $('measureBar').addEventListener('click', e=>{
 });
 
 /* ------------------------- interaction ------------------------- */
-let drag=null, flashT=null;
+let drag=null;
+let flashT=null;
 let spaceDown=false; // held to force pan mode (Space+drag pans; Space+scroll still zooms)
 const ROOM_DRAGS=['corner','wall','open','pillar','iwall','iwall-end'];
 function flash(msg){
