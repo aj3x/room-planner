@@ -1,0 +1,16 @@
+<!doctype html>
+<!-- A stand-in for the shape index.html takes in Phase 3: an HTML shell, one
+     module entry, one linked SCSS entry. It exists so the build pipeline can be
+     proved end to end NOW, while the real index.html is still a monolith and
+     must not be touched. Phase 3 / A4 changes the real file, not this one. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>scss pipeline fixture</title>
+<link rel="stylesheet" href="./styles/main.scss">
+</head>
+<body>
+<div class="card"><p class="title">hi</p></div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

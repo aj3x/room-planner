@@ -1,0 +1,8 @@
+// Deliberately exercises the two Sass features the SCSS split depends on:
+// @use (deterministic cascade order, stated in one manifest) and nesting.
+// And it keeps a design token as a CSS custom property, because that is the
+// non-negotiable rule from the plan: tokens must survive compilation as
+// custom properties so dark mode can re-declare them at runtime.
+@use 'card';
+
+:root { --rp-accent: #2f6fed; }

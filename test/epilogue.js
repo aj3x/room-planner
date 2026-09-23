@@ -14,6 +14,31 @@
  * rewrites the HTTP response body in flight.
  */
 
+/* Entry points the suites call as `window.foo(...)`.
+ *
+ * Until Phase 2 the app was one classic <script>, so every top-level `function`
+ * declaration landed on globalThis for free and the suites just called them.
+ * As a Vite entry the script is `type="module"`, which gives it its own scope —
+ * the declarations are still there, still hoisted, still identical, but they
+ * are no longer global. Nothing about the app changed; only its scope did.
+ *
+ * So the epilogue republishes the handful of entry points the baseline drives
+ * the app through. It is explicit rather than automatic because module scope
+ * cannot be enumerated from inside, and explicit is the better failure mode
+ * anyway: a name that goes missing during extraction fails here, loudly, in
+ * one place, instead of surfacing as `window.draw is not a function` in twelve
+ * specs. Add to this list when a test needs another entry point — never an
+ * export to index.html.
+ */
+const GLOBALS = [
+  // driven by Suite B (Playwright)
+  'draw', 'fit', 'save', 'setMode', 'startCustomDraw',
+  'exportPayload', 'readImport', 'applyImport',
+  'polySimple', 'swingPoly', 'bpRebuild',
+  // driven by Suite A (jsdom) — already global there, harmless to re-assign
+  'parseLen', 'fmtLen', 'migrate', 'normLayout', 'normItem',
+];
+
 export const EPILOGUE = `
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ S = v; },
@@ -67,6 +92,7 @@ export const EPILOGUE = `
   undoFloor: undoFloor,
   redoFloor: redoFloor
 };
+${GLOBALS.map((n) => `try{ globalThis.${n} = ${n}; }catch(e){}`).join('\n')}
 `;
 
 /** Append the epilogue to a full index.html source string, in memory. */

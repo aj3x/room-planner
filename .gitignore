@@ -18,3 +18,6 @@ coverage/
 
 # OS noise
 .DS_Store
+
+# instrumented build used by the e2e suite (see vite.config.js, --mode instrumented)
+dist-test/

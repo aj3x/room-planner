@@ -156,19 +156,31 @@ test.describe('smoke', () => {
 test.describe('the file:// deployment contract', () => {
   /* "Open the file and it works" is the actual deployment model, and it is what
      the refactor must not break: the shipped artifact has to stay one
-     self-contained HTML file with no network dependency. This opens index.html
-     straight off disk — no server, no interception, so no __rp here — and
-     asserts it boots and paints anyway. */
-  test('index.html boots and paints straight off disk', async ({ page }) => {
+     self-contained HTML file with no network dependency. This opens the built
+     dist/index.html straight off disk — no server, no interception, so no __rp
+     here — and asserts it boots and paints anyway.
+
+     Phase 2 moved the subject of this test from the source index.html to the
+     build output, which is the plan's Tier 3 wording all along ("dist/index.html
+     opened via file:// boots and paints off disk"). It had to move: index.html
+     is now a Vite entry with `<script type="module">`, and module scripts are
+     fetched under CORS rules no file:// origin can satisfy, so the source file
+     no longer runs off disk. Nothing about the *shipped* artifact regressed —
+     dist/index.html is one self-contained file with a classic <script>, and the
+     assertions below are unchanged. */
+  test('dist/index.html boots and paints straight off disk', async ({ page }) => {
     const external = [];
     page.on('request', (r) => { if (!r.url().startsWith('file://')) external.push(r.url()); });
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
 
     const { pathToFileURL } = await import('node:url');
-    const path = await import('node:path');
-    const { REPO_ROOT } = await import('./app-fixture.js');
-    await page.goto(pathToFileURL(path.join(REPO_ROOT, 'index.html')).href);
+    const fs = await import('node:fs');
+    const { DIST_HTML } = await import('./app-fixture.js');
+    if (!fs.existsSync(DIST_HTML)) {
+      throw new Error(`no build to test: ${DIST_HTML} is missing — run \`npm run build\` (npm run test:e2e does)`);
+    }
+    await page.goto(pathToFileURL(DIST_HTML).href);
 
     await page.waitForFunction(() => document.body.dataset.mode);
     await page.waitForFunction(() => {

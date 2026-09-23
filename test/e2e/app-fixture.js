@@ -1,20 +1,30 @@
 /* Playwright fixture: the real app, in a real browser, made deterministic.
  *
- * Same contract as the jsdom harness — index.html is never modified. Here the
- * epilogue is appended by rewriting the HTTP response body in flight, so the
- * browser parses a copy that exposes the script's let/const bindings on
- * window.__rp while the file on disk stays byte-for-byte what ships.
+ * Same contract as the jsdom harness — index.html is never modified. The copy
+ * the browser parses has the capture epilogue appended to it, so the script's
+ * let/const bindings are reachable on window.__rp; since Phase 2 that copy is
+ * made by Vite (`--mode instrumented`) rather than by rewriting the response
+ * here. The file on disk stays byte-for-byte what ships.
  */
 
 import { test as base, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { injectEpilogue } from '../epilogue.js';
+
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '../..');
 export const BLUEPRINT_PNG = path.join(REPO_ROOT, 'example blueprints/apartment-1.png');
+
+/* The shipped artifact. Since Phase 2 this — not the source index.html — is the
+   thing the file:// deployment contract is about: index.html became a Vite
+   entry whose one <script> is `type="module"`, and a module script is fetched
+   under CORS rules that an opaque file:// origin can never satisfy. The
+   "open the file and it works" promise is unchanged; the file it is a promise
+   about is now the build output, which is what the refactor plan's Tier 3
+   always specified. */
+export const DIST_HTML = path.join(REPO_ROOT, 'dist/index.html');
 
 export const fixtureState = (name) =>
   JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'test/fixtures/states', name), 'utf8'));
@@ -51,16 +61,15 @@ export const test = base.extend({
   savedState: [null, { option: true }],
 
   app: async ({ page, savedState, baseURL }, use) => {
-    // 1. append the capture epilogue to the served HTML, in flight
-    await page.route('**/index.html', async (route) => {
-      const res = await route.fetch();
-      const body = await res.text();
-      await route.fulfill({
-        response: res,
-        body: injectEpilogue(body),
-        headers: { ...res.headers(), 'content-type': 'text/html; charset=utf-8' },
-      });
-    });
+    /* 1. the capture epilogue is no longer appended here.
+       It used to be grafted onto the HTTP response with `page.route`, which
+       worked while the app was one inline classic script sitting in the HTML.
+       Neither target has that shape any more: the dev server hoists the inline
+       module into a proxy module, and the build wraps the bundle in an IIFE, so
+       text appended to the response would land outside the app's scope and
+       capture nothing. Both servers are therefore started from
+       `--mode instrumented`, which injects it in vite.config.js before Vite's
+       own HTML handling. index.html on disk is still never written to. */
 
     // 2. determinism, before a line of app code runs
     await page.addInitScript(DETERMINISM);

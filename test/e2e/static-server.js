@@ -9,8 +9,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const PORT = Number(process.env.PORT || 4173);
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+
+/* `node test/e2e/static-server.js [dir] [port]`. Phase 2 points this at the
+   built artifact (`dist-test`) instead of the repo root: index.html is now a
+   Vite entry rather than a standalone page, so "these bytes served as-is" moved
+   from the source file to the build output. The dev-server side of the same
+   contract is covered by the `vite` webServer in playwright.config.js. */
+const ROOT = path.resolve(REPO_ROOT, process.argv[2] || '.');
+const PORT = Number(process.argv[3] || process.env.PORT || 4173);
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',

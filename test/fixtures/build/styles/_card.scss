@@ -1,0 +1,5 @@
+.card {
+  padding: 8px;
+  .title { color: var(--rp-accent); }
+  &.is-wide { padding: 16px; }
+}

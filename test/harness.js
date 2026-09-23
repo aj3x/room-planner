@@ -37,7 +37,12 @@ let cached = null;
 export function readAppSource() {
   if (cached) return cached;
   const src = fs.readFileSync(INDEX_HTML, 'utf8');
-  const open = src.indexOf('<script>');
+  /* Phase 2 made this `<script type="module">` so Vite has an entry point to
+     build. The tag is the only thing that changed; the body is byte-identical.
+     Match either spelling so this harness is not a second place that has to be
+     edited in lockstep with a tag attribute. */
+  const m = /<script(?:\s+type="module")?\s*>/.exec(src);
+  const open = m ? m.index : -1;
   const close = src.lastIndexOf('</script>');
   if (open < 0 || close < 0 || close < open) {
     throw new Error('index.html: could not locate the single app <script> block');
@@ -49,7 +54,7 @@ export function readAppSource() {
   cached = {
     src,
     shell: src.slice(0, open) + '<!-- app script evaluated by the test harness -->' + src.slice(close + '</script>'.length),
-    body: src.slice(open + '<script>'.length, close),
+    body: src.slice(open + m[0].length, close),
   };
   return cached;
 }

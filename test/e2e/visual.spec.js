@@ -132,7 +132,10 @@ test.describe('the dark palette is wired to prefers-color-scheme', () => {
       light: window.__rp.CANVAS.light,
       darkPal: window.__rp.CANVAS.dark,
     }));
-    const wantDark = testInfo.project.name === 'chromium-dark';
+    /* Read the scheme off the project's own config rather than its name: since
+       Phase 2 each scheme runs under two project names (dev server and dist),
+       and a name test would silently assert "light" for the dist dark run. */
+    const wantDark = testInfo.project.use.colorScheme === 'dark';
     expect(p.dark).toBe(wantDark);
     expect(p.pal).toEqual(wantDark ? p.darkPal : p.light);
     // and the two palettes really are different objects, not the same one twice
