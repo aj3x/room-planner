@@ -108,13 +108,34 @@ module has its own scope, and two things followed from that:
    `--mode instrumented`, before Vite's own HTML handling. Same in-memory-copy
    contract, one stage earlier in the pipeline.
 
-Suite A is unaffected: it still cuts the script body out of the shell and
-evaluates it as a classic script in jsdom (jsdom does not run ES modules), so
-function declarations are still global there. That is a deliberate divergence
-from how the browser now scopes the same code, and it is safe because the
-epilogue publishes both the `let`/`const` bindings and the entry points either
-way — but it is why Suite B, not Suite A, is the suite that would notice a
-scoping mistake.
+### What Phase 2.5 changed, and why
+
+Suite A used to cut the script body out of the shell and evaluate it as a
+**classic script** in jsdom, which worked only while the app was one blob:
+**jsdom does not run ES modules**, so the first real `import` in `src/` would
+have broken the harness outright — at exactly the moment the baseline is the
+only thing proving the extraction faithful.
+
+So the harness no longer evaluates source. It **bundles** it, with the same
+bundler that builds the shipped artifact: `index.html`'s script body (plus the
+capture epilogue) is handed to Vite as a virtual entry module at the repo root,
+so its `./src/...` specifiers resolve exactly as they do in `npm run build`, and
+the output is a classic IIFE — the one thing jsdom *can* evaluate. Tree-shaking
+and minification are off; the point is to run the code, not a smaller equivalent
+of it. It costs about 60ms, once per test file, and nothing is written to disk.
+
+The alternative — `await import()` the `src/` modules in Node and inject them
+into the jsdom window — was rejected: module code would then evaluate in
+**Node's** realm, where `document` and `window` are the wrong ones or missing
+entirely. Harmless for `core/units.js`; fatal by the time `ui/` and `canvas/`
+move. Bundling keeps the whole app in one realm, the jsdom one.
+
+One consequence, and it is an improvement. Inside an IIFE, top-level `function`
+declarations are closure-scoped rather than global — which is exactly how the
+browser has scoped them since the `type="module"` tag. Suite A now reaches entry
+points the same way Suite B does, through `GLOBALS` in `epilogue.js`. The
+scoping divergence between the two suites is gone, so a name that goes missing
+during extraction now fails in **both**.
 
 ### Two targets
 
@@ -167,7 +188,7 @@ Nothing here may depend on wall-clock time, random ids or animation timing.
 ```
 test/
   README.md            this file
-  harness.js           Suite A: boots index.html in jsdom
+  harness.js           Suite A: bundles index.html + src/, boots it in jsdom
   epilogue.js          the shared capture epilogue (both suites)
   fixtures/states/     saved-state fixtures, shared by both suites
   fixtures/build/      a miniature app (HTML + module + SCSS) for the build tests

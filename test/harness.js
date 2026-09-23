@@ -1,18 +1,17 @@
 /* ===========================================================================
    Characterization harness — boots the real, unmodified index.html in jsdom.
 
-   index.html is a single classic <script> in strict mode. Top-level `function`
-   declarations land on globalThis, but the `let`/`const` bindings that hold all
-   the interesting state (S, sel, selSet, roomHist, furnHist, bpState, nav, view)
-   do not. To reach those WITHOUT touching the file on disk, we:
+   To reach the app's internals WITHOUT touching the file on disk, we:
 
      1. read index.html into memory,
      2. cut the <script> body out of the shell,
-     3. build a jsdom document from the shell alone (no scripts run yet),
-     4. evaluate a *setup* script that installs deterministic stand-ins
+     3. BUNDLE that body — following its `import`s into src/ — into one classic
+        IIFE, with a small epilogue APPENDED first, which publishes the closure
+        bindings on globalThis (see `appBundle` below for why),
+     4. build a jsdom document from the shell alone (no scripts run yet),
+     5. evaluate a *setup* script that installs deterministic stand-ins
         (seeded Math.random, frozen Date, a recording 2D canvas context),
-     5. evaluate the app script body with a small epilogue APPENDED to the
-        in-memory copy, which publishes the closure bindings on globalThis.
+     6. evaluate the bundle.
 
    The epilogue is appended, never prepended, so `"use strict"` stays the first
    statement of the script and the app still runs in strict mode.
@@ -24,6 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSDOM, VirtualConsole } from 'jsdom';
+import { build } from 'vite';
 import { EPILOGUE } from './epilogue.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -57,6 +57,97 @@ export function readAppSource() {
     body: src.slice(open + m[0].length, close),
   };
   return cached;
+}
+
+/* ---- bundling ---------------------------------------------------------- */
+
+/* Why this exists (Phase 2.5).
+
+   Until Phase 2 the app was one classic <script>, so the harness could simply
+   eval its body in jsdom and every top-level `function` declaration landed on
+   globalThis for free. Phase 3 turns that body into `import`s from src/, and
+   **jsdom cannot run ES modules** — the first real import would break this
+   harness outright, exactly when the baseline is needed most.
+
+   So the harness stops eval-ing source and starts bundling it, with the same
+   bundler that builds the shipped artifact. The body (plus the epilogue) is
+   handed to Vite as a virtual entry module sitting at the repo root, so its
+   `./src/...` specifiers resolve exactly as they do in `npm run build`, and the
+   output is a classic IIFE — the one thing jsdom *can* evaluate.
+
+   Two consequences worth stating plainly:
+
+   - **This runs the app in ONE realm.** The alternative — `await import()` the
+     src/ modules in Node and inject them into the jsdom window — puts module
+     code in Node's realm, where `document` and `window` are the wrong ones or
+     missing entirely. That is fine for `core/units.js` and fatal by the time
+     `ui/` and `canvas/` move. Bundling sidesteps it completely: every module
+     is evaluated inside the same jsdom window as the rest of the app.
+
+   - **Function declarations are no longer global here either.** Inside an IIFE
+     they are closure-scoped, which is precisely how the browser already scopes
+     them since the `type="module"` tag. Suite A now reaches entry points the
+     same way Suite B does — through `GLOBALS` in epilogue.js. That removes the
+     scoping divergence between the two suites that test/README.md used to have
+     to explain, so a name that goes missing during extraction now fails in both.
+
+   `treeshake: false` and `minify: false`: the point is to run the code, not a
+   smaller equivalent of it. `configFile: false` keeps vite.config.js's
+   single-file/HTML plugins out of the way — this entry is JS, not the page.
+
+   Nothing is written to disk. The entry id is virtual; `__rp-test-entry.js`
+   does not and must not exist. */
+const VIRTUAL_ENTRY = path.join(REPO_ROOT, '__rp-test-entry.js');
+
+let bundling = null;
+
+/** Bundle the app (index.html's script body + src/ + the epilogue) to an IIFE. */
+export function appBundle() {
+  if (!bundling) bundling = buildBundle();
+  return bundling;
+}
+
+async function buildBundle() {
+  const { body } = readAppSource();
+  const entry = body + EPILOGUE;
+  const out = await build({
+    configFile: false,
+    logLevel: 'error',
+    root: REPO_ROOT,
+    plugins: [
+      {
+        name: 'rp:test-entry',
+        resolveId: (id) => (id === VIRTUAL_ENTRY ? VIRTUAL_ENTRY : null),
+        load: (id) => (id === VIRTUAL_ENTRY ? entry : null),
+      },
+    ],
+    build: {
+      write: false,
+      minify: false,
+      target: 'es2022',
+      rollupOptions: {
+        input: VIRTUAL_ENTRY,
+        treeshake: false,
+        output: { format: 'iife' },
+      },
+    },
+  });
+  const result = Array.isArray(out) ? out[0] : out;
+  const chunks = result.output.filter((o) => o.type === 'chunk');
+  if (chunks.length !== 1) {
+    throw new Error(
+      `harness: expected one chunk, got ${chunks.length} — the app must stay a single bundle`,
+    );
+  }
+  const code = chunks[0].code;
+  /* Strict mode is load-bearing: the whole baseline was recorded with it on.
+     Rolldown hoists the app's own directive to the top of the output; if that
+     ever stops happening, say so here rather than silently characterizing
+     sloppy-mode behaviour. */
+  if (!/^["']use strict["'];/.test(code)) {
+    throw new Error('harness: bundle does not begin with "use strict" — the app would run in sloppy mode');
+  }
+  return code;
 }
 
 /* ---- determinism ------------------------------------------------------ */
@@ -190,7 +281,8 @@ function mediaPrelude({ dark = false, narrow = false } = {}) {
  */
 export async function bootApp(opts = {}) {
   const { saved = null, dark = false, narrow = false, settle = true } = opts;
-  const { shell, body } = readAppSource();
+  const { shell } = readAppSource();
+  const bundle = await appBundle();
 
   const errors = [];
   const virtualConsole = new VirtualConsole();
@@ -220,9 +312,9 @@ export async function bootApp(opts = {}) {
     window.eval(`try{ localStorage.clear(); }catch(e){}`);
   }
 
-  // 3. the app itself — untouched body, epilogue appended
+  // 3. the app itself — untouched body plus src/, bundled, epilogue appended
   const s = window.document.createElement('script');
-  s.textContent = body + EPILOGUE;
+  s.textContent = bundle;
   window.document.body.appendChild(s);
 
   const app = window;
