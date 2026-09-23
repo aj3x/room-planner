@@ -771,10 +771,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
    =================================================================== */
 
 /* ------------------------- units ------------------------- */
-import {parseLen, trimNum, fmtLen, fmtArea, SNAPS} from './src/core/units.js';
-/* unitWord stayed behind when the rest of this region moved to
-   src/core/units.js: it reads S.unit, and core/state.js does not exist yet. */
-const unitWord = () => ({ftin:'inches',in:'inches',cm:'centimetres',mm:'millimetres',m:'metres'})[S.unit];
+import {parseLen, trimNum, unitWord, fmtLen, fmtArea, SNAPS} from './src/core/units.js';
 
 import {EPS, norm360, shapePoly, bbox, worldPoly, shrink, pointInPoly, segHit, polyHit, ptSegDist, segDist, centroid, signedArea, polyArea, bbHit, polySimple} from './src/core/geometry.js';
 import {normOpen, hasOpen, openLocalBox, openPoly, openSizeLabel} from './src/core/open-state.js';

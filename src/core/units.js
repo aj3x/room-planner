@@ -3,8 +3,10 @@
 
    Extracted from index.html in Phase 3, move-only: the code below is
    byte-identical to what stood there, and the `export` block at the end is the
-   only line added. `unitWord` stayed behind in index.html — it reads `S.unit`,
-   and `core/state.js` does not exist yet. */
+   only line added. `unitWord` stayed behind on the first pass because it reads
+   `S.unit`; it rejoined the region once `core/state.js` existed. */
+
+import {S} from './state.js';
 
 /* ------------------------- units ------------------------- */
 const MM = {mm:1, cm:10, m:1000, in:25.4, ft:304.8};
@@ -38,6 +40,7 @@ function parseLen(str, dispUnit){
   return found ? total : NaN;
 }
 const trimNum = (n,dp) => String(parseFloat(n.toFixed(dp)));
+const unitWord = () => ({ftin:'inches',in:'inches',cm:'centimetres',mm:'millimetres',m:'metres'})[S.unit];
 function fmtLen(mm,u){
   if(!isFinite(mm)) return '—';
   switch(u){
@@ -63,4 +66,4 @@ const SNAPS = {
   metric:[['0','No snap'],['10','1 cm'],['50','5 cm'],['100','10 cm'],['250','25 cm'],['500','50 cm']]
 };
 
-export {MM, BARE, UNIT_RE, unitKey, parseLen, trimNum, fmtLen, fmtArea, SNAPS};
+export {MM, BARE, UNIT_RE, unitKey, parseLen, trimNum, unitWord, fmtLen, fmtArea, SNAPS};
