@@ -1535,44 +1535,7 @@ import {askText, askConfirm, showShortcuts, svgI} from './src/ui/modal.js';
 /* long enough to read: ~60ms a character, never under 1.6s or over 5s */
 const readTime = msg => Math.max(1600, Math.min(5000, String(msg).length*60));
 
-/* ------------------------- dropdown menus -------------------------
-   The ⋯ buttons open a small menu pinned to the button itself. Anything that
-   needs more than one click — a text box, a folder picker, a confirmation —
-   opens the modal from inside the menu. */
-let menuEl=null;
-function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl=null; } }
-function openMenu(anchor, actions, title){
-  closeMenu();
-  const el=document.createElement('div');
-  el.className='menu'; el.setAttribute('role','menu');
-  if(title){ const t=document.createElement('div'); t.className='mtitle'; t.textContent=title; el.appendChild(t); }
-  for(const a of actions){
-    if(a.sep){ const d=document.createElement('div'); d.className='sep'; el.appendChild(d); continue; }
-    const b=document.createElement('button');
-    b.type='button'; b.textContent=a.label;
-    if(a.danger) b.className='danger';
-    b.addEventListener('click', ()=>{ closeMenu(); a.fn(); });
-    el.appendChild(b);
-  }
-  document.body.appendChild(el);
-  const r=anchor.getBoundingClientRect(), m=el.getBoundingClientRect();
-  let x=r.left, y=r.bottom+4;
-  if(x+m.width > window.innerWidth-8) x=r.right-m.width;
-  if(y+m.height > window.innerHeight-8) y=r.top-m.height-4;
-  el.style.left=Math.max(8,Math.round(x))+'px';
-  el.style.top=Math.max(8,Math.round(y))+'px';
-  menuEl=el;
-  const f=el.querySelector('button'); if(f) f.focus();
-}
-/* a right-click menu has no button to anchor against — plant an invisible point-sized
-   one where the pointer was, let openMenu read its rect, then remove it */
-function menuAtPoint(clientX, clientY, actions, title){
-  const a=document.createElement('div');
-  a.style.cssText='position:fixed;left:'+clientX+'px;top:'+clientY+'px;width:0;height:0;';
-  document.body.appendChild(a);
-  openMenu(a, actions, title);
-  a.remove();
-}
+import {menuEl, closeMenu, openMenu, menuAtPoint} from './src/ui/menu.js';
 document.addEventListener('pointerdown', e=>{ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }, true);
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && menuEl) closeMenu(); }, true);
 window.addEventListener('resize', closeMenu);
@@ -4084,7 +4047,7 @@ function folderLabel(f){
   const tags=(f.tags&&f.tags.length) ? `<span class="tagchip" title="Tag filter: ${esc(f.tags.join(', '))}">${esc(f.tags[0])}${f.tags.length>1?' +'+(f.tags.length-1):''}</span>` : '';
   return `<span class="nm">${esc(f.name)}</span>${tags}`;
 }
-const moreBtn = (cls,label) => `<button type="button" class="btn quiet sm icon ${cls}" data-act="more" title="${label||'More actions'}" aria-label="${label||'More actions'}">${svgI('more')}</button>`;
+import {moreBtn} from './src/ui/menu.js';
 const layoutRowHTML = (l,depth) =>
   `<div class="tree-row layout-row ${l.id===S.active?'active':''} ${mergeSel.size>=2 && mergeSel.has(l.id)?'merge-sel':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*12+26}px" ${l.id===S.active?'aria-current="true"':''}>
       <span class="ico">${svgI('room')}</span><span class="nm">${esc(l.name)}</span>
