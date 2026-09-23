@@ -127,24 +127,25 @@ export const readS = (page) => page.evaluate(() => JSON.parse(JSON.stringify(win
    assertion depends on a *particular* write having landed — without it, a
    value left by an earlier save satisfies the non-null check and the race is
    still there, just quieter. */
-export async function flushSave(page, want) {
-  const handle = await page.waitForFunction(
-    ({ k, src }) => {
-      const raw = localStorage.getItem(k);
-      if (raw === null) return null;
-      let parsed;
-      try { parsed = JSON.parse(raw); } catch { return null; }
-      if (src) {
-        // eslint-disable-next-line no-new-func
-        const pred = new Function('return (' + src + ')')();
-        if (!pred(parsed)) return null;
-      }
-      return { parsed };
-    },
-    { k: APP_KEY, src: want ? want.toString() : null },
-    { timeout: 5000 },
-  );
-  return (await handle.jsonValue()).parsed;
+export async function flushSave(page, want, timeout = 5000) {
+  const read = () => page.evaluate((k) => {
+    const raw = localStorage.getItem(k);
+    if (raw === null) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  }, APP_KEY);
+
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const last = await read();
+    if (last !== null && (!want || want(last))) return last;
+    if (Date.now() > deadline) {
+      throw new Error(
+        `flushSave: the expected write never landed within ${timeout}ms. `
+        + `Last value in storage: ${JSON.stringify(last)}`,
+      );
+    }
+    await page.waitForTimeout(50);
+  }
 }
 
 /* Ids are an implementation detail; see the note on stableIds in the jsdom
