@@ -651,6 +651,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
       <div class="island" id="ctlHist">
         <button class="btn quiet icon" id="btnUndo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg class="i"><use href="#i-undo"/></svg></button>
         <button class="btn quiet icon" id="btnRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg class="i"><use href="#i-redo"/></svg></button>
+        <button class="btn quiet icon" id="btnShortcuts" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
       </div>
       <div class="island" id="ctlZoom">
         <button class="btn quiet icon" id="btnZoomOut" title="Zoom out" aria-label="Zoom out"><svg class="i"><use href="#i-minus"/></svg></button>
@@ -717,6 +718,13 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
         <section data-sec="drawing">
           <div class="sec-head"><h2>View</h2></div>
           <div class="field"><label for="snapSel">Snap to</label><select id="snapSel"></select></div>
+          <div class="field"><label for="zoomSpeedSel">Zoom speed</label>
+            <select id="zoomSpeedSel">
+              <option value="0.5">Slow</option>
+              <option value="1">Normal</option>
+              <option value="2">Fast</option>
+            </select>
+          </div>
           <label class="check"><input type="checkbox" id="showDims" checked>Size of the selected item</label>
           <label class="check"><input type="checkbox" id="showSwing" checked>Door clearance</label>
           <label class="check"><input type="checkbox" id="showOpen" checked>Items opened out</label>
@@ -1024,6 +1032,7 @@ let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true,
          invSearch:'',        // search text in the Things pane
          onlyAvailable:false, // "only show things I still have stock of"
          invScope:'project',  // how far a thing's stock reaches: 'project' | 'folder' | 'room'
+         zoomSpeed:1,         // trackpad/wheel zoom speed multiplier
          leftOpen:true, rightOpen:true,  // side panels open on wide screens
          secClosed:[],        // data-sec keys of the sections folded shut
          lastFolderId:undefined,
@@ -1035,7 +1044,8 @@ let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true,
          uiLib:{tab:'library', libFolderId:null, marketFolderId:null}};
 S.active = S.layouts[0].id;
 
-let sel = null;        // placed furniture id
+let selSet = new Set(); // placed furniture ids (multi-select), source of truth
+let sel = null;         // last-added/primary placed furniture id; null when selSet is empty
 let roomSel = null;    // {kind:'wall'|'corner'|'opening', i} / {kind:'opening', id}
 let floorSel = null;   // id of the room picked up in Floor mode
 let mergeSel = new Set();  // up to 2 layout ids marked for merge/delete (Floor canvas + room list, shift+click)
@@ -1044,6 +1054,12 @@ let floorSnapNote = ''; // what that alignment is, shown while dragging
 let alignGuides = [];  // lines a dragged corner is currently latched onto
 let alignNote = '';    // what that alignment is, shown in the readout
 let treeOpen = new Set();  // expanded folder ids in the layout tree
+
+function selectOnly(id){ selSet = new Set(id?[id]:[]); sel = id||null; }
+function selectAdd(id){ selSet.add(id); sel = id; }
+function selectToggle(id){ if(selSet.has(id)){ selSet.delete(id); sel=[...selSet].pop()||null; } else selectAdd(id); }
+function selectSet(ids){ selSet = new Set(ids); sel = ids.length ? ids[ids.length-1] : null; }
+function selectClear(){ selSet.clear(); sel = null; }
 
 const L = () => S.layouts.find(l=>l.id===S.active) || S.layouts[0];
 const RP = () => L().room.points;
@@ -1353,7 +1369,7 @@ function setOpeningDispOffset(o,len,val){
 /* How much of the opening a bi-fold's folded panels cover, as drawn. 0.5 is half open,
    1 would be shut flat. Three-quarters reads as a closet door standing ajar. */
 const BP_BIFOLD_SHUT=0.75;
-function openGeom(o, poly){
+function openGeom(o, poly, room){
   const w = wallOf(o.wall, poly);
   const p0=[w.a[0]+w.dir[0]*o.offset, w.a[1]+w.dir[1]*o.offset];
   const p1=[w.a[0]+w.dir[0]*(o.offset+o.width), w.a[1]+w.dir[1]*(o.offset+o.width)];
@@ -1383,9 +1399,14 @@ function openGeom(o, poly){
   }
   if(o.kind==='door' && o.dtype==='hinge'){
     const atStart = o.hinge!=='end';
-    g.hinge = atStart ? p0 : p1;
+    // p0/p1 sit on the interior face; a door swinging out is hung on the
+    // frame's exterior face instead, so its hinge/leaf attach there
+    const outward = o.swing==='out';
+    const faceThick = outward ? (room||L().room).wall : 0;
+    const face = p=>[p[0]-w.nrm[0]*faceThick, p[1]-w.nrm[1]*faceThick];
+    g.hinge = atStart ? face(p0) : face(p1);
     const v = atStart ? [w.dir[0]*o.width, w.dir[1]*o.width] : [-w.dir[0]*o.width, -w.dir[1]*o.width];
-    const want = o.swing==='out' ? [-w.nrm[0],-w.nrm[1]] : w.nrm;
+    const want = outward ? [-w.nrm[0],-w.nrm[1]] : w.nrm;
     const rA=[-v[1],v[0]], rB=[v[1],-v[0]];
     const open = (rA[0]*want[0]+rA[1]*want[1])>0 ? rA : rB;
     g.a0=Math.atan2(v[1],v[0]); g.a1=Math.atan2(open[1],open[0]);
@@ -1394,14 +1415,14 @@ function openGeom(o, poly){
   }
   return g;
 }
-function swingPoly(o, poly){
+function swingPoly(o, poly, room){
   if(o.kind!=='door') return null;
   if(o.dtype==='bifold'){
-    const g=openGeom(o, poly);
+    const g=openGeom(o, poly, room);
     return [g.pivot.slice(), g.apex.slice(), g.railEnd.slice()];
   }
   if(o.dtype!=='hinge') return null;
-  const g=openGeom(o, poly), pts=[g.hinge.slice()], N=14;
+  const g=openGeom(o, poly, room), pts=[g.hinge.slice()], N=14;
   let diff=g.a1-g.a0;
   while(diff>Math.PI) diff-=Math.PI*2;
   while(diff<-Math.PI) diff+=Math.PI*2;
@@ -2039,7 +2060,7 @@ function applyRoomSnap(s){
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save();
 }
 function applyFurnSnap(s){
-  L().placed=s.placed; sel=null; bumpRev();
+  L().placed=s.placed; selectClear(); bumpRev();
   renderInv(); renderSel(); draw(); save();
 }
 const undoRoom=()=>stepHist(roomHist,snapRoom,applyRoomSnap,-1);
@@ -2192,6 +2213,7 @@ function migrate(st){
   if(st.showOpen==null) st.showOpen=true;
   if(st.showMeasure==null) st.showMeasure=true;
   if(!INV_SCOPES[st.invScope]) st.invScope='project';
+  if(typeof st.zoomSpeed!=='number' || !isFinite(st.zoomSpeed) || st.zoomSpeed<=0) st.zoomSpeed=1;
   if(st.leftOpen==null) st.leftOpen=true;
   if(st.rightOpen==null) st.rightOpen=true;
   if(!Array.isArray(st.secClosed)) st.secClosed=[];
@@ -2278,6 +2300,26 @@ function askText(title,label,value,onOk){
 /* every confirmation in the app guards something destructive */
 function askConfirm(title,msg,okLabel,onOk){
   openModal(title, `<p>${esc(msg)}</p>`, okLabel||'Delete', ()=>onOk(), null, {danger:true});
+}
+function showShortcuts(){
+  openModal('Keyboard shortcuts', `
+    <dl class="kbd">
+      <dt>Select</dt><dd>Click</dd>
+      <dt>Add/remove from selection</dt><dd><kbd>Shift</kbd>+click</dd>
+      <dt>Select multiple</dt><dd>Drag on empty space</dd>
+      <dt>Move</dt><dd>Drag</dd>
+      <dt>Duplicate &amp; drag</dt><dd><kbd>Alt</kbd>+drag (furniture only)</dd>
+      <dt>Drag without snap</dt><dd><kbd>Alt</kbd>+drag</dd>
+      <dt>Nudge</dt><dd><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dd>
+      <dt>Turn 90°</dt><dd><kbd>R</kbd> / <kbd>Shift</kbd>+<kbd>R</kbd></dd>
+      <dt>Remove</dt><dd><kbd>Del</kbd></dd>
+      <dt>Pan</dt><dd><kbd>Space</kbd>+drag</dd>
+      <dt>Zoom</dt><dd>Scroll / pinch</dd>
+      <dt>Measure tool</dt><dd><kbd>M</kbd></dd>
+      <dt>Undo / redo</dt><dd><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></dd>
+      <dt>Cancel / deselect</dt><dd><kbd>Esc</kbd></dd>
+      <dt>This list</dt><dd><kbd>?</kbd></dd>
+    </dl>`, 'Close', null);
 }
 /* icons come from the <symbol> sprite at the top of <body> */
 const svgI = name => `<svg class="i" aria-hidden="true"><use href="#i-${name}"/></svg>`;
@@ -2585,12 +2627,16 @@ function drawSnapPoint(raw,shift){
   alignNote = s.guides.length ? (pts.length>1 && isSquare(pts[last-1], pts[last], s.pt) ? 'Right angle' : 'Lined up') : '';
   return s.pt;
 }
+function applyDrawCursorAt(px,py,shift){
+  const raw=[wx(px),wy(py)];
+  drawCursor = drawState ? drawSnapPoint(raw, shift) : raw;
+  wallDrawShift=shift;
+  scheduleDraw();
+}
 cv.addEventListener('mousemove', e=>{
   if(!drawState && !wallDrawState && !splitDrawState) return;
-  const raw=[wx(e.offsetX),wy(e.offsetY)];
-  drawCursor = drawState ? drawSnapPoint(raw, e.shiftKey) : raw;
-  wallDrawShift=e.shiftKey;
-  scheduleDraw();
+  lastPX=e.offsetX; lastPY=e.offsetY; lastMods={shiftKey:e.shiftKey,altKey:e.altKey};
+  applyDrawCursorAt(lastPX,lastPY,e.shiftKey);
 });
 
 /* ------------------------- drawing a freestanding wall ------------------------- */
@@ -3034,7 +3080,7 @@ function draw(){
     const oa = pa&&pa.passThrough ? 0 : 1, ob = pb&&pb.passThrough ? 0 : 1;
     return oa-ob || a.i-b.i;
   });
-  for(const {p} of drawOrder) drawItem(p, furnMode()&&p.id===sel, bad.has(p.id));
+  for(const {p} of drawOrder) drawItem(p, furnMode()&&selSet.has(p.id), bad.has(p.id));
   ctx.globalAlpha = 1;
 
   drawWallLabels();
@@ -3044,6 +3090,7 @@ function draw(){
   drawCustomOverlay();
   drawWallDrawOverlay();
   drawSplitOverlay();
+  drawMarquee();
   updateReadout(bad, openBad);
 }
 /* ---- the floor, drawn as one plan ----
@@ -3107,7 +3154,7 @@ function drawFloor(){
   members.forEach((m,mi)=>{
     for(const o of m.l.openings){
       if(wallIsOff(m.l.room,o.wall)) continue;
-      const g=openGeom(o,m.P);
+      const g=openGeom(o,m.P,m.l.room);
       const d=depths[mi][o.wall] != null ? depths[mi][o.wall] : (m.l.room.wall||0);
       ctx.strokeStyle = o.kind==='window' ? C.glass : m.l.room.floor;
       ctx.lineWidth=Math.max(2,d*view.scale)*2+2;
@@ -3488,7 +3535,7 @@ function drawFloorLabel(m){
   let anchor=centroid(m.P);
   if(!anchor||!pointInPoly(anchor,m.P)) anchor=[(b.x0+b.x1)/2,(b.y0+b.y1)/2];
   const own=bbox(m.l.room.points);
-  const dims=m.l.dimLabel || (fmtLen(own.w)+' × '+fmtLen(own.h));
+  const dims=m.l.dimLabel || (fmtLen(own.w,S.unit)+' × '+fmtLen(own.h,S.unit));
   const cxp=sx(anchor[0]), cyp=sy(anchor[1]);
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.font='600 12px ui-sans-serif,system-ui,sans-serif';
@@ -3603,7 +3650,7 @@ function drawWallDrawOverlay(){
 }
 /* `room`/`poly` let a floor draw a door on a room other than the active one */
 function drawOpening(o,blocked,room,poly){
-  const r=room||L().room, g=openGeom(o,poly), t=Math.max(2,r.wall*view.scale);
+  const r=room||L().room, g=openGeom(o,poly,r), t=Math.max(2,r.wall*view.scale);
   const C=PAL();
   // jambs
   ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(1.5,t*.35);
@@ -3623,7 +3670,7 @@ function drawOpening(o,blocked,room,poly){
     }
   } else if(o.dtype==='hinge'){
     if(S.showSwing){
-      const sp=swingPoly(o,poly), bad=blocked.includes(o.id);
+      const sp=swingPoly(o,poly,r), bad=blocked.includes(o.id);
       pathPoly(sp);
       ctx.fillStyle = bad?'rgba('+C.dangerRGB+',.16)':C.swing; ctx.fill();
       ctx.strokeStyle = bad?'rgba('+C.dangerRGB+',.7)':C.swingLine;
@@ -3639,7 +3686,7 @@ function drawOpening(o,blocked,room,poly){
        so shading it by default drew attention to clearance that is rarely the problem */
     const bad=blocked.includes(o.id);
     if(S.showSwing && bad){
-      pathPoly(swingPoly(o,poly));
+      pathPoly(swingPoly(o,poly,r));
       ctx.fillStyle='rgba('+C.dangerRGB+',.16)'; ctx.fill();
       ctx.strokeStyle='rgba('+C.dangerRGB+',.7)';
       ctx.setLineDash([4,4]); ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]);
@@ -3667,7 +3714,7 @@ function drawOpening(o,blocked,room,poly){
 }
 /* the open footprint is always drawn for whatever you have hold of, so you can
    see where it will reach as you place it, toggle on or off */
-const showOpenFor = p => S.showOpen || (furnMode() && p.id===sel);
+const showOpenFor = p => S.showOpen || (furnMode() && selSet.has(p.id));
 function drawOpenRegion(p,bad){
   const it=itemOf(p.itemId);
   const poly=it&&openPoly(p,it);
@@ -3730,24 +3777,46 @@ function drawItem(p,isSel,isBadPos){
 }
 /* the selected item's outline and rotate handle, drawn after everything else so nothing covers them */
 function drawItemTools(){
-  const p=sel&&L().placed.find(q=>q.id===sel), it=p&&itemOf(p.itemId);
-  if(!it) return;
-  const C=PAL(), isBadPos=getConflicts().bad.has(p.id);
+  if(!selSet.size) return;
+  const C=PAL(), {bad}=getConflicts();
   // selection: a surface halo under a crisp accent line, so it reads on any furniture colour
-  pathPoly(worldPoly(p,it));
-  ctx.lineJoin='round';
-  ctx.lineWidth=5; ctx.strokeStyle=C.surface; ctx.stroke();
-  ctx.lineWidth=2; ctx.strokeStyle=isBadPos?C.danger:C.accent; ctx.stroke();
-  ctx.lineJoin='miter';
+  for(const id of selSet){
+    const p=L().placed.find(q=>q.id===id), it=p&&itemOf(p.itemId);
+    if(!it) continue;
+    const isBadPos=bad.has(p.id);
+    pathPoly(worldPoly(p,it));
+    ctx.lineJoin='round';
+    ctx.lineWidth=5; ctx.strokeStyle=C.surface; ctx.stroke();
+    ctx.lineWidth=2; ctx.strokeStyle=isBadPos?C.danger:C.accent; ctx.stroke();
+    ctx.lineJoin='miter';
+  }
+  // rotate handle only makes sense for a single selected item
+  if(selSet.size!==1) return;
+  const p=instOf(sel), it=p&&itemOf(p.itemId);
+  if(!it) return;
+  const isBadPos=bad.has(p.id);
   const h=handlePos(p,it);
   const lb=bbox(shapePoly(it.shape)), r=(p.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
   const lx=(lb.x0+lb.x1)/2, ly=lb.y0;
   const ex=p.x+lx*c-ly*s, ey=p.y+lx*s+ly*c;
   ctx.beginPath(); ctx.moveTo(sx(ex),sy(ey)); ctx.lineTo(h.x,h.y);
-  ctx.strokeStyle=C.accent; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.strokeStyle=isBadPos?C.danger:C.accent; ctx.lineWidth=1.5; ctx.stroke();
   ctx.beginPath(); ctx.arc(h.x,h.y,7,0,Math.PI*2);
   ctx.fillStyle=C.surface; ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
   if(S.showDims) drawItemDims(p,it,C);
+}
+function drawMarquee(){
+  if(!drag||drag.mode!=='marquee') return;
+  const x0=Math.min(drag.x0,drag.x1), x1=Math.max(drag.x0,drag.x1);
+  const y0=Math.min(drag.y0,drag.y1), y1=Math.max(drag.y0,drag.y1);
+  const C=PAL();
+  ctx.save();
+  ctx.fillStyle=hexA(C.accent,.08);
+  ctx.fillRect(x0,y0,x1-x0,y1-y0);
+  ctx.setLineDash([5,4]); ctx.lineWidth=1.25; ctx.strokeStyle=C.accent;
+  ctx.strokeRect(x0,y0,x1-x0,y1-y0);
+  ctx.setLineDash([]);
+  ctx.restore();
 }
 /* the selected item's width and depth as dimension lines just outside it, turning with it.
    Width runs along the edge opposite the rotate handle, depth along whichever end sits
@@ -4172,6 +4241,7 @@ cv.addEventListener('pointerleave', ()=>{
   measureHover=null; measureHoverId=null; measureCursor=null; scheduleDraw();
 });
 $('btnMeasure').addEventListener('click', ()=>setMeasure(!measureOn));
+$('btnShortcuts').addEventListener('click', showShortcuts);
 $('measureBar').addEventListener('click', e=>{
   const b=e.target.closest('button[data-act]'); if(!b) return;
   if(b.dataset.act==='done') setMeasure(false);
@@ -4186,6 +4256,7 @@ $('measureBar').addEventListener('click', e=>{
 
 /* ------------------------- interaction ------------------------- */
 let drag=null, flashT=null;
+let spaceDown=false; // held to force pan mode (Space+drag pans; Space+scroll still zooms)
 const ROOM_DRAGS=['corner','wall','open','pillar','iwall','iwall-end'];
 function flash(msg){
   if(!msg) return;
@@ -4313,6 +4384,16 @@ function pickAt(x,y){
   }
   return null;
 }
+/* moves the given placed-item ids to the end of the array (drawn/hit-tested on
+   top within their pass-through tier) without touching undo history — this is
+   a view-order change, not an edit, so it must never call commitFurn()/save() */
+function bringToFront(ids){
+  const idSet=new Set(ids);
+  const arr=L().placed;
+  const moved=arr.filter(p=>idSet.has(p.id));
+  if(!moved.length) return;
+  L().placed=arr.filter(p=>!idSet.has(p.id)).concat(moved);
+}
 function pickRoom(px,py){
   const P=RP(), pt=[wx(px),wy(py)];
   for(let i=L().room.pillars.length-1;i>=0;i--){
@@ -4338,6 +4419,13 @@ function pickRoom(px,py){
 cv.addEventListener('pointerdown', e=>{
   try{ cv.setPointerCapture(e.pointerId); }catch(err){}
   const px=e.offsetX, py=e.offsetY;
+
+  if(spaceDown){
+    drag={mode:'pan', px, py, ox:view.ox, oy:view.oy};
+    cv.style.cursor='grabbing';
+    draw();
+    return;
+  }
 
   if(drawState){
     const raw=[wx(px),wy(py)];
@@ -4424,18 +4512,18 @@ cv.addEventListener('pointerdown', e=>{
   if(roomMode()){
     const hit=pickRoom(px,py);
     if(hit){
-      roomSel=hit; sel=null;
-      if(hit.kind==='opening') drag={mode:'open', id:hit.id};
-      else if(hit.kind==='corner') drag={mode:'corner', i:hit.i};
+      roomSel=hit; selectClear();
+      if(hit.kind==='opening') drag={mode:'open', id:hit.id, ox:px, oy:py, armed:false};
+      else if(hit.kind==='corner') drag={mode:'corner', i:hit.i, ox:px, oy:py, armed:false};
       else if(hit.kind==='pillar'){
         const pl=pillarOf(hit.id);
-        drag={mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y};
+        drag={mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y, ox:px, oy:py, armed:false};
       }
       else if(hit.kind==='iwall'){
-        if(hit.end) drag={mode:'iwall-end', id:hit.id, end:hit.end};
-        else { const w=iwallOf(hit.id); drag={mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1]}; }
+        if(hit.end) drag={mode:'iwall-end', id:hit.id, end:hit.end, ox:px, oy:py, armed:false};
+        else { const w=iwallOf(hit.id); drag={mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1], ox:px, oy:py, armed:false}; }
       }
-      else drag={mode:'wall', i:hit.i, last:[wx(px),wy(py)]};
+      else drag={mode:'wall', i:hit.i, last:[wx(px),wy(py)], ox:px, oy:py, armed:false};
       renderRoomSel(); renderWalls(); renderOpen(); draw();
       return;
     }
@@ -4445,7 +4533,7 @@ cv.addEventListener('pointerdown', e=>{
     return;
   }
 
-  if(sel){
+  if(!e.altKey && selSet.size===1 && sel){
     const inst=instOf(sel), it=inst&&itemOf(inst.itemId);
     if(inst&&it){
       const h=handlePos(inst,it);
@@ -4456,20 +4544,53 @@ cv.addEventListener('pointerdown', e=>{
     }
   }
   const hit=pickAt(wx(px),wy(py));
+  if(hit && e.altKey){
+    // Alt+drag: duplicate the clicked item (or the whole selection, if the
+    // clicked item is already part of a multi-selection) and drag the copies,
+    // leaving the originals in place. Snapshot BEFORE pushing the duplicates
+    // so undo removes them entirely, as one step with the drag that follows.
+    const srcIds = selSet.has(hit.id) && selSet.size>1 ? [...selSet] : [hit.id];
+    const snap = snapFurn();
+    const idMap = new Map();
+    for(const id of srcIds){
+      const src=instOf(id); if(!src) continue;
+      const dupe={...src, id:uid()};
+      L().placed.push(dupe);
+      idMap.set(id, dupe.id);
+    }
+    const newIds=[...idMap.values()];
+    if(!newIds.length) return;
+    bringToFront(newIds);
+    selectSet(newIds);
+    const anchorNew=idMap.get(hit.id);
+    const starts=newIds.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
+    drag={mode:'move', ids:newIds, anchorId:anchorNew, dx:wx(px)-instOf(anchorNew).x, dy:wy(py)-instOf(anchorNew).y, starts, loose:isBad(instOf(anchorNew)), snap};
+    renderSel(); draw();
+    return;
+  }
   if(hit){
-    sel=hit.id;
-    drag={mode:'move', id:hit.id, dx:wx(px)-hit.x, dy:wy(py)-hit.y, loose:isBad(hit)};
+    if(e.shiftKey) selectToggle(hit.id);
+    else if(!selSet.has(hit.id)) selectOnly(hit.id);
+    bringToFront([...selSet]);
+    const ids=[...selSet];
+    const starts=ids.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
+    drag={mode:'move', ids, anchorId:hit.id, dx:wx(px)-hit.x, dy:wy(py)-hit.y, starts, loose:isBad(hit)};
     renderSel(); draw();
   } else {
-    if(sel){ sel=null; renderSel(); }
-    drag={mode:'pan', px, py, ox:view.ox, oy:view.oy};
+    drag={mode:'marquee', x0:px, y0:py, x1:px, y1:py, additive:e.shiftKey};
     draw();
   }
 });
-cv.addEventListener('pointermove', e=>{
-  if(measureOn && !drag){ measureHoverAt(e.offsetX,e.offsetY); return; }
+let lastPX=null, lastPY=null, lastMods={shiftKey:false,altKey:false};
+const DEADZONE_MODES=['open','corner','pillar','iwall','iwall-end','wall'];
+const DEADZONE_PX=4;
+function applyDragAt(px,py,mods){
   if(!drag) return;
-  const px=e.offsetX, py=e.offsetY, pt=[wx(px),wy(py)];
+  if(!drag.armed && DEADZONE_MODES.includes(drag.mode)){
+    if(Math.hypot(px-drag.ox, py-drag.oy)<DEADZONE_PX) return;   // ignore tiny jitter so a click on the point doesn't nudge it
+    drag.armed=true;
+  }
+  const pt=[wx(px),wy(py)];
   const floorDrag = drag.mode==='floor-room'||drag.mode==='floor-rot';
   // nothing has moved yet: remember how things stood so Escape can put them back
   if(drag.mode!=='pan' && !drag.snap) drag.snap = floorDrag ? snapFloor() : ROOM_DRAGS.includes(drag.mode) ? snapRoom() : snapFurn();
@@ -4481,7 +4602,7 @@ cv.addEventListener('pointermove', e=>{
   if(drag.mode==='floor-room'){
     const l=S.layouts.find(x=>x.id===drag.id); if(!l) return;
     let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
-    if(e.altKey){ floorGuides=[]; floorSnapNote='Free'; }   // alt drops the magnet, same as everywhere else
+    if(mods.altKey){ floorGuides=[]; floorSnapNote='Free'; }   // alt drops the magnet, same as everywhere else
     else { const s=snapFloorPlace(l,nx,ny); nx=s.x; ny=s.y; floorGuides=s.guides; floorSnapNote=s.note; }
     l.floorPlace.x=nx; l.floorPlace.y=ny;
     scheduleDraw(); renderFloorSel(); return;
@@ -4491,17 +4612,17 @@ cv.addEventListener('pointermove', e=>{
     const b=bbox(floorPts(l));
     const a=Math.atan2(pt[1]-(b.y0+b.y1)/2, pt[0]-(b.x0+b.x1)/2);
     let deg=drag.start+(a-drag.a0)*180/Math.PI;
-    if(!e.altKey) deg=Math.round(deg/15)*15;   // free turn is the exception, not the rule
+    if(!mods.altKey) deg=Math.round(deg/15)*15;   // free turn is the exception, not the rule
     l.floorPlace.rot=norm360(deg);
     scheduleDraw(); renderFloorSel(); return;
   }
   if(drag.mode==='corner'){
     const P=RP(), was=P[drag.i].slice();
     let np=pt;
-    if(e.altKey){ alignGuides=[]; alignNote='Free'; }   // alt drops the magnet, same as everywhere else
+    if(mods.altKey){ alignGuides=[]; alignNote='Free'; }   // alt drops the magnet, same as everywhere else
     else {
       // shift reaches past the magnet's radius, for an alignment too far off to bite on its own
-      const s=snapCorner(drag.i, pt, e.shiftKey?Infinity:alignRadius());
+      const s=snapCorner(drag.i, pt, mods.shiftKey?Infinity:alignRadius());
       np=s.pt; alignGuides=s.guides; alignNote=s.note;
     }
     P[drag.i]=np;
@@ -4532,14 +4653,14 @@ cv.addEventListener('pointermove', e=>{
   if(drag.mode==='pillar'){
     const pl=pillarOf(drag.id); if(!pl) return;
     let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
-    if(!e.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
+    if(!mods.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     pl.x=nx; pl.y=ny;
     bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
   if(drag.mode==='iwall'){
     const w=iwallOf(drag.id); if(!w) return;
     let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
-    if(!e.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
+    if(!mods.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     const ddx=nx-w.a[0], ddy=ny-w.a[1];
     w.a=[w.a[0]+ddx, w.a[1]+ddy]; w.b=[w.b[0]+ddx, w.b[1]+ddy];
     bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
@@ -4547,47 +4668,96 @@ cv.addEventListener('pointermove', e=>{
   if(drag.mode==='iwall-end'){
     const w=iwallOf(drag.id); if(!w) return;
     const other = drag.end==='a' ? w.b : w.a;
-    const raw = e.shiftKey ? axisLockFrom(other,pt) : pt;
-    w[drag.end]=snapWallPoint(raw, drag.id, !e.altKey);
+    const raw = mods.shiftKey ? axisLockFrom(other,pt) : pt;
+    w[drag.end]=snapWallPoint(raw, drag.id, !mods.altKey);
     bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
 
-  const inst=instOf(drag.id); if(!inst) return;
-  const it=itemOf(inst.itemId); if(!it) return;
+  if(drag.mode==='marquee'){
+    drag.x1=px; drag.y1=py;
+    scheduleDraw(); return;
+  }
   if(drag.mode==='rot'){
+    const inst=instOf(drag.id); if(!inst) return;
+    const it=itemOf(inst.itemId); if(!it) return;
     const a=Math.atan2(wy(py)-inst.y, wx(px)-inst.x);
     let deg=drag.start+(a-drag.a0)*180/Math.PI;
-    if(!e.shiftKey) deg=Math.round(deg/15)*15;
+    if(!mods.shiftKey) deg=Math.round(deg/15)*15;
     const prev=inst.rot;
     inst.rot=norm360(deg);
     if(!drag.loose && !validate(inst,worldPoly(inst,it)).ok) inst.rot=prev;
     bumpRev(); scheduleDraw(); renderSel(); return;
   }
-  let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
+  // drag.mode==='move': one or more furniture items, each clamped/validated
+  // independently against walls/collisions (a group can end up slightly
+  // uneven if one item hits something — accepted tradeoff over blocking the
+  // whole group on a single collision)
+  const anchor=instOf(drag.anchorId); if(!anchor) return;
+  let anx=pt[0]-drag.dx, any=pt[1]-drag.dy;
+  const anchorIt=itemOf(anchor.itemId);
   const g=snapMM();
-  if(g>0&&!e.altKey){
-    const b=bbox(worldPoly({x:0,y:0,rot:inst.rot},it));
-    nx=Math.round((nx+b.x0)/g)*g-b.x0;
-    ny=Math.round((ny+b.y0)/g)*g-b.y0;
+  if(g>0&&!mods.altKey&&anchorIt){
+    const b=bbox(worldPoly({x:0,y:0,rot:anchor.rot},anchorIt));
+    anx=Math.round((anx+b.x0)/g)*g-b.x0;
+    any=Math.round((any+b.y0)/g)*g-b.y0;
   }
-  const px0=inst.x, py0=inst.y;
-  inst.x=nx; inst.y=ny;
-  const v=validate(inst,worldPoly(inst,it));
-  if(v.ok) drag.loose=false;
-  else if(drag.loose){
-    if(!centreInside(inst)){ inst.x=px0; inst.y=py0; }
-  } else {
-    // go as far toward the pointer as fits, per axis, so the piece meets the
-    // wall flush rather than stopping wherever the last pointer event left it
-    const p=slideToValid(inst,it,[px0,py0],[nx,ny]);
-    if(Math.hypot(p[0]-px0,p[1]-py0)<0.01){ inst.x=px0; inst.y=py0; flash(v.why); }
+  const anchorStart=drag.starts.find(s=>s.id===drag.anchorId);
+  const ddx=anx-anchorStart.x, ddy=any-anchorStart.y;
+  for(const st of drag.starts){
+    const inst=instOf(st.id); const it=inst&&itemOf(inst.itemId);
+    if(!inst||!it) continue;
+    const nx=st.x+ddx, ny=st.y+ddy;
+    const px0=inst.x, py0=inst.y;
+    inst.x=nx; inst.y=ny;
+    const v=validate(inst,worldPoly(inst,it));
+    if(v.ok) drag.loose=false;
+    else if(drag.loose){
+      if(!centreInside(inst)){ inst.x=px0; inst.y=py0; }
+    } else {
+      // go as far toward the pointer as fits, per axis, so the piece meets the
+      // wall flush rather than stopping wherever the last pointer event left it
+      const p=slideToValid(inst,it,[px0,py0],[nx,ny]);
+      if(Math.hypot(p[0]-px0,p[1]-py0)<0.01){ inst.x=px0; inst.y=py0; if(drag.starts.length===1) flash(v.why); }
+    }
   }
   bumpRev(); scheduleDraw();
+}
+cv.addEventListener('pointermove', e=>{
+  if(measureOn && !drag){ measureHoverAt(e.offsetX,e.offsetY); return; }
+  if(!drag) return;
+  lastPX=e.offsetX; lastPY=e.offsetY; lastMods={shiftKey:e.shiftKey,altKey:e.altKey};
+  applyDragAt(lastPX,lastPY,lastMods);
 });
+/* auto-scroll the canvas when a drag or a wall/room draw sits near the visible
+   edge and the cursor stops moving — event-driven pointermove alone can't do
+   this since no new events fire while the cursor is still */
+const EDGE_PAN_ZONE=40, EDGE_PAN_MAXSPD=18;
+function edgePanVel(px,py){
+  let vx=0, vy=0;
+  if(px<EDGE_PAN_ZONE) vx=-EDGE_PAN_MAXSPD*(1-px/EDGE_PAN_ZONE);
+  else if(px>W-EDGE_PAN_ZONE) vx=EDGE_PAN_MAXSPD*(1-(W-px)/EDGE_PAN_ZONE);
+  if(py<EDGE_PAN_ZONE) vy=-EDGE_PAN_MAXSPD*(1-py/EDGE_PAN_ZONE);
+  else if(py>H-EDGE_PAN_ZONE) vy=EDGE_PAN_MAXSPD*(1-(H-py)/EDGE_PAN_ZONE);
+  return {vx,vy};
+}
+(function edgePanTick(){
+  const dragging = drag && drag.mode!=='pan';
+  const drawing = !!(drawState || wallDrawState || splitDrawState);
+  if((dragging||drawing) && lastPX!=null){
+    const {vx,vy}=edgePanVel(lastPX,lastPY);
+    if(vx||vy){
+      view.ox-=vx; view.oy-=vy;
+      if(dragging) applyDragAt(lastPX,lastPY,lastMods);
+      else applyDrawCursorAt(lastPX,lastPY,lastMods.shiftKey);
+      scheduleDraw();
+    }
+  }
+  requestAnimationFrame(edgePanTick);
+})();
 /* Escape mid-drag: put whatever was being dragged back exactly where it started */
 function cancelDrag(){
   const wasFloor = drag.mode==='floor-room'||drag.mode==='floor-rot';
-  if(drag.mode==='pan'){ view.ox=drag.ox; view.oy=drag.oy; }
+  if(drag.mode==='pan'||drag.mode==='marquee'){ if(drag.mode==='pan'){ view.ox=drag.ox; view.oy=drag.oy; } }
   else if(drag.snap){
     const s=JSON.parse(drag.snap);
     if(wasFloor) for(const [id,place] of s){ const l=S.layouts.find(x=>x.id===id); if(l) l.floorPlace=place; }
@@ -4599,7 +4769,31 @@ function cancelDrag(){
   renderSel(); renderRoomSel(); renderWalls(); renderOpen(); renderFloorSel(); draw();
 }
 function endDrag(e){
-  if(drag&&drag.mode!=='pan'){
+  if(drag&&drag.mode==='marquee'){
+    const x0=Math.min(drag.x0,drag.x1), x1=Math.max(drag.x0,drag.x1);
+    const y0=Math.min(drag.y0,drag.y1), y1=Math.max(drag.y0,drag.y1);
+    const wa=[wx(x0),wy(y0)], wb=[wx(x1),wy(y1)];
+    const rx0=Math.min(wa[0],wb[0]), rx1=Math.max(wa[0],wb[0]);
+    const ry0=Math.min(wa[1],wb[1]), ry1=Math.max(wa[1],wb[1]);
+    const hitIds=[];
+    if(Math.hypot(x1-x0,y1-y0)>3){ // treat a near-zero-size drag as a plain empty click, not a marquee
+      for(const p of L().placed){
+        const it=itemOf(p.itemId); if(!it) continue;
+        const b=bbox(worldPoly(p,it));
+        if(b.x0<=rx1 && b.x1>=rx0 && b.y0<=ry1 && b.y1>=ry0) hitIds.push(p.id);
+      }
+    }
+    if(drag.additive) for(const id of hitIds) selectAdd(id);
+    else selectSet(hitIds);
+    if(hitIds.length) bringToFront(hitIds);
+    drag=null;
+    renderSel(); draw();
+    if(e&&e.pointerId!==undefined){ try{ cv.releasePointerCapture(e.pointerId); }catch(err){} }
+    return;
+  }
+  if(drag&&drag.mode==='pan'){
+    cv.style.cursor = spaceDown ? 'grab' : '';
+  } else if(drag){
     save();
     alignGuides=[]; alignNote='';
     if(drag.mode==='floor-room'||drag.mode==='floor-rot'){ floorGuides=[]; floorSnapNote=''; commitFloor(); renderFloorSel(); draw(); }
@@ -4641,12 +4835,29 @@ cv.addEventListener('contextmenu', e=>{
   openFloorMergeMenu([...mergeSel], e.clientX, e.clientY);
 });
 const ZOOM_FACTOR = 1.02;
-cv.addEventListener('wheel', e=>{ e.preventDefault(); zoomAt(e.deltaY<0?ZOOM_FACTOR:1/ZOOM_FACTOR, e.offsetX, e.offsetY); }, {passive:false});
+const ZOOM_ACCEL_K = 0.03; // tuned by feel: higher = faster flicks jump further
+let wheelState = {last:0};
+cv.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const now = performance.now();
+  const dt = wheelState.last ? Math.max(1, now-wheelState.last) : 100;
+  wheelState.last = now;
+  // deltaMode 1 = DOM_DELTA_LINE (mouse wheel notches, chunky); 0 = DOM_DELTA_PIXEL (trackpad, many small events)
+  const norm = e.deltaMode===1 ? e.deltaY*16 : e.deltaY;
+  const velocity = Math.abs(norm)/dt;
+  const accel = Math.min(4, 1+velocity*ZOOM_ACCEL_K);
+  const speed = S.zoomSpeed||1;
+  const magnitude = accel*speed*Math.min(3, Math.abs(norm)/4);
+  zoomAt(Math.pow(ZOOM_FACTOR, (norm<0?1:-1)*magnitude), e.offsetX, e.offsetY);
+}, {passive:false});
 
 document.addEventListener('keydown', e=>{
   const tag=(e.target.tagName||'').toLowerCase();
   if(drag && e.key==='Escape'){ e.preventDefault(); cancelDrag(); return; }
   if(tag==='input'||tag==='textarea'||tag==='select') return;
+  if(e.code==='Space' && !e.repeat && isCanvasMode(S.mode)){
+    spaceDown=true; cv.style.cursor='grab'; e.preventDefault(); return;
+  }
   if(drawState){
     if(e.key==='Escape'){ cancelCustomDraw(); return; }
     if(e.key==='Enter'){ finishCustomDraw(); return; }
@@ -4663,6 +4874,9 @@ document.addEventListener('keydown', e=>{
   if(mo.hidden && (e.key==='m'||e.key==='M') && !e.ctrlKey && !e.metaKey && !e.altKey && isCanvasMode(S.mode) && !floorMode()){
     setMeasure(!measureOn); return;
   }
+  if(mo.hidden && !drag && e.key==='?' && isCanvasMode(S.mode)){
+    e.preventDefault(); showShortcuts(); return;
+  }
   if(measureOn && mo.hidden){
     // Escape backs out one step at a time: the first end, then the selection, then the tool
     if(e.key==='Escape'){
@@ -4675,7 +4889,7 @@ document.addEventListener('keydown', e=>{
   }
   if(e.key==='Escape'){
     if(!mo.hidden){ closeModal(); return; }
-    sel=null; roomSel=null; floorSel=null; mergeSel.clear();
+    selectClear(); roomSel=null; floorSel=null; mergeSel.clear();
     renderSel(); renderRoomSel(); renderWalls(); renderOpen(); renderFloorSel(); renderTree(); draw(); return;
   }
   if(mo.hidden && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){
@@ -4706,27 +4920,37 @@ document.addEventListener('keydown', e=>{
     }
     return;
   }
-  if(!sel) return;
-  const inst=instOf(sel); if(!inst) return;
-  const it=itemOf(inst.itemId); if(!it) return;
+  if(!selSet.size) return;
   if(e.key==='Delete'||e.key==='Backspace'){ e.preventDefault(); removeSel(); return; }
-  if(e.key==='r'||e.key==='R'){ e.preventDefault(); rotate(e.shiftKey?-90:90); return; }
+  if(e.key==='r'||e.key==='R'){ if(selSet.size===1){ e.preventDefault(); rotate(e.shiftKey?-90:90); } return; }
   const step=(snapMM()||10)*(e.shiftKey?5:1);
   const d={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]}[e.key];
   if(d){
     e.preventDefault();
-    const loose=isBad(inst), ox=inst.x, oy=inst.y;
-    inst.x+=d[0]; inst.y+=d[1];
-    if(!validate(inst,worldPoly(inst,it)).ok){
-      if(loose){ if(!centreInside(inst)){ inst.x=ox; inst.y=oy; } }
-      else {
-        // take as much of the step as fits
-        inst.x=ox; inst.y=oy;
-        bisectToValid(inst,it,[ox,oy],[ox+d[0],oy+d[1]]);
-        if(Math.hypot(inst.x-ox,inst.y-oy)<0.01){ inst.x=ox; inst.y=oy; flash('No room that way'); }
+    let moved=false;
+    for(const id of selSet){
+      const inst=instOf(id); const it=inst&&itemOf(inst.itemId);
+      if(!inst||!it) continue;
+      moved=true;
+      const loose=isBad(inst), ox=inst.x, oy=inst.y;
+      inst.x+=d[0]; inst.y+=d[1];
+      if(!validate(inst,worldPoly(inst,it)).ok){
+        if(loose){ if(!centreInside(inst)){ inst.x=ox; inst.y=oy; } }
+        else {
+          // take as much of the step as fits
+          inst.x=ox; inst.y=oy;
+          bisectToValid(inst,it,[ox,oy],[ox+d[0],oy+d[1]]);
+          if(Math.hypot(inst.x-ox,inst.y-oy)<0.01){ inst.x=ox; inst.y=oy; if(selSet.size===1) flash('No room that way'); }
+        }
       }
     }
-    draw(); renderSel(); save(); commitFurn();
+    if(moved){ draw(); renderSel(); save(); commitFurn(); }
+  }
+});
+document.addEventListener('keyup', e=>{
+  if(e.code==='Space'){
+    spaceDown=false;
+    if(!drag||drag.mode!=='pan') cv.style.cursor='';
   }
 });
 function rotate(deg){
@@ -4738,8 +4962,9 @@ function rotate(deg){
   draw(); renderSel(); save(); commitFurn();
 }
 function removeSel(){
-  L().placed=L().placed.filter(p=>p.id!==sel);
-  sel=null; renderSel(); renderInv(); draw(); save(); commitFurn();
+  if(!selSet.size) return;
+  L().placed=L().placed.filter(p=>!selSet.has(p.id));
+  selectClear(); renderSel(); renderInv(); draw(); save(); commitFurn();
 }
 function place(itemId){
   const it=itemOf(itemId); if(!it) return;
@@ -4764,7 +4989,7 @@ function place(itemId){
     flash('Nowhere clear to put it — drag it where you want');
   }
   L().placed.push(inst);
-  sel=inst.id;
+  selectOnly(inst.id);
   if(roomMode()) setMode('furniture');
   renderInv(); renderSel(); draw(); save(); commitFurn();
 }
@@ -4793,8 +5018,8 @@ function setMode(m){
   S.mode=m;
   if(isCanvasMode(m)) S.planMode=m;
   if(m==='furniture') roomSel=null;
-  else if(m==='room') sel=null;
-  else if(m==='floor'){ sel=null; roomSel=null; floorSel = L().floorId ? L().id : null; floorEntry(); }
+  else if(m==='room') selectClear();
+  else if(m==='floor'){ selectClear(); roomSel=null; floorSel = L().floorId ? L().id : null; floorEntry(); }
   if(m!=='floor'){ floorGuides=[]; floorSnapNote=''; }
   alignGuides=[]; alignNote='';
   /* measurements belong to one room, so Floor mode leaves the tool behind too */
@@ -5626,19 +5851,19 @@ function renderFloorSel(){
   const p=l.floorPlace, own=bbox(l.room.points);
   t.textContent=l.name;
   box.innerHTML=`
-    <div class="field"><label for="flX">From left</label><input type="text" class="len" id="flX" value="${esc(fmtLen(p.x+own.x0))}"></div>
-    <div class="field"><label for="flY">From top</label><input type="text" class="len" id="flY" value="${esc(fmtLen(p.y+own.y0))}"></div>
+    <div class="field"><label for="flX">From left</label><input type="text" class="len" id="flX" value="${esc(fmtLen(p.x+own.x0,S.unit))}"></div>
+    <div class="field"><label for="flY">From top</label><input type="text" class="len" id="flY" value="${esc(fmtLen(p.y+own.y0,S.unit))}"></div>
     <div class="field"><label for="flRot">Angle</label><input type="text" id="flRot" value="${trimNum(p.rot,1)}"><span class="unit">°</span>
       <button class="btn quiet sm icon" id="flRotL" title="Turn left 90°" aria-label="Turn left 90 degrees">${svgI('rot-l')}</button>
       <button class="btn quiet sm icon" id="flRotR" title="Turn right 90°" aria-label="Turn right 90 degrees">${svgI('rot-r')}</button></div>
-    <div class="field"><label for="flDim">Label</label><input type="text" id="flDim" value="${esc(l.dimLabel||'')}" placeholder="${esc(fmtLen(own.w)+' × '+fmtLen(own.h))}"></div>
+    <div class="field"><label for="flDim">Label</label><input type="text" id="flDim" value="${esc(l.dimLabel||'')}" placeholder="${esc(fmtLen(own.w,S.unit)+' × '+fmtLen(own.h,S.unit))}"></div>
     <div class="row actions">
       <button class="btn sm" id="flEdit">Edit this room</button>
       <button class="btn sm quiet" id="flOff">Take off floor</button>
     </div>`;
   const move=(k,v)=>{ if(v==null||!isFinite(v)) return; l.floorPlace[k]=v-(k==='x'?own.x0:own.y0); commitFloor(); renderFloorSel(); draw(); save(); };
-  $('flX').addEventListener('change',e=>move('x',parseLen(e.target.value)));
-  $('flY').addEventListener('change',e=>move('y',parseLen(e.target.value)));
+  $('flX').addEventListener('change',e=>move('x',parseLen(e.target.value,S.unit)));
+  $('flY').addEventListener('change',e=>move('y',parseLen(e.target.value,S.unit)));
   $('flRot').addEventListener('change',e=>{
     const v=parseFloat(e.target.value);
     if(isFinite(v)){ l.floorPlace.rot=norm360(v); commitFloor(); renderFloorSel(); draw(); save(); }
@@ -5663,12 +5888,12 @@ function renderFloorProps(){
   const n=floorLayouts(fl.id).length;
   box.innerHTML=`
     <div class="field"><label for="flName">Name</label><input type="text" id="flName" value="${esc(fl.name)}"></div>
-    <div class="field"><label for="flExt">Outer wall</label><input type="text" class="len" id="flExt" value="${fl.extWall?esc(fmtLen(fl.extWall)):''}" placeholder="Same as each room"></div>
+    <div class="field"><label for="flExt">Outer wall</label><input type="text" class="len" id="flExt" value="${fl.extWall?esc(fmtLen(fl.extWall,S.unit)):''}" placeholder="Same as each room"></div>
     <p class="hint">${plural(n,'room')} on this floor. Drag one against another and it clicks to a shared wall.</p>
     <div class="row actions"><button class="btn sm quiet" id="flFit">Fit floor</button></div>`;
   $('flName').addEventListener('change',e=>{ const v=e.target.value.trim(); if(v){ fl.name=v; renderTree(); save(); } });
   $('flExt').addEventListener('change',e=>{
-    const raw=e.target.value.trim(), v=raw?parseLen(raw):0;
+    const raw=e.target.value.trim(), v=raw?parseLen(raw,S.unit):0;
     fl.extWall = raw && isFinite(v) && v>0 ? v : 0;
     renderFloorProps(); draw(); save();
   });
@@ -6083,7 +6308,7 @@ function deleteItem(id){
   const kill=()=>{
     S.inventory=S.inventory.filter(i=>i.id!==id);
     for(const l of S.layouts) l.placed=l.placed.filter(p=>p.itemId!==id);
-    sel=null; renderInv(); renderSel(); draw(); save();
+    selectClear(); renderInv(); renderSel(); draw(); save();
   };
   if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+'. Those will be removed too.', 'Delete', kill);
   else kill();
@@ -6125,11 +6350,55 @@ invBox.addEventListener('drop', e=>{
   renderInv(); save();
 });
 
+function duplicateSel(){
+  if(selSet.size<2) return;
+  const srcIds=[...selSet];
+  const newIds=[];
+  for(const id of srcIds){
+    const src=instOf(id); if(!src) continue;
+    const dupe={...src, id:uid()};
+    L().placed.push(dupe);
+    newIds.push(dupe.id);
+  }
+  if(!newIds.length) return;
+  bringToFront(newIds);
+  selectSet(newIds);
+  renderInv(); renderSel(); draw(); save(); commitFurn();
+}
 function renderSel(){
   const box=$('selBox');
-  const inst=furnMode()&&sel&&instOf(sel), it=inst&&itemOf(inst.itemId);
+  if(!furnMode() || selSet.size===0){
+    box.closest('section').classList.toggle('is-empty', true);
+    box.innerHTML=`<p class="hint">Click an item in the plan to move, turn or remove it.</p>
+      <dl class="kbd">
+        <dt>Nudge</dt><dd><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dd>
+        <dt>Turn 90°</dt><dd><kbd>R</kbd></dd>
+        <dt>Remove</dt><dd><kbd>Del</kbd></dd>
+        <dt>Drag without snap</dt><dd><kbd>Alt</kbd></dd>
+        <dt>Select multiple</dt><dd><kbd>Shift</kbd>+click, or drag on empty space</dd>
+      </dl>`;
+    return;
+  }
+  if(selSet.size>1){
+    box.closest('section').classList.toggle('is-empty', false);
+    box.innerHTML=`
+      <div class="selhead"><span class="nm">${selSet.size} items selected</span></div>
+      <div class="row actions">
+        <button class="btn sm" id="sDupG">Duplicate</button>
+        <button class="btn sm danger" id="sDelG">Remove</button>
+      </div>
+      <dl class="kbd">
+        <dt>Nudge</dt><dd><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dd>
+        <dt>Remove</dt><dd><kbd>Del</kbd></dd>
+      </dl>`;
+    $('sDelG').addEventListener('click', removeSel);
+    $('sDupG').addEventListener('click', duplicateSel);
+    return;
+  }
+  const inst=instOf(sel), it=inst&&itemOf(inst.itemId);
   box.closest('section').classList.toggle('is-empty', !(inst&&it));
   if(!inst||!it){
+    selectClear();
     box.innerHTML=`<p class="hint">Click an item in the plan to move, turn or remove it.</p>
       <dl class="kbd">
         <dt>Nudge</dt><dd><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dd>
@@ -6245,6 +6514,7 @@ $('btnDrawCustom').addEventListener('click', ()=>{
 
 $('unitSel').addEventListener('change', e=>{ S.unit=e.target.value; renderSnap(); renderAll(); save(); });
 $('snapSel').addEventListener('change', e=>{ S.snap=e.target.value; save(); });
+$('zoomSpeedSel').addEventListener('change', e=>{ S.zoomSpeed=parseFloat(e.target.value)||1; save(); });
 $('showSwing').addEventListener('change', e=>{ S.showSwing=e.target.checked; draw(); save(); });
 $('showWalk').addEventListener('change', e=>{ S.showWalk=e.target.checked; draw(); save(); });
 $('showMeasure').addEventListener('change', e=>{ S.showMeasure=e.target.checked; draw(); save(); });
@@ -9001,7 +9271,7 @@ function ancestorFolderIds(folders, id){
 }
 
 /* ------------------------- export ------------------------- */
-const PREF_KEYS=['unit','snap','showSwing','showDims','showOpen','showWalk','showMeasure','invScope','onlyAvailable'];
+const PREF_KEYS=['unit','snap','showSwing','showDims','showOpen','showWalk','showMeasure','invScope','onlyAvailable','zoomSpeed'];
 function exportPayload(roomIds, itemIds, withPrefs){
   const layouts=S.layouts.filter(l=>roomIds.includes(l.id)).map(clone);
   const keep=new Set();
@@ -9121,8 +9391,9 @@ function importDialog(inc){
     ${inc.prefs?`<label class="check"><input type="checkbox" id="imPrefs">Settings — units, snap, stock, and what the plan shows</label>`:''}
     <div class="field" id="imDupeRow"><label for="imDupe">Same id</label><select id="imDupe">
       <option value="mine">Keep mine</option>
+      <option value="theirs">Overwrite mine</option>
       <option value="copy">Add theirs as a copy</option></select></div>
-    <p class="hint" id="imDupeNote">An id already in your library, like <code>ikea/kallax/4x2</code>, means the same product — by default yours is kept and incoming rooms use it.</p>`,
+    <p class="hint" id="imDupeNote">An id already in your library, like <code>ikea/kallax/4x2</code>, means the same product — by default yours is kept and incoming rooms use it. "Overwrite mine" replaces your item's data with the incoming one, in place.</p>`,
     'Import',
     ()=>{
       const roomIds=pickValues('imRooms'), itemIds=pickValues('imThings');
@@ -9177,7 +9448,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     for(const k of Object.keys(furnHist)) delete furnHist[k];
     seedHistFor();
     $('unitSel').value=S.unit;
-    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure;
+    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure; $('zoomSpeedSel').value=S.zoomSpeed;
     renderSnap(); applyPanes(); applySections(); renderAll(); fit(); save();
     flash('Replaced your project with '+plural(S.layouts.length,'room')+' and '+plural(S.inventory.length,'item'));
     return;
@@ -9190,6 +9461,13 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
   let addedItems=0;
   for(const it of items){
     if(takenItems.has(it.id) && dupe==='mine'){ itemMap[it.id]=it.id; continue; }
+    if(takenItems.has(it.id) && dupe==='theirs'){
+      const idx=S.inventory.findIndex(x=>x.id===it.id);
+      if(idx>=0) S.inventory[idx]=it;
+      itemMap[it.id]=it.id;
+      addedItems++;
+      continue;
+    }
     const nid=uniqueId(it.id, takenItems);
     itemMap[it.id]=nid; it.id=nid;
     takenItems.add(nid);
@@ -9243,7 +9521,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
   if(wantPrefs && inc.prefs){
     Object.assign(S, inc.prefs);
     $('unitSel').value=S.unit;
-    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure;
+    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure; $('zoomSpeedSel').value=S.zoomSpeed;
     renderSnap();
   }
   renderAll(); save();
@@ -9969,7 +10247,7 @@ function deleteLibItem(id){
   const it=S.inventory.find(x=>x.id===id); if(!it) return;
   const n=S.layouts.reduce((a,l)=>a+l.placed.filter(p=>p.itemId===id).length,0);
   const kill=()=>{
-    purgeItem(id); sel=null;
+    purgeItem(id); selectClear();
     save(); renderInv(); renderSel(); draw(); renderLibAll();
   };
   if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+' across your rooms. Those will be removed too.', 'Delete', kill);
@@ -10600,7 +10878,7 @@ window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
   if(pm) S.mode=pm;
   syncModeParam();
   $('unitSel').value=S.unit;
-  $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure;
+  $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure; $('zoomSpeedSel').value=S.zoomSpeed;
   seedHistFor();
   nav.tab = S.mode==='marketplace' ? 'market' : 'library';
   nav.libFolderId = itemFolderOf(S.uiLib.libFolderId) ? S.uiLib.libFolderId : null;
