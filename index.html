@@ -798,7 +798,7 @@ function selectSet(ids){ setSelSet(new Set(ids)); setSel(ids.length ? ids[ids.le
 function selectClear(){ selSet.clear(); setSel(null); }
 
 import {floorXf, floorPts, floorInst, floorIWall,
-        floorBBox, placeOnFloor, INV_SCOPES, availableCount} from './src/core/floor-space.js';
+        placeOnFloor, INV_SCOPES, availableCount} from './src/core/floor-space.js';
 /* folder path from root to id, inclusive */
 function folderPath(id){
   const out=[]; let f=folderOf(id);
@@ -1024,45 +1024,11 @@ import {moveBefore, clearDropMarks, dropHalf} from './src/ui/dnd.js';
 import {tagFieldHTML, mountTagField, tagFieldValue} from './src/ui/tag-input.js';
 
 /* ------------------------- view ------------------------- */
-import {cv, ctx} from './src/canvas/view.js';
+import {cv} from './src/canvas/view.js';
 import {view} from './src/canvas/view.js';
-import {W, H, setW, setH} from './src/canvas/view.js';
-function resize(){
-  const r=cv.parentElement.getBoundingClientRect();
-  const dpr=Math.min(window.devicePixelRatio||1,2.5);
-  setW(Math.max(1,Math.floor(r.width))); setH(Math.max(1,Math.floor(r.height)));
-  cv.width=W*dpr; cv.height=H*dpr;
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  scheduleDraw();
-}
-function fitBBox(b,pad){
-  pad = pad==null ? 175 : pad;
-  const s=Math.min((W-pad*2)/Math.max(b.w,1),(H-pad*2)/Math.max(b.h,1));
-  view.scale = s>0 ? s : .05;
-  view.ox = (W-b.w*view.scale)/2 - b.x0*view.scale;
-  view.oy = (H-b.h*view.scale)/2 - b.y0*view.scale;
-  draw();
-}
-/* in Floor mode the frame is the whole arrangement, grown so the outermost
-   wall bands aren't clipped off at the edge */
-function fit(){
-  if(floorMode()){
-    const fl=floorOf(L().floorId), b=fl&&floorBBox(fl.id);
-    if(b){
-      let pad=0; for(const l of floorLayouts(fl.id)) pad=Math.max(pad, l.room.wall||0);
-      fitBBox({x0:b.x0-pad, y0:b.y0-pad, w:b.w+pad*2, h:b.h+pad*2}, 72);
-      return;
-    }
-  }
-  fitBBox(bbox(RP()));
-}
+import {W, H} from './src/canvas/view.js';
+import {resize, fit, zoomAt} from './src/canvas/view.js';
 import {sx, sy, wx, wy} from './src/canvas/view.js';
-function zoomAt(f,px,py){
-  const bx=wx(px),by=wy(py);
-  view.scale=Math.max(.004,Math.min(3,view.scale*f));
-  view.ox=px-bx*view.scale; view.oy=py-by*view.scale;
-  scheduleDraw();
-}
 import {snapMM, snapPt, axisLockFrom} from './src/canvas/view.js';
 
 /* ------------------------- custom room drawing (walls may cross) ------------------------- */

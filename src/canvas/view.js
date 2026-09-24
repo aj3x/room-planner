@@ -5,13 +5,22 @@
    byte-identical to what stood there, and the `export` block at the end is the
    only line added.
 
-   Five members of the region could NOT come along, because each reaches into a
-   phase that has not run yet. They stay in index.html, in place:
+   Five members of the region could not come along in the canvas/ round, each
+   reaching into a phase that had not run yet. All five are here now:
 
-     W, H                 reassigned by resize()
+     W, H                 reassigned by resize() — joined in the draw() round,
+                          once a setter split them off `view`
      resize, zoomAt       call scheduleDraw()  -> canvas/draw.js
      fitBBox              calls draw()         -> canvas/draw.js
-     fit                  calls floorBBox()    -> plan/floors.js
+     fit                  calls floorBBox()    -> core/floor-space.js, which is
+                          where floorBBox actually landed, not plan/floors.js
+
+   The last four joined in the plan/ round. They close a second import cycle
+   with canvas/draw.js, on top of the one draw.js already has with
+   split-room.js and walkpaths.js. It is rule 4's case: every name across the
+   edge is a function declaration or is read inside a function body, and
+   draw.js has no module-evaluation-time read of anything at all. Do not add a
+   top-level read across this edge either.
 
    `view` itself could go because it is never reassigned, only mutated, so an
    importer sees every change through the live binding. W and H are reassigned,
@@ -22,7 +31,10 @@
    in boot.js, see the note above it. */
 
 import {$} from '../ui/modal.js';
-import {S} from '../core/state.js';
+import {S, L, RP, floorMode, floorOf, floorLayouts} from '../core/state.js';
+import {floorBBox} from '../core/floor-space.js';
+import {bbox} from '../core/geometry.js';
+import {draw, scheduleDraw} from './draw.js';
 
 /* ------------------------- view ------------------------- */
 /* Top-level DOM, and the one place in src/ that takes a rendering context at
@@ -65,4 +77,42 @@ function axisLockFrom(a,pt){
   return Math.abs(dx)>=Math.abs(dy) ? [pt[0],a[1]] : [a[0],pt[1]];
 }
 
-export {cv, ctx, view, W, H, setW, setH, sx, sy, wx, wy, snapMM, snapPt, axisLockFrom};
+
+function resize(){
+  const r=cv.parentElement.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,2.5);
+  setW(Math.max(1,Math.floor(r.width))); setH(Math.max(1,Math.floor(r.height)));
+  cv.width=W*dpr; cv.height=H*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  scheduleDraw();
+}
+function fitBBox(b,pad){
+  pad = pad==null ? 175 : pad;
+  const s=Math.min((W-pad*2)/Math.max(b.w,1),(H-pad*2)/Math.max(b.h,1));
+  view.scale = s>0 ? s : .05;
+  view.ox = (W-b.w*view.scale)/2 - b.x0*view.scale;
+  view.oy = (H-b.h*view.scale)/2 - b.y0*view.scale;
+  draw();
+}
+/* in Floor mode the frame is the whole arrangement, grown so the outermost
+   wall bands aren't clipped off at the edge */
+function fit(){
+  if(floorMode()){
+    const fl=floorOf(L().floorId), b=fl&&floorBBox(fl.id);
+    if(b){
+      let pad=0; for(const l of floorLayouts(fl.id)) pad=Math.max(pad, l.room.wall||0);
+      fitBBox({x0:b.x0-pad, y0:b.y0-pad, w:b.w+pad*2, h:b.h+pad*2}, 72);
+      return;
+    }
+  }
+  fitBBox(bbox(RP()));
+}
+function zoomAt(f,px,py){
+  const bx=wx(px),by=wy(py);
+  view.scale=Math.max(.004,Math.min(3,view.scale*f));
+  view.ox=px-bx*view.scale; view.oy=py-by*view.scale;
+  scheduleDraw();
+}
+
+export {cv, ctx, view, W, H, setW, setH, sx, sy, wx, wy, snapMM, snapPt, axisLockFrom,
+        resize, fitBBox, fit, zoomAt};

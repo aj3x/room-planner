@@ -52,6 +52,11 @@ export const EPILOGUE = `
 ;import {CANVAS} from './src/canvas/draw.js';
 ;import {alignGuides, alignNote, floorGuides, floorSnapNote} from './src/core/selection.js';
 ;import {drawCursor} from './src/canvas/interaction-state.js';
+/* ctx left index.html's scope with resize()/fitBBox(): index.html still uses
+   cv, but nothing in it reads ctx any more, so importing it back there would
+   be an unused import. __rp.ctx is what visual.spec.js reads the recording
+   context through, so it comes in here the CANVAS way. */
+;import {ctx} from './src/canvas/view.js';
 /* swingPoly is in GLOBALS below, and index.html stopped referencing it when
    draw() took drawOpening into canvas/draw.js. GLOBALS assigns inside a
    try/catch, so a name that has left scope fails SILENTLY and surfaces only as
