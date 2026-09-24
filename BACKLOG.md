@@ -153,6 +153,22 @@ layouts are both currently active).
 
 ## Known defects
 
+- **Arriving in Floor mode leaves both floor panels stale.** `setMode('floor')`
+  (`index.html` ~1988) seeds `floorSel` with the active room, baselines the
+  arrangement and fits the camera, so the plan opens with that room drawn
+  selected — but the render list it then runs is `renderRoomSel(); renderWalls();
+  renderOpen(); renderSel();`, which does not include `renderFloorSel()`. And
+  `renderFloorProps()` has exactly one caller: `renderFloorSel()`. So the
+  Properties pane greets you with "Click a room in the plan to move or turn it
+  here." for a room that is already picked, its From-left / From-top / Angle /
+  Label fields never appear, and the Floor section shows whatever was last
+  rendered into it. Clicking the room on the plan, shift-clicking a row in the
+  tree, or anything else that calls `renderFloorSel()`/`renderAll()` puts it
+  right. The one-word fix is to add `renderFloorSel()` to that list; not done
+  here because Phase 3 is move-only. Found while writing the Floor-mode panel
+  coverage; pinned by `test/e2e/panel-select.spec.js` ("CHARACTERIZED, NOT
+  ENDORSED: arriving in Floor mode leaves both floor sections stale").
+
 - **Filing an item into a folder derives its id prefix from the folder's
   *display name*, case and all.** `rehomeItemId()` builds the new id from
   `folderIdPrefix(folderId)`, which is `itemFolderPath(...).map(f=>idSlug(f.name))`

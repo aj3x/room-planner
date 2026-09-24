@@ -99,7 +99,7 @@ test.describe('the library grid opens the item editor', () => {
        propagating. Either one going missing leaves the other holding it. */
     await app.click('#libContent [data-item="sofa"] [data-act=more]');
     await settle(app);
-    expect(await app.locator('#modal.on').count()).toBe(0);
+    await expect(app.locator('#modal')).toBeHidden();
     expect(await menuItems(app)).toEqual([
       'Sofa', 'Edit…', 'Move to folder…', 'Duplicate', 'Export…', '—', 'Delete…',
     ]);
@@ -116,7 +116,7 @@ test.describe('the library grid opens the item editor', () => {
     await app.click('#moOk');
     await settle(app);
 
-    expect(await app.locator('#modal.on').count()).toBe(0);
+    await expect(app.locator('#modal')).toBeHidden();
     const s = await readS(app);
     const sofa = s.inventory.find((i) => i.id === 'sofa');
     expect(sofa.name).toBe('Chesterfield');
@@ -141,7 +141,7 @@ test.describe('the library grid opens the item editor', () => {
   test('a folder tile navigates instead of opening anything', async ({ app }) => {
     await app.click('#libContent [data-openfolder="if-ikea"]');
     await settle(app);
-    expect(await app.locator('#modal.on').count()).toBe(0);
+    await expect(app.locator('#modal')).toBeHidden();
     expect(await app.evaluate(() => window.__rp.nav.libFolderId)).toBe('if-ikea');
     expect(await texts(app, '#libContent .crumbs button')).toEqual(['All items', 'IKEA']);
     expect(await tiles(app)).toEqual([
