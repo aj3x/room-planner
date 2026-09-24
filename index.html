@@ -1622,7 +1622,7 @@ function finishWallDraw(a,b){
    freestanding wall, a split has nowhere else to start or end. Between the two
    ends the user can drop as many interior points as they like, bending the cut
    into a polyline; each one must stay strictly inside the room. */
-import {boundaryHit, splitAngleSnap} from './src/canvas/split-room.js';
+import {boundaryHit} from './src/canvas/split-room.js';
 function startSplitRoom(id){
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
   if(!polySimple(l.room.points)){ flash("Straighten this room's outline before splitting it"); return; }
@@ -1638,97 +1638,7 @@ function startSplitRoom(id){
   draw();
 }
 function cancelSplitDraw(){ setSplitDrawState(null); setAlignGuides([]); setAlignNote(''); draw(); }
-/* Every existing room corner, and every split point already placed, that the
-   NEXT split point can align to — the same {p, bias, edge} shape snapCorner
-   builds for dragging a room corner, so it reuses alignPoint/isSquare as-is.
-   A corner offers both of its own walls as a "square to this" option; the
-   most recently placed split point offers the segment behind it (or, for
-   the very first point, the wall it started on) the same way drawSnapPoint
-   does for a freehand room outline. */
-function splitRefs(){
-  const P=RP(), n=P.length, refs=[];
-  for(let i=0;i<n;i++){
-    refs.push({p:P[i], bias:0.3, edge:wallOf(i).dir});
-    refs.push({p:P[i], bias:0.3, edge:wallOf((i-1+n)%n).dir});
-  }
-  const pts=splitDrawState.pts;
-  for(let k=0;k<pts.length;k++){
-    const p=pts[k].pt||pts[k], last=k===pts.length-1;
-    let edge=null;
-    if(last && k>0){ const prev=pts[k-1].pt||pts[k-1]; edge=[p[0]-prev[0], p[1]-prev[1]]; }
-    else if(last) edge=wallOf(pts[0].i).dir;   // only point so far is the start hit
-    refs.push({p, bias:last?0:0.2, edge});
-  }
-  return refs;
-}
-/* the three points a "is this bend square?" check (and its tick glyph) reads —
-   the last two placed points plus the candidate, or, before any bend exists
-   yet, a point synthesised back along the start wall so the very first
-   segment can still be told apart from square. */
-function splitCornerRef(pts, candidatePt){
-  if(pts.length>=2){
-    return [pts[pts.length-2].pt||pts[pts.length-2], pts[pts.length-1].pt||pts[pts.length-1], candidatePt];
-  }
-  if(pts.length===1){
-    const start=pts[0], w=wallOf(start.i);
-    /* w.dir is a unit vector — a synthetic point only 1mm back along the wall is
-       invisible on screen (drawSquareTick's own arm-direction check bails out
-       under 1 screen px), so push it out a real distance instead. */
-    return [[start.pt[0]-w.dir[0]*500, start.pt[1]-w.dir[1]*500], start.pt, candidatePt];
-  }
-  return null;
-}
-/* Where the next split point actually lands: Shift hard-locks to a 45° off
-   the last point; otherwise the room's own corners/walls and the split
-   line's own last segment get first pick (so a bend can line up square in a
-   corner, same as dragging a room corner does), falling back to the plain
-   45°-ish soft angle magnet, and finally to whatever raw point was given. */
-function splitResolvePoint(raw0, hard){
-  const pts=splitDrawState.pts;
-  const prev=pts.length ? (pts[pts.length-1].pt||pts[pts.length-1]) : null;
-  if(hard && prev) return {pt:splitAngleSnap(prev, raw0, true), guides:[], note:'Straight'};
-  const aligned=alignPoint(raw0, splitRefs(), alignRadius());
-  if(aligned.guides.length){
-    const cr=splitCornerRef(pts, aligned.pt);
-    return {pt:aligned.pt, guides:aligned.guides, note: cr && isSquare(cr[0],cr[1],cr[2]) ? 'Right angle' : 'Lined up'};
-  }
-  if(prev){
-    const angled=splitAngleSnap(prev, raw0, false);
-    if(angled!==raw0) return {pt:angled, guides:[], note:'Straight'};
-  }
-  return {pt:raw0, guides:[], note:''};
-}
-function drawSplitOverlay(){
-  if(!splitDrawState) return;
-  const worldPts=splitDrawState.pts.map(p=>p.pt||p);
-  let b=null;
-  if(drawCursor){
-    const resolved=splitResolvePoint(drawCursor, wallDrawShift);
-    setAlignGuides(resolved.guides); setAlignNote(resolved.note);
-    const snapped=snapWallPoint(resolved.pt, null, true);
-    const hit=boundaryHit(snapped);
-    b=hit?hit.pt:snapped;
-    if(resolved.note==='Right angle'){
-      const cr=splitCornerRef(splitDrawState.pts, b);
-      if(cr) drawSquareTick(cr[0], cr[1], cr[2]);
-    }
-  }
-  ctx.save();
-  if(worldPts.length){
-    ctx.setLineDash([5,4]); ctx.lineWidth=2; ctx.strokeStyle=PAL().accent;
-    ctx.beginPath();
-    ctx.moveTo(sx(worldPts[0][0]), sy(worldPts[0][1]));
-    for(let i=1;i<worldPts.length;i++) ctx.lineTo(sx(worldPts[i][0]), sy(worldPts[i][1]));
-    if(b) ctx.lineTo(sx(b[0]), sy(b[1]));
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  for(const p of worldPts){
-    ctx.beginPath(); ctx.arc(sx(p[0]),sy(p[1]),5,0,Math.PI*2);
-    ctx.fillStyle=PAL().accent; ctx.fill();
-  }
-  ctx.restore();
-}
+import {splitResolvePoint, drawSplitOverlay} from './src/canvas/split-room.js';
 /* Once a start hit, any interior points, and an end hit are in hand: validate the
    drawn path is a genuine interior cut (touches the boundary only at its two
    ends, never crosses itself or any other wall, runs through the inside), insert
