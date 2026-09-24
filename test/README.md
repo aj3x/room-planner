@@ -323,6 +323,13 @@ file input.
 
 ## Known gaps — where the refactor carries unverified risk
 
+- ~~**Walk paths were drawn in no baseline at all.**~~ **Closed.** Every fixture had
+  `showWalk` false, so the 393 lines of `model/walkpaths.js` painted nothing — the region
+  moved in the `draw()` round with zero coverage. `vis-walkpaths.json` is `vis-rect` with the
+  overlay on, and a paired test turns it back off and asserts the plain `rect-furniture`
+  baseline, so the diff between them *is* the overlay. Verified the two baselines really
+  differ (34.7 kB vs 30.3 kB) rather than assuming the fixture took effect.
+
 Stated plainly, because this is the part worth knowing:
 
 - **OCR is network-dependent.** `bpLoadTesseract()` fetches Tesseract.js from a

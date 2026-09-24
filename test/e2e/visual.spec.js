@@ -61,6 +61,32 @@ test.describe('canvas baselines', () => {
     });
   });
 
+  test.describe('walk paths', () => {
+    /* Every other fixture has showWalk false, so the 393 lines of
+       model/walkpaths.js painted nothing in any baseline — the region moved in
+       the draw() round with no coverage whatsoever. This fixture is vis-rect
+       with the overlay switched on, so a diff against rect-furniture.png is
+       exactly the overlay and nothing else. */
+    test.use({ savedState: fixtureState('vis-walkpaths.json') });
+
+    test('draws the reachable floor around the furniture', async ({ app }) => {
+      await frame(app);
+      await expect(canvas(app)).toHaveScreenshot('walkpaths-on.png');
+    });
+
+    test('the overlay is what the toggle controls, and nothing else', async ({ app }) => {
+      await frame(app);
+      /* Same state, overlay off, must equal the plain vis-rect baseline: proves
+         the paths are drawn by this toggle rather than incidental to the fixture. */
+      await app.evaluate(() => {
+        window.__rp.S.showWalk = false;
+        window.fit(); window.draw();
+      });
+      await settle(app);
+      await expect(canvas(app)).toHaveScreenshot('rect-furniture.png');
+    });
+  });
+
   test.describe('a fully populated project', () => {
     test.use({ savedState: fixtureState('v2-modern-full.json') });
 
