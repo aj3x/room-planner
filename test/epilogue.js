@@ -106,6 +106,15 @@ export const EPILOGUE = `
 ;import {roomHist, furnHist, snapRoom} from './src/core/history.js';
 ;import {polySimple} from './src/core/geometry.js';
 ;import {normLayout} from './src/core/migrate.js';
+/* And again when the four wizard step dialogs left. They were index.html's
+   last readers of bpState (__rp), bpRebuild (GLOBALS), fmtArea and PAL (both
+   __rp). bpRebuild is the silent one this time -- GLOBALS, so a try/catch
+   would have swallowed it and blueprint.spec.js would have failed much later
+   with "window.bpRebuild is not a function". */
+;import {bpState} from './src/blueprint/state.js';
+;import {bpRebuild} from './src/blueprint/draft.js';
+;import {fmtArea} from './src/core/units.js';
+;import {PAL} from './src/canvas/draw.js';
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },
