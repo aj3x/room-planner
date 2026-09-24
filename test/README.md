@@ -386,14 +386,16 @@ Stated plainly, because this is the part worth knowing:
   **There is no longer a sanctioned flaky test in this suite.** A failure here
   means the refactor is wrong. Do not re-run until green — investigate.
 
-- **Marketplace fetching is not covered** beyond the boot-time requests being
-  observed. Subscriptions, index shards and the item cache all need network or
-  an HTTP mock. Phase 3.6 covered the *ad hoc* half of the Marketplace UI —
-  listings, listing folders and `renderListingDetail`, which resolve out of `S`
-  — but everything subscription-shaped (`renderMarketSub`, `marketSubTile`,
-  `renderMarketItemPreview`, `marketPathChildren`, the "Preview contents"
-  toggle) is still unread, and it is inside the SCC that has to move in one
-  commit. **This is the largest remaining hole under that move.**
+- ~~**Marketplace fetching is not covered.**~~ **Closed by Phase 3.6's second
+  pass**, which added `panel-market.spec.js` (32 tests) over a `page.route`
+  stub: a miniature marketplace served off the page's own origin under
+  `/__market/`, so nothing reaches the real network and there is no CORS to
+  satisfy. `subscribeMarket`, `reloadMarketSub`, `removeMarketSub`,
+  `fetchMarketItem`, `renderMarketSub`, `marketSubTile`, `marketPathChildren`,
+  `renderMarketItemPreview`, the "Preview contents" toggle, both in-memory
+  caches and `addMarketItemToInventory()`'s three collision cases are all read
+  now. What is left is `ensureDefaultMarket()` at boot and `loadRegistry()` —
+  see **What Phase 3.6 does not cover** below.
 - **`migrate()` is not a pure function.** It ends by assigning `S` so that
   `reconcileTags()` can read `S.itemFolders`. Every caller reassigns `S` from
   the return value anyway, so it is invisible in practice — but a module split
@@ -503,7 +505,9 @@ so every `render*()` that writes `innerHTML` into a side panel or into
 Everything here is a **characterization** test in the sense above: it records
 what the app does today, defects included.
 
-Four files, 79 tests:
+Six files, 135 tests. The first four are the main pass; the last two closed
+the two holes it left, and are the reason the bullets about them above are
+struck through.
 
 | file | what it reads |
 |---|---|
@@ -511,6 +515,22 @@ Four files, 79 tests:
 | `panel-room.spec.js` (32) | Walls, Structures, Openings, the snap picker, `renderRoom`, `renderWallProps`, `renderOpeningProps`, `updateHistButtons`, `renderMeasureBar` |
 | `panel-furniture.spec.js` (16) | `renderInv` (stock, counts, Place enabled/disabled, scope, search, empty), `renderTagChips`, `renderSel` at zero / one / two selections |
 | `panel-library.spec.js` (17) | `setMode`'s layout swap, the Library folder tree and item grid, folder-scoped search, `renderMarketTop`, `renderAdhocFolder`, `renderListingDetail` |
+| `panel-market.spec.js` (32) | the subscription path: `subscribeMarket` and its seven refusals, `marketPathChildren`'s path-derived folders, scoped tag chips and scoped search, the "Preview contents" chips, `renderMarketItemPreview`, the three collision cases, `reloadMarketSub`, `removeMarketSub`, and both caches proved in-memory by reloading the page |
+| `panel-dialogs.spec.js` (24) | `itemDialog` — every field, the colour trio, the shape-picker field swap, OK / Cancel, both validation branches, the Advanced id field and `retagItem` under an undo — and `openingDialog` — the wall select, the hinge block, a window's sill, the offset corner and clamp, both width refusals, and the Add door / Add window defaults |
+
+`panel-market.spec.js` reaches the network through a **`page.route` stub**, not
+a fetch: a hand-written miniature marketplace (one manifest, two index shards,
+five item files) served off the page's own origin under `/__market/`. Same
+origin on purpose — a cross-origin fulfilled route needs CORS headers to be
+readable — and the path need not exist on either server, since the route
+answers first. The stub also **counts requests**, which is how the index cache
+and the item cache are proved to be caches rather than assumed to be. One thing
+it taught: `Math.random` is seeded per page load, so after a `page.reload()`
+the next `uid()` is byte-for-byte the one the first load handed the
+subscription — and `reloadMarketSub()` deletes the record it subscribed under a
+"fresh" id, which with two equal ids would delete the subscription itself. The
+two tests that reload burn one `uid()` first, with a comment saying why. That
+is a property of the deterministic seed, not of the app.
 
 `test/fixtures/states/panels.json` backs all four. It is metric so `fmtLen`
 output is short and exact, and it is built so that every branch these panels
@@ -549,16 +569,35 @@ Four things about these tests are load-bearing:
 As useful as the list above. These are where the SCC move stays unverified and
 wants a pass by hand:
 
-- **A subscribed marketplace.** `renderMarketSub`, `marketSubTile`,
-  `renderMarketItemPreview`, `marketPathChildren`, the "Preview contents"
-  toggle, `marketIndexCache`/`marketItemCache` and `subscribeMarket` all need a
-  live `market.json` or an HTTP mock, and these tests deliberately have
-  neither. **Roughly a third of the library half of the SCC is untested.**
-  Everything ad hoc — listings, listing folders, `renderListingDetail` — is
-  covered; everything subscription-shaped is not.
-- **`itemDialog` and `openingDialog`.** Both are SCC members and both are large
-  modal editors. The tests reach the ⋯ menus that open them and assert the menu
-  item-for-item, but nothing opens either dialog or drives its fields.
+- **`ensureDefaultMarket()` and `loadRegistry()`.** The one subscription path
+  still unread, and it is the one that runs by itself: `ensureDefaultMarket()`
+  fetches `DEFAULT_MARKET_URL` during boot, *before* a test can install a
+  route, and every fixture sets `defaultMarketDismissed` so it returns early.
+  Its `isDefault` flag is therefore reached only by poking it onto the stub
+  subscription, which is what the `removeMarketSub` dismissal test does.
+  `loadRegistry()` and the registry picker inside "Add a marketplace"
+  (`#mRegistry`, and its buttons that fill `#mUrl`) are likewise never
+  asserted — the dialog is driven by typing a URL. Reaching either would mean
+  routing before `page.goto`, in the fixture rather than in a test.
+- **`fetchJSON`'s timeout.** The 10s `AbortController` and its "timed out"
+  message have no test; every stubbed response is immediate.
+- **`drawPreview`.** The preview dialog is asserted through `#mPrevInfo` and
+  the enabled state of its button. Nothing reads `#mPrevCv`, so what the
+  preview actually *paints* — including the dashed open-out box — is uncovered.
+- **`marketSubTile`'s eight-group cap** (`slice(0,8)`) and `renderMarketSub`'s
+  twenty-tag cap (`slice(0,20)`): the stub is smaller than both.
+- **The other ways into `openingDialog`.** Only the Openings list's ⋯ menu and
+  `#btnAddOpening` are driven. The wall ⋯ menu's Door…/Window… entries, the
+  `#wDoor`/`#wWin` buttons in `renderWallProps`, and moving an *existing*
+  opening to a different wall on Save are all untouched.
+- **The other ways into `itemDialog`.** `#btnAddItem` / `#btnAddItem2`, the
+  Furniture pane's ⋯ menu and `#btnNewLibItem` are driven; the library grid's
+  own tile click (`bindLibGrid` -> `itemDialog`, one of the six cycle edges) is
+  not, and neither is its `dragstart`/`drop` pair.
+- **Inside `itemDialog`:** editing an existing `poly` item's outline, the
+  l-shape `cw`/`cd` clamp (`Math.max(1,Math.min(…, w-1))`), `normOpen`'s
+  handling of negative open-out values, and the tag field's autocomplete
+  suggestions (chips are asserted; the `.tagsuggest` list is not).
 - **The blueprint dialogs** (`bpUploadDialog` and the rest of the four-stage
   wizard) are covered by `blueprint.spec.js`, which asserts geometry, not the
   panel HTML around it.

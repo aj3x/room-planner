@@ -7,7 +7,7 @@ Room Planner is a client-only web app with **zero runtime dependencies**. What s
 npm install && npx playwright install chromium   # once
 npm run dev        # Vite dev server on http://127.0.0.1:5173, HMR on save
 npm run build      # -> dist/index.html, one file, everything inlined
-npm test           # 185 Vitest + 324 Playwright, ~55s
+npm test           # 185 Vitest + 436 Playwright, ~75s
 npm run lint       # ESLint, correctness rules only
 ```
 
