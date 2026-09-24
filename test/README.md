@@ -254,8 +254,11 @@ test/
     __snapshots__/
   build/               NOT characterization — see below
   e2e/                 Suite B — Playwright + Chromium
-    app-fixture.js     the `app` fixture: determinism and seeding
+    app-fixture.js     the `app` fixture: determinism, seeding, pointer
+                       helpers (3.5) and panel-text helpers (3.6)
     static-server.js   dependency-free static server, rooted at dist-test/
+    pointer-*.spec.js  Phase 3.5 — real pointer input on #cv
+    panel-*.spec.js    Phase 3.6 — the side panels and the Library UI
     __screenshots__/
 ```
 
@@ -320,6 +323,12 @@ file input.
 - **`smoke.spec.js`** — draw a room → place an item → undo/redo (both stacks,
   independently) → export → re-import → persist across a navigation, plus the
   `file://` deployment contract.
+- **`pointer-*.spec.js`** (five files) — real `mouse.down`/`move`/`up` on `#cv`:
+  the drag deadzone, the alignment magnet, item snapping, drawing, splitting,
+  measuring and floor arrangement. Phase 3.5; see **Pointer coverage** below.
+- **`panel-*.spec.js`** (four files) — the side panels and the Library UI read
+  as **text and state**, never as screenshots. Phase 3.6; see **Panel coverage**
+  below.
 
 ## Known gaps — where the refactor carries unverified risk
 
@@ -342,37 +351,16 @@ Stated plainly, because this is the part worth knowing:
   `drawImage`-scaled pixels, so the coordinates depend on the browser's image
   resampling. They are stable within a Chromium version; a browser upgrade may
   legitimately move them.
-- **Side-panel HTML is not characterized.** Only `#cv` is screenshotted. The
-  `render*()` functions rebuild panel `innerHTML` and rebind listeners, and that
-  is covered only indirectly (a throw would surface as a page error). A module
-  boundary that breaks a panel's *appearance* without throwing would not be
-  caught.
+- ~~**Side-panel HTML is not characterized.**~~ **Largely closed by Phase
+  3.6**, which added four `panel-*.spec.js` files — 79 tests — reading the
+  panels the `render*()` functions build. See **Panel coverage** below for what
+  they reach and what they do not.
 
-  **This is now the weakest spot in the repo relative to what is moving
-  through it**, because the `plan/` round moved five panel renderers and the
-  next round has to move the rest in one commit (see `AGENTS.md` on the
-  48-name Plan/Library cycle). The `plan/` round's own manual-check list —
-  the panels a green suite did *not* verify:
-
-  | panel | moved by | what a silent break would look like |
-  |---|---|---|
-  | left pane layout tree | `plan/layout-tree.js` | folders/floors/rooms missing, wrong indent, caret not expanding, "more" menu absent |
-  | Room pane › Walls | `plan/room-panel.js` | wall rows missing, wrong length/angle text, "Open" not shown for a wall that is off |
-  | Room pane › Structures | `plan/room-panel.js` | pillars/interior walls missing, wrong dimension, "None yet" when there are some |
-  | Room pane › snap picker | `plan/room-panel.js` | wrong option list for the unit, or the current snap silently reset (see the note below) |
-  | Room pane › Openings | `plan/room-panel.js` | openings missing, wrong kind label, wrong wall number |
-  | Furniture pane › Inventory | `plan/item-list.js` | items missing, wrong counts, Place button wrongly enabled/disabled |
-  | Furniture pane › tag chips | `plan/item-list.js` | chips missing, Untagged/Clear chip wrongly shown, wrong pressed state |
-  | Measure readout bar | `canvas/measure-tool.js` | `renderMeasureBar` writes a bar the suite never reads |
-
-  The undo/redo button enable/disable state (`updateHistButtons`, now in
-  `core/history.js`) is in the same category: nothing asserts it.
-
-  Worth knowing while checking the snap picker: **`renderSnap()` silently
-  rewrites `S.snap`** to the third entry of `SNAPS.imperial`/`SNAPS.metric`
-  when the current value is not in the list. That is pre-existing behaviour,
-  not something the move introduced, and it is deliberately not fixed —
-  extraction commits are move-only.
+  The reason it was the weakest spot in the repo: the next extraction round has
+  to move the 48-name / 1,224-line Plan+Library cycle in a **single** commit
+  (see `AGENTS.md`), and every `render*()` in it writes `innerHTML` into a
+  panel no screenshot reaches. A break that does not throw turned nothing red.
+  Phase 3.6 is to that commit what Phase 3.5 was to the `draw()` keystone.
 - ~~**Pointer interaction is barely covered.**~~ **Largely closed by Phase
   3.5**, which added five `pointer-*.spec.js` files driving `mouse.down` /
   `mouse.move` / `mouse.up` on `#cv`. See **Pointer coverage** below for what
@@ -400,7 +388,12 @@ Stated plainly, because this is the part worth knowing:
 
 - **Marketplace fetching is not covered** beyond the boot-time requests being
   observed. Subscriptions, index shards and the item cache all need network or
-  an HTTP mock.
+  an HTTP mock. Phase 3.6 covered the *ad hoc* half of the Marketplace UI —
+  listings, listing folders and `renderListingDetail`, which resolve out of `S`
+  — but everything subscription-shaped (`renderMarketSub`, `marketSubTile`,
+  `renderMarketItemPreview`, `marketPathChildren`, the "Preview contents"
+  toggle) is still unread, and it is inside the SCC that has to move in one
+  commit. **This is the largest remaining hole under that move.**
 - **`migrate()` is not a pure function.** It ends by assigning `S` so that
   `reconcileTags()` can read `S.itemFolders`. Every caller reassigns `S` from
   the return value anyway, so it is invisible in practice — but a module split
@@ -498,3 +491,86 @@ and wants a pass by hand:
   the state says is still only covered by the four `visual.spec.js` fixtures,
   none of which is mid-drag.
 
+## Panel coverage (Phase 3.6)
+
+Added before the Plan+Library SCC move, for the same reason Phase 3.5 was added
+before the `draw()` move: that move is one strongly-connected component of 48
+names and 1,224 lines, it cannot be cut into green intermediate commits, and it
+contains the least-covered code in the repo. The suite screenshots only `#cv`,
+so every `render*()` that writes `innerHTML` into a side panel or into
+`#paneLibrary` was unverified — a break that did not throw turned nothing red.
+
+Everything here is a **characterization** test in the sense above: it records
+what the app does today, defects included.
+
+Four files, 79 tests:
+
+| file | what it reads |
+|---|---|
+| `panel-tree.spec.js` (14) | the left pane's layout tree: root ordering, indent, carets, the room-count chip, folder tag chips, the active mark, all three ⋯ menus, inline rename, tree drag-drop |
+| `panel-room.spec.js` (32) | Walls, Structures, Openings, the snap picker, `renderRoom`, `renderWallProps`, `renderOpeningProps`, `updateHistButtons`, `renderMeasureBar` |
+| `panel-furniture.spec.js` (16) | `renderInv` (stock, counts, Place enabled/disabled, scope, search, empty), `renderTagChips`, `renderSel` at zero / one / two selections |
+| `panel-library.spec.js` (17) | `setMode`'s layout swap, the Library folder tree and item grid, folder-scoped search, `renderMarketTop`, `renderAdhocFolder`, `renderListingDetail` |
+
+`test/fixtures/states/panels.json` backs all four. It is metric so `fmtLen`
+output is short and exact, and it is built so that every branch these panels
+have is reachable from one load: a folder tree two deep with a tagged folder, a
+floor with two rooms plus one loose room, a wall turned off, a pillar and an
+interior wall, three kinds of opening on three walls, an inventory holding a
+tagged item, an untagged one (so the Untagged chip earns its place) and one
+placed to exhaustion (so Place renders disabled), a nested item folder, an ad
+hoc listing folder and two listings.
+
+Four things about these tests are load-bearing:
+
+1. **Text and state, never a panel screenshot.** Row counts, labels,
+   `disabled`, `aria-pressed`, `aria-expanded`, the order of entries, the
+   option list of a `<select>`. A DOM-text assertion says *what* broke; a panel
+   screenshot only says something did, and goes red on every legitimate style
+   change. The helpers are `texts`, `attrs` and `menuItems` in
+   `e2e/app-fixture.js`.
+2. **Nothing sleeps.** Several paths are deliberately delayed —
+   `singleClick()` holds a row's own action back 190ms so a double-click can
+   land, the library search box debounces 120ms, and `loadListing()` fills
+   `#listingBody` from a promise. Every one of those is waited on with a
+   polling `expect`, never a fixed sleep.
+3. **No network.** `panels.json` sets `defaultMarketDismissed: true` and an
+   empty `marketSubs`, so `ensureDefaultMarket()` returns before it fetches;
+   the one listing whose contents are read is `kind:'file'`, which
+   `loadListing()` answers straight out of `S`.
+4. **The epilogue, not an export.** Where a test needed an internal it went
+   into `test/epilogue.js`'s `GLOBALS` — `renderAll`, `renderLibAll`,
+   `selectOnly`, `selectSet`, `selectClear` — so a test sets up a selection or
+   a re-render the way the app does. `GLOBALS` assigns inside a `try/catch` and
+   fails **silently**, so each name was verified by actually calling it.
+
+### What Phase 3.6 does not cover
+
+As useful as the list above. These are where the SCC move stays unverified and
+wants a pass by hand:
+
+- **A subscribed marketplace.** `renderMarketSub`, `marketSubTile`,
+  `renderMarketItemPreview`, `marketPathChildren`, the "Preview contents"
+  toggle, `marketIndexCache`/`marketItemCache` and `subscribeMarket` all need a
+  live `market.json` or an HTTP mock, and these tests deliberately have
+  neither. **Roughly a third of the library half of the SCC is untested.**
+  Everything ad hoc — listings, listing folders, `renderListingDetail` — is
+  covered; everything subscription-shaped is not.
+- **`itemDialog` and `openingDialog`.** Both are SCC members and both are large
+  modal editors. The tests reach the ⋯ menus that open them and assert the menu
+  item-for-item, but nothing opens either dialog or drives its fields.
+- **The blueprint dialogs** (`bpUploadDialog` and the rest of the four-stage
+  wizard) are covered by `blueprint.spec.js`, which asserts geometry, not the
+  panel HTML around it.
+- **`renderCornerProps`, `renderPillarProps`, `renderIWallProps`.** The wall
+  and opening editors are asserted; the other three selection kinds are reached
+  only far enough to confirm the row selects them.
+- **`renderFloorSel` and `renderFloorProps`.** Floor mode's Properties pane,
+  including the two-room merge panel, is not read at all.
+- **`renderLibSearchResults` in the marketplace tab.** Only the library branch
+  of it is driven.
+- **Drag-and-drop in the library grid.** `bindLibGrid`'s `dragstart`/`drop`
+  pair, which moves an item into a folder, is not exercised; the layout tree's
+  drag-drop is.
+- **Narrow layouts.** Everything runs at 1280x800. Under 900px the panes become
+  `display:contents` and sections reorder, and nothing asserts that.
