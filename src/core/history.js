@@ -15,6 +15,14 @@
 */
 import {L, roomMode, floorMode, floorLayouts} from './state.js';
 import {$} from '../ui/modal.js';
+import {draw} from '../canvas/draw.js';
+import {renderFloorSel} from '../plan/floors.js';
+import {renderInv} from '../plan/item-list.js';
+import {renderOpen, renderRoom, renderRoomSel, renderWalls} from '../plan/room-panel.js';
+import {renderSel} from '../plan/selection-panel.js';
+import {selectClear, setRoomSel} from './selection.js';
+import {S} from './state.js';
+import {save} from './store.js';
 
 /* ------------------------- undo / redo -------------------------
    Room edits (walls, doors, windows, floor/trim) and Things edits (placed
@@ -81,7 +89,31 @@ function updateHistButtons(){
   btnR.disabled = h.idx>=h.stack.length-1;
 }
 
-export {roomHist, furnHist, snapRoom, snapFurn, histEntry, seedHistFor, commit,
-        bumpRev, commitRoom, commitFurn, stepHist,
-        floorHist, curFloorId, snapFloor, floorEntry, commitFloor,
-        updateHistButtons};
+
+/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+function applyRoomSnap(s){
+  L().room=s.room; L().openings=s.openings; setRoomSel(null); bumpRev();
+  renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save();
+}
+function applyFurnSnap(s){
+  L().placed=s.placed; selectClear(); bumpRev();
+  renderInv(); renderSel(); draw(); save();
+}
+const undoRoom=()=>stepHist(roomHist,snapRoom,applyRoomSnap,-1);
+const redoRoom=()=>stepHist(roomHist,snapRoom,applyRoomSnap,1);
+const undoFurn=()=>stepHist(furnHist,snapFurn,applyFurnSnap,-1);
+const redoFurn=()=>stepHist(furnHist,snapFurn,applyFurnSnap,1);
+function applyFloorSnap(s){
+  for(const [id,place] of s){ const l=S.layouts.find(x=>x.id===id); if(l) l.floorPlace=place; }
+  renderFloorSel(); draw(); save();
+}
+function stepFloor(dir){
+  const h=floorEntry(); if(!h) return;
+  const ni=h.idx+dir;
+  if(ni<0||ni>=h.stack.length) return;
+  h.idx=ni; applyFloorSnap(JSON.parse(h.stack[ni]));
+  updateHistButtons();
+}
+const undoFloor=()=>stepFloor(-1);
+const redoFloor=()=>stepFloor(1);
+export {roomHist, furnHist, snapRoom, snapFurn, histEntry, seedHistFor, commit, bumpRev, commitRoom, commitFurn, stepHist, floorHist, curFloorId, snapFloor, floorEntry, commitFloor, updateHistButtons, applyRoomSnap, applyFurnSnap, undoRoom, redoRoom, undoFurn, redoFurn, applyFloorSnap, stepFloor, undoFloor, redoFloor};
