@@ -2213,24 +2213,10 @@ function updateReadout(bad,openBad){
    thing's id (a room wall's index), n which corner or side. Ends are looked up live, so a
    measurement follows what it joins as things move. It is a note on the plan, not part of
    the room or the furniture, so it has no undo history of its own. */
-let measureOn=false,     // the Measure tool is active: clicks pick anchors instead of editing
-    measureStart=null,   // the first anchor, once picked
-    measureHover=null,   // the anchor under the pointer
-    measureHoverId=null, // the measurement under the pointer
-    measureSel=null,     // the selected measurement's id
-    measureCursor=null,  // world point under the pointer, for the preview line
-    measureBoxes=[];     // where each measurement was last drawn, in screen px, for hit-testing
-/* Setters for the measure lets above, for the same reason the selection and
-   interaction lets got them: you cannot assign to an imported binding, and
-   drawMeasures is the last of the four draw*() helpers draw() needs. Each body
-   is a bare assignment. */
-function setMeasureOn(v){ measureOn = v; }
-function setMeasureStart(v){ measureStart = v; }
-function setMeasureHover(v){ measureHover = v; }
-function setMeasureHoverId(v){ measureHoverId = v; }
-function setMeasureSel(v){ measureSel = v; }
-function setMeasureCursor(v){ measureCursor = v; }
-function setMeasureBoxes(v){ measureBoxes = v; }
+import {measureOn, measureStart, measureHover, measureHoverId, measureSel,
+        measureCursor, measureBoxes, setMeasureOn, setMeasureStart, setMeasureHover,
+        setMeasureHoverId, setMeasureSel, setMeasureCursor,
+        setMeasureBoxes} from './src/canvas/measure-state.js';
 import {measuresOf, anchorKey, measureObjs, objOfAnchor, anchorGeom,
         closestBetween} from './src/model/measures.js';
 
