@@ -23,9 +23,58 @@
    the long comment on it.
    =========================================================================== */
 
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import { EPILOGUE } from './test/epilogue.js';
+
+const ROOT = dirname(fileURLToPath(import.meta.url));
+
+/* --------------------------------------------------------------------------
+   `<!-- @include src/html/foo.html -->` in index.html, substituted for that
+   file's contents.
+
+   This is what lets the static markup live in src/html/ without becoming
+   anything else. It is a textual splice, deliberately: the panes stay static
+   markup that the browser parses before any script runs, which is what every
+   render*() function assumes when it looks up #paneRoom or #libContent at
+   boot. Building them from JS template strings instead would be a behaviour
+   change, not a refactor.
+
+   The directive's own indentation is consumed along with it, since each
+   partial already carries the indentation it had inside index.html.
+
+   Runs first in the chain (`enforce: 'pre'`, `order: 'pre'`), so every other
+   HTML transform — the test epilogue, Vite's own asset handling, the classic
+   script tag, and singlefile's inlining — sees one whole document, exactly the
+   one index.html described before A5 split it up.
+   -------------------------------------------------------------------------- */
+function htmlIncludes() {
+  const RE = /^[ \t]*<!--\s*@include\s+(\S+?)\s*-->[ \t]*$/gm;
+  return {
+    name: 'rp:html-includes',
+    enforce: 'pre',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        return html.replace(RE, (_, rel) =>
+          readFileSync(resolve(ROOT, rel), 'utf8').replace(/\n$/, ''));
+      },
+    },
+    /* A partial is not a module in the graph, so nothing would reload when one
+       changes. Watch the directory and ask the page to reload itself. */
+    configureServer(server) {
+      server.watcher.add(resolve(ROOT, 'src/html'));
+      server.watcher.on('change', (f) => {
+        if (f.startsWith(resolve(ROOT, 'src/html'))) {
+          server.ws.send({ type: 'full-reload', path: '*' });
+        }
+      });
+    },
+  };
+}
 
 /* --------------------------------------------------------------------------
    Test instrumentation.
@@ -105,6 +154,7 @@ export default defineConfig(({ mode }) => ({
      therefore works from file://. */
   base: './',
   plugins: [
+    htmlIncludes(),
     ...(mode === 'instrumented' ? [testEpilogue()] : []),
     classicScriptTag(),
     viteSingleFile({ removeViteModuleLoader: true }),

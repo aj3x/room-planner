@@ -1,0 +1,70 @@
+    <div class="pane right" id="paneStuff">
+      <div class="pane-head" id="headRight" role="button" tabindex="0" aria-expanded="true" aria-controls="paneStuff">
+        <span class="pane-name">Properties</span>
+        <span class="pane-toggle" id="tglRight" aria-hidden="true"></span>
+      </div>
+      <div class="pane-body">
+        <section data-sec="sel" class="for-furn">
+          <div class="sec-head"><h2>Selection</h2></div>
+          <div id="selBox"></div>
+        </section>
+        <section data-sec="roomsel" class="for-room">
+          <div class="sec-head"><h2 id="roomSelTitle">Selection</h2></div>
+          <div id="roomSelBox"></div>
+        </section>
+        <section data-sec="floorsel" class="for-floor">
+          <div class="sec-head"><h2 id="floorSelTitle">Selection</h2></div>
+          <div id="floorSelBox"></div>
+        </section>
+        <section data-sec="floorprops" class="for-floor">
+          <div class="sec-head"><h2>Floor</h2></div>
+          <div id="floorPropsBox"></div>
+        </section>
+
+        <section data-sec="shape" class="for-room">
+          <div class="sec-head"><h2>Room</h2></div>
+          <div id="rectDims"></div>
+          <div class="field"><label for="wallT">Wall thickness</label><input type="text" class="len" id="wallT"></div>
+          <div class="field"><label for="floorCol">Floor</label><input type="color" id="floorCol" aria-label="Floor colour"><input type="text" class="hex" id="floorHex" maxlength="7" spellcheck="false" aria-label="Floor colour hex code"></div>
+          <div class="field"><label class="check"><input type="checkbox" id="trimOn">Baseboard</label><input type="text" class="len" id="trimD" aria-label="Baseboard depth"></div>
+          <div class="field"><label>Area</label><span id="areaOut"></span></div>
+          <div class="group">
+            <p class="group-title">Replace the outline</p>
+            <div class="row">
+              <button class="btn sm" id="btnPreRect">Rectangle…</button>
+              <button class="btn sm" id="btnPreL">L-shape…</button>
+              <button class="btn sm" id="btnDrawCustom">Draw…</button>
+            </div>
+          </div>
+        </section>
+
+        <section data-sec="stock" class="for-furn">
+          <div class="sec-head"><h2>Stock</h2></div>
+          <div class="field"><label for="invScope">Count</label>
+            <select id="invScope">
+              <option value="project">Across all rooms</option>
+              <option value="folder">Within each folder</option>
+              <option value="room">Per room</option>
+            </select>
+          </div>
+          <p class="hint" id="invScopeHint"></p>
+        </section>
+
+        <section data-sec="drawing">
+          <div class="sec-head"><h2>View</h2></div>
+          <div class="field"><label for="snapSel">Snap to</label><select id="snapSel"></select></div>
+          <div class="field"><label for="zoomSpeedSel">Zoom speed</label>
+            <select id="zoomSpeedSel">
+              <option value="0.5">Slow</option>
+              <option value="1">Normal</option>
+              <option value="2">Fast</option>
+            </select>
+          </div>
+          <label class="check"><input type="checkbox" id="showDims" checked>Size of the selected item</label>
+          <label class="check"><input type="checkbox" id="showSwing" checked>Door clearance</label>
+          <label class="check"><input type="checkbox" id="showOpen" checked>Items opened out</label>
+          <label class="check"><input type="checkbox" id="showWalk">Walk paths</label>
+          <label class="check"><input type="checkbox" id="showMeasure" checked>Measurements</label>
+        </section>
+      </div>
+    </div>

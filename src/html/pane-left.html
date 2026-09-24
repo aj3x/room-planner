@@ -1,0 +1,56 @@
+    <div class="pane left" id="paneRoom">
+      <div class="pane-head" id="headLeft" role="button" tabindex="0" aria-expanded="true" aria-controls="paneRoom">
+        <span class="pane-name">Plan</span>
+        <span class="pane-toggle" id="tglLeft" aria-hidden="true"></span>
+      </div>
+      <div class="pane-body">
+        <section data-sec="layout">
+          <div class="sec-head"><h2>Rooms</h2>
+            <div class="sec-act">
+              <button class="btn quiet sm icon" id="btnRoomsMore" title="More actions" aria-label="More actions"><svg class="i"><use href="#i-more"/></svg></button>
+              <button class="btn quiet sm icon" id="btnImportBlueprint" title="Import a blueprint" aria-label="Import a blueprint"><svg class="i"><use href="#i-photo"/></svg></button>
+              <button class="btn quiet sm icon" id="btnNewLayout" title="New room" aria-label="New room"><svg class="i"><use href="#i-plus"/></svg></button>
+            </div>
+          </div>
+          <div id="layoutTree"></div>
+        </section>
+
+        <section data-sec="things" class="for-furn">
+          <div class="sec-head"><h2>Items</h2>
+            <div class="sec-act">
+              <button class="btn quiet sm icon" id="btnAddItem" title="New item" aria-label="New item"><svg class="i"><use href="#i-plus"/></svg></button>
+            </div>
+          </div>
+          <div class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input type="text" id="invSearch" placeholder="Search items" aria-label="Search items"></div>
+          <div class="filters">
+            <label class="chip-toggle" title="Hide items you've already placed every one of"><input type="checkbox" id="onlyAvail">In stock</label>
+            <div class="chips" id="tagChips"></div>
+          </div>
+          <ul class="list" id="invList"></ul>
+          <div class="empty" id="invEmpty" hidden>
+            No items yet. Add your own, or start with a few common pieces.
+            <div class="row"><button class="btn sm" id="btnSamples">Load samples</button><button class="btn sm primary" id="btnAddItem2">Add item</button></div>
+          </div>
+        </section>
+
+        <section data-sec="walls" class="for-room">
+          <div class="sec-head"><h2>Walls</h2></div>
+          <ul class="list" id="wallList"></ul>
+          <p class="hint" id="wallHint">Drag a corner or wall in the plan. Double-click a wall to type its length.</p>
+        </section>
+
+        <section data-sec="openings" class="for-room">
+          <div class="sec-head"><h2>Doors &amp; windows</h2>
+            <div class="sec-act"><button class="btn quiet sm icon" id="btnAddOpening" title="Add door or window" aria-label="Add door or window"><svg class="i"><use href="#i-plus"/></svg></button></div>
+          </div>
+          <ul class="list" id="openList"></ul>
+        </section>
+
+        <section data-sec="structure" class="for-room">
+          <div class="sec-head"><h2>Pillars &amp; interior walls</h2>
+            <div class="sec-act"><button class="btn quiet sm icon" id="btnAddStruct" title="Add pillar or interior wall" aria-label="Add pillar or interior wall"><svg class="i"><use href="#i-plus"/></svg></button></div>
+          </div>
+          <ul class="list" id="structList"></ul>
+        </section>
+      </div>
+    </div>

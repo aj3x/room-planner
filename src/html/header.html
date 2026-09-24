@@ -1,0 +1,21 @@
+  <header>
+    <h1 class="brand"><svg class="i" aria-hidden="true"><use href="#i-plan"/></svg><span>Room Planner</span></h1>
+    <nav class="nav" id="navSeg" aria-label="Sections">
+      <button type="button" data-nav="plan">Plan</button>
+      <button type="button" data-nav="inventory">Library</button>
+      <button type="button" data-nav="marketplace">Marketplace</button>
+    </nav>
+    <div class="spacer"></div>
+    <div class="hgroup">
+      <select id="unitSel" aria-label="Units" title="Units">
+        <option value="ftin">Feet &amp; inches</option>
+        <option value="in">Inches</option>
+        <option value="cm">Centimetres</option>
+        <option value="mm">Millimetres</option>
+        <option value="m">Metres</option>
+      </select>
+      <button class="btn" id="btnImport">Import…</button>
+      <button class="btn" id="btnExport">Export…</button>
+      <input type="file" id="fileIn" accept="application/json,.json" hidden>
+    </div>
+  </header>

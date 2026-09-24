@@ -1,0 +1,26 @@
+    <div id="stage">
+      <canvas id="cv" aria-label="Floor plan"></canvas>
+      <div class="island" id="ctlMode">
+        <div class="seg" id="modeSeg" role="group" aria-label="Editing mode">
+          <button type="button" data-mode="floor" aria-pressed="false" title="See this room beside the others on its floor">Floor</button>
+          <button type="button" data-mode="room" aria-pressed="false" title="Edit walls, doors and windows">Room</button>
+          <button type="button" data-mode="furniture" aria-pressed="true" title="Place and move items">Furniture</button>
+        </div>
+        <span class="sep" aria-hidden="true"></span>
+        <button type="button" class="btn quiet" id="btnMeasure" aria-pressed="false" title="Measure the distance between two things (M)"><svg class="i" aria-hidden="true"><use href="#i-ruler"/></svg>Measure</button>
+        <span id="measureBar" aria-live="polite" hidden></span>
+      </div>
+      <div class="island" id="ctlHist">
+        <button class="btn quiet icon" id="btnUndo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg class="i"><use href="#i-undo"/></svg></button>
+        <button class="btn quiet icon" id="btnRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg class="i"><use href="#i-redo"/></svg></button>
+        <button class="btn quiet icon" id="btnShortcuts" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+      </div>
+      <div class="island" id="ctlZoom">
+        <button class="btn quiet icon" id="btnZoomOut" title="Zoom out" aria-label="Zoom out"><svg class="i"><use href="#i-minus"/></svg></button>
+        <button class="btn quiet" id="btnFit" title="Fit the room to the view"><span id="zoomPct">Fit</span></button>
+        <button class="btn quiet icon" id="btnZoomIn" title="Zoom in" aria-label="Zoom in"><svg class="i"><use href="#i-plus"/></svg></button>
+      </div>
+      <div class="island" id="readout" aria-live="polite"></div>
+      <div class="island" id="drawHint" hidden><b>Drawing the room.</b> Click to place each corner, then click the first corner (or press Enter) to close. Corners line up with the ones already down; Shift locks to 45°. Esc cancels.</div>
+      <div class="toast" id="flash" role="status" aria-live="polite"></div>
+    </div>

@@ -32,11 +32,24 @@ export const INDEX_HTML = path.join(REPO_ROOT, 'index.html');
 
 /* ---- source splitting ------------------------------------------------- */
 
+/* A5 moved the static markup into src/html/, behind
+   `<!-- @include src/html/foo.html -->` directives that a Vite plugin
+   (`rp:html-includes`) substitutes in `transformIndexHtml`. Suite B gets its
+   HTML through Vite and so never sees a directive, but this harness reads
+   index.html off disk itself, so it has to do the same substitution — the two
+   implementations must agree, and they are four lines each. Without it the
+   shell has no #cv and the app dies at module evaluation on getContext(). */
+const INCLUDE_RE = /^[ \t]*<!--\s*@include\s+(\S+?)\s*-->[ \t]*$/gm;
+function expandIncludes(html) {
+  return html.replace(INCLUDE_RE, (_, rel) =>
+    fs.readFileSync(path.resolve(REPO_ROOT, rel), 'utf8').replace(/\n$/, ''));
+}
+
 let cached = null;
 /** Read index.html and split it into the shell and the one app <script> body. */
 export function readAppSource() {
   if (cached) return cached;
-  const src = fs.readFileSync(INDEX_HTML, 'utf8');
+  const src = expandIncludes(fs.readFileSync(INDEX_HTML, 'utf8'));
   /* Phase 2 made this `<script type="module">` so Vite has an entry point to
      build. The tag is the only thing that changed; the body is byte-identical.
      Match either spelling so this harness is not a second place that has to be
