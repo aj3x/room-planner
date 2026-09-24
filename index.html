@@ -823,14 +823,14 @@ function activateLayout(id){
 }
 
 import {syncWallOff, wallIsOff, wallOf, wallAngle, clampOpenings,
-        nearestOnWalls, pillarOf, iwallOf, iwallPoly, iwallLen,
+        nearestOnWalls, pillarOf, iwallOf, iwallLen,
         iwallAngle, setIWallLen, setIWallAngle, setIWallEndDist,
         isRectRoom} from './src/model/walls.js';
 import {setWallAngle, setWallLen, tryRoomEdit} from './src/model/walls.js';
 import {snapWallPoint} from './src/model/walls.js';
 import {setRectSize} from './src/model/walls.js';
 
-import {openingDispOffset, setOpeningDispOffset, openGeom} from './src/model/openings.js';
+import {openingDispOffset, setOpeningDispOffset} from './src/model/openings.js';
 import {validate, getConflicts, isBad, centreInside,
         bisectToValid, slideToValid} from './src/model/validity.js';
 
@@ -1476,53 +1476,7 @@ function squareCorner(i){
   if(!ok) return;
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
 }
-function pickAt(x,y){
-  const ps=L().placed;
-  // Match visual stacking: non-pass-through items (drawn on top) win clicks
-  // over pass-through items like rugs (drawn underneath), regardless of
-  // placement order in the array.
-  for(let pass=0;pass<2;pass++){
-    for(let i=ps.length-1;i>=0;i--){
-      const it=itemOf(ps[i].itemId);
-      if(!it) continue;
-      if((pass===0)===!!it.passThrough) continue;
-      if(pointInPoly([x,y],worldPoly(ps[i],it))) return ps[i];
-    }
-  }
-  return null;
-}
-/* moves the given placed-item ids to the end of the array (drawn/hit-tested on
-   top within their pass-through tier) without touching undo history — this is
-   a view-order change, not an edit, so it must never call commitFurn()/save() */
-function bringToFront(ids){
-  const idSet=new Set(ids);
-  const arr=L().placed;
-  const moved=arr.filter(p=>idSet.has(p.id));
-  if(!moved.length) return;
-  L().placed=arr.filter(p=>!idSet.has(p.id)).concat(moved);
-}
-function pickRoom(px,py){
-  const P=RP(), pt=[wx(px),wy(py)];
-  for(let i=L().room.pillars.length-1;i>=0;i--){
-    const pl=L().room.pillars[i];
-    if(pointInPoly(pt, worldPoly(pl,pl))) return {kind:'pillar', id:pl.id};
-  }
-  for(const w of L().room.iwalls){
-    if(Math.hypot(px-sx(w.a[0]),py-sy(w.a[1]))<11) return {kind:'iwall', id:w.id, end:'a'};
-    if(Math.hypot(px-sx(w.b[0]),py-sy(w.b[1]))<11) return {kind:'iwall', id:w.id, end:'b'};
-    if(pointInPoly(pt, iwallPoly(w))) return {kind:'iwall', id:w.id, end:null};
-  }
-  for(const o of L().openings){
-    const g=openGeom(o);
-    if(Math.hypot(px-sx(g.mid[0]), py-sy(g.mid[1])) < 12) return {kind:'opening', id:o.id};
-  }
-  for(let i=0;i<P.length;i++){
-    if(Math.hypot(px-sx(P[i][0]), py-sy(P[i][1])) < 11) return {kind:'corner', i};
-  }
-  const near=nearestOnWalls(pt);
-  if(near && near.d*view.scale < 10) return {kind:'wall', i:near.i};
-  return null;
-}
+import {pickAt, bringToFront, pickRoom} from './src/canvas/snap.js';
 cv.addEventListener('pointerdown', e=>{
   try{ cv.setPointerCapture(e.pointerId); }catch(err){}
   const px=e.offsetX, py=e.offsetY;

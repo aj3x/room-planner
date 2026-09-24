@@ -17,7 +17,11 @@
    reason to read it rather than trust the suite. */
 
 import {view} from './view.js';
-import {RP} from '../core/state.js';
+import {RP, L, itemOf} from '../core/state.js';
+import {sx, sy, wx, wy} from './view.js';
+import {pointInPoly, worldPoly} from '../core/geometry.js';
+import {openGeom} from '../model/openings.js';
+import {iwallPoly, nearestOnWalls} from '../model/walls.js';
 import {snapPt} from './view.js';
 
 /* ------------------------- the alignment magnet -------------------------
@@ -111,5 +115,60 @@ function snapCorner(i, raw, reach){
   return {pt:s.pt, guides:s.guides, note: isSquare(P[prev], s.pt, P[next]) ? 'Right angle' : 'Lined up'};
 }
 
-export {alignRadius, snapToLines, lineProject, lineCross, guideSeg,
+
+/* Hit-testing: what is under the pointer, and the draw/hit order within a
+   room. Moved in the plan/ round, once the panel renderers the rest of the
+   region calls had somewhere to go. squareCorner, the fourth member §3 files
+   here, did NOT come: it calls renderRoom() and renderRoomSel(), which are in
+   the plan/library reference cycle. */
+function pickAt(x,y){
+  const ps=L().placed;
+  // Match visual stacking: non-pass-through items (drawn on top) win clicks
+  // over pass-through items like rugs (drawn underneath), regardless of
+  // placement order in the array.
+  for(let pass=0;pass<2;pass++){
+    for(let i=ps.length-1;i>=0;i--){
+      const it=itemOf(ps[i].itemId);
+      if(!it) continue;
+      if((pass===0)===!!it.passThrough) continue;
+      if(pointInPoly([x,y],worldPoly(ps[i],it))) return ps[i];
+    }
+  }
+  return null;
+}
+/* moves the given placed-item ids to the end of the array (drawn/hit-tested on
+   top within their pass-through tier) without touching undo history — this is
+   a view-order change, not an edit, so it must never call commitFurn()/save() */
+function bringToFront(ids){
+  const idSet=new Set(ids);
+  const arr=L().placed;
+  const moved=arr.filter(p=>idSet.has(p.id));
+  if(!moved.length) return;
+  L().placed=arr.filter(p=>!idSet.has(p.id)).concat(moved);
+}
+function pickRoom(px,py){
+  const P=RP(), pt=[wx(px),wy(py)];
+  for(let i=L().room.pillars.length-1;i>=0;i--){
+    const pl=L().room.pillars[i];
+    if(pointInPoly(pt, worldPoly(pl,pl))) return {kind:'pillar', id:pl.id};
+  }
+  for(const w of L().room.iwalls){
+    if(Math.hypot(px-sx(w.a[0]),py-sy(w.a[1]))<11) return {kind:'iwall', id:w.id, end:'a'};
+    if(Math.hypot(px-sx(w.b[0]),py-sy(w.b[1]))<11) return {kind:'iwall', id:w.id, end:'b'};
+    if(pointInPoly(pt, iwallPoly(w))) return {kind:'iwall', id:w.id, end:null};
+  }
+  for(const o of L().openings){
+    const g=openGeom(o);
+    if(Math.hypot(px-sx(g.mid[0]), py-sy(g.mid[1])) < 12) return {kind:'opening', id:o.id};
+  }
+  for(let i=0;i<P.length;i++){
+    if(Math.hypot(px-sx(P[i][0]), py-sy(P[i][1])) < 11) return {kind:'corner', i};
+  }
+  const near=nearestOnWalls(pt);
+  if(near && near.d*view.scale < 10) return {kind:'wall', i:near.i};
+  return null;
+}
+
+export {pickAt, bringToFront, pickRoom,
+        alignRadius, snapToLines, lineProject, lineCross, guideSeg,
         alignPoint, isSquare, snapCorner};
