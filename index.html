@@ -778,7 +778,7 @@ import {normOpen, hasOpen, openLocalBox, openSizeLabel} from './src/core/open-st
 
 import {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS,
         L, RP, itemOf, instOf, openOf, roomMode, furnMode, floorMode,
-        folderOf, childFolders, childLayouts, floorOf, childFloors, floorLayouts} from './src/core/state.js';
+        folderOf, childFolders, childLayouts, floorOf, floorLayouts} from './src/core/state.js';
 
 import {idParts, idFolder, idLeaf, idProblem, uniqueId} from './src/core/ids.js';
 
@@ -2236,56 +2236,8 @@ document.addEventListener('keydown', e=>{
   if(h){ e.preventDefault(); toggleSection(h); }
 });
 
-/* ------------------------- layout tree (folders + rooms) ------------------------- */
-function folderLabel(f){
-  const tags=(f.tags&&f.tags.length) ? `<span class="tagchip" title="Tag filter: ${esc(f.tags.join(', '))}">${esc(f.tags[0])}${f.tags.length>1?' +'+(f.tags.length-1):''}</span>` : '';
-  return `<span class="nm">${esc(f.name)}</span>${tags}`;
-}
+import {renderTree, treeBox, treeRowEl} from './src/plan/layout-tree.js';
 import {moreBtn} from './src/ui/menu.js';
-const layoutRowHTML = (l,depth) =>
-  `<div class="tree-row layout-row ${l.id===S.active?'active':''} ${mergeSel.size>=2 && mergeSel.has(l.id)?'merge-sel':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*12+26}px" ${l.id===S.active?'aria-current="true"':''}>
-      <span class="ico">${svgI('room')}</span><span class="nm">${esc(l.name)}</span>
-      ${moreBtn('tree-more')}
-    </div>`;
-/* a floor holds its rooms directly: a room standing on one shows up here, not
-   back under its folder, so it is only ever in the tree once */
-function floorRowHTML(fl,depth){
-  const open=treeOpen.has(fl.id), rooms=floorLayouts(fl.id);
-  const active=floorMode() && curFloorId()===fl.id;
-  let html=`<div class="tree-row floor-row ${active?'active':''}" data-floor="${fl.id}" style="padding-left:${depth*12+4}px" aria-expanded="${open}" ${active?'aria-current="true"':''}>`+`
-      <button type="button" class="caret" data-act="toggle" aria-label="${open?'Collapse':'Expand'}">${svgI(open?'chev-d':'chev-r')}</button>
-      <span class="ico">${svgI('floor')}</span><span class="nm">${esc(fl.name)}</span>
-      <span class="tagchip">${rooms.length} room${rooms.length===1?'':'s'}</span>
-      ${moreBtn('tree-more')}
-    </div>`;
-  if(open){
-    for(const l of rooms) html+=layoutRowHTML(l,depth+1);
-    if(!rooms.length) html+=`<div class="tree-empty" style="padding-left:${(depth+1)*12+26}px">No rooms yet</div>`;
-  }
-  return html;
-}
-function renderTreeLevel(parentId,depth){
-  let html='';
-  if(!parentId) for(const fl of childFloors(null)) html+=floorRowHTML(fl,depth);
-  for(const f of childFolders(parentId)){
-    const open=treeOpen.has(f.id);
-    html+=`<div class="tree-row folder-row" draggable="true" data-folder="${f.id}" style="padding-left:${depth*12+4}px" aria-expanded="${open}">
-      <button type="button" class="caret" data-act="toggle" aria-label="${open?'Collapse':'Expand'}">${svgI(open?'chev-d':'chev-r')}</button>
-      <span class="ico">${svgI('folder')}</span>${folderLabel(f)}
-      ${moreBtn('tree-more')}
-    </div>`;
-    if(open) html+=renderTreeLevel(f.id,depth+1);
-  }
-  const loose=childLayouts(parentId).filter(l=>!l.floorId);
-  for(const l of loose) html+=layoutRowHTML(l,depth);
-  if(depth>0 && !childFolders(parentId).length && !loose.length){
-    html+=`<div class="tree-empty" style="padding-left:${depth*12+26}px">Empty</div>`;
-  }
-  return html;
-}
-function renderTree(){ $('layoutTree').innerHTML=renderTreeLevel(null,0); }
-const treeBox=$('layoutTree');
-const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layout="'+id+'"],[data-floor="'+id+'"]');
 
 /* clicking a floor switches the canvas to that floor's arrangement, not just the tree
    row — Floor mode has no floor id of its own (see curFloorId), so the anchor is
