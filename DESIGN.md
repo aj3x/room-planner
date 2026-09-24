@@ -303,6 +303,19 @@ Anything less universal gets a text label.
 All colour comes from these tokens. No hex values in component CSS. Canvas
 colours come from the matching `CANVAS` palette in JS.
 
+**Where they live:** [`src/styles/_tokens.scss`](src/styles/_tokens.scss), the
+first partial loaded by [`src/styles/main.scss`](src/styles/main.scss). They
+used to sit at the top of `index.html`'s `<style>` block; Phase 3 split that
+block into fourteen partials and nothing else about them changed.
+
+**They are CSS custom properties and they stay CSS custom properties.** Do not
+convert one to a Sass `$variable`, however tempting the tooling makes it look.
+Dark mode works by re-declaring all 24 of them inside
+`@media (prefers-color-scheme:dark)` — the mechanism is the cascade. A Sass
+variable is resolved at compile time and cannot cascade, so converting them
+would silently delete dark mode while every test stayed green. This is the one
+rule in this file that a build tool can break for you.
+
 | Token | Light | Dark | Use |
 | --- | --- | --- | --- |
 | `--surface` | `#fcfcfb` | `#1c1c1b` | Panels, header, cards, inputs, menus, modals |

@@ -87,6 +87,21 @@ sloppy mode and invalidate the entire baseline.
 If a future test needs another internal, add it to `epilogue.js`. Do not add an
 export to `index.html`.
 
+### The harness resolves `@include` itself
+
+A5 moved the static markup into `src/html/`, behind
+`<!-- @include src/html/foo.html -->` directives that a Vite plugin
+(`rp:html-includes`) substitutes in `transformIndexHtml`. Suite B is served by
+Vite and so never sees a directive. **This harness is not** — it reads
+`index.html` off disk and builds the jsdom shell from it — so it carries the
+same four-line substitution (`expandIncludes`, at the top of `harness.js`).
+
+Keep the two in step. If the harness stops expanding, or expands differently,
+the shell has no `#cv`, `canvas/view.js` throws on `getContext('2d')` at module
+evaluation, and you get **69 red unit tests with a green build and a green
+browser** — the same signature as a stale `__rp` name, and for the same reason:
+the harness's copy of the document has drifted from the one Vite builds.
+
 The converse, as Phase 3 proceeds: a binding that **moves into `src/`** is no
 longer in `index.html`'s scope, so `epilogue.js` cannot capture it any more and
 will throw a `ReferenceError` on every boot if it tries. Delete it from `__rp`

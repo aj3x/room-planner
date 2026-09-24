@@ -1017,6 +1017,107 @@ The 1,037-line script body is now, exhaustively:
 There is nothing else left to extract. A6 (per-module unit tests), A4 and A5 are
 the remaining work.
 
+### Phase 3 progress — A4 (the SCSS split) and A5 (the HTML partials)
+
+Done, two commits, baseline green (185 Vitest + 532 Playwright) after each.
+`index.html`: 1,806 -> 1,288 -> **1,068 lines**. **Phase 3 is finished.**
+
+**A4 — fourteen partials, and the compiled output proves it was a cut.**
+§3's fourteen ranges were exactly right, because the `<style>` block was already
+banner-organised and every banner is preceded by a blank line — the same reason
+the `blueprint/` round found §3 accurate. Each partial is its banner's lines
+including that trailing blank, so `cat`ing all fourteen reproduces the original
+block byte for byte (37,901 bytes both ways, checked before committing).
+
+The proof the plan asked for, run rather than asserted:
+
+| compared | result |
+|---|---|
+| `sass(original CSS, unsplit)` vs `sass(main.scss)` | **byte-identical**, 45,317 bytes, `diff` silent |
+| `dist/index.html` CSS, pre-split vs post-split | 14 bytes differ |
+
+**Those 14 bytes are Sass, not the split, and it is worth knowing about.** Every
+one is a space inserted after a comma *inside a declaration value* —
+`transition:a,b` becomes `transition:a, b`, `minmax(0,1fr)` becomes
+`minmax(0, 1fr)`. Sass re-serializes comma-separated value lists that way, and
+it does it to the **unsplit** original too, which is how the attribution was
+settled. Stripping every `", "` from both files makes them identical. It is
+insignificant whitespace, it survives minification because Lightning CSS
+preserves whitespace inside values, and the light and dark screenshot baselines
+did not move a pixel. Expect it if you ever re-run this comparison; it is not a
+regression and it does not recur — from here on both sides go through Sass.
+
+**One trap worth recording: the manifest's own header comment was in the output.**
+The first `main.scss` used a `/* */` banner like every other file in this repo,
+and Sass emitted it, so the compiled CSS differed by fourteen lines. `//`
+comments are silent. A file that is nothing but `@use` lines should say what it
+has to say in `//`.
+
+**Nothing was nested, and that is a deliberate outcome, not an unfinished one.**
+Rule 5 makes restructuring a separate optional commit, and the flat form already
+reads well: these are dense single-line rules grouped under honest banners, and
+the selectors are greppable exactly as written. Nesting them would reformat 517
+lines for no functional gain and destroy `git blame` on all of it — the same
+argument §1 uses to refuse Prettier. No `@extend`, no interpolation, no
+`$variable`: the 24 tokens are still CSS custom properties in `_tokens.scss`.
+
+**A5 — seven partials, not five, and the built file did not change at all.**
+The include plugin is `rp:html-includes` in `vite.config.js`: a regex over
+`^[ \t]*<!--\s*@include\s+(\S+?)\s*-->[ \t]*$` in `transformIndexHtml`,
+substituting the file's contents and consuming the directive's own indentation,
+since each partial already carries the indentation it had inline. It runs
+**first** — `enforce: 'pre'` plus `order: 'pre'`, listed ahead of
+`rp:test-epilogue` in the plugins array — so the epilogue, Vite's asset
+handling, `rp:classic-script-tag` (`order: 'post'`) and
+`vite-plugin-singlefile`'s inlining all see one whole document. There is no
+ordering hazard against singlefile in either direction, but running first means
+there never can be.
+
+§3 guessed five partials and put the whole of `<main>` under the name
+`pane-left.html`. `<main>` has three children — the left pane, the stage, the
+right pane — so that name would have been a lie about the contents; they are cut
+where the markup already divides, giving `pane-left`, `stage`, `pane-right`. The
+`#libFlash` toast joins `modal.html`, the two elements that live outside `#app`.
+This is finding C in its HTML form, and the answer is the same: anchor on what
+the markup *is*.
+
+**The strongest check available came out clean: `dist/index.html` is byte-identical
+across A5** — same 322,480 bytes, `diff` silent, one file in `dist/`, classic
+`<script>` tag, `file://` test green. A textual splice put back exactly what it
+took out.
+
+**The one real consequence was `test/harness.js`, and it is the epilogue's
+lesson wearing different clothes.** Suite B is served by Vite and never sees a
+directive. The harness is not: it reads `index.html` off disk and builds the
+jsdom shell from it, so it got the shell with seven comments and no markup —
+no `#cv`, `canvas/view.js` throws on `getContext('2d')` at module evaluation,
+**69 red unit tests with a green build and a green browser**. Exactly the
+signature a stale `__rp` name produces, for exactly the same underlying reason:
+the harness's copy of the document drifted from the one Vite builds. It carries
+the same four-line `expandIncludes` now, and `test/README.md` says to keep the
+two in step.
+
+**No test was added** (the suite is capped and due for pruning); the harness
+change exists only to keep the existing 717 green.
+
+**What is left in `index.html`, line by line:**
+
+| lines | what |
+|---|---|
+| 1-7 | doctype, `<html>`, `<head>`, charset, viewport, title, favicon |
+| 8 | `<link rel="stylesheet" href="./src/styles/main.scss">` |
+| 9-10 | `</head>`, `<body>` |
+| 11 | `<!-- @include src/html/sprite.html -->` |
+| 12-25 | `<div id="app">`, `<main>` and five `@include` directives, `</main>`, `</div>` |
+| 26-27 | blank, `<!-- @include src/html/modal.html -->` |
+| 28-1066 | `<script type="module">` — unchanged by A4 and A5 |
+| 1067-1068 | `</body>`, `</html>` |
+
+The script body is what the `blueprint/` round left: `"use strict";`, 86 import
+lines, 91 listener registrations, `edgePanTick();`, `boot();` and `libSearchT`.
+**Phase 3 has nothing left to extract.** What remains is Phase 4 — A6 (per-module
+unit tests, after the test-size pruning), A7 (CI + Pages) and A8 (docs).
+
 ### SCSS rules
 1. Split is a **rename + cut**. SCSS is a superset of CSS; compiled output must be
    byte-identical to today's CSS on the first commit. Verify with a diff of compiled output.
