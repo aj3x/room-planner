@@ -7926,7 +7926,7 @@ function pickerMount(id, onChange){
 }
 /* a locked row is disabled but still ticked, and :checked matches it — so it counts */
 const pickValues = id => [...$(id).querySelectorAll('input[type=checkbox]:checked')].map(c=>c.value);
-const plural = (n,w) => n+' '+w+(n===1?'':'s');
+import {plural} from './src/ui/panels.js';
 const fileSlug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'export';
 /* folder path of a room, read out of whichever folder list it belongs to */
 function folderLine(l, folders){

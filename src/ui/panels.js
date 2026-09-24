@@ -17,6 +17,7 @@ import {save} from '../core/store.js';
 import {$, svgI} from './modal.js';
 
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const plural = (n,w) => n+' '+w+(n===1?'':'s');
 /* strip diacritics so "a" also finds "ä", "café" also finds "cafe", etc. */
 function normSearch(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
 
@@ -57,4 +58,4 @@ function applyPanes(){
   set('headRight', 'tglRight', rShut, false, 'the properties panel');
 }
 
-export {esc, normSearch, applySections, toggleSection, wideLayout, applyPanes};
+export {esc, plural, normSearch, applySections, toggleSection, wideLayout, applyPanes};
