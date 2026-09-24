@@ -95,6 +95,7 @@ export const EPILOGUE = `
 ;import {PREF_KEYS} from './src/io/export.js';
 ;import {INV_SCOPES} from './src/core/floor-space.js';
 ;import {normItem} from './src/core/migrate.js';
+;import {pickValues} from './src/io/pickers.js';
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },

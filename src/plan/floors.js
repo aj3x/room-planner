@@ -27,6 +27,12 @@ import {$, askConfirm, svgI} from '../ui/modal.js';
 import {esc, plural} from '../ui/panels.js';
 import {activateLayout, renderTree} from './layout-tree.js';
 import {renderAll, setMode} from './mode.js';
+import {placeOnFloor} from '../core/floor-space.js';
+import {treeOpen} from '../core/selection.js';
+import {uid} from '../core/state.js';
+import {folderLine, pickValues, pickerHTML} from '../io/pickers.js';
+import {menuAtPoint} from '../ui/menu.js';
+import {askText, openModal} from '../ui/modal.js';
 /* one slot, not a stack \u2014 mirrors bpLastImport's own "undo the last thing" precedent */
 let lastMerge=null;
 function setLastMerge(v){ lastMerge = v; }
@@ -174,4 +180,100 @@ function renderFloorProps(){
   });
   $('flFit').addEventListener('click',()=>fit());
 }
-export {lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, renderFloorProps, turnFloorRoom};
+
+/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+/* ---- floors: a named arrangement of rooms. A floor owns no geometry of its
+        own — each room keeps its outline and carries where it stands. ---- */
+function newFloor(){
+  askText('New floor','Name','Floor', n=>{
+    const fl={id:uid(), name:n, parentId:null, extWall:0};
+    S.floors.push(fl); treeOpen.add(fl.id);
+    renderTree(); save();
+  });
+}
+
+function floorRoomsDialog(id){
+  const fl=floorOf(id); if(!fl) return;
+  const rooms=S.layouts.map(l=>{
+    const other = l.floorId && l.floorId!==id ? floorOf(l.floorId) : null;
+    return {value:l.id, label:l.name, sub: other ? 'on '+other.name : folderLine(l), checked: l.floorId===id};
+  });
+  openModal('Rooms on “'+fl.name+'”', `
+    <p class="hint">Tick the rooms that make up this floor. A room can only stand on one floor at a time.</p>
+    ${pickerHTML('flRooms','Rooms',rooms,'You have no rooms yet')}`,
+    'Save', ()=>{
+      const picked=new Set(pickValues('flRooms'));
+      for(const l of S.layouts){
+        if(picked.has(l.id)){ if(l.floorId!==id){ placeOnFloor(l,id); l.floorId=id; } }
+        else if(l.floorId===id) l.floorId=null;
+      }
+      treeOpen.add(id);
+      renderAll(); save();
+    });
+}
+/* deleting a floor never deletes a room: the arrangement goes, the rooms stay */
+function deleteFloor(id){
+  const fl=floorOf(id); if(!fl) return;
+  const rooms=floorLayouts(id), n=rooms.length;
+  const drop=()=>{
+    for(const l of rooms) l.floorId=null;
+    S.floors=S.floors.filter(x=>x.id!==id);
+    treeOpen.delete(id);
+    renderAll(); save();
+  };
+  if(!n){ askConfirm('Delete this floor?', '“'+fl.name+'” is empty.', 'Delete floor', drop); return; }
+  askConfirm('Delete “'+fl.name+'”?',
+    n+' room'+(n>1?'s':'')+' stand'+(n>1?'':'s')+' on it. Deleting the floor keeps every room — they go back to their folders.',
+    'Delete floor', drop);
+}
+function putOnFloor(l, fid){ placeOnFloor(l,fid); l.floorId=fid; treeOpen.add(fid); renderAll(); save(); }
+function newFloorWith(l){
+  askText('New floor','Name','Floor', n=>{
+    const fl={id:uid(), name:n, parentId:null, extWall:0};
+    S.floors.push(fl); putOnFloor(l, fl.id);
+  });
+}
+function putOnFloorDialog(id){
+  const l=S.layouts.find(x=>x.id===id); if(!l) return;
+  const opts=S.floors.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
+  openModal('Put “'+l.name+'” on a floor', `
+    <div class="field"><label for="flPick">Floor</label>
+      <select id="flPick">${opts}<option value="">New floor…</option></select></div>
+    <p class="hint">The room keeps its own outline, walls and items. It just gains a place to stand.</p>`,
+    'Put on floor', ()=>{
+      const v=$('flPick').value;
+      /* deferred so this modal is closed before the name prompt opens over it */
+      if(!v){ setTimeout(()=>newFloorWith(l),0); return; }
+      putOnFloor(l, v);
+    });
+}
+
+function mergeUndo(){
+  if(!lastMerge) return;
+  const m=lastMerge;
+  askConfirm('Undo this merge?', 'The two rooms will be restored as they were.', 'Undo merge', ()=>{
+    const a=S.layouts.find(x=>x.id===m.aId);
+    if(a) Object.assign(a, clone(m.aBefore));
+    if(!S.layouts.some(x=>x.id===m.bId)) S.layouts.splice(Math.min(m.bIndex, S.layouts.length), 0, clone(m.bBefore));
+    if(m.aRoomHist) roomHist[m.aId]=m.aRoomHist; else delete roomHist[m.aId];
+    if(m.aFurnHist) furnHist[m.aId]=m.aFurnHist; else delete furnHist[m.aId];
+    if(m.bRoomHist) roomHist[m.bId]=m.bRoomHist; else delete roomHist[m.bId];
+    if(m.bFurnHist) furnHist[m.bId]=m.bFurnHist; else delete furnHist[m.bId];
+    delete floorHist[m.floorId];
+    setLastMerge(null);
+    mergeSel.clear();
+    activateLayout(m.aId);
+    renderTree(); renderAll(); fit(); save();
+  });
+}
+function openFloorMergeMenu(ids, clientX, clientY){
+  const [aId,bId]=ids;
+  const a=S.layouts.find(x=>x.id===aId), b=S.layouts.find(x=>x.id===bId);
+  if(!a||!b) return;
+  menuAtPoint(clientX, clientY, [
+    {label:'Merge rooms', fn:()=>mergeLayouts(aId,bId)},
+    {sep:true},
+    {label:'Delete both rooms\u2026', danger:true, fn:()=>deleteBothDialog(aId,bId)},
+  ], a.name+' + '+b.name);
+}
+export {lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, renderFloorProps, turnFloorRoom, newFloor, floorRoomsDialog, deleteFloor, putOnFloor, newFloorWith, putOnFloorDialog, mergeUndo, openFloorMergeMenu};

@@ -775,7 +775,7 @@ import {parseLen, unitWord, fmtLen, fmtArea} from './src/core/units.js';
 
 import {norm360, shapePoly, bbox, worldPoly, pointInPoly, ptSegDist, centroid, signedArea, polyArea, polySimple} from './src/core/geometry.js';
 
-import {PALETTE, uid, clone, rectPts, blankLayout, S, setS, L, RP, itemOf, instOf, openOf, roomMode, floorMode, folderOf, childFolders, childLayouts, floorOf, floorLayouts} from './src/core/state.js';
+import {PALETTE, uid, clone, rectPts, blankLayout, S, setS, L, RP, itemOf, instOf, openOf, roomMode, floorMode, folderOf, floorOf} from './src/core/state.js';
 
 import {uniqueId} from './src/core/ids.js';
 
@@ -785,19 +785,8 @@ import {drag, drawState, wallDrawState, splitDrawState, setDrag} from './src/can
 
 import {selectOnly, selectAdd, selectToggle, selectSet, selectClear} from './src/core/selection.js';
 
-import {floorPts, placeOnFloor, availableCount} from './src/core/floor-space.js';
-/* folder path from root to id, inclusive */
-function folderPath(id){
-  const out=[]; let f=folderOf(id);
-  while(f){ out.unshift(f); f=folderOf(f.parentId); }
-  return out;
-}
-/* would putting `id` under `parentId` create a cycle? */
-function folderDescendant(id,parentId){
-  let f=folderOf(parentId);
-  while(f){ if(f.id===id) return true; f=folderOf(f.parentId); }
-  return false;
-}
+import {floorPts, availableCount} from './src/core/floor-space.js';
+import {folderDescendant, enterFloor, folderMenu, layoutMenu, newFolder} from './src/plan/layout-tree.js';
 import {activateLayout} from './src/plan/layout-tree.js';
 
 import {syncWallOff, wallIsOff, wallOf, wallAngle, clampOpenings,
@@ -810,10 +799,10 @@ import {validate, isBad, centreInside,
 
 import {KEY, Store, save} from './src/core/store.js';
 
-import {roomHist, furnHist, snapRoom, snapFurn, histEntry, seedHistFor, bumpRev, commitRoom, commitFurn, floorHist, curFloorId, snapFloor, floorEntry, commitFloor} from './src/core/history.js';
+import {roomHist, furnHist, snapRoom, snapFurn, histEntry, seedHistFor, bumpRev, commitRoom, commitFurn, floorHist, snapFloor, floorEntry, commitFloor} from './src/core/history.js';
 import {undoRoom, redoRoom, undoFurn, redoFurn, undoFloor, redoFloor} from './src/core/history.js';
 
-import {normLayout, remapMeasures, migrate} from './src/core/migrate.js';
+import {normLayout, migrate} from './src/core/migrate.js';
 
 import {$, mo, moOkFn, moBackFn, openModal, closeModal, moError} from './src/ui/modal.js';
 /* a wizard's Back replaces the footer's meaning of "leave" with "go to the previous
@@ -836,7 +825,6 @@ import {inlineEdit, singleClick, cancelSingleClick} from './src/ui/inline-edit.j
 
 import {moveBefore, clearDropMarks, dropHalf} from './src/ui/dnd.js';
 
-import {tagFieldHTML, mountTagField, tagFieldValue} from './src/ui/tag-input.js';
 
 /* ------------------------- view ------------------------- */
 import {cv} from './src/canvas/view.js';
@@ -865,7 +853,7 @@ import {cancelWallDraw, finishWallDraw} from './src/canvas/wall-draw.js';
    into a polyline; each one must stay strictly inside the room. */
 import {boundaryHit} from './src/canvas/split-room.js';
 import {startSplitRoom} from './src/canvas/split-room.js';
-import {cancelSplitDraw, trySplitLine, lastSplit, splitUndo} from './src/canvas/split-room.js';
+import {cancelSplitDraw, trySplitLine} from './src/canvas/split-room.js';
 import {splitResolvePoint} from './src/canvas/split-room.js';
 
 import {darkMQ, PAL} from './src/canvas/draw.js';
@@ -1496,16 +1484,6 @@ document.addEventListener('keydown', e=>{
 
 import {renderTree, treeBox} from './src/plan/layout-tree.js';
 
-/* clicking a floor switches the canvas to that floor's arrangement, not just the tree
-   row — Floor mode has no floor id of its own (see curFloorId), so the anchor is
-   whichever room on it is already active, or its first room otherwise */
-function enterFloor(id){
-  const rooms=floorLayouts(id);
-  if(!rooms.length){ flash('Add a room to this floor first'); return; }
-  if(curFloorId()!==id) activateLayout(rooms.find(l=>l.id===S.active)?.id || rooms[0].id);
-  setMode('floor');
-  renderAll(); save();
-}
 
 treeBox.addEventListener('click', e=>{
   const more=e.target.closest('[data-act=more]');
@@ -1653,52 +1631,7 @@ treeBox.addEventListener('drop', e=>{
   renderTree(); renderInv(); save();
 });
 
-function folderMenu(id, anchor){
-  const f=folderOf(id); if(!f) return;
-  openMenu(anchor, [
-    {label:'Rename', fn:()=>renameFolder(id)},
-    {label:'Add a room here', fn:()=>askText('New room','Name','Room', n=>{
-      const l=blankLayout(n,id); S.layouts.push(l); treeOpen.add(id); activateLayout(l.id);
-      renderAll(); fit(); save();
-    })},
-    {label:'Add a subfolder', fn:()=>askText('New folder','Name','Folder', n=>{
-      S.folders.push({id:uid(),name:n,parentId:id,tags:[]}); treeOpen.add(id); renderTree(); save();
-    })},
-    {sep:true},
-    {label:'Move to folder\u2026', fn:()=>moveDialog('folder',id)},
-    {label:'Edit tag filter\u2026', fn:()=>folderTagsDialog(id)},
-    {sep:true},
-    {label:'Delete folder\u2026', danger:true, fn:()=>deleteFolder(id)},
-  ], f.name);
-}
-function layoutMenu(id, anchor){
-  const l=S.layouts.find(x=>x.id===id); if(!l) return;
-  openMenu(anchor, [
-    {label:'Open', fn:()=>{ activateLayout(id); renderAll(); fit(); save(); }},
-    {label:'Rename', fn:()=>renameLayout(id)},
-    {label:'Duplicate', fn:()=>duplicateLayout(id)},
-    {label:'Split room\u2026', fn:()=>startSplitRoom(id)},
-    {label:'Move to folder\u2026', fn:()=>moveDialog('layout',id)},
-    l.floorId
-      ? {label:'Take off \u201c'+(floorOf(l.floorId)||{name:'the floor'}).name+'\u201d', fn:()=>{ l.floorId=null; renderAll(); save(); }}
-      : (S.floors.length
-          ? {label:'Put on a floor\u2026', fn:()=>putOnFloorDialog(id)}
-          : {label:'Put on a new floor\u2026', fn:()=>newFloorWith(l)}),
-    ...(lastMerge && lastMerge.aId===id ? [{label:'Undo this merge\u2026', fn:mergeUndo}] : []),
-    ...(lastSplit && lastSplit.aId===id ? [{label:'Undo this split\u2026', fn:splitUndo}] : []),
-    {sep:true},
-    {label:'Delete room\u2026', danger:true, fn:()=>deleteLayout(id)},
-  ], l.name);
-}
-/* ---- floors: a named arrangement of rooms. A floor owns no geometry of its
-        own — each room keeps its outline and carries where it stands. ---- */
-function newFloor(){
-  askText('New floor','Name','Floor', n=>{
-    const fl={id:uid(), name:n, parentId:null, extWall:0};
-    S.floors.push(fl); treeOpen.add(fl.id);
-    renderTree(); save();
-  });
-}
+import {newFloor, floorRoomsDialog, deleteFloor, putOnFloor, openFloorMergeMenu} from './src/plan/floors.js';
 function floorMenu(id, anchor){
   const fl=floorOf(id); if(!fl) return;
   openMenu(anchor, [
@@ -1710,198 +1643,7 @@ function floorMenu(id, anchor){
     {label:'Delete floor…', danger:true, fn:()=>deleteFloor(id)},
   ], fl.name);
 }
-function floorRoomsDialog(id){
-  const fl=floorOf(id); if(!fl) return;
-  const rooms=S.layouts.map(l=>{
-    const other = l.floorId && l.floorId!==id ? floorOf(l.floorId) : null;
-    return {value:l.id, label:l.name, sub: other ? 'on '+other.name : folderLine(l), checked: l.floorId===id};
-  });
-  openModal('Rooms on “'+fl.name+'”', `
-    <p class="hint">Tick the rooms that make up this floor. A room can only stand on one floor at a time.</p>
-    ${pickerHTML('flRooms','Rooms',rooms,'You have no rooms yet')}`,
-    'Save', ()=>{
-      const picked=new Set(pickValues('flRooms'));
-      for(const l of S.layouts){
-        if(picked.has(l.id)){ if(l.floorId!==id){ placeOnFloor(l,id); l.floorId=id; } }
-        else if(l.floorId===id) l.floorId=null;
-      }
-      treeOpen.add(id);
-      renderAll(); save();
-    });
-}
-/* deleting a floor never deletes a room: the arrangement goes, the rooms stay */
-function deleteFloor(id){
-  const fl=floorOf(id); if(!fl) return;
-  const rooms=floorLayouts(id), n=rooms.length;
-  const drop=()=>{
-    for(const l of rooms) l.floorId=null;
-    S.floors=S.floors.filter(x=>x.id!==id);
-    treeOpen.delete(id);
-    renderAll(); save();
-  };
-  if(!n){ askConfirm('Delete this floor?', '“'+fl.name+'” is empty.', 'Delete floor', drop); return; }
-  askConfirm('Delete “'+fl.name+'”?',
-    n+' room'+(n>1?'s':'')+' stand'+(n>1?'':'s')+' on it. Deleting the floor keeps every room — they go back to their folders.',
-    'Delete floor', drop);
-}
-function putOnFloor(l, fid){ placeOnFloor(l,fid); l.floorId=fid; treeOpen.add(fid); renderAll(); save(); }
-function newFloorWith(l){
-  askText('New floor','Name','Floor', n=>{
-    const fl={id:uid(), name:n, parentId:null, extWall:0};
-    S.floors.push(fl); putOnFloor(l, fl.id);
-  });
-}
-function putOnFloorDialog(id){
-  const l=S.layouts.find(x=>x.id===id); if(!l) return;
-  const opts=S.floors.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
-  openModal('Put “'+l.name+'” on a floor', `
-    <div class="field"><label for="flPick">Floor</label>
-      <select id="flPick">${opts}<option value="">New floor…</option></select></div>
-    <p class="hint">The room keeps its own outline, walls and items. It just gains a place to stand.</p>`,
-    'Put on floor', ()=>{
-      const v=$('flPick').value;
-      /* deferred so this modal is closed before the name prompt opens over it */
-      if(!v){ setTimeout(()=>newFloorWith(l),0); return; }
-      putOnFloor(l, v);
-    });
-}
-function folderTagsDialog(id){
-  const f=folderOf(id);
-  openModal('Tag filter for '+f.name, `
-    <label class="stack-label" for="fTagsInput">Tags</label>
-    ${tagFieldHTML('fTags','living room, seating')}
-    <p class="hint">Type to pick from tags you already use. Tab or comma adds one, backspace removes the last.</p>
-    <p class="hint">When you switch into a room in this folder from a room in a different folder, the item list's tag filter is set to this automatically. Switching between rooms inside this same folder leaves your filter as you left it.</p>`,
-    'Save', ()=>{
-      f.tags=tagFieldValue('fTags');
-      renderTree(); save();
-    },
-    ()=>{ mountTagField('fTags', f.tags||[]); });
-}
-/* every folder and room under `id`, deepest last */
-function folderContents(id){
-  const folders=[], layouts=[];
-  (function walk(pid){
-    for(const f of childFolders(pid)){ folders.push(f); walk(f.id); }
-    for(const l of childLayouts(pid)) layouts.push(l);
-  })(id);
-  return {folders,layouts};
-}
-function deleteFolder(id){
-  const f=folderOf(id); if(!f) return;
-  const up = folderOf(f.parentId) ? '\u201c'+folderOf(f.parentId).name+'\u201d' : 'the top level';
-  const {folders,layouts}=folderContents(id);
-  const drop=keep=>{
-    if(keep){
-      for(const sub of childFolders(id)) sub.parentId=f.parentId;
-      for(const l of childLayouts(id)) l.folderId=f.parentId;
-    } else {
-      const killF=new Set(folders.map(x=>x.id)), killL=new Set(layouts.map(x=>x.id));
-      S.layouts=S.layouts.filter(l=>!killL.has(l.id));
-      S.folders=S.folders.filter(x=>!killF.has(x.id));
-      for(const k of killF) treeOpen.delete(k);
-    }
-    S.folders=S.folders.filter(x=>x.id!==id);
-    treeOpen.delete(id);
-    if(!S.layouts.length) S.layouts=[blankLayout()];
-    if(!S.layouts.some(l=>l.id===S.active)) activateLayout(S.layouts[0].id);
-    renderAll(); fit(); save();
-  };
-  if(!folders.length && !layouts.length){
-    askConfirm('Delete this folder?', '\u201c'+f.name+'\u201d is empty.', 'Delete folder', ()=>drop(false));
-    return;
-  }
-  const bits=[];
-  if(layouts.length) bits.push(layouts.length+' room'+(layouts.length>1?'s':''));
-  if(folders.length) bits.push(folders.length+' folder'+(folders.length>1?'s':''));
-  openModal('Delete \u201c'+f.name+'\u201d?', `
-    <p>It holds ${esc(bits.join(' and '))}. Deleting the folder deletes all of that too.</p>
-    <label class="check"><input type="checkbox" id="keepKids">Keep everything inside \u2014 move it up to ${esc(up)}</label>
-    <p class="hint">Your library is never touched, only the rooms themselves.</p>`,
-    'Delete folder', ()=>drop($('keepKids').checked), null, {danger:true});
-}
-function duplicateLayout(id){
-  const src=S.layouts.find(x=>x.id===id); if(!src) return;
-  const c=JSON.parse(JSON.stringify(src));
-  c.id=uid(); c.name=c.name+' copy';
-  const map={open:{}, item:{}, pillar:{}, iwall:{}};
-  const renew = (k,x) => { const id=uid(); map[k][x.id]=id; x.id=id; };
-  c.openings.forEach(o=>renew('open',o));
-  c.placed.forEach(p=>renew('item',p));
-  c.room.pillars.forEach(p=>renew('pillar',p));
-  c.room.iwalls.forEach(w=>renew('iwall',w));
-  remapMeasures(c, map);
-  /* a copy stays on the same floor, nudged clear so it isn't hidden under the original */
-  if(c.floorId) c.floorPlace={x:(c.floorPlace.x||0)+500, y:(c.floorPlace.y||0)+500, rot:c.floorPlace.rot||0};
-  S.layouts.splice(S.layouts.indexOf(src)+1, 0, c);
-  activateLayout(c.id);
-  renderAll(); save();
-}
-function deleteLayout(id){
-  if(S.layouts.length===1){ flash('You need at least one room'); return; }
-  const l=S.layouts.find(x=>x.id===id); if(!l) return;
-  askConfirm('Delete this room?', '\u201c'+l.name+'\u201d will be removed. Your library stays.', 'Delete', ()=>{
-    S.layouts=S.layouts.filter(x=>x.id!==id);
-    if(S.active===id) activateLayout(S.layouts[0].id);
-    if(lastMerge && lastMerge.aId===id) setLastMerge(null);
-    renderAll(); fit(); save();
-  });
-}
-import {lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, turnFloorRoom} from './src/plan/floors.js';
-function mergeUndo(){
-  if(!lastMerge) return;
-  const m=lastMerge;
-  askConfirm('Undo this merge?', 'The two rooms will be restored as they were.', 'Undo merge', ()=>{
-    const a=S.layouts.find(x=>x.id===m.aId);
-    if(a) Object.assign(a, clone(m.aBefore));
-    if(!S.layouts.some(x=>x.id===m.bId)) S.layouts.splice(Math.min(m.bIndex, S.layouts.length), 0, clone(m.bBefore));
-    if(m.aRoomHist) roomHist[m.aId]=m.aRoomHist; else delete roomHist[m.aId];
-    if(m.aFurnHist) furnHist[m.aId]=m.aFurnHist; else delete furnHist[m.aId];
-    if(m.bRoomHist) roomHist[m.bId]=m.bRoomHist; else delete roomHist[m.bId];
-    if(m.bFurnHist) furnHist[m.bId]=m.bFurnHist; else delete furnHist[m.bId];
-    delete floorHist[m.floorId];
-    setLastMerge(null);
-    mergeSel.clear();
-    activateLayout(m.aId);
-    renderTree(); renderAll(); fit(); save();
-  });
-}
-function openFloorMergeMenu(ids, clientX, clientY){
-  const [aId,bId]=ids;
-  const a=S.layouts.find(x=>x.id===aId), b=S.layouts.find(x=>x.id===bId);
-  if(!a||!b) return;
-  menuAtPoint(clientX, clientY, [
-    {label:'Merge rooms', fn:()=>mergeLayouts(aId,bId)},
-    {sep:true},
-    {label:'Delete both rooms\u2026', danger:true, fn:()=>deleteBothDialog(aId,bId)},
-  ], a.name+' + '+b.name);
-}
-/* the menu's long way round to what dragging does */
-function moveDialog(kind,id){
-  const obj = kind==='folder' ? folderOf(id) : S.layouts.find(x=>x.id===id);
-  if(!obj) return;
-  const cur = (kind==='folder' ? obj.parentId : obj.folderId) || '';
-  let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
-  (function walk(pid,depth){
-    for(const f of childFolders(pid)){
-      const bad = kind==='folder' && (f.id===id || folderDescendant(id,f.id));
-      if(!bad) opts+=`<option value="${f.id}" ${f.id===cur?'selected':''}>${'\u00a0\u00a0'.repeat(depth)}${esc(f.name)}</option>`;
-      walk(f.id,depth+1);
-    }
-  })(null,0);
-  openModal('Move \u201c'+obj.name+'\u201d', `
-    <label class="stack-label" for="moFolder">Folder</label>
-    <select id="moFolder">${opts}</select>`, 'Move', ()=>{
-      const v=$('moFolder').value||null;
-      if(kind==='folder') obj.parentId=v; else { obj.folderId=v; obj.floorId=null; }
-      if(v) treeOpen.add(v);
-      renderTree(); renderInv(); save();
-    });
-}
-/* The Rooms list holds more than one kind of thing, so + stays the one-click common case
-   (a new room) and everything rarer sits behind the ⋯ with a word for a label. */
-const newFolder = () =>
-  askText('New folder','Name','Folder', n=>{ S.folders.push({id:uid(),name:n,parentId:null,tags:[]}); renderTree(); save(); });
+import {renderFloorSel, turnFloorRoom} from './src/plan/floors.js';
 $('btnRoomsMore').addEventListener('click', e=>{
   openMenu(e.currentTarget, [
     {label:'New folder', fn:newFolder},
@@ -4658,7 +4400,6 @@ $('btnSamples').addEventListener('click', ()=>{
   renderInv(); save();
 });
 
-import {pickerHTML, pickValues, folderLine} from './src/io/pickers.js';
 import {plural} from './src/ui/panels.js';
 
 import {exportDialog} from './src/io/export.js';
