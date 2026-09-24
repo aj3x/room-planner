@@ -774,7 +774,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
 import {parseLen, trimNum, unitWord, fmtLen, fmtArea} from './src/core/units.js';
 
 import {norm360, shapePoly, bbox, worldPoly, pointInPoly, segHit, ptSegDist, centroid, signedArea, polyArea, polySimple} from './src/core/geometry.js';
-import {normOpen, hasOpen, openLocalBox, openSizeLabel} from './src/core/open-state.js';
+import {normOpen, hasOpen, openSizeLabel} from './src/core/open-state.js';
 
 import {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS,
         L, RP, itemOf, instOf, openOf, roomMode, furnMode, floorMode,
@@ -1179,7 +1179,7 @@ darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>scheduleDraw())
 
 import {draw, scheduleDraw, floorMembers, snapFloorPlace,
         pickFloorRoom, floorRotHandle, handlePos, sizeLabel} from './src/canvas/draw.js';
-import {normHex, hexA} from './src/canvas/draw.js';
+import {normHex} from './src/canvas/draw.js';
 import {mergeSplice, mergeGeometry} from './src/canvas/merge-rooms.js';
 
 /* ------------------------- measuring -------------------------
@@ -6048,9 +6048,9 @@ $('fileIn').addEventListener('change', e=>{
 
 import {libFlash} from './src/ui/flash.js';
 
-import {childItemFolders, itemFolderOf, itemsInFolder, itemFolderDescendant, itemFolderPath, itemFolderSubtreeIds, ancestorTags, applyTags, recomputeFolderSubtree, ensureItemFolderPath, rehomeItemId, moveItemToFolder, purgeItem} from './src/library/item-folders.js';
+import {childItemFolders, itemFolderOf, itemsInFolder, itemFolderDescendant, itemFolderSubtreeIds, ancestorTags, applyTags, recomputeFolderSubtree, ensureItemFolderPath, rehomeItemId, moveItemToFolder, purgeItem} from './src/library/item-folders.js';
 
-import {childMarketFolders, marketFolderOf, listingsInFolder, marketFolderDescendant, marketFolderPath, adhocCache, loadListing} from './src/library/adhoc-folders.js';
+import {childMarketFolders, marketFolderOf, listingsInFolder, marketFolderDescendant, adhocCache, loadListing} from './src/library/adhoc-folders.js';
 
 import {marketIndexCache, ensureDefaultMarket, subscribeMarket, reloadMarketSub, removeMarketSub, fetchMarketItem, loadRegistry} from './src/library/market-subs.js';
 
@@ -6191,8 +6191,7 @@ function renameAdhocFolder(id){
 
 /* ---- drag: reparent a library folder, or drop a library item onto one ---- */
 let dragLib=null;
-let gridDragItem=null;
-function setGridDragItem(v){ gridDragItem = v; }
+import {gridDragItem, setGridDragItem, itemTile, folderTile, crumbsHTML} from './src/library/grid.js';
 libTreeBox.addEventListener('dragstart', e=>{
   const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]'); if(!row) return;
   cancelSingleClick(); closeMenu();
@@ -6495,32 +6494,6 @@ function libItemMenu(id, anchor){
     {label:'Delete…', danger:true, fn:()=>deleteLibItem(id)},
   ], it.name);
 }
-function itemTile(it){
-  const chips=(it.tags&&it.tags.length) ? `<div class="chips">${it.tags.slice(0,3).map(t=>{
-      const inherited = !it.manualTags || !it.manualTags.includes(t);
-      return `<span class="tagchip${inherited?' inherit':''}">${esc(t)}</span>`;
-    }).join('')}${it.tags.length>3?`<span class="tagchip">+${it.tags.length-3}</span>`:''}</div>` : '';
-  return `<div class="tile" role="button" tabindex="0" draggable="true" data-item="${it.id}" aria-label="Edit ${esc(it.name)}">
-    <span class="more" role="button" tabindex="0" data-act="more" title="More actions" aria-label="More actions">${svgI('more')}</span>
-    <div class="thumb"><canvas data-prev="${esc(it.id)}"></canvas></div>
-    <div class="body"><div class="nm" title="${esc(it.name)}">${esc(it.name)}</div>
-      <div class="dim">${esc(sizeLabel(it))}</div>${chips}</div>
-  </div>`;
-}
-function folderTile(f){
-  return `<button type="button" class="tile folder" data-openfolder="${f.id}">
-    <div class="thumb">${svgI('folder')}</div>
-    <div class="body"><div class="nm" title="${esc(f.name)}">${esc(f.name)}</div>
-      <div class="dim">${esc(folderCountLabel(f.id))}</div></div>
-  </button>`;
-}
-function folderCountLabel(fid){
-  const n=childItemFolders(fid).length, m=itemsInFolder(fid).length;
-  const bits=[];
-  if(n) bits.push(n+' folder'+(n>1?'s':''));
-  if(m) bits.push(m+' item'+(m>1?'s':''));
-  return bits.length?bits.join(', '):'Empty';
-}
 function renderLibraryFolder(box, folderId){
   const f=itemFolderOf(folderId);
   const subs=childItemFolders(folderId), items=itemsInFolder(folderId);
@@ -6596,15 +6569,6 @@ function bindLibGrid(box, kind){
     });
   }
 }
-function crumbsHTML(kind, folderId){
-  const isLib=kind==='library';
-  const path = isLib ? itemFolderPath(folderId) : marketFolderPath(folderId);
-  const rootLabel = isLib ? 'All items' : 'Listings';
-  let html=`<div class="crumbs"><button data-crumb="">${esc(rootLabel)}</button>`;
-  for(const f of path) html+=`<span class="sep">/</span><button data-crumb="${f.id}">${esc(f.name)}</button>`;
-  html+='</div>';
-  return html;
-}
 function bindCrumbs(box, kind){
   box.querySelectorAll('[data-crumb]').forEach(b=>{
     b.addEventListener('click', ()=>goLibFolder(kind, b.dataset.crumb||null));
@@ -6668,32 +6632,7 @@ function addMarketDialog(){
       }).catch(()=>{ const box=$('mRegistry'); if(box) box.innerHTML=''; });
     });
 }
-function marketSubTile(sub){
-  const items=marketIndexCache.get(sub.id);
-  let inner='';
-  if(nav.showMarketContents){
-    if(!items){ inner='<div class="sub" data-loadsub="'+sub.id+'">Loading…</div>'; }
-    else {
-      const groups=new Map();
-      for(const it of items){
-        const seg=it.id.includes('/') ? idParts(it.id)[0] : null;
-        const key=seg||('\0'+it.id);
-        if(!groups.has(key)) groups.set(key,{folder:seg, name:seg||it.name, id:it.id, n:0});
-        groups.get(key).n++;
-      }
-      inner='<div class="chips">'+[...groups.values()].slice(0,8).map(g=>
-        g.folder ? `<span class="tagchip" data-openmsub="${sub.id}" data-mfolder2="${esc(g.folder)}">${esc(g.folder)}/</span>`
-                 : `<span class="tagchip" data-openmsub="${sub.id}" data-mitem="${esc(g.id)}">${esc(g.name)}</span>`
-      ).join('')+'</div>';
-    }
-  }
-  return `<button type="button" class="tile subtile" data-opensub="${sub.id}">
-    <span class="more" data-act="more" title="More actions" aria-label="More actions">${svgI('more')}</span>
-    <div class="thumb">${svgI('store')}</div>
-    <div class="body"><div class="nm" title="${esc(sub.name)}">${esc(sub.name)}</div>
-      <div class="dim" title="${esc(sub.url)}">${items?plural(items.length,'item'):esc(sub.url)}</div>${inner}</div>
-  </button>`;
-}
+import {marketSubTile, marketPathChildren, marketItemTile, drawPreview} from './src/library/marketplace.js';
 function subMenu(sub, anchor){
   openMenu(anchor, [
     {label:'Open', fn:()=>{ nav.marketSubId=sub.id; nav.subPath=null; renderLibContent(); }},
@@ -6742,17 +6681,6 @@ function renderMarketTop(box){
   });
 }
 /* the folder tree inside one marketplace is derived from id path segments, not a stored folder list */
-function marketPathChildren(items, prefix){
-  const folders=new Map(), leaves=[];
-  const plen=prefix?prefix.split('/').length:0;
-  for(const it of items){
-    const parts=idParts(it.id);
-    if(prefix && it.id!==prefix && !it.id.startsWith(prefix+'/')) continue;
-    if(parts.length>plen+1){ const seg=parts[plen]; if(!folders.has(seg)) folders.set(seg,0); folders.set(seg, folders.get(seg)+1); }
-    else if(parts.length===plen+1) leaves.push(it);
-  }
-  return {folders:[...folders.entries()].map(([name,n])=>({name,n})), leaves};
-}
 function renderMarketSub(box, sub){
   const items=marketIndexCache.get(sub.id);
   const q=nav.searching ? $('searchBox').value.trim().toLowerCase() : '';
@@ -6815,13 +6743,6 @@ function renderMarketSub(box, sub){
   }));
   if(nav.marketSelItemId) renderMarketItemPreview(box, sub, nav.marketSelItemId);
 }
-function marketItemTile(it){
-  const have=S.inventory.some(x=>x.id===it.id);
-  return `<div class="ttile" data-mitemopen="${esc(it.id)}" role="button" tabindex="0" aria-label="Preview ${esc(it.name)}">
-    <div class="tmain"><div class="tname" title="${esc(it.name)}">${esc(it.name)}</div></div>
-    <button type="button" class="btn sm${have?' quiet':''}" data-add="${esc(it.id)}" title="Add “${esc(it.name)}” to your library">${have?'Added':'Add'}</button>
-  </div>`;
-}
 /* a preview opens where you're looking (a dialog), not appended below hundreds of tiles */
 function renderMarketItemPreview(box, sub, id){
   nav.marketSelItemId=null;
@@ -6847,49 +6768,9 @@ function renderMarketItemPreview(box, sub, id){
       }).catch(e=>{ const st=$('mPrevInfo'); if(st){ st.className='hint warn'; st.textContent=e.message; } });
     });
 }
-function drawPreview(cv,it){
-  const ctx=cv.getContext('2d');
-  const dpr=Math.min(window.devicePixelRatio||1,2.5);
-  const W=cv.clientWidth||260, H=cv.clientHeight||150;
-  cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.clearRect(0,0,W,H);
-  if(!it||!it.shape) return;
-  const ob=hasOpen(it)?openLocalBox(it):null;
-  const b=ob?{x0:ob.x0,y0:ob.y0,x1:ob.x1,y1:ob.y1,w:ob.x1-ob.x0,h:ob.y1-ob.y0}:bbox(shapePoly(it.shape));
-  const pad=18, s=Math.min((W-pad*2)/Math.max(b.w,1),(H-pad*2)/Math.max(b.h,1));
-  const cx=W/2-((b.x0+b.x1)/2)*s, cy=H/2-((b.y0+b.y1)/2)*s;
-  const toPx=([x,y])=>[cx+x*s, cy+y*s];
-  if(ob){
-    ctx.beginPath();
-    [[ob.x0,ob.y0],[ob.x1,ob.y0],[ob.x1,ob.y1],[ob.x0,ob.y1]].forEach((p,i)=>{const [x,y]=toPx(p); i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
-    ctx.closePath();
-    ctx.setLineDash([4,3]); ctx.strokeStyle=it.color; ctx.lineWidth=1.3; ctx.stroke(); ctx.setLineDash([]);
-  }
-  const poly=shapePoly(it.shape);
-  ctx.beginPath();
-  poly.forEach((p,i)=>{const [x,y]=toPx(p); i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
-  ctx.closePath();
-  ctx.fillStyle=hexA(it.color,.85); ctx.fill();
-  ctx.strokeStyle=it.color; ctx.lineWidth=1.5; ctx.stroke();
-}
 
 /* ---- ad hoc listings: upload a file, paste JSON, or fetch a plain {inventory:[...]} link ---- */
-function listingTile(l){
-  const sub = l.kind==='link' ? 'Link' : (l.content&&Array.isArray(l.content.inventory) ? plural(l.content.inventory.length,'item') : 'File');
-  return `<button type="button" class="tile" data-listing="${l.id}">
-    <span class="more" data-act="more" title="More actions" aria-label="More actions">${svgI('more')}</span>
-    <div class="thumb">${svgI(l.kind==='link'?'link':'box')}</div>
-    <div class="body"><div class="nm" title="${esc(l.name)}">${esc(l.name)}</div><div class="dim">${esc(sub)}</div></div>
-  </button>`;
-}
-function adhocFolderTile(f){
-  const n=childMarketFolders(f.id).length, m=listingsInFolder(f.id).length;
-  const bits=[]; if(n) bits.push(n+' folder'+(n>1?'s':'')); if(m) bits.push(m+' listing'+(m>1?'s':''));
-  return `<button type="button" class="tile folder" data-openfolder="${f.id}">
-    <div class="thumb">${svgI('folder')}</div>
-    <div class="body"><div class="nm">${esc(f.name)}</div><div class="dim">${bits.length?esc(bits.join(', ')):'Empty'}</div></div>
-  </button>`;
-}
+import {listingTile, adhocFolderTile} from './src/library/adhoc-listings.js';
 function renderAdhocFolder(box, folderId, standalone){
   const subs=childMarketFolders(folderId), listings=listingsInFolder(folderId);
   let html=standalone ? crumbsHTML('market', folderId) : `<div class="lib-section">Listings — one-off bundles from a file, link or pasted JSON</div>`;
