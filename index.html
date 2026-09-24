@@ -1500,10 +1500,16 @@ import {tagFieldHTML, mountTagField, tagFieldValue} from './src/ui/tag-input.js'
 import {cv, ctx} from './src/canvas/view.js';
 import {view} from './src/canvas/view.js';
 let W=0, H=0;
+/* W/H are the canvas's CSS-pixel size, and resize() is the only thing that
+   writes them. It stays in index.html (it calls scheduleDraw), so the write has
+   to go through a function once W and H live in canvas/view.js -- the same
+   pattern setS uses in core/state.js. Each setter is a bare assignment. */
+function setW(v){ W = v; }
+function setH(v){ H = v; }
 function resize(){
   const r=cv.parentElement.getBoundingClientRect();
   const dpr=Math.min(window.devicePixelRatio||1,2.5);
-  W=Math.max(1,Math.floor(r.width)); H=Math.max(1,Math.floor(r.height));
+  setW(Math.max(1,Math.floor(r.width))); setH(Math.max(1,Math.floor(r.height)));
   cv.width=W*dpr; cv.height=H*dpr;
   ctx.setTransform(dpr,0,0,dpr,0,0);
   scheduleDraw();
