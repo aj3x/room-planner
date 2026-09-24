@@ -138,6 +138,41 @@ Target the behaviour the move could break, not line coverage:
 These are characterization tests like the rest: capture what the app **does today**, before
 the move, defects included. A test that pins current behaviour is the point.
 
+### Phase 3.6 — Characterize the side panels before the SCC move (blocking)
+The `plan/` round established that the Plan side panels and the Library UI are **one
+strongly-connected component of 48 names / 1,224 lines**, bound by six function-call edges.
+It cannot be split, no setter breaks it (the edges are calls, not shared state), and it must
+land in one commit — with most of `library/` + `io/` landing first.
+
+That commit sits on **the least-covered code in the repo**: the suite screenshots only `#cv`,
+so every `render*()` function that writes `innerHTML` into a side panel is unverified. A
+break that does not throw turns nothing red.
+
+This is the same situation as the `draw()` keystone, and it gets the same answer that worked
+there: **characterize first, then move.** Phase 3.5's pointer tests are why the keystone was
+safe; these are the equivalent for the panels.
+
+What to cover — the `plan/` round's own unverified list:
+
+| panel | what a silent break looks like |
+|---|---|
+| left pane layout tree | folders/floors/rooms missing, wrong indent, caret not expanding, "more" menu absent |
+| Room pane › Walls | wall rows missing, wrong length/angle, "Open" not shown for a wall that is off |
+| Room pane › Structures | pillars/interior walls missing, wrong dimension, "None yet" when there are some |
+| Room pane › snap picker | wrong option list for the unit, or current snap silently reset |
+| Room pane › Openings | openings missing, wrong kind label, wrong wall number |
+| Furniture pane › Inventory | items missing, wrong counts, Place button wrongly enabled/disabled |
+| Furniture pane › tag chips | chips missing, Untagged/Clear wrongly shown, wrong pressed state |
+| Measure readout bar | `renderMeasureBar` writes a bar nothing reads |
+| undo/redo button state | `updateHistButtons` enable/disable is unasserted |
+
+Plus inline rename on a tree row (`renameFolder`/`renameLayout`/`renameFloor`) and tree
+drag-drop.
+
+Assert **text and state**, not screenshots: row counts, labels, `disabled`/`aria-pressed`,
+the order of entries. A DOM-text assertion says what broke; a panel screenshot only says
+something did, and is far more brittle to legitimate change.
+
 ### Phase 3 — Extraction (serial)
 JS, then SCSS, then HTML partials. One agent at a time. Details in §4.
 
