@@ -1,0 +1,8 @@
+/* ---------------- touch ---------------- */
+@media (pointer:coarse){
+  :root{--h-ctl:40px;--h-sm:36px;--h-row:32px}
+  .kbd{display:none}
+  .island .btn.quiet{height:36px;min-width:36px}
+  .island .btn.quiet.icon{width:36px}
+}
+

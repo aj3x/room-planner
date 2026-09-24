@@ -1,0 +1,45 @@
+/* ---------------- blueprint import ---------------- */
+.bp-stage{position:relative;background:var(--surface-3);border-radius:var(--r-md);overflow:hidden;touch-action:none;margin:8px 0;display:grid;place-items:center}
+/* the photo is portrait as often as not, so bound it by height too and let the
+   aspect ratio pick the width — otherwise a tall plan pushes the buttons off-screen.
+   The cap is in px as well as vh because the modal card is itself capped at 760px. */
+.bp-stage canvas{display:block;max-width:100%;max-height:min(52vh,470px);width:auto;height:auto;cursor:crosshair}
+.bp-review{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+.bp-review > .bp-stage{position:sticky;top:0;align-self:start;margin:0}
+@media (max-width:820px){ .bp-review{grid-template-columns:1fr} .bp-review > .bp-stage{position:static} }
+.bp-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bp-row.mt{margin-top:12px}
+.bp-row .len{width:96px}
+.bp-status{font-size:var(--fs-sm);color:var(--ink-3);min-height:16px;padding:4px 0}
+/* click-to-measure is a temporary mode, not a permanent part of the form, so it
+   gets its own well rather than floating loose among the other fields */
+.bp-measure{margin-top:8px;padding:10px 12px;border-radius:var(--r-md);background:var(--surface-2)}
+.bp-measure .hint{margin:0 0 8px}
+.bp-measure .bp-row{flex-wrap:nowrap}
+.mt{margin-top:12px}
+/* a name that's editable on every row shouldn't look boxed at rest — the border only
+   shows up once it's actually being interacted with */
+input.nm.ghost{border-color:transparent;background:transparent}
+input.nm.ghost:hover{border-color:var(--ink-3)}
+input.nm.ghost:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-soft)}
+.bp-steps{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.bp-steps li{display:flex;align-items:center;gap:8px;min-height:20px;font-size:var(--fs-md);color:var(--ink-3)}
+.bp-steps li .i{color:var(--ink-3);opacity:0}
+.bp-steps li[data-done="1"]{color:var(--ink)}
+.bp-steps li[data-done="1"] .i{opacity:1}
+.bp-steps li[data-now="1"]{color:var(--ink-2)}
+.bp-review li.bad .nm,.bp-review li.bad .meta{color:var(--danger)}
+.bp-review .lact{display:flex;align-items:center;gap:4px}
+/* the side column is 320px and these rows carry a length, a kind and a delete, which will
+   not sit beside a label — so let them stack rather than clip */
+#bpOpens li{flex-wrap:wrap}
+#bpOpens .lmain{flex:1 1 100%;min-width:0}
+#bpOpens .lact{flex:1 1 100%;justify-content:flex-start;margin-top:4px}
+#bpOpens .len{width:88px}
+#bpOpens select{flex:1;min-width:0}
+#bpRooms li{flex-wrap:wrap}
+#bpRooms .lmain{flex:1 1 100%;min-width:0}
+#bpRooms .lmain .nm{width:100%}
+#bpRooms .lact{flex:1 1 100%;margin-top:4px}
+#bpRooms select{width:100%}
+

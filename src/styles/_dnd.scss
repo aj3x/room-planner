@@ -1,0 +1,9 @@
+/* ---------------- drag to move / reorder ---------------- */
+.tree-row[draggable=true],ul.list li[draggable=true]{cursor:grab}
+.tree-row.dragging,ul.list li.dragging,.tile.dragging{opacity:.4}
+.tree-row.drop-into{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.tree-row.drop-before,ul.list li.drop-before{box-shadow:inset 0 2px 0 var(--accent)}
+.tree-row.drop-after,ul.list li.drop-after{box-shadow:inset 0 -2px 0 var(--accent)}
+#layoutTree.drop-root,#tree.drop-root{background:var(--accent-soft);border-radius:var(--r-md)}
+.inline-edit{flex:1;min-width:0;width:100%;height:24px!important;padding:0 6px!important;border-color:var(--accent)!important}
+

@@ -1,0 +1,32 @@
+// ======================================================================
+// The cascade, stated once.
+//
+// This file is the only place the order of the stylesheet is declared, and
+// the order matters: these partials are plain CSS, so later rules win ties
+// with earlier ones on equal specificity. The sequence below is exactly the
+// order the rules sat in inside index.html's <style> block, and changing it
+// changes the page. Add a partial where its rules belong, not at the end.
+//
+// Design tokens stay CSS custom properties (_tokens.scss). They are never
+// Sass variables: dark mode works by re-declaring them under
+// @media (prefers-color-scheme:dark), and a compile-time variable cannot
+// cascade -- see DESIGN.md §3.
+//
+// `//` comments are silent: Sass strips them, so this header never reaches
+// the compiled CSS and the split stays byte-identical to the old <style>.
+// ======================================================================
+
+@use 'tokens';
+@use 'base';
+@use 'header';
+@use 'buttons';
+@use 'inputs';
+@use 'plan';
+@use 'canvas';
+@use 'modal';
+@use 'blueprint';
+@use 'menus';
+@use 'dnd';
+@use 'library';
+@use 'touch';
+@use 'narrow';

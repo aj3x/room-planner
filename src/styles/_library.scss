@@ -1,0 +1,68 @@
+/* ---------------- library + marketplace ---------------- */
+main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
+#paneLibrary{display:none;grid-template-columns:280px minmax(0,1fr);min-width:0;overflow:hidden}
+#paneLibrary.on{display:grid}
+#paneLibrary .lib-left{background:var(--surface);border-right:1px solid var(--line);overflow-y:auto;min-width:0;display:flex;flex-direction:column}
+#libContent{overflow-y:auto;min-width:0;background:var(--surface-2)}
+.lib-title{margin:0;padding:16px 16px 8px;font-size:var(--fs-lg);font-weight:600}
+.expl-top{padding:0 16px;flex:none}
+.expl-tools{display:flex;gap:8px;padding:0 16px 12px;flex-wrap:wrap}
+#tree{padding:8px 8px 24px;border-top:1px solid var(--line);flex:1}
+#tree .tree-row{cursor:grab}
+#tree .tree-row.root-row{cursor:pointer}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:16px 24px 0}
+.crumbs button{height:var(--h-sm);background:none;border:0;padding:0 6px;color:var(--ink-2);border-radius:var(--r-sm)}
+.crumbs button:hover{background:var(--surface-3);color:var(--ink)}
+.crumbs button:last-child{color:var(--ink);font-weight:600;font-size:var(--fs-lg)}
+.crumbs .sep{color:var(--ink-3)}
+.viewhead{display:flex;align-items:center;gap:8px;padding:8px 24px 0;flex-wrap:wrap;min-height:40px}
+.viewhead .grow{flex:1}
+.viewhead .hint,.viewhead .check{margin:0}
+.foldertagbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 24px 0}
+.foldertagbar .lbl{font-size:var(--fs-sm);color:var(--ink-3)}
+.lib-section{margin:24px 24px 0;font-size:var(--fs-sm);font-weight:600;color:var(--ink-2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px;padding:12px 24px 48px}
+.grid > .empty{grid-column:1/-1;padding:32px 16px}
+.tile{position:relative;display:flex;flex-direction:column;min-width:0;padding:0;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);text-align:left;overflow:hidden;cursor:pointer;transition:border-color var(--dur-fast) var(--ease)}
+.tile:hover{border-color:var(--line-strong)}
+.tile.dragover{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
+.tile[draggable=true]{cursor:grab}
+.tile.static{cursor:default}
+.tile .thumb{position:relative;height:88px;display:grid;place-items:center;background:var(--surface-2);border-bottom:1px solid var(--line);color:var(--ink-3)}
+.tile .thumb canvas,.preview canvas{position:absolute;inset:0;width:100%;height:100%}
+.tile .thumb svg.i{width:28px;height:28px;stroke-width:1.25}
+.tile .body{padding:8px 10px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile .nm{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .dim{overflow:hidden;text-overflow:ellipsis}
+.tile .chips{margin-top:4px}
+.tile .more{position:absolute;top:4px;right:4px;z-index:1;display:grid;place-items:center;width:24px;height:24px;border-radius:var(--r-sm);color:var(--ink-3);background:transparent;cursor:pointer;transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.tile .more:hover,.tile .more:focus-visible{color:var(--ink);background:var(--surface-3)}
+.tile .tile-foot{display:flex;align-items:center;gap:8px;margin-top:6px}
+.tile .tile-foot .dim{flex:1;min-width:0}
+/* text tiles: marketplace entries have no picture, so the name is the content —
+   give it line length (wider columns) and room to wrap instead of truncating. At 264px nearly
+   every name fits in two lines; the 3-line clamp is a safety net, and rows only grow when needed */
+.grid.text{grid-template-columns:repeat(auto-fill,minmax(264px,1fr));gap:8px}
+.ttile{display:flex;align-items:center;gap:12px;min-width:0;padding:10px 10px 10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);text-align:left;cursor:pointer;transition:border-color var(--dur-fast) var(--ease)}
+.ttile:hover{border-color:var(--line-strong)}
+.ttile .ico{flex:none;color:var(--ink-3)}
+.ttile .tmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.ttile .tname{font-weight:500;line-height:20px;overflow-wrap:break-word;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
+.ttile .dim{line-height:16px}
+.ttile .btn{flex:none}
+.detail{padding:16px 24px 48px;max-width:720px}
+.detail.wide{max-width:none}
+.grid.flush{padding:0}
+.dhead{display:flex;align-items:flex-start;gap:16px;margin-bottom:16px}
+.dhead .grow{flex:1;min-width:0}
+.dhead h1{margin:0 0 4px;font-size:var(--fs-xl);line-height:28px;font-weight:600}
+.dhead .title{font-size:var(--fs-lg);font-weight:600;margin-bottom:2px}
+.preview{position:relative;width:100%;height:180px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);display:grid;place-items:center;margin-bottom:16px}
+.addmode-tabs{margin:4px 0 12px}
+.dropzone{border:1.5px dashed var(--line-strong);border-radius:var(--r-md);padding:24px 16px;text-align:center;color:var(--ink-3);transition:border-color var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.dropzone .btn{margin-top:8px}
+.dropzone.over{border-color:var(--accent);color:var(--ink);background:var(--accent-soft)}
+.listing-status{font-size:var(--fs-sm);color:var(--ink-3);padding:4px 0}
+.registry{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+#libFlash{position:fixed;top:60px}
+

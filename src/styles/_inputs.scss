@@ -1,0 +1,46 @@
+/* ---------------- inputs ---------------- */
+input[type=text],input[type=number],input[type=url],select,textarea{
+  width:100%;min-width:0;height:var(--h-ctl);padding:0 8px;background:var(--surface);
+  border:1px solid var(--line-strong);border-radius:var(--r-md);
+  transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+input[type=text]:hover,input[type=number]:hover,input[type=url]:hover,select:hover,textarea:hover{border-color:var(--ink-3)}
+input[type=text]:focus,input[type=number]:focus,input[type=url]:focus,select:focus,textarea:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+input:disabled,select:disabled{opacity:.5;cursor:default}
+input::placeholder,textarea::placeholder{color:var(--ink-3);opacity:1}
+input.bad,input.bad:focus{border-color:var(--danger);box-shadow:0 0 0 3px var(--danger-soft)}
+textarea{height:auto;min-height:88px;padding:8px;resize:vertical;font-family:var(--mono);font-size:var(--fs-sm);line-height:16px}
+select{appearance:none;padding-right:28px;background-repeat:no-repeat;background-position:right 8px center;background-size:12px 12px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238f8f89' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:16px;height:16px;margin:0;flex:none}
+input[type=color]{width:32px;height:var(--h-ctl);flex:none;padding:3px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);cursor:pointer}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+input[type=color]::-webkit-color-swatch{border:0;border-radius:3px}
+input[type=text].hex,input[type=text].id{font-family:var(--mono);font-size:var(--fs-sm)}
+input[type=text].hex{flex:1;min-width:64px;text-transform:lowercase}
+
+.field{display:flex;align-items:center;gap:8px;margin-bottom:8px;min-width:0}
+.field:last-child{margin-bottom:0}
+.field > label:first-child{width:96px;flex:none;color:var(--ink-2)}
+.field .unit{color:var(--ink-3);flex:none}
+.field.top{align-items:flex-start}
+.field.top > label:first-child{padding-top:6px}
+.check{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;color:var(--ink)}
+.check:last-child{margin-bottom:0}
+.check input{cursor:pointer}
+.stack-label{display:block;color:var(--ink-2);margin:0 0 4px}
+.stack-label.mt{margin-top:12px}
+.hint{font-size:var(--fs-sm);line-height:16px;color:var(--ink-3);margin:8px 0 0}
+.hint:first-child{margin-top:0}
+.hint.warn{color:var(--danger)}
+.dim{font-size:var(--fs-sm);color:var(--ink-3);white-space:nowrap}
+.nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw{width:14px;height:14px;flex:none;border-radius:var(--r-sm);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+
+/* segmented control — position, not colour, shows which is on */
+.seg{display:inline-flex;gap:2px;padding:2px;background:var(--surface-3);border-radius:var(--r-md);flex:none}
+.seg button{height:var(--h-sm);padding:0 12px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink-2);font-weight:500;white-space:nowrap;transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:var(--shadow-1)}
+.seg.full{display:flex}
+.seg.full button{flex:1}
+
