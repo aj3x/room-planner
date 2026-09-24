@@ -1649,67 +1649,9 @@ $('btnAddItem2').addEventListener('click',()=>itemDialog(null));
 
 import {openingDialog} from './src/plan/opening-dialog.js';
 
-/* ------------------------- blueprint import -------------------------
-   Trace a photo of a floor plan into rooms on a floor.
+import {bpState, bpRunSeq, bpPasteFn, setBpState, setBpRunSeq, setBpPasteFn, bpClamp, bpUnbindPaste, bpDispose} from './src/blueprint/state.js';
 
-   Four stages in one modal — choose a photo, crop it, find the rooms, review —
-   chained by the fact that an onOk returning false leaves the modal open, so each
-   stage just replaces the body. Detection is a PROPOSAL, never a result: everything
-   it decides is shown, editable and deletable before a single room is created.
-
-   The photo is deliberately not part of S. save() serialises the whole of S into
-   localStorage, so a few megabytes of base64 there would break saving permanently
-   and silently. It lives in bpState until commit, then it is dropped. */
-
-/* ---- blueprint: state ---- */
-let bpState=null;
-/* every async continuation carries the run it belongs to, so a cancelled detection's
-   late results land on the floor instead of on a dialog that has moved on */
-let bpRunSeq=0, bpPasteFn=null;
-/* these three are written by the wizard's step dialogs, which become their own
-   modules — and you cannot assign to an imported binding */
-function setBpState(v){ bpState=v; }
-function setBpRunSeq(v){ bpRunSeq=v; return v; }
-function setBpPasteFn(v){ bpPasteFn=v; }
-const bpClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function bpUnbindPaste(){ if(bpPasteFn){ document.removeEventListener('paste', bpPasteFn); bpPasteFn=null; } }
-function bpDispose(){
-  bpRunSeq++;
-  bpUnbindPaste();
-  if(bpState){
-    if(bpState.url) URL.revokeObjectURL(bpState.url);
-    if(bpState.worker){ try{ bpState.worker.terminate(); }catch(e){} }
-  }
-  bpState=null;
-}
-
-/* ---- blueprint: image ---- */
-function bpLoadImage(file){
-  return new Promise((res,rej)=>{
-    if(!file || !/^image\//.test(file.type||'')) return rej(new Error('type'));
-    const url=URL.createObjectURL(file), img=new Image();
-    img.onload=()=>res({img,url,file});
-    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('decode')); };
-    img.src=url;
-  });
-}
-/* never upscale for tracing — it invents nothing and costs everything */
-function bpFitCanvas(img,max){
-  const s=Math.min(1, max/Math.max(img.naturalWidth,img.naturalHeight));
-  const c=document.createElement('canvas');
-  c.width=Math.max(1,Math.round(img.naturalWidth*s));
-  c.height=Math.max(1,Math.round(img.naturalHeight*s));
-  const x=c.getContext('2d');
-  x.imageSmoothingEnabled=true; x.imageSmoothingQuality='high';
-  x.drawImage(img,0,0,c.width,c.height);
-  return c;
-}
-function bpCropCanvas(src,r){
-  const c=document.createElement('canvas');
-  c.width=Math.max(1,Math.round(r.w)); c.height=Math.max(1,Math.round(r.h));
-  c.getContext('2d').drawImage(src, Math.round(r.x), Math.round(r.y), c.width, c.height, 0, 0, c.width, c.height);
-  return c;
-}
+import {bpLoadImage, bpFitCanvas, bpCropCanvas} from './src/blueprint/image.js';
 
 /* ---- blueprint: polygon clean-up ----
    Order matters and it is the order below. polySimple rejects any edge under 50mm,
