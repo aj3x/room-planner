@@ -809,6 +809,11 @@ function setFloorSnapNote(v){ floorSnapNote = v; }
 function setAlignGuides(v){ alignGuides = v; }
 function setAlignNote(v){ alignNote = v; }
 function setDrag(v){ drag = v; }
+function setDrawState(v){ drawState = v; }
+function setDrawCursor(v){ drawCursor = v; }
+function setWallDrawState(v){ wallDrawState = v; }
+function setWallDrawShift(v){ wallDrawShift = v; }
+function setSplitDrawState(v){ splitDrawState = v; }
 
 function selectOnly(id){ setSelSet(new Set(id?[id]:[])); setSel(id||null); }
 function selectAdd(id){ selSet.add(id); setSel(id); }
@@ -1563,20 +1568,20 @@ function startCustomDraw(){
   if(splitDrawState) cancelSplitDraw();
   if(measureOn) setMeasure(false);
   if(!roomMode()) setMode('room');
-  drawState={pts:[]}; drawCursor=null;
+  setDrawState({pts:[]}); setDrawCursor(null);
   setRoomSel(null); renderRoomSel();
   $('drawHint').hidden=false;
   draw();
 }
 function cancelCustomDraw(){
-  drawState=null; setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true; draw();
+  setDrawState(null); setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true; draw();
 }
 function finishCustomDraw(){
   if(!drawState||drawState.pts.length<3){ flash('Add at least 3 corners first'); return; }
   L().room.points=drawState.pts.map(p=>p.slice());
   L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
   clampOpenings(); setRoomSel(null);
-  drawState=null; setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true;
+  setDrawState(null); setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true;
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
 }
 /* Where the next corner would land, and why — the same magnet the corner drag uses, so
@@ -1605,8 +1610,8 @@ function drawSnapPoint(raw,shift){
 }
 function applyDrawCursorAt(px,py,shift){
   const raw=[wx(px),wy(py)];
-  drawCursor = drawState ? drawSnapPoint(raw, shift) : raw;
-  wallDrawShift=shift;
+  setDrawCursor(drawState ? drawSnapPoint(raw, shift) : raw);
+  setWallDrawShift(shift);
   scheduleDraw();
 }
 cv.addEventListener('mousemove', e=>{
@@ -1622,16 +1627,16 @@ function startWallDraw(){
   if(splitDrawState) cancelSplitDraw();
   if(measureOn) setMeasure(false);
   if(!roomMode()) setMode('room');
-  wallDrawState={a:null}; drawCursor=null;
+  setWallDrawState({a:null}); setDrawCursor(null);
   setRoomSel(null); renderRoomSel();
   flash('Click the wall’s start, then its end. Esc cancels.');
   draw();
 }
-function cancelWallDraw(){ wallDrawState=null; draw(); }
+function cancelWallDraw(){ setWallDrawState(null); draw(); }
 function finishWallDraw(a,b){
   const w={id:uid(), a, b, t:L().room.wall};
   L().room.iwalls.push(w);
-  wallDrawState=null;
+  setWallDrawState(null);
   setRoomSel({kind:'iwall', id:w.id});
   renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
 }
@@ -1652,13 +1657,13 @@ function startSplitRoom(id){
   if(measureOn) setMeasure(false);
   if(S.active!==id) activateLayout(id);
   setMode('room');
-  splitDrawState={pts:[]}; drawCursor=null;
+  setSplitDrawState({pts:[]}); setDrawCursor(null);
   setRoomSel(null); renderRoomSel();
   renderAll(); fit();
   flash("Click a point on the room's wall to start the divider. Click inside the room to bend it, or click another wall to finish. Esc cancels.");
   draw();
 }
-function cancelSplitDraw(){ splitDrawState=null; setAlignGuides([]); setAlignNote(''); draw(); }
+function cancelSplitDraw(){ setSplitDrawState(null); setAlignGuides([]); setAlignNote(''); draw(); }
 /* Every existing room corner, and every split point already placed, that the
    NEXT split point can align to — the same {p, bias, edge} shape snapCorner
    builds for dragging a room corner, so it reuses alignPoint/isSquare as-is.
