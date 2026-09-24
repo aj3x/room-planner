@@ -1067,7 +1067,7 @@ cv.addEventListener('pointermove', e=>{
   setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
   applyDragAt(lastPX,lastPY,lastMods);
 });
-(function edgePanTick(){
+function edgePanTick(){
   const dragging = drag && drag.mode!=='pan';
   const drawing = !!(drawState || wallDrawState || splitDrawState);
   if((dragging||drawing) && lastPX!=null){
@@ -1080,7 +1080,8 @@ cv.addEventListener('pointermove', e=>{
     }
   }
   requestAnimationFrame(edgePanTick);
-})();
+}
+edgePanTick();
 cv.addEventListener('pointerup',endDrag);
 cv.addEventListener('pointercancel',endDrag);
 /* in Room mode, double-clicking a wall types its length in rather than dragging for it */
@@ -1814,7 +1815,7 @@ import {listingMenu} from './src/library/adhoc-listings.js';
 import {renderLibContent} from './src/library/router.js';
 
 window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
-(async function boot(){
+async function boot(){
   try{
     const raw=await Store.get(KEY);
     if(raw){
@@ -1835,7 +1836,8 @@ window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
   if(isCanvasMode(S.mode)){ resize(); fit(); } else { setPendingFit(true); }
   if(!isCanvasMode(S.mode)) renderLibAll();
   ensureDefaultMarket().then(()=>{ if(!isCanvasMode(S.mode)) renderLibAll(); });
-})();
+}
+boot();
 </script>
 </body>
 </html>
