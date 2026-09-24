@@ -1233,11 +1233,7 @@ import {rotate, removeSel, renderSel} from './src/plan/selection-panel.js';
 /* ------------------------- panels ------------------------- */
 import {esc} from './src/ui/panels.js';
 import {renderAll} from './src/plan/mode.js';
-/* the mode also lives in ?mode=, so a refresh (or a shared link) lands back in the same mode */
-function paramMode(){
-  const m=new URLSearchParams(location.search).get('mode');
-  return ['room','furniture','floor','inventory','marketplace'].includes(m) ? m : null;
-}
+import {paramMode} from './src/plan/mode.js';
 import {setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode} from './src/plan/mode.js';
 import {isCanvasMode} from './src/core/state.js';
 $('modeSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setMode(b.dataset.mode); });
@@ -1417,18 +1413,8 @@ treeBox.addEventListener('drop', e=>{
   renderTree(); renderInv(); save();
 });
 
-import {newFloor, floorRoomsDialog, deleteFloor, putOnFloor, openFloorMergeMenu} from './src/plan/floors.js';
-function floorMenu(id, anchor){
-  const fl=floorOf(id); if(!fl) return;
-  openMenu(anchor, [
-    {label:'Rename', fn:()=>renameFloor(id)},
-    {label:'Rooms on this floor…', fn:()=>floorRoomsDialog(id)},
-    {label:'Import a blueprint onto this floor…', fn:()=>bpUploadDialog(false, id)},
-    ...(bpLastImport && bpLastImport.floorId===id ? [{label:'Undo the blueprint import…', fn:bpUndoImport}] : []),
-    {sep:true},
-    {label:'Delete floor…', danger:true, fn:()=>deleteFloor(id)},
-  ], fl.name);
-}
+import {newFloor, putOnFloor, openFloorMergeMenu} from './src/plan/floors.js';
+import {floorMenu} from './src/plan/floors.js';
 import {renderFloorSel, turnFloorRoom} from './src/plan/floors.js';
 $('btnRoomsMore').addEventListener('click', e=>{
   openMenu(e.currentTarget, [
@@ -1668,7 +1654,6 @@ import {bpUploadDialog} from './src/blueprint/step1-upload.js';
 
 
 
-import {bpLastImport, bpUndoImport} from './src/blueprint/commit.js';
 
 /* ------------------------- samples / io ------------------------- */
 $('btnSamples').addEventListener('click', ()=>{

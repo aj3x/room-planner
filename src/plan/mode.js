@@ -95,4 +95,10 @@ function togglePane(side){
   if(side==='left') S.leftOpen=!S.leftOpen; else S.rightOpen=!S.rightOpen;
   closeMenu(); applyPanes(); save(); resize();
 }
-export {setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode, renderAll, togglePane};
+/* the mode also lives in ?mode=, so a refresh (or a shared link) lands back in the same mode */
+function paramMode(){
+  const m=new URLSearchParams(location.search).get('mode');
+  return ['room','furniture','floor','inventory','marketplace'].includes(m) ? m : null;
+}
+
+export {setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode, renderAll, togglePane, paramMode};

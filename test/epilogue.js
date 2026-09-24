@@ -115,6 +115,9 @@ export const EPILOGUE = `
 ;import {bpRebuild} from './src/blueprint/draft.js';
 ;import {fmtArea} from './src/core/units.js';
 ;import {PAL} from './src/canvas/draw.js';
+/* And bpLastImport when floorMenu -- index.html's last reader of it -- moved
+   into plan/floors.js. __rp, so this one fails loudly at boot. */
+;import {bpLastImport} from './src/blueprint/commit.js';
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },

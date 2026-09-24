@@ -33,6 +33,10 @@ import {uid} from '../core/state.js';
 import {folderLine, pickValues, pickerHTML} from '../io/pickers.js';
 import {menuAtPoint} from '../ui/menu.js';
 import {askText, openModal} from '../ui/modal.js';
+import {bpLastImport, bpUndoImport} from '../blueprint/commit.js';
+import {bpUploadDialog} from '../blueprint/step1-upload.js';
+import {openMenu} from '../ui/menu.js';
+import {renameFloor} from './layout-tree.js';
 /* one slot, not a stack \u2014 mirrors bpLastImport's own "undo the last thing" precedent */
 let lastMerge=null;
 function setLastMerge(v){ lastMerge = v; }
@@ -276,4 +280,16 @@ function openFloorMergeMenu(ids, clientX, clientY){
     {label:'Delete both rooms\u2026', danger:true, fn:()=>deleteBothDialog(aId,bId)},
   ], a.name+' + '+b.name);
 }
-export {lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, renderFloorProps, turnFloorRoom, newFloor, floorRoomsDialog, deleteFloor, putOnFloor, newFloorWith, putOnFloorDialog, mergeUndo, openFloorMergeMenu};
+function floorMenu(id, anchor){
+  const fl=floorOf(id); if(!fl) return;
+  openMenu(anchor, [
+    {label:'Rename', fn:()=>renameFloor(id)},
+    {label:'Rooms on this floor…', fn:()=>floorRoomsDialog(id)},
+    {label:'Import a blueprint onto this floor…', fn:()=>bpUploadDialog(false, id)},
+    ...(bpLastImport && bpLastImport.floorId===id ? [{label:'Undo the blueprint import…', fn:bpUndoImport}] : []),
+    {sep:true},
+    {label:'Delete floor…', danger:true, fn:()=>deleteFloor(id)},
+  ], fl.name);
+}
+
+export {lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, renderFloorProps, turnFloorRoom, newFloor, floorRoomsDialog, deleteFloor, putOnFloor, newFloorWith, putOnFloorDialog, mergeUndo, openFloorMergeMenu, floorMenu};
