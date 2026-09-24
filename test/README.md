@@ -32,16 +32,16 @@ snapshot.
 npm install                 # once; Vite, Sass, Vitest, jsdom, Playwright, ESLint
 npx playwright install chromium
 
-npm test                    # everything (~25s)
+npm test                    # everything (~35s)
 npm run test:unit           # Suite A + the build-pipeline tests — Vitest (~3s)
-npm run test:e2e            # Suite B — builds, then Playwright + Chromium (~20s)
+npm run test:e2e            # Suite B — builds, then Playwright + Chromium (~32s)
 ```
 
 Since Phase 2 there is a build, and `npm run test:e2e` runs it first (`npm run
 build && npm run build:test`) because both of its targets are build outputs. See
 **Two targets** below.
 
-Between extraction commits, run **`npm test`**. The whole suite is ~25 seconds,
+Between extraction commits, run **`npm test`**. The whole suite is ~35 seconds,
 which is well inside the budget for running it after every single move, and that
 is how it is meant to be used — a regression that bisects to one commit is worth
 far more than the seconds saved. If you ever do need a subset, `npm run
@@ -324,20 +324,19 @@ Stated plainly, because this is the part worth knowing:
   is covered only indirectly (a throw would surface as a page error). A module
   boundary that breaks a panel's *appearance* without throwing would not be
   caught.
-- **Pointer interaction is barely covered.** The snapping/alignment magnet
-  (`canvas/snap.js`, ~730 lines), drag handling and the corner editor are driven
-  through state, not through synthetic pointer events. This is the largest
-  untested surface in the app.
+- ~~**Pointer interaction is barely covered.**~~ **Largely closed by Phase
+  3.5**, which added five `pointer-*.spec.js` files driving `mouse.down` /
+  `mouse.move` / `mouse.up` on `#cv`. See **Pointer coverage** below for what
+  they reach and — more usefully — what they still do not.
 
-  **It is also still in `index.html`.** The `canvas/` round moved nothing out of
-  the alignment magnet or the interaction region except `flash()` and the
-  `flashT` half of `let drag=null, flashT=null;`, both from the interaction
-  region's head, precisely because a green suite is weak evidence here. Three
-  dependency-free helpers inside the magnet (`lineProject`, `lineCross`,
-  `isSquare`) were verified movable and deliberately left, since moving them
-  would have fragmented the region for no unblocking. Whoever does move this
-  code should assume the suite will not catch a mistake in it and review by
-  hand.
+  The code is all still in `index.html`. The `canvas/` round moved nothing out
+  of the alignment magnet or the interaction region except `flash()` and the
+  `flashT` half of `let drag=null, flashT=null;`, precisely because a green
+  suite was weak evidence here. Three dependency-free helpers inside the magnet
+  (`lineProject`, `lineCross`, `isSquare`) were verified movable and
+  deliberately left. Phase 3.5 exists so that the `draw()` move — one
+  unbisectable ~1,500-line commit — is made against real evidence rather than
+  hope.
 - ~~**`smoke › an edit survives a reload through localStorage` is flaky.**~~
   **Fixed.** It failed three times across Phase 2.5 and the `core/`+`model/`
   extraction, always passing on re-run — the test, not the code. Cause:
@@ -364,3 +363,88 @@ Stated plainly, because this is the part worth knowing:
   the declaration. The binding is still live and `reconcileTags()` still reads
   the new object on the same tick; `setS` does exactly what the assignment did.
   The epilogue's `set S(v)` goes through it too.
+
+## Pointer coverage (Phase 3.5)
+
+Added before the `draw()` move, because that move is one connected component of
+about 1,500 lines that cannot be cut into green intermediate commits, and it
+contains the least-tested code in the app. Everything here is a
+**characterization** test in the sense above: it records what the app does
+today, defects included.
+
+Five files, 42 tests, all against real browser pointer input:
+
+| file | what it drives |
+|---|---|
+| `pointer-corner.spec.js` | dragging a room corner: the deadzone, the magnet, Alt, Shift |
+| `pointer-item.spec.js` | dragging a placed item: grid, walls, other items, Alt-duplicate, marquee |
+| `pointer-draw.spec.js` | drawing an outline, a freestanding wall, and a room split |
+| `pointer-measure.spec.js` | the Measure tool: toggling it, picking two anchors, what it blocks |
+| `pointer-floor.spec.js` | arranging rooms on a floor: `floorGuides` / `floorSnapNote` |
+
+The helpers live in `e2e/app-fixture.js` alongside the rest:
+`camera`/`project` (world mm to viewport px, re-read per gesture because the
+camera moves), `pointerDownAt`/`pointerStepTo`/`pointerUp`/`dragWorld`,
+`liveDrag` (one read of everything in flight), `clickWorld`, `frameBox` and
+`useCoarseSnap`.
+
+Four things about them are load-bearing:
+
+1. **Drags are stepped.** `DEADZONE_PX` is 4 canvas px and a drag arms only on a
+   `pointermove` further than that from the press. One jump arms it *and*
+   applies the whole travel in a single step, which is not the path a real drag
+   takes.
+2. **Guides can only be read mid-drag.** `endDrag()` clears `alignGuides`,
+   `alignNote`, `floorGuides` and `floorSnapNote`, so every assertion on them
+   goes through `dragWorld`'s `whileDown` hook or an explicit
+   down / step / read / up sequence. The same is true of `#readout`'s
+   `.snap` span.
+3. **Geometry, not pixels.** Landings are asserted in millimetres —
+   `[5000, 0]` exactly for a corner on `lineCross`, `4100` exactly for a floor
+   placement sharing a wall, guide endpoints against `guideSeg`'s 10px
+   overshoot. Screenshots are not involved.
+4. **No point may land near a canvas edge.** `assertUsable` throws if a
+   projected point falls within 56px of one: that band is `edgePanVel`'s 40px
+   auto-pan zone plus the floating `.island` controls, and a gesture that
+   strays into either is not testing what it thinks it is. `frameBox` is the
+   way out — it parks the camera so the room occupies the middle of the canvas,
+   which `fit()` deliberately does not.
+
+`useCoarseSnap` deserves its own note. Several tests assert an exact landing
+coordinate, and at the fixtures' 25.4mm snap one grid cell is under four screen
+pixels — which cell a click lands in is then not predictable. It sets 500mm,
+**and** the unit, because `renderSnap()` rebuilds the snap `<select>` from
+`SNAPS.imperial` or `SNAPS.metric` and *resets `S.snap`* when the current value
+is not one of the options. 500 is metric-only, so on a ft+in project it
+survives exactly until the next `renderAll()` — which `startSplitRoom()` calls.
+
+### What Phase 3.5 still does not cover
+
+As useful as the list above. These are where the `draw()` move stays unverified
+and wants a pass by hand:
+
+- **`snapCorner` against a non-rectangular room.** Every magnet assertion is on
+  the 5000 x 4000 rectangle, where the two neighbour lines cross at the corner's
+  own position. The `bias` ordering in `alignPoint` — near corner 0, far corner
+  0.3, the square-to-this edge line +0.35 — is therefore never the thing that
+  decides an outcome. An L-shape or an imported outline would exercise it.
+- **`drag.mode` `'wall'`, `'open'`, `'pillar'`, `'iwall'` and `'iwall-end'`.**
+  Four of the six `DEADZONE_MODES` are only covered *as* deadzone modes, through
+  `'corner'`. Dragging a whole wall perpendicular to itself, sliding a door
+  along a wall, and `axisLockFrom` on an interior wall's end are all untested.
+- **`'rot'`.** The rotate handle, its 15-degree default step, Shift for a free
+  turn, and the roll-back when the rotated footprint fails `validate`.
+- **Edge auto-pan.** `edgePanVel`/`edgePanTick` is deliberately avoided by
+  `assertUsable`, so the one piece of interaction that runs off `requestAnimationFrame`
+  rather than events has no coverage at all.
+- **`cancelDrag()`.** Escape mid-drag restores `drag.snap`; nothing presses it.
+- **Touch and pen.** Everything goes through a mouse pointer. `setPointerCapture`,
+  multi-touch and `touch-action` are untouched.
+- **`'Open through'`, `'Lined up'` and `'Corners meet'`** — three of
+  `snapFloorPlace`'s four notes. Only `'Sharing a wall'`, `'Free'` and the empty
+  fallback are asserted.
+- **The canvas drawing itself.** These tests assert state and DOM readouts. That
+  `drawAlignGuides`, `drawSquareTick` and `drawSplitOverlay` actually paint what
+  the state says is still only covered by the four `visual.spec.js` fixtures,
+  none of which is mid-drag.
+
