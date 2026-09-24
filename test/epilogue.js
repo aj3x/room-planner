@@ -33,6 +33,14 @@
 const GLOBALS = [
   // driven by Suite B (Playwright)
   'draw', 'fit', 'save', 'setMode', 'startCustomDraw',
+  /* Phase 3.6: the side-panel characterization drives a state change and then
+     needs the panels rebuilt the way the app rebuilds them. renderAll() is
+     that one entry point -- it is what every acting listener in the panel
+     region calls. */
+  'renderAll',
+  /* the app's own selection entry points -- renderSel reads both `sel` and
+     `selSet`, so a test cannot set up a selection by poking one of them. */
+  'selectOnly', 'selectSet', 'selectClear',
   'startWallDraw', 'startSplitRoom', 'setMeasure', 'activateLayout',
   'exportPayload', 'readImport', 'applyImport',
   'polySimple', 'swingPoly', 'bpRebuild',

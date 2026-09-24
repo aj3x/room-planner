@@ -153,6 +153,36 @@ layouts are both currently active).
 
 ## Known defects
 
+- **`renderSnap()` silently rewrites `S.snap` when the value is not in the
+  list.** The picker is rebuilt from `SNAPS.imperial` or `SNAPS.metric`
+  depending on `S.unit`, and if the saved snap size is not one of the six
+  options it is reset to the list's **third** entry
+  (`src/plan/room-panel.js`, `if(!list.some(([v])=>v===S.snap)) S.snap=list[2][0]`).
+  Changing the display unit therefore changes the user's snap size, with no
+  flash, no confirmation and no undo: 10 cm becomes 1 inch on the way to ft+in,
+  and 1 inch becomes 5 cm on the way back — a round trip through the unit
+  picker does not return the setting it started with. It bites code as well as
+  users: anything that sets `S.snap` directly keeps it only until the next
+  `renderAll()`, which is why `useCoarseSnap()` in the Playwright fixture has
+  to set the unit too, and why `startSplitRoom()` (which calls `renderAll()`)
+  drops a snap set just before it. Pre-existing; named by the `plan/` round and
+  deliberately not fixed there because extraction commits are move-only.
+  Pinned by `test/e2e/panel-room.spec.js` ("CHARACTERIZED, NOT ENDORSED:
+  renderSnap silently rewrites S.snap…" and "…a snap set behind the picker
+  survives until the next renderAll").
+
+- **A room standing on a floor is invisible in the tree at boot.** `treeOpen`
+  (`src/core/selection.js`) starts as an empty `Set` and is never persisted, so
+  every floor and folder row renders collapsed on load. When the active room
+  sits on a floor — the normal case once floors are used at all — the left pane
+  opens with no row for the room the canvas is showing, no `.active` row
+  anywhere, and nothing that reveals it short of finding and expanding the
+  right floor by hand. `renderTree` has all it needs to auto-expand the
+  ancestors of `S.active`; it does not. Pinned by
+  `test/e2e/panel-tree.spec.js` ("CHARACTERIZED, NOT ENDORSED: the active room
+  is not visible at boot when its floor is collapsed"). Not fixed: Phase 3 is
+  move-only, and this is behaviour, not a move.
+
 - **A placement that is already invalid can be dragged *further* out of the
   room.** `drag.loose` is seeded from `isBad(hit)` at pointerdown, and while it
   is true the `move` branch of `applyDragAt` (`index.html` ~3424) skips

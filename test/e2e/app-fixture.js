@@ -355,3 +355,30 @@ export async function confirmModal(page, title) {
   await page.click('#moOk');
   await settle(page);
 }
+
+/* ---------------------------------------------------------------------------
+   Panel text (Phase 3.6)
+
+   The side panels and the Library UI are rebuilt by `render*()` functions that
+   re-set `innerHTML`. Nothing in the suite read that HTML until Phase 3.6, and
+   a break that does not throw turns nothing red. These read it as **text and
+   state** — row counts, labels, `disabled`, `aria-pressed`, `aria-expanded`,
+   the order of entries — never as a screenshot: a DOM-text assertion says what
+   broke, a panel screenshot only says something did and goes red on every
+   legitimate style change.
+
+   Whitespace is collapsed because the templates are indented source strings;
+   what is being pinned is the wording and the order, not the indentation.
+--------------------------------------------------------------------------- */
+
+/** The collapsed text of every element matching `sel`, in document order. */
+export const texts = (page, sel) =>
+  page.$$eval(sel, (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+
+/** One attribute off every element matching `sel`, in document order. */
+export const attrs = (page, sel, name) =>
+  page.$$eval(sel, (els, n) => els.map((e) => e.getAttribute(n)), name);
+
+/** The open `⋯` menu: its title and the labels in it, separators marked. */
+export const menuItems = (page) =>
+  page.$$eval('.menu > *', (els) => els.map((e) => (e.className === 'sep' ? '—' : e.textContent)));
