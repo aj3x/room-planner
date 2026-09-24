@@ -89,6 +89,12 @@ export const EPILOGUE = `
 ;import {idFolder, idLeaf} from './src/core/ids.js';
 ;import {hasOpen} from './src/core/open-state.js';
 ;import {fileSlug} from './src/io/pickers.js';
+/* Same again for the io/ round's tail: applyImport (GLOBALS) left with
+   importDialog, and PREF_KEYS (__rp) with the Export dialog. */
+;import {applyImport} from './src/io/import.js';
+;import {PREF_KEYS} from './src/io/export.js';
+;import {INV_SCOPES} from './src/core/floor-space.js';
+;import {normItem} from './src/core/migrate.js';
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },
