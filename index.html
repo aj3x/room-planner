@@ -1666,6 +1666,11 @@ let bpState=null;
 /* every async continuation carries the run it belongs to, so a cancelled detection's
    late results land on the floor instead of on a dialog that has moved on */
 let bpRunSeq=0, bpPasteFn=null;
+/* these three are written by the wizard's step dialogs, which become their own
+   modules — and you cannot assign to an imported binding */
+function setBpState(v){ bpState=v; }
+function setBpRunSeq(v){ bpRunSeq=v; return v; }
+function setBpPasteFn(v){ bpPasteFn=v; }
 const bpClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function bpUnbindPaste(){ if(bpPasteFn){ document.removeEventListener('paste', bpPasteFn); bpPasteFn=null; } }
 function bpDispose(){
@@ -3351,9 +3356,9 @@ function bpStepperHTML(active){
 /* ---- blueprint: step 1, upload ---- */
 function bpUploadDialog(keep, targetFloorId){
   if(!keep) bpDispose();
-  if(!bpState) bpState={file:null,img:null,url:null,full:null,crop:null,cropRect:null,work:null,
+  if(!bpState) setBpState({file:null,img:null,url:null,full:null,crop:null,cropRect:null,work:null,
                         proposal:null,detectedFor:null,edits:null,draft:null,cal:null,worker:null,
-                        debugMask:'none',targetFloorId:targetFloorId||null};
+                        debugMask:'none',targetFloorId:targetFloorId||null});
   openModal('Import a blueprint', `
     <div class="dropzone" id="bpDrop">Drop a photo of a floor plan here<br>
       <label class="btn sm">Choose photo…<input type="file" id="bpFile" accept="image/*" hidden></label></div>
@@ -3397,7 +3402,7 @@ function bpMountUpload(targetFloorId){
      to the next stage as well as on close, because a stage handoff replaces the
      modal's close hook without ever running it. */
   bpUnbindPaste();
-  bpPasteFn=e=>{ const f=e.clipboardData&&e.clipboardData.files[0]; if(f) take(f); };
+  setBpPasteFn(e=>{ const f=e.clipboardData&&e.clipboardData.files[0]; if(f) take(f); });
   document.addEventListener('paste', bpPasteFn);
 }
 
@@ -3536,12 +3541,12 @@ function bpScaleDialog(targetFloorId){
     'Generate layout',
     ()=>{ if(!st.edits||!st.edits.scale) return false; bpReviewDialog(targetFloorId); return false; },
     ()=>{ if(ready) bpMountScale(); else bpRunDetection(targetFloorId); },
-    {xwide:true, onClose:bpDispose, onBack:()=>{ bpRunSeq++; bpCropDialog(targetFloorId); }, stepper:bpStepperHTML(2)});
+    {xwide:true, onClose:bpDispose, onBack:()=>{ setBpRunSeq(bpRunSeq+1); bpCropDialog(targetFloorId); }, stepper:bpStepperHTML(2)});
   $('moOk').disabled = !ready || !st.edits.scale;
 }
 function bpRunDetection(targetFloorId){
   $('moOk').disabled=true;
-  const runId=++bpRunSeq;
+  const runId=setBpRunSeq(bpRunSeq+1);
   bpState.runId=runId;
   const step=k=>{
     const li=$('bpSteps')&&$('bpSteps').querySelector(`li[data-step="${k}"]`);
