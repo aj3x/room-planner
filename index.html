@@ -779,12 +779,9 @@ import {PALETTE, uid, clone, rectPts, blankLayout, S, setS, L, RP, itemOf, instO
 
 import {uniqueId} from './src/core/ids.js';
 
-import {sel, selSet, roomSel, floorSel, mergeSel,
-        setSel, setRoomSel, setFloorSel, setMergeSel,
-        setFloorGuides, setFloorSnapNote, setAlignGuides, setAlignNote,
-        treeOpen} from './src/core/selection.js';
+import {sel, selSet, roomSel, floorSel, mergeSel, setRoomSel, setFloorSel, setMergeSel, setFloorGuides, setFloorSnapNote, setAlignGuides, setAlignNote, treeOpen} from './src/core/selection.js';
 
-import {drag, drawState, wallDrawState, splitDrawState, setDrag, setDrawState, setDrawCursor, setWallDrawState, setSplitDrawState} from './src/canvas/interaction-state.js';
+import {drag, drawState, wallDrawState, splitDrawState, setDrag} from './src/canvas/interaction-state.js';
 
 import {selectOnly, selectAdd, selectToggle, selectSet, selectClear} from './src/core/selection.js';
 
@@ -849,17 +846,7 @@ import {resize, fit, zoomAt} from './src/canvas/view.js';
 import {sx, sy, wx, wy} from './src/canvas/view.js';
 import {snapMM, snapPt, axisLockFrom} from './src/canvas/view.js';
 
-/* ------------------------- custom room drawing (walls may cross) ------------------------- */
-function startCustomDraw(){
-  if(wallDrawState) cancelWallDraw();
-  if(splitDrawState) cancelSplitDraw();
-  if(measureOn) setMeasure(false);
-  if(!roomMode()) setMode('room');
-  setDrawState({pts:[]}); setDrawCursor(null);
-  setRoomSel(null); renderRoomSel();
-  $('drawHint').hidden=false;
-  draw();
-}
+import {startCustomDraw} from './src/canvas/room-draw.js';
 import {cancelCustomDraw, finishCustomDraw, drawSnapPoint, applyDrawCursorAt} from './src/canvas/room-draw.js';
 cv.addEventListener('mousemove', e=>{
   if(!drawState && !wallDrawState && !splitDrawState) return;
@@ -867,17 +854,7 @@ cv.addEventListener('mousemove', e=>{
   applyDrawCursorAt(lastPX,lastPY,e.shiftKey);
 });
 
-/* ------------------------- drawing a freestanding wall ------------------------- */
-function startWallDraw(){
-  if(drawState) cancelCustomDraw();
-  if(splitDrawState) cancelSplitDraw();
-  if(measureOn) setMeasure(false);
-  if(!roomMode()) setMode('room');
-  setWallDrawState({a:null}); setDrawCursor(null);
-  setRoomSel(null); renderRoomSel();
-  flash('Click the wall’s start, then its end. Esc cancels.');
-  draw();
-}
+import {startWallDraw} from './src/canvas/wall-draw.js';
 import {cancelWallDraw, finishWallDraw} from './src/canvas/wall-draw.js';
 
 /* ------------------------- splitting a room in two ------------------------- */
@@ -887,20 +864,7 @@ import {cancelWallDraw, finishWallDraw} from './src/canvas/wall-draw.js';
    ends the user can drop as many interior points as they like, bending the cut
    into a polyline; each one must stay strictly inside the room. */
 import {boundaryHit} from './src/canvas/split-room.js';
-function startSplitRoom(id){
-  const l=S.layouts.find(x=>x.id===id); if(!l) return;
-  if(!polySimple(l.room.points)){ flash("Straighten this room's outline before splitting it"); return; }
-  if(drawState) cancelCustomDraw();
-  if(wallDrawState) cancelWallDraw();
-  if(measureOn) setMeasure(false);
-  if(S.active!==id) activateLayout(id);
-  setMode('room');
-  setSplitDrawState({pts:[]}); setDrawCursor(null);
-  setRoomSel(null); renderRoomSel();
-  renderAll(); fit();
-  flash("Click a point on the room's wall to start the divider. Click inside the room to bend it, or click another wall to finish. Esc cancels.");
-  draw();
-}
+import {startSplitRoom} from './src/canvas/split-room.js';
 import {cancelSplitDraw, trySplitLine, lastSplit, splitUndo} from './src/canvas/split-room.js';
 import {splitResolvePoint} from './src/canvas/split-room.js';
 
@@ -925,24 +889,9 @@ import {normHex} from './src/canvas/draw.js';
    thing's id (a room wall's index), n which corner or side. Ends are looked up live, so a
    measurement follows what it joins as things move. It is a note on the plan, not part of
    the room or the furniture, so it has no undo history of its own. */
-import {measureOn, measureStart, measureSel,
-        setMeasureOn, setMeasureStart, setMeasureHover,
-        setMeasureHoverId, setMeasureSel,
-        setMeasureCursor} from './src/canvas/measure-state.js';
+import {measureOn, measureStart, measureSel, setMeasureStart, setMeasureHover, setMeasureHoverId, setMeasureSel, setMeasureCursor} from './src/canvas/measure-state.js';
 import {liveMeasures, renderMeasureBar} from './src/canvas/measure-tool.js';
-function setMeasure(on){
-  if(on){
-    if(!isCanvasMode(S.mode)) return;
-    if(drawState) cancelCustomDraw();
-    if(wallDrawState) cancelWallDraw();
-    if(splitDrawState) cancelSplitDraw();
-    // a click now measures, so nothing stays selected for editing
-    setSel(null); setRoomSel(null); renderSel(); renderRoomSel(); renderWalls(); renderOpen();
-  }
-  setMeasureOn(!!on);
-  resetMeasureState();
-  renderMeasureBar(); draw();
-}
+import {setMeasure} from './src/canvas/measure-tool.js';
 import {resetMeasureState, removeMeasure, measurePointerDown, measureHoverAt} from './src/canvas/measure-tool.js';
 cv.addEventListener('pointerleave', ()=>{
   if(!measureOn || drag) return;
@@ -1525,12 +1474,7 @@ $('navSeg').addEventListener('click', e=>{
   else if(n!==S.mode) setMode(n);
 });
 
-import {wideLayout, applyPanes} from './src/ui/panels.js';
-function togglePane(side){
-  if(!wideLayout()) return;
-  if(side==='left') S.leftOpen=!S.leftOpen; else S.rightOpen=!S.rightOpen;
-  closeMenu(); applyPanes(); save(); resize();
-}
+import {togglePane} from './src/plan/mode.js';
 for(const [headId,side] of [['headLeft','left'],['headRight','right']]){
   const h=$(headId);
   h.addEventListener('click', ()=>togglePane(side));

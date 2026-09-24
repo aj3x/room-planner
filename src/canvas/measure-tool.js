@@ -23,6 +23,15 @@ import {measuresOf, anchorKey, measureObjs, anchorGeom} from '../model/measures.
 import {measureOn, measureStart, measureSel, measureBoxes,
         setMeasureStart, setMeasureHover, setMeasureHoverId,
         setMeasureSel, setMeasureCursor} from './measure-state.js';
+import {setRoomSel, setSel} from '../core/selection.js';
+import {isCanvasMode} from '../core/state.js';
+import {renderOpen, renderRoomSel, renderWalls} from '../plan/room-panel.js';
+import {renderSel} from '../plan/selection-panel.js';
+import {drawState, splitDrawState, wallDrawState} from './interaction-state.js';
+import {setMeasureOn} from './measure-state.js';
+import {cancelCustomDraw} from './room-draw.js';
+import {cancelSplitDraw} from './split-room.js';
+import {cancelWallDraw} from './wall-draw.js';
 
 
 /* the anchor under a screen point: a corner or centre point beats a side, which beats the
@@ -115,5 +124,19 @@ function measureHoverAt(px,py){
   scheduleDraw();
 }
 
-export {measurePick, pickMeasure, measureTargetAt, liveMeasures, renderMeasureBar,
-        resetMeasureState, removeMeasure, measurePointerDown, measureHoverAt};
+
+/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+function setMeasure(on){
+  if(on){
+    if(!isCanvasMode(S.mode)) return;
+    if(drawState) cancelCustomDraw();
+    if(wallDrawState) cancelWallDraw();
+    if(splitDrawState) cancelSplitDraw();
+    // a click now measures, so nothing stays selected for editing
+    setSel(null); setRoomSel(null); renderSel(); renderRoomSel(); renderWalls(); renderOpen();
+  }
+  setMeasureOn(!!on);
+  resetMeasureState();
+  renderMeasureBar(); draw();
+}
+export {measurePick, pickMeasure, measureTargetAt, liveMeasures, renderMeasureBar, resetMeasureState, removeMeasure, measurePointerDown, measureHoverAt, setMeasure};

@@ -74,6 +74,14 @@ import {draw} from './draw.js';
 import {setSplitDrawState} from './interaction-state.js';
 import {mergeSplice} from './merge-rooms.js';
 import {fit} from './view.js';
+import {setRoomSel} from '../core/selection.js';
+import {setMode} from '../plan/mode.js';
+import {renderRoomSel} from '../plan/room-panel.js';
+import {drawState, setDrawCursor, wallDrawState} from './interaction-state.js';
+import {measureOn} from './measure-state.js';
+import {setMeasure} from './measure-tool.js';
+import {cancelCustomDraw} from './room-draw.js';
+import {cancelWallDraw} from './wall-draw.js';
 
 /* Every existing room corner, and every split point already placed, that the
    NEXT split point can align to — the same {p, bias, edge} shape snapCorner
@@ -347,4 +355,20 @@ function splitUndo(){
     renderTree(); renderAll(); fit(); save();
   });
 }
-export {boundaryHit, splitAngleSnap, splitRefs, splitCornerRef, splitResolvePoint, drawSplitOverlay, cancelSplitDraw, trySplitLine, openSplitChoice, lastSplit, commitSplit, splitUndo};
+
+/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+function startSplitRoom(id){
+  const l=S.layouts.find(x=>x.id===id); if(!l) return;
+  if(!polySimple(l.room.points)){ flash("Straighten this room's outline before splitting it"); return; }
+  if(drawState) cancelCustomDraw();
+  if(wallDrawState) cancelWallDraw();
+  if(measureOn) setMeasure(false);
+  if(S.active!==id) activateLayout(id);
+  setMode('room');
+  setSplitDrawState({pts:[]}); setDrawCursor(null);
+  setRoomSel(null); renderRoomSel();
+  renderAll(); fit();
+  flash("Click a point on the room's wall to start the divider. Click inside the room to bend it, or click another wall to finish. Esc cancels.");
+  draw();
+}
+export {boundaryHit, splitAngleSnap, splitRefs, splitCornerRef, splitResolvePoint, drawSplitOverlay, cancelSplitDraw, trySplitLine, openSplitChoice, lastSplit, commitSplit, splitUndo, startSplitRoom};

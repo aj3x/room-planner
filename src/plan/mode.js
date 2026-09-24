@@ -33,6 +33,8 @@ import {renderFloorSel} from './floors.js';
 import {renderInv} from './item-list.js';
 import {renderTree} from './layout-tree.js';
 import {renderRoom, renderSnap} from './room-panel.js';
+import {closeMenu} from '../ui/menu.js';
+import {wideLayout} from '../ui/panels.js';
 
 function syncModeParam(){
   const usp=new URLSearchParams(location.search);
@@ -86,4 +88,11 @@ function renderAll(){
   renderTree(); renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
   renderInv(); renderSel(); renderFloorSel(); renderSnap(); renderMode(); renderMeasureBar(); updateHistButtons(); draw();
 }
-export {setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode, renderAll};
+
+/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+function togglePane(side){
+  if(!wideLayout()) return;
+  if(side==='left') S.leftOpen=!S.leftOpen; else S.rightOpen=!S.rightOpen;
+  closeMenu(); applyPanes(); save(); resize();
+}
+export {setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode, renderAll, togglePane};

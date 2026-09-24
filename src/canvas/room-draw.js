@@ -20,6 +20,13 @@ import {draw, scheduleDraw} from './draw.js';
 import {drawState, setDrawCursor, setDrawState, setWallDrawShift} from './interaction-state.js';
 import {alignPoint, alignRadius, isSquare} from './snap.js';
 import {fit, snapPt, wx, wy} from './view.js';
+import {roomMode} from '../core/state.js';
+import {setMode} from '../plan/mode.js';
+import {splitDrawState, wallDrawState} from './interaction-state.js';
+import {measureOn} from './measure-state.js';
+import {setMeasure} from './measure-tool.js';
+import {cancelSplitDraw} from './split-room.js';
+import {cancelWallDraw} from './wall-draw.js';
 function cancelCustomDraw(){
   setDrawState(null); setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true; draw();
 }
@@ -61,4 +68,17 @@ function applyDrawCursorAt(px,py,shift){
   setWallDrawShift(shift);
   scheduleDraw();
 }
-export {cancelCustomDraw, finishCustomDraw, drawSnapPoint, applyDrawCursorAt};
+
+/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+/* ------------------------- custom room drawing (walls may cross) ------------------------- */
+function startCustomDraw(){
+  if(wallDrawState) cancelWallDraw();
+  if(splitDrawState) cancelSplitDraw();
+  if(measureOn) setMeasure(false);
+  if(!roomMode()) setMode('room');
+  setDrawState({pts:[]}); setDrawCursor(null);
+  setRoomSel(null); renderRoomSel();
+  $('drawHint').hidden=false;
+  draw();
+}
+export {cancelCustomDraw, finishCustomDraw, drawSnapPoint, applyDrawCursorAt, startCustomDraw};
