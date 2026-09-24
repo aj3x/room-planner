@@ -21,6 +21,16 @@ import {marketIndexCache} from './market-subs.js';
 import {nav} from './nav.js';
 import {svgI} from '../ui/modal.js';
 import {esc, plural} from '../ui/panels.js';
+import {sizeLabel} from '../canvas/draw.js';
+import {libFlash} from '../ui/flash.js';
+import {openMenu} from '../ui/menu.js';
+import {$, askConfirm, closeModal, moError, openModal} from '../ui/modal.js';
+import {normSearch} from '../ui/panels.js';
+import {addMarketItemToInventory} from './add-to-inventory.js';
+import {bindCrumbs} from './grid.js';
+import {fetchMarketItem, loadRegistry, reloadMarketSub, removeMarketSub, subscribeMarket} from './market-subs.js';
+import {renderLibContent} from './router.js';
+import {renderLibAll} from './shell.js';
 
 function marketSubTile(sub){
   const items=marketIndexCache.get(sub.id);
@@ -94,4 +104,170 @@ function drawPreview(cv,it){
   ctx.fillStyle=hexA(it.color,.85); ctx.fill();
   ctx.strokeStyle=it.color; ctx.lineWidth=1.5; ctx.stroke();
 }
-export {marketSubTile, marketPathChildren, marketItemTile, drawPreview};
+
+/* ---- Phase 3, the SCC commit: the rest of this file's region, which could
+   not move until the whole 49-name component could. Move-only. ---- */
+/* ------------------------- marketplace tab: subscribed markets + ad hoc listings ------------------------- */
+function selectListing(id){ nav.marketSelListingId=id; renderLibContent(); }
+function addMarketDialog(){
+  openModal('Add a marketplace', `
+    <p class="hint">Paste a <code>market.json</code> URL, or pick one from the registry below. See <code>MARKET_SCHEMA.md</code> for the format — anyone can publish one as a plain git repo.</p>
+    <input type="url" id="mUrl" placeholder="https://…/market.json">
+    <div id="mRegistry"></div>`,
+    'Subscribe',
+    ()=>{
+      const url=($('mUrl').value||'').trim();
+      if(!/^https?:\/\//i.test(url)){ moError('Enter a valid http(s) link to a market.json'); return false; }
+      if(S.marketSubs.some(s=>s.url===url)){ moError('You already subscribe to that marketplace'); return false; }
+      $('moOk').disabled=true;
+      subscribeMarket(url).then(()=>{ closeModal(); renderLibAll(); })
+        .catch(e=>{ moError(e.message); $('moOk').disabled=false; });
+      return false;   // keep the dialog open until the fetch settles; the .then() above closes it
+    },
+    ()=>{
+      loadRegistry('registry.json').then(list=>{
+        const box=$('mRegistry'); if(!box) return;
+        if(!list.length){ box.innerHTML='<p class="hint">The default registry is empty right now — paste a URL above, or see <code>CONTRIBUTING.md</code> to add one.</p>'; return; }
+        box.innerHTML='<p class="hint">Or pick one:</p><div class="registry">'+list.map(m=>
+          `<button type="button" class="btn sm" data-pick="${esc(m.url)}">${esc(m.name||m.url)}</button>`).join('')+'</div>';
+        box.querySelectorAll('[data-pick]').forEach(b=>b.addEventListener('click', ()=>{ $('mUrl').value=b.dataset.pick; }));
+      }).catch(()=>{ const box=$('mRegistry'); if(box) box.innerHTML=''; });
+    });
+}
+
+function subMenu(sub, anchor){
+  openMenu(anchor, [
+    {label:'Open', fn:()=>{ nav.marketSubId=sub.id; nav.subPath=null; renderLibContent(); }},
+    {label:'Reload', fn:()=>{ reloadMarketSub(sub).then(()=>{ libFlash('Reloaded'); renderLibAll(); }).catch(e=>libFlash(e.message,true)); }},
+    {sep:true},
+    {label:'Remove…', danger:true, fn:()=>askConfirm('Remove this marketplace?', '“'+sub.name+'” and its cached index will be forgotten. Your library isn’t affected.', 'Remove', ()=>{
+      removeMarketSub(sub); renderLibAll();
+    })},
+  ], sub.name);
+}
+function renderMarketTop(box){
+  let html=`<div class="crumbs"><button data-crumb="">Marketplaces</button></div>`;
+  html+=`<div class="viewhead"><span class="hint grow">Browse a marketplace and add what you want to your library. Nothing is added until you choose it.</span>
+    ${S.marketSubs.length?`<label class="check"><input type="checkbox" id="chkContents" ${nav.showMarketContents?'checked':''}>Preview contents</label>`:''}</div>`;
+  if(!S.marketSubs.length){
+    html+=`<div class="grid"><div class="empty">You haven't added a marketplace yet.
+      <div class="row"><button class="btn sm primary" data-addmarket>${svgI('plus')}Add marketplace…</button></div></div></div>`;
+  } else {
+    html+=`<div class="grid">${S.marketSubs.map(marketSubTile).join('')}</div>`;
+  }
+  box.innerHTML=html;
+  bindCrumbs(box,'market');
+  const chk=box.querySelector('#chkContents'); if(chk) chk.addEventListener('change', ()=>{ nav.showMarketContents=chk.checked; renderLibContent(); });
+  const am=box.querySelector('[data-addmarket]'); if(am) am.addEventListener('click', addMarketDialog);
+  box.querySelectorAll('[data-opensub]').forEach(t=>{
+    t.addEventListener('click', e=>{
+      if(e.target.closest('[data-act=more],[data-loadsub],[data-openmsub]')) return;
+      const sub=S.marketSubs.find(s=>s.id===t.dataset.opensub); if(!sub) return;
+      nav.marketSubId=sub.id; nav.subPath=null; renderLibContent();
+    });
+    const more=t.querySelector('[data-act=more]');
+    if(more) more.addEventListener('click', e=>{ e.stopPropagation(); const sub=S.marketSubs.find(s=>s.id===t.dataset.opensub); if(sub) subMenu(sub, e.currentTarget); });
+  });
+  box.querySelectorAll('[data-loadsub]').forEach(el=>{
+    const sub=S.marketSubs.find(s=>s.id===el.dataset.loadsub); if(!sub) return;
+    reloadMarketSub(sub).then(()=>renderLibContent()).catch(e=>{ el.textContent=e.message; });
+  });
+  box.querySelectorAll('[data-openmsub]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      nav.marketSubId=el.dataset.openmsub;
+      nav.subPath=el.dataset.mfolder2||null;
+      nav.marketSelItemId=el.dataset.mitem||null;
+      renderLibContent();
+    });
+  });
+}
+/* the folder tree inside one marketplace is derived from id path segments, not a stored folder list */
+function renderMarketSub(box, sub){
+  const items=marketIndexCache.get(sub.id);
+  const q=nav.searching ? $('searchBox').value.trim().toLowerCase() : '';
+  const backToTop=()=>{ nav.marketSubId=null; nav.subPath=null; nav.marketTagFilter=null; renderLibContent(); };
+  if(!items){
+    box.innerHTML=`<div class="crumbs"><button data-back>Marketplaces</button><span class="sep">/</span><button>${esc(sub.name)}</button></div><div class="grid"><div class="empty">Loading…</div></div>`;
+    box.querySelector('[data-back]').addEventListener('click', backToTop);
+    reloadMarketSub(sub).then(()=>renderLibContent()).catch(e=>{ box.querySelector('.empty').textContent=e.message; });
+    return;
+  }
+  let html=`<div class="crumbs"><button data-back>Marketplaces</button><span class="sep">/</span>`;
+  html+=nav.subPath ? `<button data-toroot>${esc(sub.name)}</button>` : `<button>${esc(sub.name)}</button>`;
+  if(nav.subPath){
+    const parts=idParts(nav.subPath);
+    let acc='';
+    for(const p of parts){ acc=acc?acc+'/'+p:p; html+=`<span class="sep">/</span><button data-mcrumb="${esc(acc)}">${esc(p)}</button>`; }
+  }
+  html+='</div>';
+  // scope search/filter to the folder currently being browsed, not the whole marketplace
+  const scoped=nav.subPath ? items.filter(it=>it.id===nav.subPath||it.id.startsWith(nav.subPath+'/')) : items;
+  const allTagsHere=[...new Set(scoped.flatMap(it=>it.tags))].sort();
+  if(allTagsHere.length) html+=`<div class="viewhead"><div class="chips">${allTagsHere.slice(0,20).map(t=>
+    `<button type="button" data-mtag="${esc(t)}" aria-pressed="${(nav.marketTagFilter===t)}">${esc(t)}</button>`).join('')}</div></div>`;
+  let matches;
+  if(q){ const nq=normSearch(q); matches=scoped.filter(it=>normSearch(it.name).includes(nq)||normSearch(it.id).includes(nq)||it.tags.some(t=>normSearch(t).includes(nq))); }
+  else if(nav.marketTagFilter){ matches=scoped.filter(it=>it.tags.includes(nav.marketTagFilter)); }
+  if(matches){
+    html+= matches.length ? `<div class="grid text">${matches.map(marketItemTile).join('')}</div>`
+      : `<div class="grid"><div class="empty">No matches.</div></div>`;
+  } else {
+    const {folders,leaves}=marketPathChildren(items, nav.subPath);
+    html+= (folders.length||leaves.length)
+      ? `<div class="grid text">${folders.map(f=>{
+          const full=nav.subPath?nav.subPath+'/'+f.name:f.name;
+          return `<button type="button" class="ttile" data-mopenfolder="${esc(full)}"><span class="ico">${svgI('folder')}</span><span class="tmain"><span class="tname">${esc(f.name)}</span><span class="dim">${plural(f.n,'item')}</span></span></button>`;
+        }).join('')}${leaves.map(marketItemTile).join('')}</div>`
+      : `<div class="grid"><div class="empty">Nothing in here.</div></div>`;
+  }
+  box.innerHTML=html;
+  box.querySelector('[data-back]').addEventListener('click', backToTop);
+  const toRoot=box.querySelector('[data-toroot]');
+  if(toRoot) toRoot.addEventListener('click', ()=>{ nav.subPath=null; renderLibContent(); });
+  box.querySelectorAll('[data-mcrumb]').forEach(b=>b.addEventListener('click', ()=>{ nav.subPath=b.dataset.mcrumb; renderLibContent(); }));
+  box.querySelectorAll('[data-mopenfolder]').forEach(t=>t.addEventListener('click', ()=>{ nav.subPath=t.dataset.mopenfolder; renderLibContent(); }));
+  box.querySelectorAll('[data-mtag]').forEach(b=>b.addEventListener('click', ()=>{
+    nav.marketTagFilter = nav.marketTagFilter===b.dataset.mtag ? null : b.dataset.mtag; renderLibContent();
+  }));
+  box.querySelectorAll('[data-mitemopen]').forEach(t=>{
+    t.addEventListener('click', e=>{
+      if(e.target.closest('[data-add]')) return;
+      nav.marketSelItemId = t.dataset.mitemopen; renderLibContent();
+    });
+    t.addEventListener('keydown', e=>{
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); nav.marketSelItemId = t.dataset.mitemopen; renderLibContent(); }
+    });
+  });
+  box.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click', e=>{
+    e.stopPropagation();
+    fetchMarketItem(sub, b.dataset.add).then(it=>addMarketItemToInventory(it)).catch(err=>libFlash(err.message,true));
+  }));
+  if(nav.marketSelItemId) renderMarketItemPreview(box, sub, nav.marketSelItemId);
+}
+/* a preview opens where you're looking (a dialog), not appended below hundreds of tiles */
+function renderMarketItemPreview(box, sub, id){
+  nav.marketSelItemId=null;
+  const entry=(marketIndexCache.get(sub.id)||[]).find(x=>x.id===id);
+  let loaded=null;
+  openModal(entry?entry.name:'Item', `
+    <div class="preview"><canvas id="mPrevCv"></canvas></div>
+    <div class="listing-status" id="mPrevInfo">Loading…</div>`,
+    'Add to library',
+    ()=>{
+      if(!loaded){ moError('Still loading — try again in a moment'); return false; }
+      setTimeout(()=>addMarketItemToInventory(loaded));   // after this dialog closes, in case it opens its own
+    },
+    ()=>{
+      $('moOk').disabled=true;
+      fetchMarketItem(sub, id).then(it=>{
+        if(!$('mPrevInfo')) return;
+        loaded=it;
+        $('moTitle').textContent=it.name;
+        $('mPrevInfo').innerHTML=`${esc(sizeLabel(it))}${(it.tags||[]).length?' · '+(it.tags||[]).map(esc).join(', '):''}<br><code>${esc(it.id)}</code>`;
+        drawPreview($('mPrevCv'), it);
+        $('moOk').disabled=false;
+      }).catch(e=>{ const st=$('mPrevInfo'); if(st){ st.className='hint warn'; st.textContent=e.message; } });
+    });
+}
+export {marketSubTile, marketPathChildren, marketItemTile, drawPreview, selectListing, addMarketDialog, subMenu, renderMarketTop, renderMarketSub, renderMarketItemPreview};

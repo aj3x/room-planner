@@ -774,13 +774,12 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
 import {parseLen, trimNum, unitWord, fmtLen, fmtArea} from './src/core/units.js';
 
 import {norm360, shapePoly, bbox, worldPoly, pointInPoly, segHit, ptSegDist, centroid, signedArea, polyArea, polySimple} from './src/core/geometry.js';
-import {normOpen, hasOpen, openSizeLabel} from './src/core/open-state.js';
 
 import {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS,
-        L, RP, itemOf, instOf, openOf, roomMode, furnMode, floorMode,
+        L, RP, itemOf, instOf, openOf, roomMode, floorMode,
         folderOf, childFolders, childLayouts, floorOf, floorLayouts} from './src/core/state.js';
 
-import {idParts, idFolder, idLeaf, idProblem, uniqueId} from './src/core/ids.js';
+import {uniqueId} from './src/core/ids.js';
 
 import {sel, selSet, roomSel, floorSel, mergeSel,
         setSel, setRoomSel, setFloorSel, setMergeSel,
@@ -819,15 +818,11 @@ function activateLayout(id){
 }
 
 import {syncWallOff, wallIsOff, wallOf, wallAngle, clampOpenings,
-        nearestOnWalls, pillarOf, iwallOf, iwallLen,
-        iwallAngle, setIWallLen, setIWallAngle, setIWallEndDist,
-        isRectRoom} from './src/model/walls.js';
-import {setWallAngle, setWallLen, tryRoomEdit} from './src/model/walls.js';
+        nearestOnWalls, pillarOf, iwallOf} from './src/model/walls.js';
+import {setWallAngle, setWallLen} from './src/model/walls.js';
 import {snapWallPoint} from './src/model/walls.js';
-import {setRectSize} from './src/model/walls.js';
 
-import {openingDispOffset, setOpeningDispOffset} from './src/model/openings.js';
-import {validate, getConflicts, isBad, centreInside,
+import {validate, isBad, centreInside,
         bisectToValid, slideToValid} from './src/model/validity.js';
 
 import {KEY, Store, save} from './src/core/store.js';
@@ -1178,7 +1173,7 @@ darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>scheduleDraw())
 
 
 import {draw, scheduleDraw, floorMembers, snapFloorPlace,
-        pickFloorRoom, floorRotHandle, handlePos, sizeLabel} from './src/canvas/draw.js';
+        pickFloorRoom, floorRotHandle, handlePos} from './src/canvas/draw.js';
 import {normHex} from './src/canvas/draw.js';
 import {mergeSplice, mergeGeometry} from './src/canvas/merge-rooms.js';
 
@@ -1237,21 +1232,6 @@ let spaceDown=false; // held to force pan mode (Space+drag pans; Space+scroll st
 const ROOM_DRAGS=['corner','wall','open','pillar','iwall','iwall-end'];
 import {flash} from './src/ui/flash.js';
 import {alignRadius, alignPoint, isSquare, snapCorner} from './src/canvas/snap.js';
-/* Put the corner at exactly 90° without dragging for it. Every point that squares this
-   corner sits on the circle with its two neighbours as diameter, so the nearest point on
-   that circle is the smallest move that does it. */
-function squareCorner(i){
-  const P=RP(), n=P.length;
-  if(n<3) return;
-  const a=P[(i-1+n)%n], c=P[(i+1)%n], b=P[i];
-  const mx=(a[0]+c[0])/2, my=(a[1]+c[1])/2, rad=Math.hypot(c[0]-a[0], c[1]-a[1])/2;
-  if(rad<1){ flash('Those two walls meet at the same point'); return; }
-  let vx=b[0]-mx, vy=b[1]-my, len=Math.hypot(vx,vy);
-  if(len<1){ vx=-(c[1]-a[1]); vy=c[0]-a[0]; len=rad*2; }   // dead centre: step off square to the span
-  const ok=tryRoomEdit(()=>{ P[i]=[mx+vx/len*rad, my+vy/len*rad]; });
-  if(!ok) return;
-  renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
-}
 import {pickAt, bringToFront, pickRoom} from './src/canvas/snap.js';
 cv.addEventListener('pointerdown', e=>{
   try{ cv.setPointerCapture(e.pointerId); }catch(err){}
@@ -1790,49 +1770,10 @@ document.addEventListener('keyup', e=>{
     if(!drag||drag.mode!=='pan') cv.style.cursor='';
   }
 });
-function rotate(deg){
-  const inst=instOf(sel); if(!inst) return;
-  const it=itemOf(inst.itemId); if(!it) return;
-  const loose=isBad(inst), prev=inst.rot||0;
-  inst.rot=norm360(prev+deg);
-  if(!loose && !validate(inst,worldPoly(inst,it)).ok){ inst.rot=prev; flash('No room to turn it'); }
-  draw(); renderSel(); save(); commitFurn();
-}
-function removeSel(){
-  if(!selSet.size) return;
-  L().placed=L().placed.filter(p=>!selSet.has(p.id));
-  selectClear(); renderSel(); renderInv(); draw(); save(); commitFurn();
-}
-function place(itemId){
-  const it=itemOf(itemId); if(!it) return;
-  const b0=bbox(RP());
-  const inst={id:uid(), itemId, x:0, y:0, rot:0};
-  let done=false;
-  for(const rot of [0,90]){
-    inst.rot=rot;
-    const b=bbox(worldPoly({x:0,y:0,rot},it));
-    const step=Math.max(40,Math.min(b.w,b.h)/3);
-    for(let y=b0.y0-b.y0; y<=b0.y1-b.y1+1 && !done; y+=step){
-      for(let x=b0.x0-b.x0; x<=b0.x1-b.x1+1 && !done; x+=step){
-        inst.x=x; inst.y=y;
-        if(validate(inst,worldPoly(inst,it)).ok) done=true;
-      }
-    }
-    if(done) break;
-  }
-  if(!done){
-    const c=centroid(RP())||[(b0.x0+b0.x1)/2,(b0.y0+b0.y1)/2];
-    inst.rot=0; inst.x=c[0]; inst.y=c[1];
-    flash('Nowhere clear to put it — drag it where you want');
-  }
-  L().placed.push(inst);
-  selectOnly(inst.id);
-  if(roomMode()) setMode('furniture');
-  renderInv(); renderSel(); draw(); save(); commitFurn();
-}
+import {rotate, removeSel, place, renderSel} from './src/plan/selection-panel.js';
 
 /* ------------------------- panels ------------------------- */
-import {esc, normSearch} from './src/ui/panels.js';
+import {esc} from './src/ui/panels.js';
 function renderAll(){
   renderTree(); renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
   renderInv(); renderSel(); renderFloorSel(); renderSnap(); renderMode(); renderMeasureBar(); updateHistButtons(); draw();
@@ -1842,43 +1783,8 @@ function paramMode(){
   const m=new URLSearchParams(location.search).get('mode');
   return ['room','furniture','floor','inventory','marketplace'].includes(m) ? m : null;
 }
-function syncModeParam(){
-  const usp=new URLSearchParams(location.search);
-  usp.set('mode', S.mode);
-  history.replaceState(null,'',location.pathname+'?'+usp.toString()+location.hash);
-}
+import {setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode} from './src/plan/mode.js';
 import {isCanvasMode} from './src/core/state.js';
-let pendingFit=false;
-function setMode(m){
-  S.mode=m;
-  if(isCanvasMode(m)) S.planMode=m;
-  if(m==='furniture') setRoomSel(null);
-  else if(m==='room') selectClear();
-  else if(m==='floor'){ selectClear(); setRoomSel(null); setFloorSel(L().floorId ? L().id : null); floorEntry(); }
-  if(m!=='floor'){ setFloorGuides([]); setFloorSnapNote(''); }
-  setAlignGuides([]); setAlignNote('');
-  /* measurements belong to one room, so Floor mode leaves the tool behind too */
-  if((!isCanvasMode(m) || m==='floor') && measureOn){ setMeasureOn(false); resetMeasureState(); renderMeasureBar(); }
-  renderMode(); applyLayoutMode();
-  if(isCanvasMode(m)){
-    resize();
-    if(pendingFit){ pendingFit=false; fit(); }
-    else if(m==='floor') fit();   // arriving at a floor, frame the whole arrangement
-    renderRoomSel(); renderWalls(); renderOpen(); renderSel(); updateHistButtons(); draw();
-  }
-  else renderLibAll();
-  save();
-  syncModeParam();
-}
-/* places (Plan / Library / Marketplace) live in the header; the Room/Furniture mode lives on the canvas it changes */
-function renderMode(){
-  const place = isCanvasMode(S.mode) ? 'plan' : S.mode;
-  for(const b of document.querySelectorAll('#navSeg button')){
-    if(b.dataset.nav===place) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
-  }
-  for(const b of document.querySelectorAll('#modeSeg button')) b.setAttribute('aria-pressed', String(b.dataset.mode===S.mode));
-  document.body.dataset.mode = S.mode;
-}
 $('modeSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setMode(b.dataset.mode); });
 $('navSeg').addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b) return;
@@ -2396,32 +2302,7 @@ $('btnNewLayout').addEventListener('click', ()=>{
   });
 });
 
-function renderRoom(){
-  const r=L().room;
-  const box=$('rectDims');
-  if(isRectRoom()){
-    const b=bbox(RP());
-    box.innerHTML=`<div class="field"><label for="roomW">Width</label><input type="text" class="len" id="roomW" value="${esc(fmtLen(b.w,S.unit))}"></div>
-      <div class="field"><label for="roomD">Depth</label><input type="text" class="len" id="roomD" value="${esc(fmtLen(b.h,S.unit))}"></div>`;
-    const go=()=>{
-      const w=parseLen($('roomW').value,S.unit), d=parseLen($('roomD').value,S.unit);
-      if(isFinite(w)&&isFinite(d)&&w>200&&d>200) setRectSize(w,d);
-      renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
-    };
-    $('roomW').addEventListener('change',go);
-    $('roomD').addEventListener('change',go);
-  } else {
-    const b=bbox(RP());
-    box.innerHTML=`<div class="field"><label>Bounds</label><span>${esc(fmtLen(b.w,S.unit))} × ${esc(fmtLen(b.h,S.unit))}</span></div>`;
-  }
-  $('wallT').value=fmtLen(r.wall,S.unit);
-  $('floorCol').value=r.floor;
-  $('floorHex').value=r.floor; $('floorHex').classList.remove('bad');
-  $('trimOn').checked=!!r.trimOn;
-  $('trimD').value=fmtLen(r.trim,S.unit);
-  $('trimD').disabled=!r.trimOn;
-  $('areaOut').textContent=fmtArea(polyArea(RP()),S.unit);
-}
+import {renderRoom, deletePillar, deleteIWall, renderRoomSel, deleteOpening} from './src/plan/room-panel.js';
 import {renderSnap, renderWalls, renderObstacles} from './src/plan/room-panel.js';
 $('structList').addEventListener('click', e=>{
   const li=e.target.closest('li[data-id]'); if(!li) return;
@@ -2461,16 +2342,6 @@ function addPillar(){
   setRoomSel({kind:'pillar', id:pl.id});
   renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
 }
-function deletePillar(id){
-  L().room.pillars=L().room.pillars.filter(p=>p.id!==id);
-  if(roomSel&&roomSel.kind==='pillar'&&roomSel.id===id) setRoomSel(null);
-  renderRoomSel(); renderWalls(); draw(); save(); commitRoom();
-}
-function deleteIWall(id){
-  L().room.iwalls=L().room.iwalls.filter(w=>w.id!==id);
-  if(roomSel&&roomSel.kind==='iwall'&&roomSel.id===id) setRoomSel(null);
-  renderRoomSel(); renderWalls(); draw(); save(); commitRoom();
-}
 $('wallList').addEventListener('click', e=>{
   const li=e.target.closest('li[data-i]'); if(!li) return;
   if(!roomMode()) setMode('room');
@@ -2507,20 +2378,6 @@ function wallDialog(i){
     });
 }
 
-function renderRoomSel(){
-  const box=$('roomSelBox'), t=$('roomSelTitle');
-  box.closest('section').classList.toggle('is-empty', !(roomMode()&&roomSel));
-  if(!roomMode() || !roomSel){
-    t.textContent='Selection';
-    box.innerHTML='<p class="hint">Click a wall, corner, door or pillar in the plan to change it here.</p>';
-    return;
-  }
-  if(roomSel.kind==='wall') return renderWallProps();
-  if(roomSel.kind==='corner') return renderCornerProps();
-  if(roomSel.kind==='pillar') return renderPillarProps();
-  if(roomSel.kind==='iwall') return renderIWallProps();
-  return renderOpeningProps();
-}
 /* Floor mode's Properties: the picked room's place on the floor, and the floor itself.
    Anything about the room's own shape or contents stays in Room/Furniture mode. */
 function renderFloorSel(){
@@ -2602,208 +2459,7 @@ function renderFloorProps(){
   });
   $('flFit').addEventListener('click',()=>fit());
 }
-function renderWallProps(){
-  const i=roomSel.i, w=wallOf(i), room=L().room, off=wallIsOff(room,i);
-  $('roomSelTitle').textContent='Wall '+(i+1);
-  $('roomSelBox').innerHTML=`
-    <div class="field"><label for="wLen">Length</label><input type="text" class="len" id="wLen" value="${esc(fmtLen(w.len,S.unit))}"></div>
-    <div class="field"><label for="wAng">Direction</label><input type="number" class="deg" id="wAng" step="1" value="${Math.round(wallAngle(i))}"><span class="unit">°</span></div>
-    <p class="hint">0° points right, 90° up. Changing either moves the far corner.</p>
-    ${off?'<p class="hint">This side is open: the corner stays, the wall is gone. The room still keeps its floor area.</p>':''}
-    <div class="row actions">
-      ${off?'' : '<button class="btn sm" id="wDoor">Add door…</button><button class="btn sm" id="wWin">Add window…</button>'}
-      <button class="btn sm" id="wSplit">Split</button>
-      <button class="btn sm ${off?'':'danger'}" id="wOff">${off?'Put the wall back':'Open this side'}</button>
-    </div>`;
-  $('wOff').addEventListener('click',()=>toggleWallOff(i));
-  $('wLen').addEventListener('change', e=>{
-    const v=parseLen(e.target.value,S.unit);
-    if(isFinite(v)&&v>=100) setWallLen(i,v); else flash('Give the wall a length');
-    renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
-  });
-  $('wAng').addEventListener('change', e=>{
-    const v=parseFloat(e.target.value);
-    if(isFinite(v)) setWallAngle(i,v);
-    renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
-  });
-  if(!off){
-    $('wDoor').addEventListener('click',()=>openingDialog(null,'door',i));
-    $('wWin').addEventListener('click',()=>openingDialog(null,'window',i));
-  }
-  $('wSplit').addEventListener('click',()=>splitWall(i));
-}
-function renderCornerProps(){
-  const i=roomSel.i, P=RP(), p=P[i], b=bbox(P);
-  if(!p){ setRoomSel(null); return renderRoomSel(); }   // the corner went away under the selection
-  $('roomSelTitle').textContent='Corner '+(i+1);
-  $('roomSelBox').innerHTML=`
-    <div class="field"><label for="cX">From left</label><input type="text" class="len" id="cX" value="${esc(fmtLen(p[0]-b.x0,S.unit))}"></div>
-    <div class="field"><label for="cY">From top</label><input type="text" class="len" id="cY" value="${esc(fmtLen(p[1]-b.y0,S.unit))}"></div>
-    <p class="hint">Both walls meeting here move with the corner. Dragging it lines it up with the rest of the room; hold Alt for a free hand.</p>
-    <div class="row actions"><button class="btn sm" id="cSq">Square this corner</button><button class="btn sm danger" id="cDel" ${P.length<=3?'disabled title="A room needs at least three corners"':''}>Remove corner</button></div>`;
-  const go=()=>{
-    const x=parseLen($('cX').value,S.unit), y=parseLen($('cY').value,S.unit);
-    if(isFinite(x)&&isFinite(y)) tryRoomEdit(()=>{ P[i]=[b.x0+x, b.y0+y]; });
-    renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
-  };
-  $('cX').addEventListener('change',go);
-  $('cY').addEventListener('change',go);
-  $('cSq').addEventListener('click',()=>squareCorner(i));
-  $('cDel').addEventListener('click',()=>deleteCorner(i));
-}
-/* Taking a wall away takes its doors and windows with it — there is nothing left for
-   them to sit in. It all goes through commitRoom, so one undo brings the wall and
-   everything that was in it back together. */
-function toggleWallOff(i){
-  const l=L(), room=l.room;
-  syncWallOff(room);
-  if(wallIsOff(room,i)){
-    room.wallOff[i]=false;
-    renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
-    return;
-  }
-  const inWall=l.openings.filter(o=>o.wall===i);
-  const apply=()=>{
-    room.wallOff[i]=true;
-    if(inWall.length) l.openings=l.openings.filter(o=>o.wall!==i);
-    renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
-  };
-  if(!inWall.length){ apply(); return; }
-  askConfirm('Open this side?',
-    'Wall '+(i+1)+' holds '+plural(inWall.length,'door or window')+'. Opening the side removes '+(inWall.length>1?'them':'it')+' too.',
-    'Open this side', apply);
-}
-/* ------------------------- adding and taking away a corner -------------------------
-   A wall has no id: it IS the gap between points i and i+1, so it is addressed by that
-   index. Doors and windows (`opening.wall`) and measurements taken to a wall
-   (`anchor.k==='wall'`, `anchor.id`) are pinned to a wall by that same index. Splicing
-   the polygon therefore renumbers walls underneath everything standing in them, and
-   anything not renumbered to match stays behind on whichever wall inherited its old
-   number — which is how a closet door ended up two walls down the room. Both of these
-   functions renumber before they render, and clampOpenings then pulls back anything
-   left hanging off the end of the wall it landed on. */
-/* Not tryRoomEdit, deliberately: it clamps the openings the moment the polygon changes,
-   which here is one step too early. At that point every opening still carries its old
-   wall number against a polygon that has already been renumbered, so each one is
-   measured against somebody else's wall and its offset is squashed to fit. Splice,
-   renumber, and only then clamp. */
-function splitWall(i){
-  const P=RP(), room=L().room, w=wallOf(i);
-  P.splice(i+1, 0, [w.mid[0], w.mid[1]]);
-  if(!polySimple(P)){ P.splice(i+1,1); flash('That would fold the room over itself'); return; }
-  room.wallOff.splice(i+1, 0, wallIsOff(room,i));   // both halves inherit whether that wall was there
-  /* One wall became two, so every wall past it moves up a number. A door or window in
-     the far half changes wall as well, and starts that much further back along it; one
-     straddling the join goes wherever most of it is, since an opening cannot span two
-     walls. */
-  const half=wallOf(i,P).len;
-  for(const o of L().openings){
-    if(o.wall>i){ o.wall++; continue; }
-    if(o.wall!==i || o.offset+o.width/2 < half) continue;
-    o.wall=i+1; o.offset=Math.max(0, o.offset-half);
-  }
-  for(const m of L().measures) for(const a of [m.a,m.b]) if(a.k==='wall' && a.id>i) a.id++;
-  syncWallOff(room);
-  clampOpenings();
-  setRoomSel({kind:'corner', i:i+1});
-  renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
-}
-function deleteCorner(i){
-  const P=RP();
-  if(P.length<=3){ flash('A room needs at least three corners'); return; }
-  const room=L().room, n=P.length, prev=(i-1+n)%n;
-  // measured before the splice: how much of the merged wall the absorbing one already
-  // accounts for, and so how far along it anything from the far side now starts
-  const absorbed=wallOf(prev,P).len;
-  const removed=P.splice(i,1);
-  if(!polySimple(P)){ P.splice(i,0,removed[0]); flash("That corner can't be removed"); return; }
-  room.wallOff.splice(i,1);   // the two edges merge; the one before keeps its state
-  // walls i-1 and i are now one wall, numbered i-1, and everything past i drops a number
-  const to = w => { const t = w===i ? prev : w; return t>i ? t-1 : t; };
-  for(const o of L().openings){
-    if(o.wall===i) o.offset+=absorbed;
-    o.wall=to(o.wall);
-  }
-  const l=L();
-  for(const m of l.measures) for(const a of [m.a,m.b]) if(a.k==='wall') a.id=to(a.id);
-  /* a measurement that ran between the two walls now joins one wall to itself and reads
-     zero, so it goes with them */
-  const sameEnd = m => m.a.k==='wall' && m.b.k==='wall' && m.a.id===m.b.id
-                    && m.a.part===m.b.part && m.a.n===m.b.n;
-  l.measures = l.measures.filter(m=>!sameEnd(m));
-  syncWallOff(room);
-  clampOpenings();
-  setRoomSel(null);
-  renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
-}
-function renderPillarProps(){
-  const pl=pillarOf(roomSel.id);
-  if(!pl){ setRoomSel(null); return renderRoomSel(); }
-  $('roomSelTitle').textContent='Pillar';
-  $('roomSelBox').innerHTML=`
-    <div class="field"><label for="plShape">Shape</label><select id="plShape">
-      <option value="rect" ${pl.shape.type==='rect'?'selected':''}>Rectangle</option>
-      <option value="ellipse" ${pl.shape.type==='ellipse'?'selected':''}>Round</option></select></div>
-    <div class="field"><label for="plW">Width</label><input type="text" class="len" id="plW" value="${esc(fmtLen(pl.shape.w,S.unit))}"></div>
-    <div class="field"><label for="plD">Depth</label><input type="text" class="len" id="plD" value="${esc(fmtLen(pl.shape.d,S.unit))}"></div>
-    <div class="field"><label for="plRot">Rotation</label><input type="number" class="deg" id="plRot" step="1" value="${Math.round(pl.rot||0)}"><span class="unit">°</span></div>
-    <p class="hint">Drag it in the plan to move it.</p>
-    <div class="row actions"><button class="btn sm danger" id="plDel">Remove pillar</button></div>`;
-  const go=()=>{
-    pl.shape.type=$('plShape').value;
-    const w=parseLen($('plW').value,S.unit), d=parseLen($('plD').value,S.unit);
-    if(isFinite(w)&&w>0) pl.shape.w=w;
-    if(isFinite(d)&&d>0) pl.shape.d=d;
-    const rot=parseFloat($('plRot').value);
-    if(isFinite(rot)) pl.rot=norm360(rot);
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
-  };
-  $('plShape').addEventListener('change',go);
-  $('plW').addEventListener('change',go);
-  $('plD').addEventListener('change',go);
-  $('plRot').addEventListener('change',go);
-  $('plDel').addEventListener('click',()=>deletePillar(pl.id));
-}
-function renderIWallProps(){
-  const w=iwallOf(roomSel.id);
-  if(!w){ setRoomSel(null); return renderRoomSel(); }
-  const na=nearestOnWalls(w.a), nb=nearestOnWalls(w.b);
-  $('roomSelTitle').textContent='Interior wall';
-  $('roomSelBox').innerHTML=`
-    <div class="field"><label for="iwLen">Length</label><input type="text" class="len" id="iwLen" value="${esc(fmtLen(iwallLen(w),S.unit))}"></div>
-    <div class="field"><label for="iwAng">Direction</label><input type="number" class="deg" id="iwAng" step="1" value="${Math.round(iwallAngle(w))}"><span class="unit">°</span></div>
-    <div class="field"><label for="iwT">Thickness</label><input type="text" class="len" id="iwT" value="${esc(fmtLen(w.t,S.unit))}"></div>
-    <div class="field"><label for="iwDA" title="Gap from end A to wall ${na?na.i+1:'-'}">End A gap</label><input type="text" class="len" id="iwDA" value="${esc(fmtLen(na?na.d:0,S.unit))}" ${na?'':'disabled'}></div>
-    <div class="field"><label for="iwDB" title="Gap from end B to wall ${nb?nb.i+1:'-'}">End B gap</label><input type="text" class="len" id="iwDB" value="${esc(fmtLen(nb?nb.d:0,S.unit))}" ${nb?'':'disabled'}></div>
-    <p class="hint">Gaps are measured to wall ${na?na.i+1:'-'} and wall ${nb?nb.i+1:'-'}. Drag an end to resize or snap it; drag the middle to move it. Shift keeps it straight.</p>
-    <div class="row actions"><button class="btn sm danger" id="iwDel">Remove wall</button></div>`;
-  $('iwLen').addEventListener('change', e=>{
-    const v=parseLen(e.target.value,S.unit);
-    if(isFinite(v)&&v>=50) setIWallLen(w,v); else flash('Give the wall a length');
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
-  });
-  $('iwAng').addEventListener('change', e=>{
-    const v=parseFloat(e.target.value);
-    if(isFinite(v)) setIWallAngle(w,v);
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
-  });
-  $('iwT').addEventListener('change', e=>{
-    const v=parseLen(e.target.value,S.unit);
-    if(isFinite(v)&&v>=10) w.t=v; else flash('Give the wall a thickness');
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
-  });
-  $('iwDA').addEventListener('change', e=>{
-    const v=parseLen(e.target.value,S.unit);
-    if(isFinite(v)&&v>=0) setIWallEndDist(w,'a',v);
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
-  });
-  $('iwDB').addEventListener('change', e=>{
-    const v=parseLen(e.target.value,S.unit);
-    if(isFinite(v)&&v>=0) setIWallEndDist(w,'b',v);
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
-  });
-  $('iwDel').addEventListener('click',()=>deleteIWall(w.id));
-}
+import {deleteCorner} from './src/canvas/corners.js';
 
 import {KIND, renderOpen} from './src/plan/room-panel.js';
 $('openList').addEventListener('click', e=>{
@@ -2821,77 +2477,6 @@ $('openList').addEventListener('click', e=>{
   setRoomSel({kind:'opening', id});
   renderRoomSel(); renderOpen(); draw();
 });
-function deleteOpening(id){
-  L().openings=L().openings.filter(o=>o.id!==id);
-  if(roomSel&&roomSel.id===id) setRoomSel(null);
-  renderOpen(); renderRoomSel(); draw(); save(); commitRoom();
-}
-function renderOpeningProps(){
-  const o=openOf(roomSel.id);
-  if(!o){ setRoomSel(null); return renderRoomSel(); }
-  const len=wallOf(o.wall).len;
-  o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
-  const isDoor=o.kind==='door';
-  const hingeBits = isDoor && (o.dtype==='hinge'||o.dtype==='bifold');
-  $('roomSelTitle').textContent=KIND(o);
-  $('roomSelBox').innerHTML=`
-    <div class="field"><label for="oWall">Wall</label><select id="oWall">${RP().map((_,i)=>wallIsOff(L().room,i)&&i!==o.wall?'':`<option value="${i}" ${i===o.wall?'selected':''}>Wall ${i+1}</option>`).join('')}</select></div>
-    <div class="field"><label for="oW">Width</label><input type="text" class="len" id="oW" value="${esc(fmtLen(o.width,S.unit))}"></div>
-    <div class="field"><label for="oCorner">From</label><select id="oCorner">
-      <option value="cw" ${o.corner==='cw'?'selected':''}>Near corner</option>
-      <option value="ccw" ${o.corner==='ccw'?'selected':''}>Far corner</option></select></div>
-    <div class="field"><label for="oOff">Offset</label><input type="text" class="len" id="oOff" value="${esc(fmtLen(openingDispOffset(o,len),S.unit))}"></div>
-    ${isDoor ? `
-      <div class="field"><label for="oType">Type</label><select id="oType">
-        <option value="hinge" ${o.dtype==='hinge'?'selected':''}>Hinged</option>
-        <option value="bifold" ${o.dtype==='bifold'?'selected':''}>Bi-fold</option>
-        <option value="slide" ${o.dtype==='slide'?'selected':''}>Sliding</option>
-        <option value="open" ${o.dtype==='open'?'selected':''}>Open doorway</option></select></div>
-      <div id="oHingeBits" ${hingeBits?'':'hidden'}>
-        <div class="field"><label for="oHinge">Hinge</label><select id="oHinge">
-          <option value="start" ${(o.hinge||'start')==='start'?'selected':''}>Near corner</option>
-          <option value="end" ${o.hinge==='end'?'selected':''}>Far corner</option></select></div>
-        <div class="field"><label for="oSwing">Swings</label><select id="oSwing">
-          <option value="in" ${(o.swing||'in')==='in'?'selected':''}>Into room</option>
-          <option value="out" ${o.swing==='out'?'selected':''}>Out of room</option></select></div>
-      </div>` : `
-      <div class="field"><label for="oSill">Sill height</label><input type="text" class="len" id="oSill" value="${esc(fmtLen(o.sill||900,S.unit))}"></div>
-      <p class="hint">Sill height is a note for you; it doesn't change the plan.</p>`}
-    <p class="hint">Wall ${o.wall+1} is ${esc(fmtLen(len,S.unit))} long. Drag the circle in the plan to slide it along, or onto another wall.</p>
-    <div class="row actions"><button class="btn sm danger" id="oDel">Delete</button></div>`;
-  const go=()=>{
-    const wv=parseLen($('oW').value,S.unit);
-    o.wall=+$('oWall').value;
-    o.corner=$('oCorner').value==='ccw'?'ccw':'cw';
-    const l2=wallOf(o.wall).len;
-    if(isFinite(wv)&&wv>=100) o.width=Math.min(wv,l2);
-    const ov=parseLen($('oOff').value,S.unit);
-    if(isFinite(ov)) setOpeningDispOffset(o,l2,ov);
-    clampOpenings();
-    renderOpen(); renderRoomSel(); draw(); save(); commitRoom();
-  };
-  $('oWall').addEventListener('change',go);
-  $('oW').addEventListener('change',go);
-  $('oCorner').addEventListener('change',go);
-  $('oOff').addEventListener('change',go);
-  if(isDoor){
-    $('oType').addEventListener('change', ()=>{
-      o.dtype=$('oType').value;
-      const hb=$('oHingeBits'); if(hb) hb.hidden = o.dtype!=='hinge' && o.dtype!=='bifold';
-      $('roomSelTitle').textContent=KIND(o);
-      renderOpen(); draw(); save(); commitRoom();
-    });
-    $('oHinge').addEventListener('change', ()=>{ o.hinge=$('oHinge').value; draw(); save(); commitRoom(); });
-    $('oSwing').addEventListener('change', ()=>{ o.swing=$('oSwing').value; draw(); save(); commitRoom(); });
-  } else {
-    $('oSill').addEventListener('change', ()=>{
-      const v=parseLen($('oSill').value,S.unit);
-      o.sill = isFinite(v) ? v : 900;
-      save(); commitRoom();
-    });
-  }
-  $('oDel').addEventListener('click',()=>deleteOpening(o.id));
-}
 
 import {renderTagChips, renderInv, invBox} from './src/plan/item-list.js';
 $('tagChips').addEventListener('click', e=>{
@@ -2997,103 +2582,6 @@ invBox.addEventListener('drop', e=>{
   renderInv(); save();
 });
 
-function duplicateSel(){
-  if(selSet.size<2) return;
-  const srcIds=[...selSet];
-  const newIds=[];
-  for(const id of srcIds){
-    const src=instOf(id); if(!src) continue;
-    const dupe={...src, id:uid()};
-    L().placed.push(dupe);
-    newIds.push(dupe.id);
-  }
-  if(!newIds.length) return;
-  bringToFront(newIds);
-  selectSet(newIds);
-  renderInv(); renderSel(); draw(); save(); commitFurn();
-}
-function renderSel(){
-  const box=$('selBox');
-  if(!furnMode() || selSet.size===0){
-    box.closest('section').classList.toggle('is-empty', true);
-    box.innerHTML=`<p class="hint">Click an item in the plan to move, turn or remove it.</p>
-      <dl class="kbd">
-        <dt>Nudge</dt><dd><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dd>
-        <dt>Turn 90°</dt><dd><kbd>R</kbd></dd>
-        <dt>Remove</dt><dd><kbd>Del</kbd></dd>
-        <dt>Drag without snap</dt><dd><kbd>Alt</kbd></dd>
-        <dt>Select multiple</dt><dd><kbd>Shift</kbd>+click, or drag on empty space</dd>
-      </dl>`;
-    return;
-  }
-  if(selSet.size>1){
-    box.closest('section').classList.toggle('is-empty', false);
-    box.innerHTML=`
-      <div class="selhead"><span class="nm">${selSet.size} items selected</span></div>
-      <div class="row actions">
-        <button class="btn sm" id="sDupG">Duplicate</button>
-        <button class="btn sm danger" id="sDelG">Remove</button>
-      </div>
-      <dl class="kbd">
-        <dt>Nudge</dt><dd><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dd>
-        <dt>Remove</dt><dd><kbd>Del</kbd></dd>
-      </dl>`;
-    $('sDelG').addEventListener('click', removeSel);
-    $('sDupG').addEventListener('click', duplicateSel);
-    return;
-  }
-  const inst=instOf(sel), it=inst&&itemOf(inst.itemId);
-  box.closest('section').classList.toggle('is-empty', !(inst&&it));
-  if(!inst||!it){
-    selectClear();
-    box.innerHTML=`<p class="hint">Click an item in the plan to move, turn or remove it.</p>
-      <dl class="kbd">
-        <dt>Nudge</dt><dd><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dd>
-        <dt>Turn 90°</dt><dd><kbd>R</kbd></dd>
-        <dt>Remove</dt><dd><kbd>Del</kbd></dd>
-        <dt>Drag without snap</dt><dd><kbd>Alt</kbd></dd>
-      </dl>`;
-    return;
-  }
-  const b=bbox(worldPoly(inst,it)), rb=bbox(RP());
-  const openWhy = hasOpen(it) ? getConflicts().openBad.get(inst.id) : null;
-  const badWhy = isBad(inst) ? validate(inst,worldPoly(inst,it)).why : null;
-  box.innerHTML=`
-    <div class="selhead"><span class="sw" style="background:${it.color}"></span><span class="nm" title="${esc(it.name)}">${esc(it.name)}</span>
-      <button class="btn quiet sm" id="sEdit" title="Change this item's size, shape or colour everywhere">Edit item…</button></div>
-    ${badWhy?`<p class="hint warn">${esc(badWhy)}</p>`:''}
-    ${openWhy?`<p class="hint warn">${esc(openWhy)}</p>`:''}
-    <div class="field"><label for="sX">From left</label><input type="text" class="len" id="sX" value="${esc(fmtLen(b.x0-rb.x0,S.unit))}"></div>
-    <div class="field"><label for="sY">From top</label><input type="text" class="len" id="sY" value="${esc(fmtLen(b.y0-rb.y0,S.unit))}"></div>
-    <div class="field"><label for="sR">Angle</label>
-      <span class="inline-ctl"><input type="number" class="deg" id="sR" step="15" value="${Math.round(inst.rot||0)}">
-      <button class="btn icon" id="sRotL" title="Turn 90° left (Shift+R)" aria-label="Turn 90° left">${svgI('rot-l')}</button>
-      <button class="btn icon" id="sRotR" title="Turn 90° right (R)" aria-label="Turn 90° right">${svgI('rot-r')}</button></span></div>
-    ${hasOpen(it)?`<p class="hint">Opens out to ${esc(openSizeLabel(it))}.</p>`:''}
-    <div class="row actions">
-      <button class="btn sm" id="sDup">Duplicate</button>
-      <button class="btn sm danger" id="sDel">Remove</button>
-    </div>`;
-  $('sEdit').addEventListener('click',()=>itemDialog(it.id));
-  const move=(which,val)=>{
-    const mm=parseLen(val,S.unit);
-    if(!isFinite(mm)){ renderSel(); return; }
-    const loose=isBad(inst), bb=bbox(worldPoly(inst,it)), ox=inst.x, oy=inst.y;
-    if(which==='x') inst.x+=(rb.x0+mm)-bb.x0; else inst.y+=(rb.y0+mm)-bb.y0;
-    if(!validate(inst,worldPoly(inst,it)).ok){
-      if(loose){ if(!centreInside(inst)){ inst.x=ox; inst.y=oy; } }
-      else { inst.x=ox; inst.y=oy; flash('No room there'); }
-    }
-    draw(); renderSel(); save();
-  };
-  $('sX').addEventListener('change',e=>move('x',e.target.value));
-  $('sY').addEventListener('change',e=>move('y',e.target.value));
-  $('sR').addEventListener('change',e=>rotate((parseFloat(e.target.value)||0)-(inst.rot||0)));
-  $('sRotL').addEventListener('click',()=>rotate(-90));
-  $('sRotR').addEventListener('click',()=>rotate(90));
-  $('sDel').addEventListener('click',removeSel);
-  $('sDup').addEventListener('click',()=>place(inst.itemId));
-}
 
 /* ------------------------- room controls ------------------------- */
 function bindLen(id,set){
@@ -3173,221 +2661,11 @@ $('btnZoomIn').addEventListener('click',()=>zoomAt(1.25,W/2,H/2));
 $('btnZoomOut').addEventListener('click',()=>zoomAt(1/1.25,W/2,H/2));
 $('btnFit').addEventListener('click',fit);
 
-/* ------------------------- item dialog ------------------------- */
-let dlgColor=PALETTE[0];
-const openV = (it,k) => fmtLen((it&&it.open&&it.open[k])||0, S.unit);
-function shapeFieldHTML(type,sh){
-  const v=(k,def)=>fmtLen(sh&&sh[k]!==undefined?sh[k]:def,S.unit);
-  if(type==='poly'){
-    const pts = sh&&sh.type==='poly'
-      ? sh.points.map(p=>fmtLen(p[0],S.unit)+', '+fmtLen(p[1],S.unit)).join('\n')
-      : '0, 0\n36", 0\n36", 20"\n0, 20"';
-    return `<div class="field top"><label for="pPts">Corners</label>
-      <textarea id="pPts" spellcheck="false">${esc(pts)}</textarea></div>
-      <p class="hint">One corner per line as <code>across, down</code>, in order around the outline.</p>`;
-  }
-  let h=`<div class="field"><label for="fW">Width</label><input type="text" class="len" id="fW" value="${esc(v('w',900))}"></div>
-         <div class="field"><label for="fD">Depth</label><input type="text" class="len" id="fD" value="${esc(v('d',600))}"></div>`;
-  if(type==='lshape'){
-    h+=`<div class="field"><label for="fCW">Notch across</label><input type="text" class="len" id="fCW" value="${esc(v('cw',400))}"></div>
-        <div class="field"><label for="fCD">Notch down</label><input type="text" class="len" id="fCD" value="${esc(v('cd',300))}"></div>
-        <div class="field"><label for="fCorner">Notch at</label><select id="fCorner">
-          <option value="nw">Top left</option><option value="ne">Top right</option>
-          <option value="se">Bottom right</option><option value="sw">Bottom left</option></select></div>`;
-  }
-  return h;
-}
-import {retagItem} from './src/core/ids.js';
-function itemDialog(id){
-  const it=id?itemOf(id):null;
-  dlgColor = (it&&normHex(it.color)) || PALETTE[S.inventory.length%PALETTE.length];
-  const dlgId = it ? it.id : uid();
-  const type0 = it?it.shape.type:'rect';
-  openModal(it?'Edit “'+it.name+'”':'New item', `
-    <div class="field"><label for="iName">Name</label><input type="text" id="iName" value="${esc(it?it.name:'')}" placeholder="Sofa"></div>
-    <div class="field"><label for="iShape">Shape</label><select id="iShape">
-      <option value="rect">Rectangle</option><option value="ellipse">Circle / oval</option>
-      <option value="lshape">L-shape</option><option value="poly">Custom outline</option></select></div>
-    <div id="shapeFields"></div>
-    <p class="hint">Plain numbers are ${unitWord()}; 6'2", 30in, 75cm and 1.2m also work.</p>
-    <div class="field mt"><label>Colour</label><div class="swatches" id="iSwatches"></div></div>
-    <div class="field"><label for="iHex">Custom</label><input type="color" id="iColPick" aria-label="Pick a colour"><input type="text" class="hex" id="iHex" maxlength="7" spellcheck="false" placeholder="#6e8b7a"></div>
-    <div class="field"><label for="iCount">Owned</label><input type="number" id="iCount" min="1" step="1" value="${it&&it.count!=null?it.count:1}"></div>
-    <label class="stack-label mt" for="iTagsInput">Tags</label>
-    ${tagFieldHTML('iTags','living room, seating, IKEA')}
-    <p class="hint">Tab or comma adds a tag. Tags filter the item list.</p>
-
-    <div class="group">
-      <p class="group-title">Behaviour</p>
-      <label class="check"><input type="checkbox" id="iPass" ${it&&it.passThrough?'checked':''}>Other items can sit on it (rugs, mats)</label>
-      <label class="check"><input type="checkbox" id="iOpenOn" ${hasOpen(it)?'checked':''}>Opens out when in use (drawers, leaves, recliners)</label>
-      <div id="openFields" class="sub" ${hasOpen(it)?'':'hidden'}>
-        <div class="field"><label for="oTop">Up</label><input type="text" class="len" id="oTop" value="${esc(openV(it,'top'))}"></div>
-        <div class="field"><label for="oBottom">Down</label><input type="text" class="len" id="oBottom" value="${esc(openV(it,'bottom'))}"></div>
-        <div class="field"><label for="oLeft">Left</label><input type="text" class="len" id="oLeft" value="${esc(openV(it,'left'))}"></div>
-        <div class="field"><label for="oRight">Right</label><input type="text" class="len" id="oRight" value="${esc(openV(it,'right'))}"></div>
-        <p class="hint">How far it reaches past its footprint, before turning — a dresser with 20" drawers opens down 20". This only warns; it never blocks a placement.</p>
-      </div>
-    </div>
-
-    <details class="adv"${idProblem(dlgId)?' open':''}>
-      <summary>Advanced</summary>
-      <div class="advbody">
-        <div class="field"><label for="iId">Id</label><input type="text" class="id" id="iId" spellcheck="false" autocapitalize="off" autocorrect="off" value="${esc(dlgId)}"></div>
-        <p class="hint" id="iIdNote"></p>
-        <p class="hint">Letters, digits and <code>! - _ . * ' ( )</code>. A <code>/</code> files it like a folder, so <code>ikea/kallax/4x2</code> and <code>ikea/kallax/2x4</code> sit together. Rooms using it follow a rename.</p>
-      </div>
-    </details>
-`,
-    'Save',
-    ()=>{
-      const type=$('iShape').value;
-      let shape;
-      if(type==='poly'){
-        const pts=$('pPts').value.split('\n').map(line=>{
-          const [a,b]=line.split(',');
-          return [parseLen(a,S.unit), parseLen(b,S.unit)];
-        }).filter(p=>isFinite(p[0])&&isFinite(p[1]));
-        if(pts.length<3){ moError('An outline needs at least 3 corners'); return false; }
-        shape={type:'poly', points:pts};
-      } else {
-        const w=parseLen($('fW').value,S.unit), d=parseLen($('fD').value,S.unit);
-        if(!isFinite(w)||!isFinite(d)||w<=0||d<=0){ moError('Width and depth must be positive'); return false; }
-        shape={type,w,d};
-        if(type==='lshape'){
-          shape.cw=Math.max(1,Math.min(parseLen($('fCW').value,S.unit)||w/2, w-1));
-          shape.cd=Math.max(1,Math.min(parseLen($('fCD').value,S.unit)||d/2, d-1));
-          shape.corner=$('fCorner').value;
-        }
-      }
-      const name=($('iName').value||'').trim()||'Untitled';
-      const count=Math.max(1, Math.round(parseFloat($('iCount').value))||1);
-      const manualTags=tagFieldValue('iTags');
-      const open = $('iOpenOn').checked ? normOpen({
-        top:parseLen($('oTop').value,S.unit),    bottom:parseLen($('oBottom').value,S.unit),
-        left:parseLen($('oLeft').value,S.unit),  right:parseLen($('oRight').value,S.unit)
-      }) : null;
-      const newId=($('iId').value||'').trim();
-      const bad=idProblem(newId);
-      if(bad){ $('iId').closest('details').open=true; moError(bad); return false; }
-      if(S.inventory.some(x=>x.id===newId && x.id!==id)){ $('iId').closest('details').open=true; moError('Another item already uses that id'); return false; }
-      if(id){
-        const cur=itemOf(id);
-        Object.assign(cur,{name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,open});
-        applyTags(cur);
-        retagItem(id,newId);
-      }
-      else {
-        const nit={id:newId,name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,folderId:(isCanvasMode(S.mode)?null:nav.libFolderId)||null,open};
-        applyTags(nit);
-        S.inventory.push(nit);
-        // an untouched id is filed under the folder it was created in, same as moving it there
-        if(nit.folderId && newId===dlgId) rehomeItemId(nit, nit.folderId);
-      }
-      renderInv(); renderSel(); draw(); save(); renderLibAll();
-    },
-    ()=>{
-      const sel2=$('iShape');
-      sel2.value=type0;
-      const fill=()=>{
-        const t=sel2.value, sh=it&&it.shape.type===t?it.shape:null;
-        $('shapeFields').innerHTML=shapeFieldHTML(t,sh);
-        if(t==='lshape'&&sh) $('fCorner').value=sh.corner;
-      };
-      sel2.addEventListener('change',fill);
-      fill();
-      const sw=$('iSwatches'), pick=$('iColPick'), hx=$('iHex');
-      /* swatches + picker always show the live colour; the hex box is left alone while it's being typed in */
-      const syncSw=()=>{
-        sw.innerHTML=PALETTE.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-pressed="${c===dlgColor}" title="${c}"></button>`).join('');
-        pick.value=dlgColor;
-      };
-      const paint=()=>{ syncSw(); hx.value=dlgColor; hx.classList.remove('bad'); };
-      sw.addEventListener('click',e=>{ const b=e.target.closest('button'); if(b){ dlgColor=b.dataset.c; paint(); } });
-      pick.addEventListener('input',()=>{ dlgColor=normHex(pick.value)||dlgColor; paint(); });
-      hx.addEventListener('input',()=>{ const c=normHex(hx.value); hx.classList.toggle('bad',!c); if(c){ dlgColor=c; syncSw(); } });
-      hx.addEventListener('change',paint);
-      hx.addEventListener('blur',paint);
-      paint();
-      const oc=$('iOpenOn');
-      oc.addEventListener('change',()=>{ $('openFields').hidden=!oc.checked; });
-      mountTagField('iTags', (it&&it.manualTags)||[]);
-      const idIn=$('iId'), idNote=$('iIdNote');
-      const sayId=()=>{
-        const v=idIn.value.trim(), bad=idProblem(v);
-        idIn.classList.toggle('bad', !!bad && !!v);
-        if(bad){ idNote.textContent=v?bad:''; return; }
-        const f=idFolder(v);
-        idNote.textContent = f ? 'Filed under '+f+', as '+idLeaf(v) : 'No folder — sits at the top level.';
-      };
-      idIn.addEventListener('input',sayId);
-      sayId();
-    });
-}
+import {itemDialog} from './src/plan/item-dialog.js';
 $('btnAddItem').addEventListener('click',()=>itemDialog(null));
 $('btnAddItem2').addEventListener('click',()=>itemDialog(null));
 
-/* ------------------------- opening dialog ------------------------- */
-function openingDialog(id, kind, wallIdx){
-  const o = id?openOf(id):null;
-  const k = o?o.kind:(kind||'door');
-  const wi = o?o.wall:(wallIdx!==undefined?wallIdx:0);
-  const corner = o?(o.corner==='ccw'?'ccw':'cw'):'cw';
-  const dispOff = o ? openingDispOffset(o, wallOf(wi).len) : 600;
-  openModal(o?('Edit '+KIND(o).toLowerCase()):(k==='window'?'Add window':'Add door'), `
-    <div class="field"><label for="dWall">Wall</label><select id="dWall">${RP().map((_,i)=>wallIsOff(L().room,i)&&i!==wi?'':`<option value="${i}" ${i===wi?'selected':''}>Wall ${i+1} (${esc(fmtLen(wallOf(i).len,S.unit))})</option>`).join('')}</select></div>
-    <div class="field"><label for="dWidth">Width</label><input type="text" class="len" id="dWidth" value="${esc(fmtLen(o?o.width:(k==='window'?1200:813),S.unit))}"></div>
-    <div class="field"><label for="dCorner">From</label><select id="dCorner">
-      <option value="cw" ${corner==='cw'?'selected':''}>Near corner (clockwise)</option>
-      <option value="ccw" ${corner==='ccw'?'selected':''}>Far corner (counter-clockwise)</option></select></div>
-    <div class="field"><label for="dOffset">Offset</label><input type="text" class="len" id="dOffset" value="${esc(fmtLen(dispOff,S.unit))}"></div>
-    ${k==='door' ? `
-      <div class="field"><label for="dType">Type</label><select id="dType">
-        <option value="hinge">Hinged</option><option value="bifold">Bi-fold</option><option value="slide">Sliding</option><option value="open">Open doorway</option></select></div>
-      <div id="hingeBits">
-        <div class="field"><label for="dHinge">Hinge</label><select id="dHinge">
-          <option value="start">Near corner</option><option value="end">Far corner</option></select></div>
-        <div class="field"><label for="dSwing">Swings</label><select id="dSwing">
-          <option value="in">Into room</option><option value="out">Out of room</option></select></div>
-      </div>` : `
-      <div class="field"><label for="dSill">Sill height</label><input type="text" class="len" id="dSill" value="${esc(fmtLen(o&&o.sill?o.sill:900,S.unit))}"></div>
-      <p class="hint">Sill height is a note for you; it doesn't change the plan.</p>`}
-    <p class="hint">The offset is measured along the wall from the corner you pick. You can also drag it in the plan.</p>`,
-    'Save',
-    ()=>{
-      const wall=+$('dWall').value, len=wallOf(wall).len;
-      let width=parseLen($('dWidth').value,S.unit);
-      const cnr=$('dCorner').value==='ccw'?'ccw':'cw';
-      let dispOffset=parseLen($('dOffset').value,S.unit);
-      if(!isFinite(width)||width<100){ moError('Give it a width of at least 100 mm'); return false; }
-      if(width>len){ moError('That is wider than the wall ('+fmtLen(len,S.unit)+')'); return false; }
-      if(!isFinite(dispOffset)) dispOffset=0;
-      let offset = cnr==='ccw' ? (len-width-dispOffset) : dispOffset;
-      offset=Math.max(0,Math.min(offset,len-width));
-      const rec={
-        id:id||uid(), kind:k, wall, width, offset, corner:cnr,
-        dtype: k==='door' ? $('dType').value : 'open',
-        hinge: k==='door' ? $('dHinge').value : 'start',
-        swing: k==='door' ? $('dSwing').value : 'in',
-        sill:  k==='window' ? (parseLen($('dSill').value,S.unit)||900) : undefined
-      };
-      if(id){ const i=L().openings.findIndex(x=>x.id===id); L().openings[i]=rec; }
-      else L().openings.push(rec);
-      setRoomSel({kind:'opening', id:rec.id});
-      if(!roomMode()) setMode('room');
-      renderOpen(); renderRoomSel(); draw(); save(); commitRoom();
-    },
-    ()=>{
-      if(k!=='door') return;
-      if(o){ $('dType').value=o.dtype; $('dHinge').value=o.hinge||'start'; $('dSwing').value=o.swing||'in'; }
-      const t=()=>{
-        const v=$('dType').value;
-        $('hingeBits').hidden = v!=='hinge' && v!=='bifold';
-      };
-      $('dType').addEventListener('change',t);
-      t();
-    });
-}
+import {openingDialog} from './src/plan/opening-dialog.js';
 
 /* ------------------------- blueprint import -------------------------
    Trace a photo of a floor plan into rooms on a floor.
@@ -5847,7 +5125,7 @@ $('btnSamples').addEventListener('click', ()=>{
   renderInv(); save();
 });
 
-import {pickerHTML, pickerMount, pickValues, fileSlug, folderLine, ancestorFolderIds} from './src/io/pickers.js';
+import {pickerHTML, pickerMount, pickValues, folderLine, ancestorFolderIds} from './src/io/pickers.js';
 import {plural} from './src/ui/panels.js';
 
 import {PREF_KEYS, exportDialog} from './src/io/export.js';
@@ -6048,91 +5326,16 @@ $('fileIn').addEventListener('change', e=>{
 
 import {libFlash} from './src/ui/flash.js';
 
-import {childItemFolders, itemFolderOf, itemsInFolder, itemFolderDescendant, itemFolderSubtreeIds, ancestorTags, applyTags, recomputeFolderSubtree, ensureItemFolderPath, rehomeItemId, moveItemToFolder, purgeItem} from './src/library/item-folders.js';
+import {childItemFolders, itemFolderOf, itemsInFolder, itemFolderDescendant, applyTags, recomputeFolderSubtree, moveItemToFolder, purgeItem} from './src/library/item-folders.js';
 
-import {childMarketFolders, marketFolderOf, listingsInFolder, marketFolderDescendant, adhocCache, loadListing} from './src/library/adhoc-folders.js';
+import {childMarketFolders, marketFolderOf, listingsInFolder, marketFolderDescendant} from './src/library/adhoc-folders.js';
 
-import {marketIndexCache, ensureDefaultMarket, subscribeMarket, reloadMarketSub, removeMarketSub, fetchMarketItem, loadRegistry} from './src/library/market-subs.js';
+import {ensureDefaultMarket} from './src/library/market-subs.js';
 
-/* ------------------------- add to inventory: the 3 collision cases (MARKET_SCHEMA.md §4) ------------------------- */
-function itemsDeepEqual(a,b){
-  const strip=o=>{ const c=clone(o); delete c.folderId; delete c.manualTags; return c; };
-  return JSON.stringify(strip(a))===JSON.stringify(strip(b));
-}
-function addMarketItemToInventory(raw){
-  const incoming=normItem(clone(raw));
-  const existing=S.inventory.find(x=>x.id===incoming.id);
-  if(existing){
-    if(itemsDeepEqual(existing, incoming)){ libFlash('You already have this'); return; }
-    openModal('Already in your library', `
-      <p>You already have <code>${esc(incoming.id)}</code>, but this copy is different.</p>
-      <p class="hint">Taking theirs replaces your copy's shape, colour and other fields, but keeps the same id — anywhere you've placed it keeps its spot, now with the new geometry.</p>`,
-      'Take theirs', ()=>{
-        const folderId=existing.folderId, manualTags=existing.manualTags;
-        Object.assign(existing, incoming, {id:existing.id, folderId, manualTags});
-        applyTags(existing); save(); renderLibAll();
-        libFlash('Replaced your copy');
-      });
-    return;
-  }
-  const sameName=S.inventory.find(x=>x.name===incoming.name);
-  const parts=idParts(incoming.id); parts.pop();   // drop the leaf, keep the folder path
-  incoming.folderId=parts.length ? ensureItemFolderPath(parts) : null;
-  incoming.manualTags=(incoming.tags||[]).slice();
-  applyTags(incoming);
-  S.inventory.push(incoming);
-  save(); renderLibAll();
-  libFlash(sameName ? 'Added — you also have another "'+incoming.name+'" under a different id' : 'Added to your library');
-}
 
 import {nav, libTreeOpen} from './src/library/nav.js';
 
-function goLibFolder(kind,id){
-  if(kind==='library'){ nav.libFolderId=id; S.uiLib.libFolderId=id; }
-  else { nav.marketFolderId=id; S.uiLib.marketFolderId=id; nav.marketSubId=null; nav.subPath=null; nav.marketSelListingId=null; }
-  nav.searching=false; $('searchBox').value='';
-  save(); renderLibAll();
-}
-
-/* ------------------------- rendering: shell ------------------------- */
-function renderLibAll(){
-  if(isCanvasMode(S.mode)) return;
-  nav.tab = S.mode==='marketplace' ? 'market' : 'library';
-  $('libTitle').textContent = nav.tab==='library' ? 'Library' : 'Marketplace';
-  $('searchBox').placeholder = nav.tab==='library' ? 'Search items and tags' : 'Search the marketplace';
-  $('searchBox').setAttribute('aria-label', $('searchBox').placeholder);
-  renderLibTools();
-  renderLibTree();
-  renderLibContent();
-}
-function renderLibTools(){
-  const box=$('explTools');
-  if(nav.tab==='library'){
-    box.innerHTML=`<button class="btn sm primary" id="btnNewLibItem">${svgI('plus')}New item</button>
-      <button class="btn sm" id="btnNewLibFolder">${svgI('folder-plus')}New folder</button>`;
-    $('btnNewLibFolder').addEventListener('click', ()=>{
-      askNewLibFolder('New folder', (n,tags)=>{
-        S.itemFolders.push({id:uid(),name:n,parentId:nav.libFolderId,tags});
-        if(nav.libFolderId) libTreeOpen.add(nav.libFolderId);
-        save(); renderLibAll();
-      });
-    });
-    $('btnNewLibItem').addEventListener('click', createLibItem);
-  } else {
-    box.innerHTML=`<button class="btn sm primary" id="btnAddMarket">${svgI('plus')}Add marketplace…</button>
-      <button class="btn sm" id="btnAddListing">Add listing…</button>
-      <button class="btn sm icon" id="btnNewMFolder" title="New folder for listings" aria-label="New folder for listings">${svgI('folder-plus')}</button>`;
-    $('btnAddMarket').addEventListener('click', addMarketDialog);
-    $('btnNewMFolder').addEventListener('click', ()=>{
-      askText('New folder','Name','Folder', n=>{
-        S.marketFolders.push({id:uid(),name:n,parentId:nav.marketFolderId});
-        if(nav.marketFolderId) libTreeOpen.add('m:'+nav.marketFolderId);
-        save(); renderLibAll();
-      });
-    });
-    $('btnAddListing').addEventListener('click', addListingDialog);
-  }
-}
+import {goLibFolder, renderLibAll} from './src/library/shell.js';
 let libSearchT=null;
 $('searchBox').addEventListener('input', e=>{
   clearTimeout(libSearchT);
@@ -6191,7 +5394,7 @@ function renameAdhocFolder(id){
 
 /* ---- drag: reparent a library folder, or drop a library item onto one ---- */
 let dragLib=null;
-import {gridDragItem, setGridDragItem, itemTile, folderTile, crumbsHTML} from './src/library/grid.js';
+import {gridDragItem, setGridDragItem} from './src/library/grid.js';
 libTreeBox.addEventListener('dragstart', e=>{
   const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]'); if(!row) return;
   cancelSingleClick(); closeMenu();
@@ -6268,18 +5471,7 @@ libTreeBox.addEventListener('drop', e=>{
   dragLib=null; save(); renderLibAll();
 });
 
-/* ------------------------- folder menus & dialogs ------------------------- */
-function askNewLibFolder(title,onOk){
-  openModal(title, `
-    <label class="stack-label">Name</label>
-    <input type="text" id="moText" value="Folder">
-    <label class="stack-label mt">Tags</label>
-    ${tagFieldHTML('fNewTags','living room, seating, IKEA')}
-    <p class="hint">Every item filed in this folder — or in any subfolder underneath it — carries these tags automatically.</p>`,
-    'Save',
-    ()=>{ const v=$('moText').value.trim(); if(!v){ moError('Enter a name'); return false; } onOk(v, tagFieldValue('fNewTags')); },
-    ()=>{ mountTagField('fNewTags', []); });
-}
+import {askNewLibFolder, libFolderTagsDialog, adhocFolderContents} from './src/library/folder-menus.js';
 function libFolderMenu(id, anchor){
   const f=itemFolderOf(id); if(!f) return;
   openMenu(anchor, [
@@ -6308,19 +5500,6 @@ function adhocFolderMenu(id, anchor){
     {sep:true},
     {label:'Delete folder…', danger:true, fn:()=>deleteAdhocFolder(id)},
   ], f.name);
-}
-function libFolderTagsDialog(id){
-  const f=itemFolderOf(id); if(!f) return;
-  openModal('Tag everything in “'+f.name+'”', `
-    <label class="stack-label">Tags</label>
-    ${tagFieldHTML('fTags','living room, seating, IKEA')}
-    <p class="hint">Every item filed in this folder — or any subfolder underneath it — carries these tags automatically, alongside whatever tags you put on the item itself. They show up in Furniture mode's own tag filter too.</p>`,
-    'Save', ()=>{
-      f.tags=tagFieldValue('fTags');
-      recomputeFolderSubtree(id);
-      save(); renderLibAll();
-    },
-    ()=>{ mountTagField('fTags', f.tags||[]); });
 }
 function itemFolderContents(id){
   const folders=[], items=[];
@@ -6364,14 +5543,6 @@ function deleteLibFolder(id){
     <p>It holds ${esc(bits.join(' and '))}. Deleting the folder deletes all of that too, including anywhere those items are placed.</p>
     <label class="check"><input type="checkbox" id="keepKids">Keep everything inside — move it up to ${esc(up)}</label>`,
     'Delete folder', ()=>drop($('keepKids').checked), null, {danger:true});
-}
-function adhocFolderContents(id){
-  const folders=[], listings=[];
-  (function walk(pid){
-    for(const f of childMarketFolders(pid)){ folders.push(f); walk(f.id); }
-    for(const l of listingsInFolder(pid)) listings.push(l);
-  })(id);
-  return {folders,listings};
 }
 function deleteAdhocFolder(id){
   const f=marketFolderOf(id); if(!f) return;
@@ -6443,512 +5614,17 @@ function moveAdhocFolderDialog(id){
       save(); renderLibAll();
     });
 }
-function moveLibItemDialog(item){
-  const cur=item.folderId||'';
-  let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
-  (function walk(pid,depth){
-    for(const f of childItemFolders(pid)){
-      opts+=`<option value="${f.id}" ${f.id===cur?'selected':''}>${' '.repeat(depth)}${esc(f.name)}</option>`;
-      walk(f.id,depth+1);
-    }
-  })(null,0);
-  openModal('Move “'+item.name+'”', `<label class="stack-label">Folder</label>
-    <select id="moFolder">${opts}</select>`, 'Move', ()=>{
-      const v=$('moFolder').value||null;
-      moveItemToFolder(item, v);
-      if(v) libTreeOpen.add(v);
-      save(); renderLibAll();
-    });
-}
 
-/* ------------------------- library: item/folder tiles + grid ------------------------- */
-/* nothing is created until Save, so cancelling a new item leaves no "Untitled" behind */
-function createLibItem(){ itemDialog(null); }
-function duplicateLibItem(id){
-  const it=S.inventory.find(x=>x.id===id); if(!it) return;
-  const c=clone(it);
-  c.id=uniqueId(it.id+'-copy', new Set(S.inventory.map(x=>x.id)));
-  c.name=it.name+' copy';
-  S.inventory.push(c);
-  save(); renderLibAll();
-  libFlash('Duplicated');
-}
-function deleteLibItem(id){
-  const it=S.inventory.find(x=>x.id===id); if(!it) return;
-  const n=S.layouts.reduce((a,l)=>a+l.placed.filter(p=>p.itemId===id).length,0);
-  const kill=()=>{
-    purgeItem(id); selectClear();
-    save(); renderInv(); renderSel(); draw(); renderLibAll();
-  };
-  if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+' across your rooms. Those will be removed too.', 'Delete', kill);
-  else askConfirm('Delete this item?', '“'+it.name+'” will be removed for good.', 'Delete', kill);
-}
-function libItemMenu(id, anchor){
-  const it=S.inventory.find(x=>x.id===id); if(!it) return;
-  openMenu(anchor, [
-    {label:'Edit…', fn:()=>itemDialog(id)},
-    {label:'Move to folder…', fn:()=>moveLibItemDialog(it)},
-    {label:'Duplicate', fn:()=>duplicateLibItem(id)},
-    {label:'Export…', fn:()=>exportLibItems([it], 'room-planner-'+fileSlug(it.name)+'.json')},
-    {sep:true},
-    {label:'Delete…', danger:true, fn:()=>deleteLibItem(id)},
-  ], it.name);
-}
-function renderLibraryFolder(box, folderId){
-  const f=itemFolderOf(folderId);
-  const subs=childItemFolders(folderId), items=itemsInFolder(folderId);
-  let html=crumbsHTML('library', folderId);
-  const bits=[]; if(subs.length) bits.push(plural(subs.length,'folder')); if(items.length) bits.push(plural(items.length,'item'));
-  html+=`<div class="viewhead"><span class="hint grow">${bits.join(', ')}</span>
-    ${f?'<button class="btn sm" id="btnFolderTags">Folder tags…</button>':''}
-    ${(subs.length||items.length)?`<button class="btn sm" id="btnFolderExport">${f?'Export folder':'Export…'}</button>`:''}</div>`;
-  const inherited = f ? ancestorTags(folderId) : [];
-  if(f && inherited.length){
-    html+=`<div class="foldertagbar"><span class="lbl">Everything here is tagged</span>
-      ${inherited.map(t=>`<span class="tagchip">${esc(t)}</span>`).join('')}</div>`;
-  }
-  if(!subs.length && !items.length){
-    html+=`<div class="grid"><div class="empty">${f?'This folder is empty. Drag items onto it in the tree, or':'Your library is empty.'}
-      <div class="row"><button class="btn sm primary" data-newitem>${svgI('plus')}New item</button></div></div></div>`;
-  } else {
-    html+=`<div class="grid">${subs.map(folderTile).join('')}${items.map(itemTile).join('')}</div>`;
-  }
-  box.innerHTML=html;
-  bindCrumbs(box,'library');
-  if(f) $('btnFolderTags').addEventListener('click', ()=>libFolderTagsDialog(f.id));
-  if($('btnFolderExport')) $('btnFolderExport').addEventListener('click', ()=> f ? exportLibFolder(folderId) : exportLibraryDialog());
-  const ni=box.querySelector('[data-newitem]'); if(ni) ni.addEventListener('click', createLibItem);
-  bindLibGrid(box,'library');
-}
-function bindLibGrid(box, kind){
-  box.querySelectorAll('[data-openfolder]').forEach(t=>{
-    t.addEventListener('click', ()=>goLibFolder(kind, t.dataset.openfolder));
-  });
-  if(kind==='library'){
-    box.querySelectorAll('[data-item]').forEach(t=>{
-      const it=S.inventory.find(x=>x.id===t.dataset.item);
-      const cvp=t.querySelector('canvas[data-prev]'); if(cvp&&it) drawPreview(cvp,it);
-      t.addEventListener('click', e=>{
-        if(e.target.closest('[data-act=more]')) return;
-        itemDialog(t.dataset.item);
-      });
-      t.addEventListener('keydown', e=>{
-        if(e.target!==t || (e.key!=='Enter'&&e.key!==' ')) return;
-        e.preventDefault(); itemDialog(t.dataset.item);
-      });
-      const more=t.querySelector('[data-act=more]');
-      more.addEventListener('click', e=>{ e.stopPropagation(); libItemMenu(t.dataset.item, e.currentTarget); });
-      more.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); libItemMenu(t.dataset.item, more); } });
-      t.addEventListener('dragstart', e=>{
-        setGridDragItem(t.dataset.item); t.classList.add('dragging');
-        e.dataTransfer.effectAllowed='move';
-        try{ e.dataTransfer.setData('text/plain',gridDragItem); }catch(err){}
-      });
-      t.addEventListener('dragend', ()=>{ setGridDragItem(null); t.classList.remove('dragging'); clearDropMarks(); });
-    });
-    box.querySelectorAll('[data-openfolder]').forEach(t=>{
-      t.addEventListener('dragover', e=>{ if(!gridDragItem) return; e.preventDefault(); t.classList.add('dragover'); });
-      t.addEventListener('dragleave', ()=>t.classList.remove('dragover'));
-      t.addEventListener('drop', e=>{
-        e.preventDefault(); t.classList.remove('dragover');
-        if(!gridDragItem) return;
-        const it=S.inventory.find(x=>x.id===gridDragItem); if(!it) return;
-        moveItemToFolder(it, t.dataset.openfolder);
-        setGridDragItem(null); save(); renderLibAll();
-        libFlash('Moved “'+it.name+'”');
-      });
-    });
-  } else {
-    box.querySelectorAll('[data-listing]').forEach(t=>{
-      t.addEventListener('click', e=>{
-        if(e.target.closest('[data-act=more]')) return;
-        selectListing(t.dataset.listing);
-      });
-      const more=t.querySelector('[data-act=more]');
-      if(more) more.addEventListener('click', e=>{ e.stopPropagation(); listingMenu(t.dataset.listing, e.currentTarget); });
-    });
-  }
-}
-function bindCrumbs(box, kind){
-  box.querySelectorAll('[data-crumb]').forEach(b=>{
-    b.addEventListener('click', ()=>goLibFolder(kind, b.dataset.crumb||null));
-  });
-}
 
-import {exportLibItems, exportLibFolder, exportLibraryDialog} from './src/library/export.js';
 
-/* ------------------------- search, scoped to the folder currently being browsed ------------------------- */
-function renderLibSearchResults(box){
-  const qRaw=$('searchBox').value.trim();
-  const nq=normSearch(qRaw);
-  if(nav.tab==='library'){
-    const ids=itemFolderSubtreeIds(nav.libFolderId);
-    const scope=S.inventory.filter(it=>ids.has(it.folderId||null));
-    const hits=scope.filter(it=>normSearch(it.name).includes(nq) || (it.tags||[]).some(t=>normSearch(t).includes(nq)));
-    let html=crumbsHTML('library', nav.libFolderId).replace('</div>', `<span class="sep">/</span><button>Search: "${esc(qRaw)}"</button></div>`);
-    html += hits.length
-      ? `<div class="grid">${hits.map(itemTile).join('')}</div>`
-      : `<div class="grid"><div class="empty">Nothing matches “${esc(qRaw)}” here.</div></div>`;
-    box.innerHTML=html;
-    bindCrumbs(box,'library');
-    bindLibGrid(box,'library');
-  } else {
-    const {listings}=adhocFolderContents(nav.marketFolderId);
-    const hits=listings.filter(l=>normSearch(l.name).includes(nq));
-    let html=crumbsHTML('market', nav.marketFolderId).replace('</div>', `<span class="sep">/</span><button>Search: "${esc(qRaw)}"</button></div>`);
-    html += hits.length
-      ? `<div class="grid">${hits.map(listingTile).join('')}</div>`
-      : `<div class="grid"><div class="empty">Nothing matches “${esc(qRaw)}” here.</div></div>`;
-    box.innerHTML=html;
-    bindCrumbs(box,'market');
-    bindLibGrid(box,'market');
-  }
-}
 
-/* ------------------------- marketplace tab: subscribed markets + ad hoc listings ------------------------- */
-function selectListing(id){ nav.marketSelListingId=id; renderLibContent(); }
-function addMarketDialog(){
-  openModal('Add a marketplace', `
-    <p class="hint">Paste a <code>market.json</code> URL, or pick one from the registry below. See <code>MARKET_SCHEMA.md</code> for the format — anyone can publish one as a plain git repo.</p>
-    <input type="url" id="mUrl" placeholder="https://…/market.json">
-    <div id="mRegistry"></div>`,
-    'Subscribe',
-    ()=>{
-      const url=($('mUrl').value||'').trim();
-      if(!/^https?:\/\//i.test(url)){ moError('Enter a valid http(s) link to a market.json'); return false; }
-      if(S.marketSubs.some(s=>s.url===url)){ moError('You already subscribe to that marketplace'); return false; }
-      $('moOk').disabled=true;
-      subscribeMarket(url).then(()=>{ closeModal(); renderLibAll(); })
-        .catch(e=>{ moError(e.message); $('moOk').disabled=false; });
-      return false;   // keep the dialog open until the fetch settles; the .then() above closes it
-    },
-    ()=>{
-      loadRegistry('registry.json').then(list=>{
-        const box=$('mRegistry'); if(!box) return;
-        if(!list.length){ box.innerHTML='<p class="hint">The default registry is empty right now — paste a URL above, or see <code>CONTRIBUTING.md</code> to add one.</p>'; return; }
-        box.innerHTML='<p class="hint">Or pick one:</p><div class="registry">'+list.map(m=>
-          `<button type="button" class="btn sm" data-pick="${esc(m.url)}">${esc(m.name||m.url)}</button>`).join('')+'</div>';
-        box.querySelectorAll('[data-pick]').forEach(b=>b.addEventListener('click', ()=>{ $('mUrl').value=b.dataset.pick; }));
-      }).catch(()=>{ const box=$('mRegistry'); if(box) box.innerHTML=''; });
-    });
-}
-import {marketSubTile, marketPathChildren, marketItemTile, drawPreview} from './src/library/marketplace.js';
-function subMenu(sub, anchor){
-  openMenu(anchor, [
-    {label:'Open', fn:()=>{ nav.marketSubId=sub.id; nav.subPath=null; renderLibContent(); }},
-    {label:'Reload', fn:()=>{ reloadMarketSub(sub).then(()=>{ libFlash('Reloaded'); renderLibAll(); }).catch(e=>libFlash(e.message,true)); }},
-    {sep:true},
-    {label:'Remove…', danger:true, fn:()=>askConfirm('Remove this marketplace?', '“'+sub.name+'” and its cached index will be forgotten. Your library isn’t affected.', 'Remove', ()=>{
-      removeMarketSub(sub); renderLibAll();
-    })},
-  ], sub.name);
-}
-function renderMarketTop(box){
-  let html=`<div class="crumbs"><button data-crumb="">Marketplaces</button></div>`;
-  html+=`<div class="viewhead"><span class="hint grow">Browse a marketplace and add what you want to your library. Nothing is added until you choose it.</span>
-    ${S.marketSubs.length?`<label class="check"><input type="checkbox" id="chkContents" ${nav.showMarketContents?'checked':''}>Preview contents</label>`:''}</div>`;
-  if(!S.marketSubs.length){
-    html+=`<div class="grid"><div class="empty">You haven't added a marketplace yet.
-      <div class="row"><button class="btn sm primary" data-addmarket>${svgI('plus')}Add marketplace…</button></div></div></div>`;
-  } else {
-    html+=`<div class="grid">${S.marketSubs.map(marketSubTile).join('')}</div>`;
-  }
-  box.innerHTML=html;
-  bindCrumbs(box,'market');
-  const chk=box.querySelector('#chkContents'); if(chk) chk.addEventListener('change', ()=>{ nav.showMarketContents=chk.checked; renderLibContent(); });
-  const am=box.querySelector('[data-addmarket]'); if(am) am.addEventListener('click', addMarketDialog);
-  box.querySelectorAll('[data-opensub]').forEach(t=>{
-    t.addEventListener('click', e=>{
-      if(e.target.closest('[data-act=more],[data-loadsub],[data-openmsub]')) return;
-      const sub=S.marketSubs.find(s=>s.id===t.dataset.opensub); if(!sub) return;
-      nav.marketSubId=sub.id; nav.subPath=null; renderLibContent();
-    });
-    const more=t.querySelector('[data-act=more]');
-    if(more) more.addEventListener('click', e=>{ e.stopPropagation(); const sub=S.marketSubs.find(s=>s.id===t.dataset.opensub); if(sub) subMenu(sub, e.currentTarget); });
-  });
-  box.querySelectorAll('[data-loadsub]').forEach(el=>{
-    const sub=S.marketSubs.find(s=>s.id===el.dataset.loadsub); if(!sub) return;
-    reloadMarketSub(sub).then(()=>renderLibContent()).catch(e=>{ el.textContent=e.message; });
-  });
-  box.querySelectorAll('[data-openmsub]').forEach(el=>{
-    el.addEventListener('click', e=>{
-      e.stopPropagation();
-      nav.marketSubId=el.dataset.openmsub;
-      nav.subPath=el.dataset.mfolder2||null;
-      nav.marketSelItemId=el.dataset.mitem||null;
-      renderLibContent();
-    });
-  });
-}
-/* the folder tree inside one marketplace is derived from id path segments, not a stored folder list */
-function renderMarketSub(box, sub){
-  const items=marketIndexCache.get(sub.id);
-  const q=nav.searching ? $('searchBox').value.trim().toLowerCase() : '';
-  const backToTop=()=>{ nav.marketSubId=null; nav.subPath=null; nav.marketTagFilter=null; renderLibContent(); };
-  if(!items){
-    box.innerHTML=`<div class="crumbs"><button data-back>Marketplaces</button><span class="sep">/</span><button>${esc(sub.name)}</button></div><div class="grid"><div class="empty">Loading…</div></div>`;
-    box.querySelector('[data-back]').addEventListener('click', backToTop);
-    reloadMarketSub(sub).then(()=>renderLibContent()).catch(e=>{ box.querySelector('.empty').textContent=e.message; });
-    return;
-  }
-  let html=`<div class="crumbs"><button data-back>Marketplaces</button><span class="sep">/</span>`;
-  html+=nav.subPath ? `<button data-toroot>${esc(sub.name)}</button>` : `<button>${esc(sub.name)}</button>`;
-  if(nav.subPath){
-    const parts=idParts(nav.subPath);
-    let acc='';
-    for(const p of parts){ acc=acc?acc+'/'+p:p; html+=`<span class="sep">/</span><button data-mcrumb="${esc(acc)}">${esc(p)}</button>`; }
-  }
-  html+='</div>';
-  // scope search/filter to the folder currently being browsed, not the whole marketplace
-  const scoped=nav.subPath ? items.filter(it=>it.id===nav.subPath||it.id.startsWith(nav.subPath+'/')) : items;
-  const allTagsHere=[...new Set(scoped.flatMap(it=>it.tags))].sort();
-  if(allTagsHere.length) html+=`<div class="viewhead"><div class="chips">${allTagsHere.slice(0,20).map(t=>
-    `<button type="button" data-mtag="${esc(t)}" aria-pressed="${(nav.marketTagFilter===t)}">${esc(t)}</button>`).join('')}</div></div>`;
-  let matches;
-  if(q){ const nq=normSearch(q); matches=scoped.filter(it=>normSearch(it.name).includes(nq)||normSearch(it.id).includes(nq)||it.tags.some(t=>normSearch(t).includes(nq))); }
-  else if(nav.marketTagFilter){ matches=scoped.filter(it=>it.tags.includes(nav.marketTagFilter)); }
-  if(matches){
-    html+= matches.length ? `<div class="grid text">${matches.map(marketItemTile).join('')}</div>`
-      : `<div class="grid"><div class="empty">No matches.</div></div>`;
-  } else {
-    const {folders,leaves}=marketPathChildren(items, nav.subPath);
-    html+= (folders.length||leaves.length)
-      ? `<div class="grid text">${folders.map(f=>{
-          const full=nav.subPath?nav.subPath+'/'+f.name:f.name;
-          return `<button type="button" class="ttile" data-mopenfolder="${esc(full)}"><span class="ico">${svgI('folder')}</span><span class="tmain"><span class="tname">${esc(f.name)}</span><span class="dim">${plural(f.n,'item')}</span></span></button>`;
-        }).join('')}${leaves.map(marketItemTile).join('')}</div>`
-      : `<div class="grid"><div class="empty">Nothing in here.</div></div>`;
-  }
-  box.innerHTML=html;
-  box.querySelector('[data-back]').addEventListener('click', backToTop);
-  const toRoot=box.querySelector('[data-toroot]');
-  if(toRoot) toRoot.addEventListener('click', ()=>{ nav.subPath=null; renderLibContent(); });
-  box.querySelectorAll('[data-mcrumb]').forEach(b=>b.addEventListener('click', ()=>{ nav.subPath=b.dataset.mcrumb; renderLibContent(); }));
-  box.querySelectorAll('[data-mopenfolder]').forEach(t=>t.addEventListener('click', ()=>{ nav.subPath=t.dataset.mopenfolder; renderLibContent(); }));
-  box.querySelectorAll('[data-mtag]').forEach(b=>b.addEventListener('click', ()=>{
-    nav.marketTagFilter = nav.marketTagFilter===b.dataset.mtag ? null : b.dataset.mtag; renderLibContent();
-  }));
-  box.querySelectorAll('[data-mitemopen]').forEach(t=>{
-    t.addEventListener('click', e=>{
-      if(e.target.closest('[data-add]')) return;
-      nav.marketSelItemId = t.dataset.mitemopen; renderLibContent();
-    });
-    t.addEventListener('keydown', e=>{
-      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); nav.marketSelItemId = t.dataset.mitemopen; renderLibContent(); }
-    });
-  });
-  box.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click', e=>{
-    e.stopPropagation();
-    fetchMarketItem(sub, b.dataset.add).then(it=>addMarketItemToInventory(it)).catch(err=>libFlash(err.message,true));
-  }));
-  if(nav.marketSelItemId) renderMarketItemPreview(box, sub, nav.marketSelItemId);
-}
-/* a preview opens where you're looking (a dialog), not appended below hundreds of tiles */
-function renderMarketItemPreview(box, sub, id){
-  nav.marketSelItemId=null;
-  const entry=(marketIndexCache.get(sub.id)||[]).find(x=>x.id===id);
-  let loaded=null;
-  openModal(entry?entry.name:'Item', `
-    <div class="preview"><canvas id="mPrevCv"></canvas></div>
-    <div class="listing-status" id="mPrevInfo">Loading…</div>`,
-    'Add to library',
-    ()=>{
-      if(!loaded){ moError('Still loading — try again in a moment'); return false; }
-      setTimeout(()=>addMarketItemToInventory(loaded));   // after this dialog closes, in case it opens its own
-    },
-    ()=>{
-      $('moOk').disabled=true;
-      fetchMarketItem(sub, id).then(it=>{
-        if(!$('mPrevInfo')) return;
-        loaded=it;
-        $('moTitle').textContent=it.name;
-        $('mPrevInfo').innerHTML=`${esc(sizeLabel(it))}${(it.tags||[]).length?' · '+(it.tags||[]).map(esc).join(', '):''}<br><code>${esc(it.id)}</code>`;
-        drawPreview($('mPrevCv'), it);
-        $('moOk').disabled=false;
-      }).catch(e=>{ const st=$('mPrevInfo'); if(st){ st.className='hint warn'; st.textContent=e.message; } });
-    });
-}
+import {selectListing} from './src/library/marketplace.js';
 
 /* ---- ad hoc listings: upload a file, paste JSON, or fetch a plain {inventory:[...]} link ---- */
-import {listingTile, adhocFolderTile} from './src/library/adhoc-listings.js';
-function renderAdhocFolder(box, folderId, standalone){
-  const subs=childMarketFolders(folderId), listings=listingsInFolder(folderId);
-  let html=standalone ? crumbsHTML('market', folderId) : `<div class="lib-section">Listings — one-off bundles from a file, link or pasted JSON</div>`;
-  if(!subs.length && !listings.length){
-    html+=`<div class="grid"><div class="empty">No listings yet.
-      <div class="row"><button class="btn sm" data-addlisting-empty>Add listing…</button></div></div></div>`;
-  } else {
-    html+=`<div class="grid">${subs.map(adhocFolderTile).join('')}${listings.map(listingTile).join('')}</div>`;
-  }
-  let target=box;
-  if(standalone){ box.innerHTML=html; }
-  else { target=document.createElement('div'); target.innerHTML=html; box.appendChild(target); }
-  bindCrumbs(target,'market');
-  bindLibGrid(target,'market');
-  const al=target.querySelector('[data-addlisting-empty]'); if(al) al.addEventListener('click', addListingDialog);
-}
-function listingMenu(id, anchor){
-  const l=S.marketListings.find(x=>x.id===id); if(!l) return;
-  openMenu(anchor, [
-    {label:'Open', fn:()=>selectListing(id)},
-    {label:'Move to folder…', fn:()=>moveListingDialog(l)},
-    {sep:true},
-    {label:'Delete…', danger:true, fn:()=>askConfirm('Delete this listing?', '“'+l.name+'” will be removed. Your library isn’t affected.', 'Delete', ()=>{
-      S.marketListings=S.marketListings.filter(x=>x.id!==id);
-      adhocCache.delete(id);
-      if(nav.marketSelListingId===id) nav.marketSelListingId=null;
-      save(); renderLibAll();
-    })},
-  ], l.name);
-}
-function moveListingDialog(l){
-  const cur=l.parentId||'';
-  let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
-  (function walk(pid,depth){
-    for(const f of childMarketFolders(pid)){
-      opts+=`<option value="${f.id}" ${f.id===cur?'selected':''}>${' '.repeat(depth)}${esc(f.name)}</option>`;
-      walk(f.id,depth+1);
-    }
-  })(null,0);
-  openModal('Move “'+l.name+'”', `<label class="stack-label">Folder</label>
-    <select id="moFolder">${opts}</select>`, 'Move', ()=>{
-      l.parentId=$('moFolder').value||null;
-      save(); renderLibAll();
-    });
-}
-let pendingFile=null;
-function addListingDialog(){
-  pendingFile=null;
-  openModal('Add a listing', `
-    <div class="field"><label for="lName">Name</label><input type="text" id="lName" placeholder="A one-off bundle"></div>
-    <div class="seg full addmode-tabs" role="group" aria-label="Source">
-      <button type="button" data-lmode="file" aria-pressed="true">File</button>
-      <button type="button" data-lmode="link" aria-pressed="false">Link</button>
-      <button type="button" data-lmode="paste" aria-pressed="false">Paste JSON</button>
-    </div>
-    <div id="modeFile"><div class="dropzone" id="dropZone">Drop a Room Planner export here<br>
-      <label class="btn sm">Choose file…<input type="file" id="lFile" accept="application/json,.json" hidden></label></div>
-      <p class="hint" id="lFileNote"></p></div>
-    <div id="modeLink" hidden><input type="url" id="lUrl" placeholder="https://…/items.json">
-      <p class="hint">Fetched fresh each time you open this listing. This is a flat <code>{"inventory":[...]}</code> file, not a full marketplace — for a browsable catalog, use "Add marketplace" instead.</p></div>
-    <div id="modePaste" hidden><textarea id="lPaste" placeholder='{"inventory":[ ... ]}' rows="6"></textarea></div>
-    <p class="hint">Any of these can be a full Room Planner export, or just <code>{"inventory":[…]}</code>. Adding it here doesn't touch your inventory — you grab items from it one at a time, or all at once, from inside the listing.</p>`,
-    'Add', ()=>{
-      const name=($('lName').value||'').trim()||'Untitled listing';
-      const mode=$('modeFile').hidden ? ($('modeLink').hidden?'paste':'link') : 'file';
-      if(mode==='link'){
-        const url=($('lUrl').value||'').trim();
-        if(!/^https?:\/\//i.test(url)){ moError('Enter a valid http(s) link'); return false; }
-        S.marketListings.push({id:uid(), name, parentId:nav.marketFolderId, kind:'link', url, addedAt:Date.now()});
-        save(); renderLibAll();
-        return;
-      }
-      let raw=null;
-      if(mode==='paste'){
-        try{ raw=JSON.parse($('lPaste').value); }catch(e){ moError('That is not valid JSON'); return false; }
-      } else {
-        raw=pendingFile;
-      }
-      if(!raw || !Array.isArray(raw.inventory)){ moError('That file doesn’t look like a Room Planner export — it needs an "inventory" array'); return false; }
-      const content={inventory: raw.inventory.filter(i=>i&&typeof i==='object'&&i.shape).map(i=>normItem(clone(i)))};
-      S.marketListings.push({id:uid(), name, parentId:nav.marketFolderId, kind:'file', content, addedAt:Date.now()});
-      save(); renderLibAll();
-    },
-    ()=>{
-      const tabs=[...document.querySelectorAll('.addmode-tabs button')];
-      tabs.forEach(b=>b.addEventListener('click', ()=>{
-        tabs.forEach(x=>x.setAttribute('aria-pressed', String(x===b)));
-        $('modeFile').hidden = b.dataset.lmode!=='file';
-        $('modeLink').hidden = b.dataset.lmode!=='link';
-        $('modePaste').hidden = b.dataset.lmode!=='paste';
-      }));
-      const dz=$('dropZone'), fileIn=$('lFile');
-      function readFile(file){
-        if(!file) return;
-        const r=new FileReader();
-        r.onload=()=>{ try{ pendingFile=JSON.parse(r.result); $('lFileNote').textContent='Loaded “'+file.name+'”'; if(!$('lName').value.trim()) $('lName').value=file.name.replace(/\.json$/i,''); }
-          catch(e){ pendingFile=null; $('lFileNote').textContent='That file isn’t valid JSON.'; } };
-        r.readAsText(file);
-      }
-      fileIn.addEventListener('change', ()=>readFile(fileIn.files[0]));
-      dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('over'); });
-      dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
-      dz.addEventListener('drop', e=>{ e.preventDefault(); dz.classList.remove('over'); readFile(e.dataTransfer.files[0]); });
-    });
-}
-function renderListingDetail(box, id){
-  const l=S.marketListings.find(x=>x.id===id);
-  if(!l){ nav.marketSelListingId=null; return; }
-  box.innerHTML = crumbsHTML('market', l.parentId) + `
-    <div class="detail wide">
-      <div class="dhead"><div class="grow"><h1>${esc(l.name)}</h1>
-        <div class="dim">${l.kind==='link'?esc(l.url):'Uploaded file'}</div></div>
-        <div class="row">
-          <button class="btn sm danger" id="btnDelListing">Delete listing…</button>
-          <button class="btn sm primary" id="btnAddAllListing">Add all to library</button>
-        </div></div>
-      <div id="listingBody"><div class="listing-status">Loading…</div></div>
-    </div>`;
-  bindCrumbs(box,'market');
-  $('btnDelListing').addEventListener('click', ()=>{
-    askConfirm('Delete this listing?', '“'+l.name+'” will be removed.', 'Delete', ()=>{
-      S.marketListings=S.marketListings.filter(x=>x.id!==id);
-      nav.marketSelListingId=null; save(); renderLibAll();
-    });
-  });
-  loadListing(l).then(res=>{
-    if(nav.marketSelListingId!==id) return;
-    const body=$('listingBody'); if(!body) return;
-    if(res.error){ body.innerHTML=`<p class="hint warn">${esc(res.error)}</p>`; return; }
-    if(!res.items.length){ body.innerHTML=`<div class="empty">This listing has no items.</div>`; return; }
-    body.innerHTML=`<div class="grid flush">${res.items.map(it=>`
-      <div class="tile static">
-        <div class="thumb"><canvas data-lprev="${esc(it.id)}"></canvas></div>
-        <div class="body"><div class="nm" title="${esc(it.name)}">${esc(it.name)}</div>
-          <div class="tile-foot"><span class="dim">${esc(sizeLabel(it))}</span>
-          <button class="btn sm" data-addlisting="${esc(it.id)}">Add</button></div></div>
-      </div>`).join('')}</div>`;
-    body.querySelectorAll('canvas[data-lprev]').forEach(c=>{ const it=res.items.find(x=>x.id===c.dataset.lprev); if(it) drawPreview(c,it); });
-    body.querySelectorAll('[data-addlisting]').forEach(b=>{
-      b.addEventListener('click', ()=>{
-        const it=res.items.find(x=>x.id===b.dataset.addlisting);
-        addMarketItemToInventory(it);
-        b.textContent='Added'; b.classList.add('quiet'); b.disabled=true;
-      });
-    });
-    $('btnAddAllListing').addEventListener('click', ()=>{
-      for(const it of res.items) addMarketItemToInventory(it);
-      libFlash('Added '+res.items.length+' item'+(res.items.length===1?'':'s')+' to your library');
-      body.querySelectorAll('[data-addlisting]').forEach(b=>{ b.textContent='Added'; b.disabled=true; });
-    });
-  });
-}
+import {listingMenu} from './src/library/adhoc-listings.js';
 
-/* ------------------------- main content router ------------------------- */
-function renderLibContent(){
-  const box=$('libContent');
-  // a marketplace subscription owns search/filter within itself (scoped to the folder you're
-  // browsing there), so route to it before the generic search view even while nav.searching is set
-  if(nav.tab==='market' && nav.marketSubId){
-    const sub=S.marketSubs.find(s=>s.id===nav.marketSubId);
-    if(sub){ renderMarketSub(box, sub); return; }
-    nav.marketSubId=null;
-  }
-  if(nav.searching){ renderLibSearchResults(box); return; }
-  if(nav.tab==='library'){ renderLibraryFolder(box, nav.libFolderId); return; }
-  if(nav.marketSelListingId){ renderListingDetail(box, nav.marketSelListingId); return; }
-  if(nav.marketFolderId!=null){ renderAdhocFolder(box, nav.marketFolderId, true); return; }
-  renderMarketTop(box);
-  renderAdhocFolder(box, null);
-}
+import {renderLibContent} from './src/library/router.js';
 
-/* ------------------------- boot ------------------------- */
-function applyLayoutMode(){
-  const lib = !isCanvasMode(S.mode);
-  document.querySelector('main').style.display = lib ? 'none' : '';
-  $('paneLibrary').classList.toggle('on', lib);
-  if(!lib) applyPanes();
-}
 window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
 (async function boot(){
   try{
@@ -6968,7 +5644,7 @@ window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
   nav.libFolderId = itemFolderOf(S.uiLib.libFolderId) ? S.uiLib.libFolderId : null;
   nav.marketFolderId = marketFolderOf(S.uiLib.marketFolderId) ? S.uiLib.marketFolderId : null;
   renderSnap(); applySections(); renderMode(); applyLayoutMode(); renderAll();
-  if(isCanvasMode(S.mode)){ resize(); fit(); } else { pendingFit=true; }
+  if(isCanvasMode(S.mode)){ resize(); fit(); } else { setPendingFit(true); }
   if(!isCanvasMode(S.mode)) renderLibAll();
   ensureDefaultMarket().then(()=>{ if(!isCanvasMode(S.mode)) renderLibAll(); });
 })();

@@ -79,6 +79,16 @@ export const EPILOGUE = `
    inside a try/catch, so it would have gone missing silently. Import it the
    CANVAS way. */
 ;import {exportPayload} from './src/io/export.js';
+/* The SCC commit took the last index.html readers of these four with it:
+   idFolder/idLeaf went with itemDialog and the library menus, hasOpen with
+   itemDialog's open-footprint fields, fileSlug with libItemMenu. __rp still
+   hands all four to the unit suite, and __rp is NOT linted -- eslint never
+   sees this file appended to index.html -- so they failed at boot with a bare
+   ReferenceError: idFolder is not defined and 69 red tests. Import them the
+   CANVAS way. */
+;import {idFolder, idLeaf} from './src/core/ids.js';
+;import {hasOpen} from './src/core/open-state.js';
+;import {fileSlug} from './src/io/pickers.js';
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },

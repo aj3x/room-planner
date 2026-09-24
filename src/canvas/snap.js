@@ -23,6 +23,12 @@ import {pointInPoly, worldPoly} from '../core/geometry.js';
 import {openGeom} from '../model/openings.js';
 import {iwallPoly, nearestOnWalls} from '../model/walls.js';
 import {snapPt} from './view.js';
+import {commitRoom} from '../core/history.js';
+import {save} from '../core/store.js';
+import {tryRoomEdit} from '../model/walls.js';
+import {renderOpen, renderRoom, renderRoomSel, renderWalls} from '../plan/room-panel.js';
+import {flash} from '../ui/flash.js';
+import {draw} from './draw.js';
 
 /* ------------------------- the alignment magnet -------------------------
    A dragged point used to land wherever the grid allowed, which is hopeless on a plan
@@ -169,6 +175,22 @@ function pickRoom(px,py){
   return null;
 }
 
-export {pickAt, bringToFront, pickRoom,
-        alignRadius, snapToLines, lineProject, lineCross, guideSeg,
-        alignPoint, isSquare, snapCorner};
+
+/* ---- Phase 3, the SCC commit: the rest of this file's region, which could
+   not move until the whole 49-name component could. Move-only. ---- */
+/* Put the corner at exactly 90° without dragging for it. Every point that squares this
+   corner sits on the circle with its two neighbours as diameter, so the nearest point on
+   that circle is the smallest move that does it. */
+function squareCorner(i){
+  const P=RP(), n=P.length;
+  if(n<3) return;
+  const a=P[(i-1+n)%n], c=P[(i+1)%n], b=P[i];
+  const mx=(a[0]+c[0])/2, my=(a[1]+c[1])/2, rad=Math.hypot(c[0]-a[0], c[1]-a[1])/2;
+  if(rad<1){ flash('Those two walls meet at the same point'); return; }
+  let vx=b[0]-mx, vy=b[1]-my, len=Math.hypot(vx,vy);
+  if(len<1){ vx=-(c[1]-a[1]); vy=c[0]-a[0]; len=rad*2; }   // dead centre: step off square to the span
+  const ok=tryRoomEdit(()=>{ P[i]=[mx+vx/len*rad, my+vy/len*rad]; });
+  if(!ok) return;
+  renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
+}
+export {pickAt, bringToFront, pickRoom, alignRadius, snapToLines, lineProject, lineCross, guideSeg, alignPoint, isSquare, snapCorner, squareCorner};
