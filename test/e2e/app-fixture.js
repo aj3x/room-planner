@@ -173,3 +173,131 @@ export function stableIds(value) {
 }
 
 export { expect };
+
+/* ---------------------------------------------------------------------------
+   Pointer input (Phase 3.5)
+
+   Everything above drives the app through its own entry points. These helpers
+   drive it through the browser's real pointer pipeline instead — `mouse.down` /
+   `mouse.move` / `mouse.up` on `#cv` — because that is the only way the drag
+   deadzone, the alignment magnet and the guide readouts are reached at all.
+
+   Two things they exist to get right:
+
+   1. **Coordinates.** Tests are written in world millimetres; `pointerdown`
+      reads `e.offsetX`/`e.offsetY`, canvas-relative CSS px; `page.mouse` takes
+      viewport CSS px. The camera (`view.ox`/`oy`/`scale`) is set by `fit()` and
+      moves during a pan, so it is read fresh for every gesture rather than
+      cached. `#cv` has no border or padding (see the `canvas{}` rule), so the
+      element's border box and its padding box coincide and
+      `getBoundingClientRect()` is the offset origin.
+
+   2. **Intermediate moves.** `DEADZONE_PX` is 4 canvas px, and a drag arms only
+      once a `pointermove` lands further than that from where the pointer went
+      down. One jump from start to finish arms it and then applies the whole
+      travel in a single step, which is a different code path from the real
+      thing. So a drag is always stepped.
+
+   Nothing here sleeps. `settle()` waits on the app's own rAF, and the drag's
+   effect on state is synchronous inside `applyDragAt`.
+--------------------------------------------------------------------------- */
+
+/** The canvas's viewport origin plus the live camera, read together. */
+export const camera = (page) => page.evaluate(() => {
+  const c = document.getElementById('cv');
+  const r = c.getBoundingClientRect();
+  const v = window.__rp.view;
+  return { left: r.left, top: r.top, width: r.width, height: r.height, ox: v.ox, oy: v.oy, scale: v.scale };
+});
+
+/** Project world mm -> viewport CSS px using a camera snapshot from `camera()`. */
+export const project = (cam, [x, y]) => ({
+  x: cam.left + cam.ox + x * cam.scale,
+  y: cam.top + cam.oy + y * cam.scale,
+});
+
+/** Project world mm -> canvas-relative CSS px (what `e.offsetX/Y` will report). */
+export const projectOffset = (cam, [x, y]) => ({ x: cam.ox + x * cam.scale, y: cam.oy + y * cam.scale });
+
+/* The floating `.island` controls sit over the canvas at its four corners with
+   z-index 4, and `edgePanVel` starts auto-panning inside 40px of any edge.
+   A gesture that strays into either is not testing what it thinks it is, so
+   every projected point is checked against both. */
+/* 40px is edgePanVel's zone; the tallest island is 36px tall at a 12px inset,
+   so 56px clears both and the margin is one number rather than two. */
+const SAFE_INSET = 56;
+export function assertUsable(cam, p, what) {
+  const ox = p.x - cam.left, oy = p.y - cam.top;
+  if (ox < SAFE_INSET || oy < SAFE_INSET || ox > cam.width - SAFE_INSET || oy > cam.height - SAFE_INSET) {
+    throw new Error(
+      `${what} projects to canvas px (${ox.toFixed(1)}, ${oy.toFixed(1)}) on a `
+      + `${cam.width}x${cam.height} canvas, within ${SAFE_INSET}px of an edge — that is the `
+      + 'auto-pan zone and the floating island controls. Pick a point nearer the middle.',
+    );
+  }
+}
+
+/** Press the pointer down at a world point. Returns the camera snapshot used. */
+export async function pointerDownAt(page, world, { modifiers = [], button } = {}) {
+  const cam = await camera(page);
+  const p = project(cam, world);
+  assertUsable(cam, p, 'pointerdown');
+  for (const m of modifiers) await page.keyboard.down(m);
+  await page.mouse.move(p.x, p.y);
+  await page.mouse.down(button ? { button } : undefined);
+  return cam;
+}
+
+/** Step the pointer from one world point to another, in `steps` moves. */
+export async function pointerStepTo(page, cam, from, to, steps = 10) {
+  const a = project(cam, from), b = project(cam, to);
+  assertUsable(cam, b, 'pointer target');
+  for (let i = 1; i <= steps; i++) {
+    await page.mouse.move(a.x + (b.x - a.x) * (i / steps), a.y + (b.y - a.y) * (i / steps));
+  }
+}
+
+/** Release, and drop any modifiers that were held. */
+export async function pointerUp(page, { modifiers = [] } = {}) {
+  await page.mouse.up();
+  for (const m of [...modifiers].reverse()) await page.keyboard.up(m);
+}
+
+/**
+ * A complete stepped drag between two world points.
+ *
+ * `whileDown` is called after the last move and before the release, which is
+ * the only window in which `alignGuides`/`alignNote`/`floorGuides`/
+ * `floorSnapNote` and `drag` are readable — `endDrag()` clears all of them.
+ * Whatever it returns comes back from `dragWorld`.
+ */
+export async function dragWorld(page, from, to, opts = {}) {
+  const { steps = 10, modifiers = [], whileDown } = opts;
+  const cam = await pointerDownAt(page, from, { modifiers });
+  await pointerStepTo(page, cam, from, to, steps);
+  let held;
+  if (whileDown) held = await whileDown(cam);
+  await pointerUp(page, { modifiers });
+  return held;
+}
+
+/** Everything the interaction region keeps in flight, in one read. */
+export const liveDrag = (page) => page.evaluate(() => {
+  const t = window.__rp;
+  return {
+    drag: t.drag && JSON.parse(JSON.stringify(t.drag)),
+    alignNote: t.alignNote,
+    alignGuides: JSON.parse(JSON.stringify(t.alignGuides)),
+    floorSnapNote: t.floorSnapNote,
+    floorGuides: JSON.parse(JSON.stringify(t.floorGuides)),
+    readout: document.getElementById('readout').textContent,
+    snapSpan: document.querySelector('#readout .snap')?.textContent ?? null,
+  };
+});
+
+/** A single click (down+up, no travel) at a world point. */
+export async function clickWorld(page, world, opts = {}) {
+  const cam = await pointerDownAt(page, world, opts);
+  void cam;
+  await pointerUp(page, opts);
+}

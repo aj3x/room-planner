@@ -33,6 +33,7 @@
 const GLOBALS = [
   // driven by Suite B (Playwright)
   'draw', 'fit', 'save', 'setMode', 'startCustomDraw',
+  'startWallDraw', 'startSplitRoom', 'setMeasure', 'activateLayout',
   'exportPayload', 'readImport', 'applyImport',
   'polySimple', 'swingPoly', 'bpRebuild',
   // driven by Suite A (jsdom) — already global there, harmless to re-assign
@@ -59,6 +60,23 @@ export const EPILOGUE = `
   get view(){ return view; },
   get nav(){ return nav; },
   get measureOn(){ return measureOn; },
+  get measureStart(){ return measureStart; },
+  get measureSel(){ return measureSel; },
+  /* The guide readouts. Four of the ten selection lets, reassigned from all
+     over the interaction region and cleared again by endDrag(), so the only
+     way to see them is to look while the pointer is still down. Nothing
+     asserted them until Phase 3.5's pointer suite. */
+  get alignGuides(){ return alignGuides; },
+  get alignNote(){ return alignNote; },
+  get floorGuides(){ return floorGuides; },
+  get floorSnapNote(){ return floorSnapNote; },
+  /* The interaction lets draw() reads. drag is the one that says whether the
+     deadzone has armed yet. */
+  get drag(){ return drag; },
+  get drawState(){ return drawState; },
+  get drawCursor(){ return drawCursor; },
+  get wallDrawState(){ return wallDrawState; },
+  get splitDrawState(){ return splitDrawState; },
   get bpState(){ return bpState; },
   get bpLastImport(){ return bpLastImport; },
   roomHist: roomHist,
