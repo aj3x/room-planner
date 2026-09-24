@@ -835,7 +835,7 @@ import {startCustomDraw} from './src/canvas/room-draw.js';
 import {cancelCustomDraw, finishCustomDraw, drawSnapPoint, applyDrawCursorAt} from './src/canvas/room-draw.js';
 cv.addEventListener('mousemove', e=>{
   if(!drawState && !wallDrawState && !splitDrawState) return;
-  lastPX=e.offsetX; lastPY=e.offsetY; lastMods={shiftKey:e.shiftKey,altKey:e.altKey};
+  setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
   applyDrawCursorAt(lastPX,lastPY,e.shiftKey);
 });
 
@@ -897,7 +897,8 @@ $('measureBar').addEventListener('click', e=>{
 });
 
 /* ------------------------- interaction ------------------------- */
-let spaceDown=false; // held to force pan mode (Space+drag pans; Space+scroll still zooms)
+let spaceDown=false;
+function setSpaceDown(v){ spaceDown = v; } // held to force pan mode (Space+drag pans; Space+scroll still zooms)
 const ROOM_DRAGS=['corner','wall','open','pillar','iwall','iwall-end'];
 import {flash} from './src/ui/flash.js';
 import {alignRadius, snapCorner} from './src/canvas/snap.js';
@@ -1068,6 +1069,9 @@ cv.addEventListener('pointerdown', e=>{
   }
 });
 let lastPX=null, lastPY=null, lastMods={shiftKey:false,altKey:false};
+function setLastPX(v){ lastPX = v; }
+function setLastPY(v){ lastPY = v; }
+function setLastMods(v){ lastMods = v; }
 const DEADZONE_MODES=['open','corner','pillar','iwall','iwall-end','wall'];
 const DEADZONE_PX=4;
 function applyDragAt(px,py,mods){
@@ -1211,7 +1215,7 @@ function applyDragAt(px,py,mods){
 cv.addEventListener('pointermove', e=>{
   if(measureOn && !drag){ measureHoverAt(e.offsetX,e.offsetY); return; }
   if(!drag) return;
-  lastPX=e.offsetX; lastPY=e.offsetY; lastMods={shiftKey:e.shiftKey,altKey:e.altKey};
+  setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
   applyDragAt(lastPX,lastPY,lastMods);
 });
 /* auto-scroll the canvas when a drag or a wall/room draw sits near the visible
@@ -1342,7 +1346,7 @@ document.addEventListener('keydown', e=>{
   if(drag && e.key==='Escape'){ e.preventDefault(); cancelDrag(); return; }
   if(tag==='input'||tag==='textarea'||tag==='select') return;
   if(e.code==='Space' && !e.repeat && isCanvasMode(S.mode)){
-    spaceDown=true; cv.style.cursor='grab'; e.preventDefault(); return;
+    setSpaceDown(true); cv.style.cursor='grab'; e.preventDefault(); return;
   }
   if(drawState){
     if(e.key==='Escape'){ cancelCustomDraw(); return; }
@@ -1435,7 +1439,7 @@ document.addEventListener('keydown', e=>{
 });
 document.addEventListener('keyup', e=>{
   if(e.code==='Space'){
-    spaceDown=false;
+    setSpaceDown(false);
     if(!drag||drag.mode!=='pan') cv.style.cursor='';
   }
 });
