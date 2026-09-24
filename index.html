@@ -6140,37 +6140,9 @@ import {libFlash} from './src/ui/flash.js';
 
 import {childItemFolders, itemFolderOf, itemsInFolder, itemFolderDescendant, itemFolderPath, itemFolderSubtreeIds, itemCountInSubtree, ancestorTags, applyTags, recomputeFolderSubtree, ensureItemFolderPath, rehomeItemId, moveItemToFolder, purgeItem} from './src/library/item-folders.js';
 
-/* ------------------------- ad hoc market folders & listings (upload/paste/link a one-off bundle) ------------------------- */
-const childMarketFolders = pid => S.marketFolders.filter(f=>(f.parentId||null)===(pid||null));
-const marketFolderOf = id => id ? S.marketFolders.find(f=>f.id===id) : null;
-const listingsInFolder = fid => S.marketListings.filter(l=>(l.parentId||null)===(fid||null));
-function marketFolderDescendant(id,parentId){
-  let f=marketFolderOf(parentId);
-  while(f){ if(f.id===id) return true; f=marketFolderOf(f.parentId); }
-  return false;
-}
-function marketFolderPath(id){
-  const out=[]; let f=marketFolderOf(id);
-  while(f){ out.unshift(f); f=marketFolderOf(f.parentId); }
-  return out;
-}
-const adhocCache=new Map();   // listingId -> {items, error} — never persisted, refetched per session
-/* the one place an ad hoc listing reaches out over the network, and only when it's opened */
-async function loadListing(l){
-  if(l.kind==='file') return {items:(l.content&&l.content.inventory)||[]};
-  if(adhocCache.has(l.id)) return adhocCache.get(l.id);
-  try{
-    const data=await fetchJSON(l.url);
-    if(!data||!Array.isArray(data.inventory)) throw new Error('No "inventory" array in that file');
-    const out={items:data.inventory.filter(i=>i&&typeof i==='object'&&i.shape).map(i=>normItem(clone(i)))};
-    adhocCache.set(l.id, out);
-    return out;
-  }catch(e){
-    return {error:'Couldn’t load this link (' + e.message + '). The site may not allow cross-origin requests — try Paste JSON instead when adding a listing.'};
-  }
-}
+import {childMarketFolders, marketFolderOf, listingsInFolder, marketFolderDescendant, marketFolderPath, adhocCache, loadListing} from './src/library/adhoc-folders.js';
 
-import {fetchJSON, marketIndexCache, ensureDefaultMarket, subscribeMarket, reloadMarketSub, removeMarketSub, fetchMarketItem, loadRegistry} from './src/library/market-subs.js';
+import {marketIndexCache, ensureDefaultMarket, subscribeMarket, reloadMarketSub, removeMarketSub, fetchMarketItem, loadRegistry} from './src/library/market-subs.js';
 
 /* ------------------------- add to inventory: the 3 collision cases (MARKET_SCHEMA.md §4) ------------------------- */
 function itemsDeepEqual(a,b){
