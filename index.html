@@ -771,7 +771,7 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
    =================================================================== */
 
 /* ------------------------- units ------------------------- */
-import {parseLen, trimNum, unitWord, fmtLen, fmtArea, SNAPS} from './src/core/units.js';
+import {parseLen, trimNum, unitWord, fmtLen, fmtArea} from './src/core/units.js';
 
 import {norm360, shapePoly, bbox, worldPoly, pointInPoly, segHit, ptSegDist, centroid, signedArea, polyArea, polySimple} from './src/core/geometry.js';
 import {normOpen, hasOpen, openLocalBox, openSizeLabel} from './src/core/open-state.js';
@@ -2761,43 +2761,7 @@ function renderRoom(){
   $('trimD').disabled=!r.trimOn;
   $('areaOut').textContent=fmtArea(polyArea(RP()),S.unit);
 }
-function renderSnap(){
-  const list=(S.unit==='ftin'||S.unit==='in')?SNAPS.imperial:SNAPS.metric;
-  const s=$('snapSel');
-  s.innerHTML=list.map(([v,t])=>`<option value="${v}">${t}</option>`).join('');
-  if(!list.some(([v])=>v===S.snap)) S.snap=list[2][0];
-  s.value=S.snap;
-}
-function renderWalls(){
-  const ul=$('wallList'), P=RP(), room=L().room;
-  ul.innerHTML=P.map((_,i)=>{
-    const w=wallOf(i);
-    const on=roomSel&&roomSel.kind==='wall'&&roomSel.i===i;
-    const meta = wallIsOff(room,i) ? 'Open · '+esc(fmtLen(w.len,S.unit))
-                                   : esc(fmtLen(w.len,S.unit))+' · '+Math.round(wallAngle(i))+'°';
-    return `<li data-i="${i}" class="${on?'on':''}">
-      <span class="nm">Wall ${i+1}</span>
-      <span class="lmeta">${meta}</span></li>`;
-  }).join('');
-  renderObstacles();
-}
-const sizeLabelShape = sh => fmtLen(sh.w,S.unit)+' × '+fmtLen(sh.d,S.unit);
-const emptyRow = msg => `<li class="list-empty"><div class="empty">${msg}</div></li>`;
-function renderObstacles(){
-  const ul=$('structList'), room=L().room;
-  let pn=0, wn=0;
-  const rows=[
-    ...room.pillars.map(pl=>({kind:'pillar', id:pl.id, label:'Pillar '+(++pn), dim:sizeLabelShape(pl.shape)})),
-    ...room.iwalls.map(w=>({kind:'iwall', id:w.id, label:'Interior wall '+(++wn), dim:fmtLen(iwallLen(w),S.unit)}))
-  ];
-  if(!rows.length){ ul.innerHTML=emptyRow('None yet'); return; }
-  ul.innerHTML=rows.map(r=>{
-    const on=roomSel&&roomSel.kind===r.kind&&roomSel.id===r.id;
-    return `<li data-kind="${r.kind}" data-id="${r.id}" class="${on?'on':''}">
-      <span class="nm">${esc(r.label)}</span><span class="lmeta">${esc(r.dim)}</span>
-      <span class="lact">${moreBtn('')}</span></li>`;
-  }).join('');
-}
+import {renderSnap, renderWalls, emptyRow, renderObstacles} from './src/plan/room-panel.js';
 $('structList').addEventListener('click', e=>{
   const li=e.target.closest('li[data-id]'); if(!li) return;
   const kind=li.dataset.kind, id=li.dataset.id, btn=e.target.closest('button');
