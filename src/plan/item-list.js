@@ -25,6 +25,17 @@ import {INV_SCOPES, availableCount} from '../core/floor-space.js';
 import {sizeLabel} from '../canvas/draw.js';
 import {emptyRow} from './room-panel.js';
 
+import {draw} from '../canvas/draw.js';
+import {uniqueId} from '../core/ids.js';
+import {selectClear} from '../core/selection.js';
+import {clone, itemOf} from '../core/state.js';
+import {save} from '../core/store.js';
+import {flash} from '../ui/flash.js';
+import {inlineEdit} from '../ui/inline-edit.js';
+import {openMenu} from '../ui/menu.js';
+import {askConfirm} from '../ui/modal.js';
+import {itemDialog} from './item-dialog.js';
+import {place, renderSel} from './selection-panel.js';
 function allTags(){
   const s=new Set();
   for(const it of S.inventory) for(const t of (it.tags||[])) s.add(t);
@@ -96,4 +107,44 @@ function renderInv(){
 
 const invBox=$('invList');
 
-export {allTags, itemMatchesFilter, renderTagChips, renderInv, invBox};
+
+/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+function placeItem(id){
+  const it=itemOf(id); if(!it) return;
+  if(availableCount(it)<=0){ flash("None left to place \u2014 edit the item to own more"); return; }
+  place(id);
+}
+function renameItem(id){
+  const it=itemOf(id), li=invBox.querySelector('li[data-id="'+id+'"]');
+  if(!it||!li) return;
+  inlineEdit(li.querySelector('.nm'), it.name, v=>{ if(v){ it.name=v; save(); } renderInv(); renderSel(); draw(); });
+}
+function itemMenu(id, anchor){
+  const it=itemOf(id); if(!it) return;
+  openMenu(anchor, [
+    {label:'Place in this room', fn:()=>placeItem(id)},
+    {label:'Rename', fn:()=>renameItem(id)},
+    {label:'Edit\u2026', fn:()=>itemDialog(id)},
+    {label:'Duplicate', fn:()=>{
+      const c=clone(it);
+      // keep the copy in the same id folder as the original: ikea/kallax/4x2 → ikea/kallax/4x2-copy
+      c.id=uniqueId(it.id+'-copy', new Set(S.inventory.map(x=>x.id)));
+      c.name=it.name+' copy';
+      S.inventory.splice(S.inventory.indexOf(it)+1, 0, c);
+      renderInv(); save();
+    }},
+    {sep:true},
+    {label:'Delete\u2026', danger:true, fn:()=>deleteItem(id)},
+  ], it.name);
+}
+function deleteItem(id){
+  const n=S.layouts.reduce((a,l)=>a+l.placed.filter(p=>p.itemId===id).length,0);
+  const kill=()=>{
+    S.inventory=S.inventory.filter(i=>i.id!==id);
+    for(const l of S.layouts) l.placed=l.placed.filter(p=>p.itemId!==id);
+    selectClear(); renderInv(); renderSel(); draw(); save();
+  };
+  if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+'. Those will be removed too.', 'Delete', kill);
+  else kill();
+}
+export {allTags, itemMatchesFilter, renderTagChips, renderInv, invBox, placeItem, renameItem, itemMenu, deleteItem};

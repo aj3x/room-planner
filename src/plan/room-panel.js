@@ -38,6 +38,14 @@ import {askConfirm} from '../ui/modal.js';
 import {plural} from '../ui/panels.js';
 import {openingDialog} from './opening-dialog.js';
 
+import {drawState, wallDrawState} from '../canvas/interaction-state.js';
+import {cancelCustomDraw} from '../canvas/room-draw.js';
+import {cancelWallDraw} from '../canvas/wall-draw.js';
+import {centroid} from '../core/geometry.js';
+import {uid} from '../core/state.js';
+import {unitWord} from '../core/units.js';
+import {moError, openModal} from '../ui/modal.js';
+import {setMode} from './mode.js';
 function renderSnap(){
   const list=(S.unit==='ftin'||S.unit==='in')?SNAPS.imperial:SNAPS.metric;
   const s=$('snapSel');
@@ -356,4 +364,42 @@ function renderOpeningProps(){
   }
   $('oDel').addEventListener('click',()=>deleteOpening(o.id));
 }
-export {renderSnap, renderWalls, sizeLabelShape, emptyRow, renderObstacles, KIND, renderOpen, renderRoom, deletePillar, deleteIWall, renderRoomSel, renderWallProps, renderCornerProps, toggleWallOff, renderPillarProps, renderIWallProps, deleteOpening, renderOpeningProps};
+
+/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+function addPillar(){
+  if(wallDrawState) cancelWallDraw();
+  if(drawState) cancelCustomDraw();
+  if(!roomMode()) setMode('room');
+  const b=bbox(RP()), c=centroid(RP())||[(b.x0+b.x1)/2,(b.y0+b.y1)/2];
+  const pl={id:uid(), x:c[0], y:c[1], rot:0, shape:{type:'rect',w:300,d:300}};
+  L().room.pillars.push(pl);
+  setRoomSel({kind:'pillar', id:pl.id});
+  renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+}
+
+/* double-clicking a wall — in the plan or in the wall list — types its length in.
+   Same two values as the Selected panel, just close to hand while you are in the plan. */
+function wallDialog(i){
+  if(!roomMode()) setMode('room');
+  const P=RP();
+  if(!(i>=0&&i<P.length)) return;
+  const w=wallOf(i);
+  setRoomSel({kind:'wall', i});
+  renderWalls(); renderRoomSel(); draw();
+  openModal('Wall '+(i+1), `
+    <div class="field"><label for="wdLen">Length</label><input type="text" class="len" id="wdLen" value="${esc(fmtLen(w.len,S.unit))}"></div>
+    <div class="field"><label for="wdAng">Direction</label><input type="number" class="deg" id="wdAng" step="1" value="${Math.round(wallAngle(i))}"><span class="unit">°</span></div>
+    <p class="hint">The far corner moves, and the next wall follows. 0° points right, 90° up. Plain numbers are ${unitWord()}; 6'2", 75cm and 1.2m also work.</p>`,
+    'Save',
+    ()=>{
+      const len=parseLen($('wdLen').value,S.unit);
+      if(!isFinite(len)||len<100){ moError('Give the wall a length of at least 100 mm'); return false; }
+      const deg=parseFloat($('wdAng').value);
+      let ok=true;
+      if(isFinite(deg) && Math.round(deg)!==Math.round(wallAngle(i))) ok=setWallAngle(i,deg);
+      if(ok) ok=setWallLen(i,len);
+      renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+      if(!ok) return false;   // tryRoomEdit rolled it back and flashed why — stay open
+    });
+}
+export {renderSnap, renderWalls, sizeLabelShape, emptyRow, renderObstacles, KIND, renderOpen, renderRoom, deletePillar, deleteIWall, renderRoomSel, renderWallProps, renderCornerProps, toggleWallOff, renderPillarProps, renderIWallProps, deleteOpening, renderOpeningProps, addPillar, wallDialog};
