@@ -20,6 +20,8 @@ import {libTreeOpen, nav} from './nav.js';
 import {moreBtn} from '../ui/menu.js';
 import {$, svgI} from '../ui/modal.js';
 import {esc, plural} from '../ui/panels.js';
+import {dropHalf} from '../ui/dnd.js';
+import {gridDragItem} from './grid.js';
 
 /* ------------------------- library tree: folders only ------------------------- */
 function folderTagsInline(f){
@@ -88,4 +90,21 @@ function markActiveTreeRow(){
   }
 }
 const libTreeBox=$('tree');
-export {folderTagsInline, renderLibTreeLevel, renderMarketTreeLevel, renderLibTree, markActiveTreeRow, libTreeBox};
+let dragLib=null;
+function setDragLib(v){ dragLib=v; }
+
+function libDropSpot(e){
+  const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]');
+  const root=e.target.closest('[data-root]');
+  if(root) return {mode:'root'};
+  if(!row) return null;
+  const isLib=!!row.dataset.folder;
+  if(gridDragItem && !isLib) return null;
+  const id=isLib?row.dataset.folder:row.dataset.mfolder;
+  if(dragLib && dragLib.kind==='folder' && id===dragLib.id) return null;
+  const t=dropHalf(e,row);
+  if(t>=0.25 && t<=0.75) return {mode:'into',id,isLib,row};
+  return {mode:t<0.5?'before':'after',id,isLib,row};
+}
+
+export {folderTagsInline, renderLibTreeLevel, renderMarketTreeLevel, renderLibTree, markActiveTreeRow, libTreeBox, dragLib, setDragLib, libDropSpot};

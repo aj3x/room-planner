@@ -41,6 +41,7 @@ import {mountTagField, tagFieldHTML, tagFieldValue} from '../ui/tag-input.js';
 import {lastMerge, mergeUndo, newFloorWith, putOnFloorDialog, setLastMerge} from './floors.js';
 import {renderInv} from './item-list.js';
 import {renderAll, setMode} from './mode.js';
+import {dropHalf} from '../ui/dnd.js';
 /* ------------------------- layout tree (folders + rooms) ------------------------- */
 function folderLabel(f){
   const tags=(f.tags&&f.tags.length) ? `<span class="tagchip" title="Tag filter: ${esc(f.tags.join(', '))}">${esc(f.tags[0])}${f.tags.length>1?' +'+(f.tags.length-1):''}</span>` : '';
@@ -292,4 +293,21 @@ function moveDialog(kind,id){
    (a new room) and everything rarer sits behind the ⋯ with a word for a label. */
 const newFolder = () =>
   askText('New folder','Name','Folder', n=>{ S.folders.push({id:uid(),name:n,parentId:null,tags:[]}); renderTree(); save(); });
-export {folderLabel, layoutRowHTML, floorRowHTML, renderTreeLevel, renderTree, treeBox, treeRowEl, renameFolder, renameLayout, renameFloor, activateLayout, folderPath, folderDescendant, enterFloor, folderMenu, layoutMenu, folderTagsDialog, folderContents, deleteFolder, duplicateLayout, deleteLayout, moveDialog, newFolder};
+let dragTree=null;
+function setDragTree(v){ dragTree=v; }
+
+function treeDropSpot(e){
+  if(!dragTree) return null;
+  const row=e.target.closest('.tree-row');
+  if(!row) return {mode:'root'};
+  /* dropping a room on a floor row is how you stand it on that floor */
+  if(row.dataset.floor) return dragTree.kind==='layout' ? {mode:'onto-floor',id:row.dataset.floor,row} : null;
+  const isFolder=!!row.dataset.folder;
+  const id=isFolder?row.dataset.folder:row.dataset.layout;
+  if(isFolder && dragTree.kind==='folder' && id===dragTree.id) return null;
+  const t=dropHalf(e,row);
+  if(isFolder && t>=0.3 && t<=0.7) return {mode:'into',id,isFolder,row};
+  return {mode:t<0.5?'before':'after',id,isFolder,row};
+}
+
+export {folderLabel, layoutRowHTML, floorRowHTML, renderTreeLevel, renderTree, treeBox, treeRowEl, renameFolder, renameLayout, renameFloor, activateLayout, folderPath, folderDescendant, enterFloor, folderMenu, layoutMenu, folderTagsDialog, folderContents, deleteFolder, duplicateLayout, deleteLayout, moveDialog, newFolder, dragTree, setDragTree, treeDropSpot};

@@ -1341,8 +1341,7 @@ import {renameFolder, renameLayout, renameFloor} from './src/plan/layout-tree.js
 
 /* ---- drag a room or folder to move it: onto a folder puts it inside, on the
         upper/lower edge of a row drops it beside that row ---- */
-let dragTree=null;
-function setDragTree(v){ dragTree=v; }
+import {dragTree, setDragTree} from './src/plan/layout-tree.js';
 treeBox.addEventListener('dragstart', e=>{
   const row=e.target.closest('.tree-row'); if(!row) return;
   cancelSingleClick(); closeMenu();
@@ -1357,19 +1356,7 @@ treeBox.addEventListener('dragend', ()=>{
   clearDropMarks(treeBox);
   for(const r of treeBox.querySelectorAll('.dragging')) r.classList.remove('dragging');
 });
-function treeDropSpot(e){
-  if(!dragTree) return null;
-  const row=e.target.closest('.tree-row');
-  if(!row) return {mode:'root'};
-  /* dropping a room on a floor row is how you stand it on that floor */
-  if(row.dataset.floor) return dragTree.kind==='layout' ? {mode:'onto-floor',id:row.dataset.floor,row} : null;
-  const isFolder=!!row.dataset.folder;
-  const id=isFolder?row.dataset.folder:row.dataset.layout;
-  if(isFolder && dragTree.kind==='folder' && id===dragTree.id) return null;
-  const t=dropHalf(e,row);
-  if(isFolder && t>=0.3 && t<=0.7) return {mode:'into',id,isFolder,row};
-  return {mode:t<0.5?'before':'after',id,isFolder,row};
-}
+import {treeDropSpot} from './src/plan/layout-tree.js';
 treeBox.addEventListener('dragover', e=>{
   const spot=treeDropSpot(e); if(!spot) return;
   e.preventDefault();
@@ -1524,8 +1511,7 @@ invBox.addEventListener('dblclick', e=>{
 import {placeItem, renameItem, itemMenu} from './src/plan/item-list.js';
 
 /* ---- drag a thing up or down to reorder your list ---- */
-let dragInv=null;
-function setDragInv(v){ dragInv=v; }
+import {dragInv, setDragInv} from './src/plan/item-list.js';
 invBox.addEventListener('dragstart', e=>{
   const li=e.target.closest('li[data-id]'); if(!li) return;
   cancelSingleClick(); closeMenu();
@@ -1750,8 +1736,7 @@ libTreeBox.addEventListener('dblclick', e=>{
 import {renameLibFolder, renameAdhocFolder, libFolderMenu, adhocFolderMenu} from './src/library/folder-menus.js';
 
 /* ---- drag: reparent a library folder, or drop a library item onto one ---- */
-let dragLib=null;
-function setDragLib(v){ dragLib=v; }
+import {dragLib, setDragLib} from './src/library/tree.js';
 import {gridDragItem, setGridDragItem} from './src/library/grid.js';
 libTreeBox.addEventListener('dragstart', e=>{
   const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]'); if(!row) return;
@@ -1765,19 +1750,7 @@ libTreeBox.addEventListener('dragend', ()=>{
   setDragLib(null); clearDropMarks(libTreeBox);
   for(const r of libTreeBox.querySelectorAll('.dragging')) r.classList.remove('dragging');
 });
-function libDropSpot(e){
-  const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]');
-  const root=e.target.closest('[data-root]');
-  if(root) return {mode:'root'};
-  if(!row) return null;
-  const isLib=!!row.dataset.folder;
-  if(gridDragItem && !isLib) return null;
-  const id=isLib?row.dataset.folder:row.dataset.mfolder;
-  if(dragLib && dragLib.kind==='folder' && id===dragLib.id) return null;
-  const t=dropHalf(e,row);
-  if(t>=0.25 && t<=0.75) return {mode:'into',id,isLib,row};
-  return {mode:t<0.5?'before':'after',id,isLib,row};
-}
+import {libDropSpot} from './src/library/tree.js';
 libTreeBox.addEventListener('dragover', e=>{
   if(!dragLib && !gridDragItem) return;
   const spot=libDropSpot(e); if(!spot) return;

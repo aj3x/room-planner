@@ -147,4 +147,7 @@ function deleteItem(id){
   if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+'. Those will be removed too.', 'Delete', kill);
   else kill();
 }
-export {allTags, itemMatchesFilter, renderTagChips, renderInv, invBox, placeItem, renameItem, itemMenu, deleteItem};
+let dragInv=null;
+function setDragInv(v){ dragInv=v; }
+
+export {allTags, itemMatchesFilter, renderTagChips, renderInv, invBox, placeItem, renameItem, itemMenu, deleteItem, dragInv, setDragInv};
