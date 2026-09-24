@@ -633,6 +633,116 @@ Re-checked, not assumed: `canvas/room-draw.js`, `canvas/corners.js`,
 `togglePane` all now want the `render*()` functions, `setMode` and `renderAll`.
 That is one gate, and it is the `plan/` round's.
 
+### Phase 3 progress — the `plan/` round
+
+Done, baseline green (185 Vitest + 166 Playwright) between every one of the ten
+commits. `index.html`: 8,070 → 7,670 lines. `src/`: 27 → 32 modules. **Every
+commit is move-only.** No setter was needed and none was spent.
+
+| commit | note |
+|---|---|
+| `core/history.js` | the recording half of undo/redo, in three chunks |
+| `treeOpen` → `core/selection.js` | the tenth selection let; no setter needed |
+| `plan/layout-tree.js` | the tree's HTML builders |
+| `plan/room-panel.js` | the Room pane's wall, structure and snap lists |
+| `plan/room-panel.js` + the Openings list | `KIND`, `renderOpen` |
+| `plan/item-list.js` | the inventory list + `allTags`/`itemMatchesFilter` |
+| rename helpers → `plan/layout-tree.js` | `renameFolder`/`renameLayout`/`renameFloor` |
+| `canvas/view.js` ← `resize`, `fitBBox`, `fit`, `zoomAt` | **the file is whole** |
+| `canvas/snap.js` ← `pickAt`, `bringToFront`, `pickRoom` | |
+| `canvas/measure-tool.js` | the Measure tool's canvas half |
+
+**The gate did not open, and the reason is the round's main finding. It is not
+`plan/`'s to open.**
+
+The brief for this round said `canvas/room-draw.js`, `canvas/corners.js`,
+`canvas/interaction.js`, the rest of `split-room.js`, `core/history.js` and the
+rest were blocked "solely on the `render*()` functions, `setMode` and
+`renderAll`". That is true. What it did not say — because nobody had measured
+it — is what those are blocked on.
+
+**`setMode` and `itemDialog` both call `renderLibAll`, and four library
+functions call back into the Plan panels.** Six edges, all plain function
+calls:
+
+```
+setMode        -> renderLibAll        createLibItem -> itemDialog
+itemDialog     -> renderLibAll        libItemMenu   -> itemDialog
+                                      bindLibGrid   -> itemDialog
+                                      deleteLibItem -> renderSel
+```
+
+A Tarjan run over the whole reference graph makes it exact: the Plan side
+panels and the Library UI are **one strongly-connected component of 48 names
+and 1,224 lines**, spanning `renderRoom`, `renderRoomSel`, `renderSel`,
+`renderWallProps`, `renderOpeningProps`, `splitWall`, `deleteCorner`,
+`setMode`, `itemDialog`, `openingDialog` on one side and `renderLibAll`,
+`renderLibContent`, `renderMarketTop`, `renderListingDetail`, `bindLibGrid`
+and the rest of the library on the other.
+
+An SCC cannot be extracted in pieces. Any proper subset references the rest,
+which would still be in `index.html`, and `src/` cannot import from
+`index.html`. So the whole component must land in **one commit** — and its
+non-SCC dependencies (the marketplace caches, the folder helpers, the io
+pickers) must land before it, which is most of the `library/` + `io/` round.
+
+**The draw() lesson was applied and does not rescue this one.** The check was
+made explicitly: is the knot state rather than code? It is not. All six edges
+are function calls, not shared mutable bindings. There is no `setX()` that
+breaks this cycle, and none was spent pretending otherwise.
+
+**So the extraction order in "Findings from the pilot, A" needs one
+correction.** Leaves-first gives `core/` → `model/` → `ui/` → `canvas/` →
+`plan/` → `blueprint/` → `library/`+`io/`. `plan/` cannot come before
+`library/`: they are the same component. The next round should be
+**`library/` + `io/` + the Plan panels together**, and it should expect one
+large commit in the middle of it. That commit is over the *least*-tested code
+in the app (see `test/README.md`: side-panel HTML is not characterized), so it
+deserves the Phase 3.5 treatment — coverage first, then the move.
+
+**A second, smaller finding: `canvas/view.js`'s top-level DOM read now
+constrains the graph.** `togglePane` was expected to come free with `resize()`.
+It cannot. `ui/modal.js` and `ui/panels.js` already import each other, and
+moving `togglePane` into `panels.js` adds `panels.js -> canvas/view.js`, which
+pulls `view.js` into that cycle. `view.js` runs `const cv=$('cv'),
+ctx=cv.getContext('2d')` at module-evaluation time, so it then reads `$` before
+`modal.js` has finished initialising: **`TypeError: $ is not a function`, and
+the whole app fails to boot.** This was not theorised — it was tried, it went
+red in 69 unit tests, and it was reverted. Rule 9 in the round brief is real
+and it bites in both directions: the rule is not only "do not add a top-level
+read across a cycle", it is also **"do not add an import edge that drags an
+existing top-level read into one"**. `togglePane` stays until `view.js`'s DOM
+read moves, or until the `ui/` cycle is broken.
+
+**What is still blocked, re-checked rather than assumed:**
+
+- `canvas/room-draw.js`, `canvas/corners.js`, `canvas/interaction.js`, the rest
+  of `canvas/split-room.js`, `squareCorner` in `canvas/snap.js`, the UI half of
+  `canvas/merge-rooms.js`, `setMeasure`, the replaying half of
+  `core/history.js` (`applyRoomSnap`/`applyFurnSnap`/`applyFloorSnap` and the
+  six undo/redo entry points), and the rest of `plan/` — **all on the 48-name
+  SCC**, not on anything smaller.
+- `togglePane` — on the `view.js` top-level DOM read, above.
+- `dragTree`/`treeDropSpot` and `dlgColor` — each reassigned from listeners
+  that stay, so each needs a setter. Deliberately not spent: they buy a dozen
+  lines apiece and unblock nothing.
+- `retagItem` — filed under `library/`, per the `core/` round's note.
+
+**Two smaller things worth carrying forward.**
+
+- **ESLint cannot check a module specifier.** `import {sizeLabel} from
+  '../model/measures.js'` lints clean — `no-undef` sees the name as declared by
+  the import either way — but `sizeLabel` is exported by `canvas/draw.js`, and
+  only running the suite finds it. Verify the *module*, not just the name.
+- **The probe earns its keep, and it has one sharp edge.** It found every range
+  in this round. But `index.html`'s regions contain `import` lines of their
+  own, and those must be stripped from the probe body or it dies on a
+  redeclaration. Worse, twice in this round a moved range *contained* an import
+  line that also served code far outside it (`moreBtn`, and `sx/sy/wx/wy`).
+  Deleting it is silent in the probe and loud in `no-undef` on the real file.
+  Rule 5 exists for this; run `npm run lint` on `index.html` after every cut.
+
+
 ### SCSS rules
 1. Split is a **rename + cut**. SCSS is a superset of CSS; compiled output must be
    byte-identical to today's CSS on the first commit. Verify with a diff of compiled output.

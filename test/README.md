@@ -347,6 +347,32 @@ Stated plainly, because this is the part worth knowing:
   is covered only indirectly (a throw would surface as a page error). A module
   boundary that breaks a panel's *appearance* without throwing would not be
   caught.
+
+  **This is now the weakest spot in the repo relative to what is moving
+  through it**, because the `plan/` round moved five panel renderers and the
+  next round has to move the rest in one commit (see `AGENTS.md` on the
+  48-name Plan/Library cycle). The `plan/` round's own manual-check list —
+  the panels a green suite did *not* verify:
+
+  | panel | moved by | what a silent break would look like |
+  |---|---|---|
+  | left pane layout tree | `plan/layout-tree.js` | folders/floors/rooms missing, wrong indent, caret not expanding, "more" menu absent |
+  | Room pane › Walls | `plan/room-panel.js` | wall rows missing, wrong length/angle text, "Open" not shown for a wall that is off |
+  | Room pane › Structures | `plan/room-panel.js` | pillars/interior walls missing, wrong dimension, "None yet" when there are some |
+  | Room pane › snap picker | `plan/room-panel.js` | wrong option list for the unit, or the current snap silently reset (see the note below) |
+  | Room pane › Openings | `plan/room-panel.js` | openings missing, wrong kind label, wrong wall number |
+  | Furniture pane › Inventory | `plan/item-list.js` | items missing, wrong counts, Place button wrongly enabled/disabled |
+  | Furniture pane › tag chips | `plan/item-list.js` | chips missing, Untagged/Clear chip wrongly shown, wrong pressed state |
+  | Measure readout bar | `canvas/measure-tool.js` | `renderMeasureBar` writes a bar the suite never reads |
+
+  The undo/redo button enable/disable state (`updateHistButtons`, now in
+  `core/history.js`) is in the same category: nothing asserts it.
+
+  Worth knowing while checking the snap picker: **`renderSnap()` silently
+  rewrites `S.snap`** to the third entry of `SNAPS.imperial`/`SNAPS.metric`
+  when the current value is not in the list. That is pre-existing behaviour,
+  not something the move introduced, and it is deliberately not fixed —
+  extraction commits are move-only.
 - ~~**Pointer interaction is barely covered.**~~ **Largely closed by Phase
   3.5**, which added five `pointer-*.spec.js` files driving `mouse.down` /
   `mouse.move` / `mouse.up` on `#cv`. See **Pointer coverage** below for what
