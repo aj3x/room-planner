@@ -804,6 +804,10 @@ function setSelSet(v){ selSet = v; }
 function setRoomSel(v){ roomSel = v; }
 function setFloorSel(v){ floorSel = v; }
 function setMergeSel(v){ mergeSel = v; }
+function setFloorGuides(v){ floorGuides = v; }
+function setFloorSnapNote(v){ floorSnapNote = v; }
+function setAlignGuides(v){ alignGuides = v; }
+function setAlignNote(v){ alignNote = v; }
 
 function selectOnly(id){ setSelSet(new Set(id?[id]:[])); setSel(id||null); }
 function selectAdd(id){ selSet.add(id); setSel(id); }
@@ -1564,14 +1568,14 @@ function startCustomDraw(){
   draw();
 }
 function cancelCustomDraw(){
-  drawState=null; alignGuides=[]; alignNote=''; $('drawHint').hidden=true; draw();
+  drawState=null; setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true; draw();
 }
 function finishCustomDraw(){
   if(!drawState||drawState.pts.length<3){ flash('Add at least 3 corners first'); return; }
   L().room.points=drawState.pts.map(p=>p.slice());
   L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
   clampOpenings(); setRoomSel(null);
-  drawState=null; alignGuides=[]; alignNote=''; $('drawHint').hidden=true;
+  drawState=null; setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true;
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
 }
 /* Where the next corner would land, and why — the same magnet the corner drag uses, so
@@ -1583,10 +1587,10 @@ function drawSnapPoint(raw,shift){
     const prev=pts[pts.length-1];
     const v=[raw[0]-prev[0], raw[1]-prev[1]], len=Math.hypot(v[0],v[1])||1;
     const ang=Math.round(Math.atan2(v[1],v[0])/(Math.PI/4))*(Math.PI/4);
-    alignGuides=[]; alignNote='Straight';
+    setAlignGuides([]); setAlignNote('Straight');
     return snapPt([prev[0]+Math.cos(ang)*len, prev[1]+Math.sin(ang)*len]);
   }
-  if(!pts.length){ alignGuides=[]; alignNote=''; return snapPt(raw); }
+  if(!pts.length){ setAlignGuides([]); setAlignNote(''); return snapPt(raw); }
   const last=pts.length-1;
   const refs=pts.map((p,k)=>({
     p,
@@ -1594,8 +1598,8 @@ function drawSnapPoint(raw,shift){
     edge: k===last && k>0 ? [p[0]-pts[k-1][0], p[1]-pts[k-1][1]] : null
   }));
   const s=alignPoint(raw, refs, alignRadius());
-  alignGuides=s.guides;
-  alignNote = s.guides.length ? (pts.length>1 && isSquare(pts[last-1], pts[last], s.pt) ? 'Right angle' : 'Lined up') : '';
+  setAlignGuides(s.guides);
+  setAlignNote(s.guides.length ? (pts.length>1 && isSquare(pts[last-1], pts[last], s.pt) ? 'Right angle' : 'Lined up') : '');
   return s.pt;
 }
 function applyDrawCursorAt(px,py,shift){
@@ -1653,7 +1657,7 @@ function startSplitRoom(id){
   flash("Click a point on the room's wall to start the divider. Click inside the room to bend it, or click another wall to finish. Esc cancels.");
   draw();
 }
-function cancelSplitDraw(){ splitDrawState=null; alignGuides=[]; alignNote=''; draw(); }
+function cancelSplitDraw(){ splitDrawState=null; setAlignGuides([]); setAlignNote(''); draw(); }
 /* Every existing room corner, and every split point already placed, that the
    NEXT split point can align to — the same {p, bias, edge} shape snapCorner
    builds for dragging a room corner, so it reuses alignPoint/isSquare as-is.
@@ -1720,7 +1724,7 @@ function drawSplitOverlay(){
   let b=null;
   if(drawCursor){
     const resolved=splitResolvePoint(drawCursor, wallDrawShift);
-    alignGuides=resolved.guides; alignNote=resolved.note;
+    setAlignGuides(resolved.guides); setAlignNote(resolved.note);
     const snapped=snapWallPoint(resolved.pt, null, true);
     const hit=boundaryHit(snapped);
     b=hit?hit.pt:snapped;
@@ -3159,7 +3163,7 @@ cv.addEventListener('pointerdown', e=>{
       if(Math.hypot(px-s0[0], py-s0[1])<12){ finishCustomDraw(); return; }
     }
     drawState.pts.push(drawSnapPoint(raw,e.shiftKey));
-    alignGuides=[]; alignNote='';
+    setAlignGuides([]); setAlignNote('');
     draw();
     return;
   }
@@ -3327,8 +3331,8 @@ function applyDragAt(px,py,mods){
   if(drag.mode==='floor-room'){
     const l=S.layouts.find(x=>x.id===drag.id); if(!l) return;
     let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
-    if(mods.altKey){ floorGuides=[]; floorSnapNote='Free'; }   // alt drops the magnet, same as everywhere else
-    else { const s=snapFloorPlace(l,nx,ny); nx=s.x; ny=s.y; floorGuides=s.guides; floorSnapNote=s.note; }
+    if(mods.altKey){ setFloorGuides([]); setFloorSnapNote('Free'); }   // alt drops the magnet, same as everywhere else
+    else { const s=snapFloorPlace(l,nx,ny); nx=s.x; ny=s.y; setFloorGuides(s.guides); setFloorSnapNote(s.note); }
     l.floorPlace.x=nx; l.floorPlace.y=ny;
     scheduleDraw(); renderFloorSel(); return;
   }
@@ -3344,14 +3348,14 @@ function applyDragAt(px,py,mods){
   if(drag.mode==='corner'){
     const P=RP(), was=P[drag.i].slice();
     let np=pt;
-    if(mods.altKey){ alignGuides=[]; alignNote='Free'; }   // alt drops the magnet, same as everywhere else
+    if(mods.altKey){ setAlignGuides([]); setAlignNote('Free'); }   // alt drops the magnet, same as everywhere else
     else {
       // shift reaches past the magnet's radius, for an alignment too far off to bite on its own
       const s=snapCorner(drag.i, pt, mods.shiftKey?Infinity:alignRadius());
-      np=s.pt; alignGuides=s.guides; alignNote=s.note;
+      np=s.pt; setAlignGuides(s.guides); setAlignNote(s.note);
     }
     P[drag.i]=np;
-    if(!polySimple(P)){ P[drag.i]=was; alignGuides=[]; alignNote=''; }
+    if(!polySimple(P)){ P[drag.i]=was; setAlignGuides([]); setAlignNote(''); }
     else clampOpenings();
     bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
   }
@@ -3490,7 +3494,7 @@ function cancelDrag(){
     else L().placed=s.placed;
     if(!wasFloor) bumpRev();
   }
-  drag=null; floorGuides=[]; floorSnapNote=''; alignGuides=[]; alignNote='';
+  drag=null; setFloorGuides([]); setFloorSnapNote(''); setAlignGuides([]); setAlignNote('');
   renderSel(); renderRoomSel(); renderWalls(); renderOpen(); renderFloorSel(); draw();
 }
 function endDrag(e){
@@ -3520,8 +3524,8 @@ function endDrag(e){
     cv.style.cursor = spaceDown ? 'grab' : '';
   } else if(drag){
     save();
-    alignGuides=[]; alignNote='';
-    if(drag.mode==='floor-room'||drag.mode==='floor-rot'){ floorGuides=[]; floorSnapNote=''; commitFloor(); renderFloorSel(); draw(); }
+    setAlignGuides([]); setAlignNote('');
+    if(drag.mode==='floor-room'||drag.mode==='floor-rot'){ setFloorGuides([]); setFloorSnapNote(''); commitFloor(); renderFloorSel(); draw(); }
     else if(ROOM_DRAGS.includes(drag.mode)){ commitRoom(); scheduleDraw(); }
     else { commitFurn(); renderSel(); }
   }
@@ -3743,8 +3747,8 @@ function setMode(m){
   if(m==='furniture') setRoomSel(null);
   else if(m==='room') selectClear();
   else if(m==='floor'){ selectClear(); setRoomSel(null); setFloorSel(L().floorId ? L().id : null); floorEntry(); }
-  if(m!=='floor'){ floorGuides=[]; floorSnapNote=''; }
-  alignGuides=[]; alignNote='';
+  if(m!=='floor'){ setFloorGuides([]); setFloorSnapNote(''); }
+  setAlignGuides([]); setAlignNote('');
   /* measurements belong to one room, so Floor mode leaves the tool behind too */
   if((!isCanvasMode(m) || m==='floor') && measureOn){ measureOn=false; resetMeasureState(); renderMeasureBar(); }
   renderMode(); applyLayoutMode();
