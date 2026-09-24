@@ -788,12 +788,9 @@ import {sel, selSet, roomSel, floorSel, mergeSel,
         setFloorGuides, setFloorSnapNote, setAlignGuides, setAlignNote} from './src/core/selection.js';
 let treeOpen = new Set();  // expanded folder ids in the layout tree
 
-function setDrag(v){ drag = v; }
-function setDrawState(v){ drawState = v; }
-function setDrawCursor(v){ drawCursor = v; }
-function setWallDrawState(v){ wallDrawState = v; }
-function setWallDrawShift(v){ wallDrawShift = v; }
-function setSplitDrawState(v){ splitDrawState = v; }
+import {drag, drawState, drawCursor, wallDrawState, wallDrawShift, splitDrawState,
+        setDrag, setDrawState, setDrawCursor, setWallDrawState, setWallDrawShift,
+        setSplitDrawState} from './src/canvas/interaction-state.js';
 
 function selectOnly(id){ setSelSet(new Set(id?[id]:[])); setSel(id||null); }
 function selectAdd(id){ selSet.add(id); setSel(id); }
@@ -1542,7 +1539,6 @@ function zoomAt(f,px,py){
 import {snapMM, snapPt, axisLockFrom} from './src/canvas/view.js';
 
 /* ------------------------- custom room drawing (walls may cross) ------------------------- */
-let drawState=null, drawCursor=null;
 function startCustomDraw(){
   if(wallDrawState) cancelWallDraw();
   if(splitDrawState) cancelSplitDraw();
@@ -1601,7 +1597,6 @@ cv.addEventListener('mousemove', e=>{
 });
 
 /* ------------------------- drawing a freestanding wall ------------------------- */
-let wallDrawState=null, wallDrawShift=false;
 function startWallDraw(){
   if(drawState) cancelCustomDraw();
   if(splitDrawState) cancelSplitDraw();
@@ -1627,7 +1622,6 @@ function finishWallDraw(a,b){
    freestanding wall, a split has nowhere else to start or end. Between the two
    ends the user can drop as many interior points as they like, bending the cut
    into a polyline; each one must stay strictly inside the room. */
-let splitDrawState=null;   // {pts:[hit, ...world points]} — pts[0] is always a boundary hit
 import {boundaryHit, splitAngleSnap} from './src/canvas/split-room.js';
 function startSplitRoom(id){
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
@@ -2975,7 +2969,6 @@ $('measureBar').addEventListener('click', e=>{
 });
 
 /* ------------------------- interaction ------------------------- */
-let drag=null;
 let spaceDown=false; // held to force pan mode (Space+drag pans; Space+scroll still zooms)
 const ROOM_DRAGS=['corner','wall','open','pillar','iwall','iwall-end'];
 import {flash} from './src/ui/flash.js';
