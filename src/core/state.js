@@ -76,6 +76,7 @@ const childFloors = pid => S.floors.filter(f=>(f.parentId||null)===(pid||null));
 /* rooms standing on a floor, in S.layouts order — that order is also their z-order */
 const floorLayouts = fid => fid ? S.layouts.filter(l=>l.floorId===fid) : [];
 
+const isCanvasMode = m => m==='room'||m==='furniture'||m==='floor';
 export {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS,
         L, RP, itemOf, instOf, openOf, roomMode, furnMode, floorMode,
-        folderOf, childFolders, childLayouts, floorOf, childFloors, floorLayouts};
+        folderOf, childFolders, childLayouts, floorOf, childFloors, floorLayouts, isCanvasMode};

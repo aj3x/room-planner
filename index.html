@@ -1983,7 +1983,7 @@ function syncModeParam(){
   usp.set('mode', S.mode);
   history.replaceState(null,'',location.pathname+'?'+usp.toString()+location.hash);
 }
-const isCanvasMode = m => m==='room'||m==='furniture'||m==='floor';
+import {isCanvasMode} from './src/core/state.js';
 let pendingFit=false;
 function setMode(m){
   S.mode=m;
