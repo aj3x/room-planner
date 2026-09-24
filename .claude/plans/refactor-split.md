@@ -778,6 +778,100 @@ read moves, or until the `ui/` cycle is broken.
   Rule 5 exists for this; run `npm run lint` on `index.html` after every cut.
 
 
+### Phase 3 progress — the `library/` + `io/` + SCC round
+
+Done, baseline green (185 Vitest + 532 Playwright) between every one of the
+twenty-two commits. `index.html`: 7,670 → 4,304 lines. `src/`: 32 → 60 modules.
+**The SCC landed.** Four commits are declared code changes, each stated in its
+own message; every other commit is move-only with a per-module byte-identical
+diff in the message.
+
+**The SCC was real, and it was the shape the `plan/` round said.** Re-derived
+here independently with **espree + eslint-scope** rather than trusted: 49 names,
+1,232 declaration lines, 1,326 lines with their comments — the same component,
+off by one name from the earlier count. It went out in **one commit**, cut as
+**28 spans into 15 modules** (5 extended, 10 new). Its closure had shrunk to
+**ten** non-SCC names by the time it moved, each bound to a single SCC
+neighbour, so they rode along.
+
+The order that got there: `isCanvasMode` → `io/pickers.js` → `retagItem` →
+`library/item-folders.js` → `core/migrate.js` → `market-subs` → `adhoc-folders`
+→ `nav` → `io/export.js` → the five `select*` → `library/tree.js` →
+`library/export.js` → the tile builders → **the SCC** → and then, in eight more
+commits, everything it unblocked.
+
+**The round's main structural finding: §3's `core/store.js` cannot hold
+`migrate()`.** `migrate()` needs `syncWallOff` (`model/walls.js`) and `normHex`
+(`canvas/draw.js`), both inside the canvas cycle, and `ui/panels.js` imports
+`core/store.js`. So `core/store.js → canvas/draw.js` welds the canvas cycle onto
+`modal.js ↔ panels.js`, and the merged cycle contains `canvas/view.js`'s
+top-level `const cv=$('cv'), ctx=cv.getContext('2d')` — the exact boot failure
+that reverted `togglePane`. A separate **`core/migrate.js`**, which nothing in
+`ui/` or `canvas/` imports, adds no cycle at all. The same reasoning put
+`savePlanImage` in `io/export.js` rather than `canvas/`, `setMode` in
+**`plan/mode.js`** rather than `ui/panels.js`, and — finally — **`togglePane` in
+`plan/mode.js`**, which is how that long-standing trap was resolved: by
+placement, not by a code change. Nothing in `ui/` imports `plan/`.
+
+**Rule 8 held, and the graph is now one big cycle.** After the SCC the module
+graph has exactly two cycles: `modal.js ↔ panels.js ↔ tag-input.js`, and a
+39-module one containing nearly everything else. **`ui/modal.js` stays outside
+the big one**, which is what keeps `canvas/view.js`'s `$('cv')`,
+`library/tree.js`'s `$('tree')`, `plan/item-list.js`'s `invBox` and
+`plan/item-dialog.js`'s `let dlgColor=PALETTE[0]` resolving against fully
+evaluated modules. This was simulated *before* the cut and re-checked after
+every commit since, with a Tarjan run over the module import graph — never by
+eye.
+
+**The four declared code changes**, each its own commit, each a bare assignment
+and nothing else:
+
+| commit | binding(s) | why |
+|---|---|---|
+| `setGridDragItem` | `gridDragItem` | written by `bindLibGrid` (moved) *and* the libTreeBox drop listener (stayed); split out of `let dragLib=null, gridDragItem=null;` |
+| `setPendingFit` | `pendingFit` | read/written inside `setMode`, written once by boot |
+| `setLastMerge` | `lastMerge` | written inside `mergeLayouts`, and by two listeners that stayed |
+| `setSpaceDown`, `setLastPX/PY/Mods` | four interaction lets | written by the pointer and Space listeners, which stay under rule 6 |
+
+`setPendingFit` and `setLastMerge` are the two that are **not** in a commit of
+their own — the binding cannot exist in `index.html` and in its module at the
+same time, and sequencing them separately would have meant discarding a working
+tree. Both are isolated by their commit's own move-only diff.
+
+**The epilogue is the thing that bit hardest, twice, and it now has a check.**
+`__rp` is **not linted** — ESLint never sees `test/epilogue.js` appended to
+`index.html` — so a name that leaves `index.html`'s scope produces a bare
+`ReferenceError: X is not defined` at module evaluation, 69 red unit tests, and
+a **green build and a green browser**. It happened twice: `idFolder` after the
+SCC, `INV_SCOPES` after `io/import.js`. Eleven names went this way in total and
+are epilogue imports now: `exportPayload`, `idFolder`, `idLeaf`, `hasOpen`,
+`fileSlug`, `applyImport`, `PREF_KEYS`, `INV_SCOPES`, `normItem`, `pickValues`,
+`clone`. **There is now a standing audit** (see `test/README.md`) that reads
+every name `__rp` and `GLOBALS` reference and checks each resolves in
+`index.html`'s scope or in the epilogue's own imports. Run it after every move;
+it is cheaper than a red suite and far cheaper than a silent one.
+
+**Two tooling notes for whoever takes `blueprint/`.**
+
+- The probe from the `draw()` round was replaced by a **real reference graph**:
+  espree + eslint-scope over the script body, Tarjan for components, and a
+  span-cutter that refuses to move a span containing an `import` line, a foreign
+  declaration, or a top-level statement. That last check earned its keep twice —
+  it caught two `bindLen('wallT', …)` registrations that a naive merge would
+  have swallowed out of `plan/room-controls.js`.
+- **ESLint still cannot check a module specifier**, and the import resolver
+  used here inserts by name, so it can put a real name behind the wrong file.
+  Only the suite finds that.
+
+**What is left in `index.html`:** the blueprint region (102 declarations, ~2,120
+lines) and eight other declarations — `paramMode`, `floorMenu` (blocked on
+`bpUploadDialog`/`bpUndoImport`/`bpLastImport`), and the three drag-state lets
+with their drop-spot helpers (`dragTree`/`treeDropSpot`, `dragLib`/`libDropSpot`,
+`dragInv`), each reassigned from listeners that stay and so each wanting a
+setter that buys a dozen lines. Everything else is listener registrations and
+`boot()`. **The next round is `blueprint/`, and it has no gate in front of it.**
+
+
 ### SCSS rules
 1. Split is a **rename + cut**. SCSS is a superset of CSS; compiled output must be
    byte-identical to today's CSS on the first commit. Verify with a diff of compiled output.

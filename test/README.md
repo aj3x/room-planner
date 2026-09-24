@@ -142,8 +142,41 @@ as `window.swingPoly is not a function` in `visual.spec.js`. **After any move,
 check `GLOBALS` by name as well as the `__rp` getters**: `__rp` fails loudly at
 boot, `GLOBALS` fails silently and late.
 
-Still ahead: `snapRoom`, `commitRoom`/`commitFurn` and the six undo/redo entry
-points go with `core/history.js`.
+The `library/`+`io/`+SCC round moved eleven more names this way, and taught the
+sharpest version of the lesson so far.
+
+**`__rp` is not linted.** ESLint lints `index.html` on its own; it never sees
+`epilogue.js` appended to it. So when the last `index.html` reader of an `__rp`
+name moves into `src/`, nothing goes red at lint time — the app throws a bare
+`ReferenceError: idFolder is not defined` during *module evaluation*, the
+epilogue never runs, and every unit test fails with `harness: capture epilogue
+did not run`. That message does not name the missing binding. Worse, **the build
+and the browser stay green**: `npm run build` succeeds and `dist/index.html`
+boots in Chromium without a console error, because the failure is about which
+names are in `index.html`'s closure, not about whether the app works. It
+happened twice in one round, on `idFolder` and on `INV_SCOPES`.
+
+To find the name when it happens: build the bundle with `appBundle()`, evaluate
+it in a jsdom you control with a `VirtualConsole` listening for `jsdomError`,
+and print `e.message`. The harness throws before it can hand you its own
+`errors` array.
+
+Better, do not let it happen. **Audit the epilogue after every move**: read every
+name `__rp` and `GLOBALS` reference, and check each one is either declared or
+imported in `index.html`, or imported by the epilogue itself. That check is
+mechanical, takes a second, and is the cheapest step in the whole extraction
+loop. `__rp` fails loudly and late; `GLOBALS` fails silently and later.
+
+Names the epilogue now imports, in the order they lost their last reader:
+`CANVAS`, `alignGuides`, `alignNote`, `floorGuides`, `floorSnapNote`,
+`drawCursor`, `ctx`, `swingPoly`, `exportPayload`, `idFolder`, `idLeaf`,
+`hasOpen`, `fileSlug`, `applyImport`, `PREF_KEYS`, `INV_SCOPES`, `normItem`,
+`pickValues`, `clone`.
+
+All 25 `GLOBALS` entries survived the SCC move inside `index.html`'s scope,
+`setMode` and `renderLibAll` included — index.html still drives both from its
+listeners. `snapRoom`, `commitRoom`/`commitFurn` and the six undo/redo entry
+points likewise stayed in scope when `core/history.js` became whole.
 
 ### What Phase 2 changed about that, and why
 
@@ -356,11 +389,18 @@ Stated plainly, because this is the part worth knowing:
   panels the `render*()` functions build. See **Panel coverage** below for what
   they reach and what they do not.
 
-  The reason it was the weakest spot in the repo: the next extraction round has
-  to move the 48-name / 1,224-line Plan+Library cycle in a **single** commit
-  (see `AGENTS.md`), and every `render*()` in it writes `innerHTML` into a
-  panel no screenshot reaches. A break that does not throw turned nothing red.
-  Phase 3.6 is to that commit what Phase 3.5 was to the `draw()` keystone.
+  The reason it was the weakest spot in the repo: the extraction round after it
+  had to move the Plan+Library cycle in a **single** commit, and every
+  `render*()` in it writes `innerHTML` into a panel no screenshot reaches. A
+  break that does not throw turns nothing red. Phase 3.6 was to that commit what
+  Phase 3.5 was to the `draw()` keystone.
+
+  **That commit has now happened** — 49 names, 1,326 lines, one commit, into 15
+  modules (`plan/room-panel.js`, `plan/selection-panel.js`, `plan/item-dialog.js`,
+  `plan/opening-dialog.js`, `plan/mode.js`, `canvas/corners.js`, `library/shell.js`,
+  `library/grid.js`, `library/router.js` and the rest). These 79 tests are what
+  stood behind it, so the gap list below is the **manual-review list for that
+  move**, not a forecast. The panels are no longer in `index.html`.
 - ~~**Pointer interaction is barely covered.**~~ **Largely closed by Phase
   3.5**, which added five `pointer-*.spec.js` files driving `mouse.down` /
   `mouse.move` / `mouse.up` on `#cv`. See **Pointer coverage** below for what
