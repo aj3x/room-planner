@@ -3,9 +3,13 @@
 
    Extracted from index.html in Phase 3, move-only: the code below is
    byte-identical to what stood there, and the `export` block at the end is the
-   only line added. `retagItem`/`rehomeItemId`, which §3 also files here, are
-   still in the monolith — they reach into layouts, furnHist and the library
-   tree, none of which have moved. */
+   only line added. `retagItem` is here too, as §3 files it; `rehomeItemId`,
+   which §3 also lists, is not — it needs folderIdPrefix and itemFolderPath
+   from the Inventory tab's folder tree, so it went to
+   src/library/item-folders.js with them. */
+
+import {S, itemOf} from './state.js';
+import {furnHist} from './history.js';
 
 /* ---- ids ----
    A thing's id is visible and editable (Advanced, in the edit dialog), so it is held to a
@@ -36,4 +40,20 @@ function uniqueId(base, taken){
   return base+'-'+n;
 }
 
-export {ID_SAFE, idParts, idFolder, idLeaf, idProblem, uniqueId};
+/* renaming a thing's id rewrites every reference to it: what is placed in each room now,
+   and what sits in the furniture history, so an undo can't resurrect the old id */
+function retagItem(oldId,newId){
+  const it=itemOf(oldId);
+  if(!it||oldId===newId) return;
+  it.id=newId;
+  for(const l of S.layouts) for(const p of l.placed) if(p.itemId===oldId) p.itemId=newId;
+  for(const k of Object.keys(furnHist)){
+    const h=furnHist[k];
+    h.stack=h.stack.map(snap=>{
+      const o=JSON.parse(snap);
+      for(const p of (o.placed||[])) if(p.itemId===oldId) p.itemId=newId;
+      return JSON.stringify(o);
+    });
+  }
+}
+export {ID_SAFE, idParts, idFolder, idLeaf, idProblem, uniqueId, retagItem};

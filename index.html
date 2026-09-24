@@ -3344,22 +3344,7 @@ function shapeFieldHTML(type,sh){
   }
   return h;
 }
-/* renaming a thing's id rewrites every reference to it: what is placed in each room now,
-   and what sits in the furniture history, so an undo can't resurrect the old id */
-function retagItem(oldId,newId){
-  const it=itemOf(oldId);
-  if(!it||oldId===newId) return;
-  it.id=newId;
-  for(const l of S.layouts) for(const p of l.placed) if(p.itemId===oldId) p.itemId=newId;
-  for(const k of Object.keys(furnHist)){
-    const h=furnHist[k];
-    h.stack=h.stack.map(snap=>{
-      const o=JSON.parse(snap);
-      for(const p of (o.placed||[])) if(p.itemId===oldId) p.itemId=newId;
-      return JSON.stringify(o);
-    });
-  }
-}
+import {retagItem} from './src/core/ids.js';
 function itemDialog(id){
   const it=id?itemOf(id):null;
   dlgColor = (it&&normHex(it.color)) || PALETTE[S.inventory.length%PALETTE.length];
