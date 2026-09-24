@@ -856,35 +856,10 @@ import {validate, getConflicts, isBad, centreInside,
 
 import {KEY, Store, save} from './src/core/store.js';
 
-/* ------------------------- undo / redo -------------------------
-   Room edits (walls, doors, windows, floor/trim) and Things edits (placed
-   furniture on the canvas) get their own history, kept per layout. Each
-   layout's history is seeded with a pristine baseline (before any edits)
-   the moment it becomes active, so undo can always get back to "untouched". */
-const roomHist={}, furnHist={};
-const snapRoom = () => JSON.stringify({room:L().room, openings:L().openings});
-const snapFurn = () => JSON.stringify({placed:L().placed});
-function histEntry(map,snapFn){ const id=L().id; if(!map[id]) map[id]={stack:[snapFn()], idx:0}; return map[id]; }
-function seedHistFor(){ histEntry(roomHist,snapRoom); histEntry(furnHist,snapFurn); floorEntry(); }
-function commit(map,snapFn){
-  const h=histEntry(map,snapFn);
-  const s=snapFn();
-  if(h.stack[h.idx]===s) return;
-  h.stack=h.stack.slice(0,h.idx+1); h.stack.push(s);
-  if(h.stack.length>80) h.stack.shift();
-  h.idx=h.stack.length-1;
-  updateHistButtons();
-}
-const bumpRev = () => { const l=L(); l._rev=(l._rev||0)+1; };
-const commitRoom = () => { commit(roomHist,snapRoom); bumpRev(); };
-const commitFurn = () => { commit(furnHist,snapFurn); bumpRev(); };
-function stepHist(map,snapFn,applyFn,dir){
-  const h=histEntry(map,snapFn);
-  const ni=h.idx+dir;
-  if(ni<0||ni>=h.stack.length) return;
-  h.idx=ni; applyFn(JSON.parse(h.stack[ni]));
-  updateHistButtons();
-}
+import {roomHist, furnHist, snapRoom, snapFurn, histEntry, seedHistFor,
+        bumpRev, commitRoom, commitFurn, stepHist,
+        floorHist, curFloorId, snapFloor, floorEntry, commitFloor,
+        updateHistButtons} from './src/core/history.js';
 function applyRoomSnap(s){
   L().room=s.room; L().openings=s.openings; setRoomSel(null); bumpRev();
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save();
@@ -897,27 +872,6 @@ const undoRoom=()=>stepHist(roomHist,snapRoom,applyRoomSnap,-1);
 const redoRoom=()=>stepHist(roomHist,snapRoom,applyRoomSnap,1);
 const undoFurn=()=>stepHist(furnHist,snapFurn,applyFurnSnap,-1);
 const redoFurn=()=>stepHist(furnHist,snapFurn,applyFurnSnap,1);
-/* An arrangement is the floor's own history, keyed by floor, not by room: moving one
-   room changes the floor. It is deliberately NOT folded into snapRoom, whose
-   {room,openings} snapshot belongs to Room mode — sharing one stack would make a
-   wall edit and a floor move undo each other. */
-const floorHist={};
-const curFloorId = () => (L() && L().floorId) || null;
-const snapFloor = () => JSON.stringify(floorLayouts(curFloorId()).map(l=>[l.id, l.floorPlace]));
-function floorEntry(){
-  const id=curFloorId(); if(!id) return null;
-  if(!floorHist[id]) floorHist[id]={stack:[snapFloor()], idx:0};
-  return floorHist[id];
-}
-function commitFloor(){
-  const h=floorEntry(); if(!h) return;
-  const s=snapFloor();
-  if(h.stack[h.idx]===s) return;
-  h.stack=h.stack.slice(0,h.idx+1); h.stack.push(s);
-  if(h.stack.length>80) h.stack.shift();
-  h.idx=h.stack.length-1;
-  updateHistButtons();
-}
 function applyFloorSnap(s){
   for(const [id,place] of s){ const l=S.layouts.find(x=>x.id===id); if(l) l.floorPlace=place; }
   renderFloorSel(); draw(); save();
@@ -931,18 +885,6 @@ function stepFloor(dir){
 }
 const undoFloor=()=>stepFloor(-1);
 const redoFloor=()=>stepFloor(1);
-function updateHistButtons(){
-  const btnU=$('btnUndo'), btnR=$('btnRedo'); if(!btnU) return;
-  if(floorMode()){
-    const h=floorEntry();
-    btnU.disabled = !h || h.idx<=0;
-    btnR.disabled = !h || h.idx>=h.stack.length-1;
-    return;
-  }
-  const h = roomMode() ? histEntry(roomHist,snapRoom) : histEntry(furnHist,snapFurn);
-  btnU.disabled = h.idx<=0;
-  btnR.disabled = h.idx>=h.stack.length-1;
-}
 
 /* older saves used a width/depth rectangle, N/E/S/W doors, tagless/countless items, and no folders.
    normLayout/normItem are split out so the importer can clean up one room or one thing
