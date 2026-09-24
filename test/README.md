@@ -173,15 +173,23 @@ Names the epilogue now imports, in the order they lost their last reader:
 `hasOpen`, `fileSlug`, `applyImport`, `PREF_KEYS`, `INV_SCOPES`, `normItem`,
 `pickValues`, `clone`, then the `blueprint/` round's ten: `roomHist`,
 `furnHist`, `snapRoom`, `normLayout`, `polySimple`, `bpState`, `bpRebuild`,
-`fmtArea`, `PAL`, `bpLastImport`.
+`fmtArea`, `PAL`, `bpLastImport`, `setS`, `KEY`, `Store`, `migrate`.
 
-**The `blueprint/` round fired the audit three times in ten commits, and twice
-on `GLOBALS`.** `polySimple` left with `bpSeedHistory` and `bpRebuild` with the
+**The `blueprint/` round fired the audit four times, and three of those were
+`GLOBALS`.** `polySimple` left with `bpSeedHistory` and `bpRebuild` with the
 four wizard step dialogs; both are `GLOBALS` entries, so both would have failed
 *silently* and surfaced much later as `window.bpRebuild is not a function` in
 `blueprint.spec.js` rather than as a red boot. That is the third time `GLOBALS`
 has been the dangerous half of this check and the second time it was caught only
 because the audit was run rather than because something went red.
+
+The fourth firing came when `boot()` moved into `src/boot.js`: it had been
+`index.html`'s only remaining reader of `setS` (the `__rp` `S` setter), `KEY`,
+`Store` and `migrate` — `migrate` being a `GLOBALS` entry, so silent again.
+Those four closed the loop: **`index.html` now imports nothing solely to keep
+the epilogue fed.** Every name the epilogue needs that the monolith does not
+use is imported by the epilogue itself, which is the end state this pattern was
+always heading for.
 
 All 25 `GLOBALS` entries survived the SCC move inside `index.html`'s scope,
 `setMode` and `renderLibAll` included — index.html still drives both from its

@@ -875,10 +875,11 @@ setter that buys a dozen lines. Everything else is listener registrations and
 ### Phase 3 progress — the `blueprint/` round
 
 Done, baseline green (185 Vitest + 532 Playwright) between every one of the
-eight commits that landed. `index.html`: 4,304 -> 1,866 lines. `src/`: 60 -> 80
-modules. **The blueprint region is entirely out**; what remains in `index.html`
-is the CSS, the static HTML, the listener registrations, `boot()` and four small
-drag-state bindings (see "What is left" below).
+twelve commits. `index.html`: 4,304 -> 1,806 lines. `src/`: 60 -> 81 modules.
+**The JS extraction is finished.** What remains in `index.html` is the CSS, the
+static HTML, the 91 listener registrations and the two calls that start
+`edgePanTick()` and `boot()` — see "What is left in index.html" below, which is
+written for the SCSS and HTML-partial rounds that come next.
 
 **§3's file list was right this time, for the first time.** All twenty names it
 guessed — `state`, `image`, `poly`, `pixels`, `walls`, `outlines`, `openings`,
@@ -901,7 +902,10 @@ the start.
 | `draft.js`, `wizard.js`, `mask-viewer.js`, `commit.js` | move-only | |
 | the four step dialogs | move-only | **the region's SCC, one commit** |
 | `paramMode` -> `plan/mode.js`, `floorMenu` -> `plan/floors.js` | move-only | |
-| `setDragTree`, `setDragInv`, `setDragLib` | **not move-only** | 10 sites; written, green, NOT COMMITTED — see below |
+| `setDragTree`, `setDragInv`, `setDragLib` | **not move-only** | 10 sites |
+| `treeDropSpot`, `dragInv`, `libDropSpot` into their panels | move-only | banners stayed with the listeners |
+| un-IIFE `edgePanTick` and `boot` | **not move-only** | two wrappers, four lines |
+| `src/boot.js` + `edgePanTick` -> `canvas/interaction.js` | move-only | |
 
 **The region was almost a DAG, which is why it bisected so well.** A reference
 graph over the 102 declarations found only four multi-member components, and
@@ -956,19 +960,62 @@ flagged and the `library/` round repeated: **ESLint cannot check a module
 specifier**, and an import resolver that inserts by name can put a real name
 behind the wrong file. 1,385 names checked, all correct.
 
-**What is left, and one thing that is unfinished.** The round stopped short of
-its tail because **commit signing (SSH via 1Password) stopped working partway
-through and did not come back across twelve attempts**. The three drag setters
-(`setDragTree`/`setDragInv`/`setDragLib`) are written, green and staged in the
-working tree but unsigned and therefore uncommitted; the move they unblock —
-`dragTree`+`treeDropSpot` into `plan/layout-tree.js`, `dragInv` into
-`plan/item-list.js`, `dragLib`+`libDropSpot` into `library/tree.js`, about
-thirty lines — was deliberately not started, because starting it would have
-fused a declared not-move-only change and a move into one uncommittable blob.
-`libSearchT` stays regardless: its only reader is the `#searchBox` listener that
-stays, so moving it would separate a timer from its sole user and buy a line —
-the same call the `canvas/` round made on the ten selection lets. After that
-tail, the remaining Phase 3 work is A4 (SCSS) and A5 (HTML partials).
+**`boot()` moved, and §3's shape for it turned out to be the wrong one.** §3
+calls `boot.js` "the only module with top-level side effects". It does not need
+to be, and should not be. Importing a `boot.js` that calls `boot()` at
+module-evaluation time would run boot **before** index.html's 91 listener
+registrations, because imports hoist and are evaluated ahead of the importing
+module's body. It happens to work — `boot()` suspends on its first `await` and
+resumes only after the whole module graph has finished evaluating — but that is
+a subtle ordering argument to rest the entire boot path on, and nothing in the
+suite would catch it if it stopped being true. So `src/boot.js` **exports**
+`boot()` and index.html calls it at the exact line the IIFE occupied. Same for
+the `edgePanTick` rAF loop, which went to `canvas/interaction.js`.
+
+The consequence is worth stating plainly: **there are now no top-level side
+effects anywhere in `src/`.** Every module defines and exports; nothing runs at
+import time. Rule 6's exemption went unused.
+
+Cost: one declared not-move-only commit that splits each IIFE into a
+declaration plus a call — four lines, no line inside either body touched.
+
+**What is left in `index.html` (1,806 lines).** Written out because the SCSS
+split (A4) and the HTML partials (A5) need to know exactly what they are
+working with:
+
+| lines | what | goes to |
+|---|---|---|
+| 1-7 | doctype, `<html>`, `<head>`, meta, title, favicon | stays |
+| **8-526** | **`<style>`** — 519 lines, 24 custom properties | **A4**, 15 SCSS partials |
+| 527-528 | `</head>`, `<body>` | stays |
+| **529-557** | the 26-`<symbol>` SVG sprite | **A5** `sprite.html` |
+| 558-749 | `<div id="app">` — `<header>` 559-580, `<main>` 581-737 (both side panes), `<div id="paneLibrary">` 738-748 | **A5** `header.html`, `pane-left.html`, `pane-library.html` |
+| 751 | the `#libFlash` toast div | **A5** |
+| **753-764** | `<div id="modal" hidden>` | **A5** `modal.html` |
+| 766-1804 | `<script type="module">` — see below | stays |
+| 1805-1806 | `</body></html>` | stays |
+
+§3's HTML-partial line guesses are very close (the markup never moved): sprite
+529-557 as predicted, header 559-580 exactly, and only the `main`/`paneLibrary`/
+`modal` boundaries drift by a line or two.
+
+The 1,037-line script body is now, exhaustively:
+
+- `"use strict";` (line 767), which must stay the first statement;
+- **86 `import` lines**, each at the spot its code left;
+- **91 listener registrations**, including the two pane-head ones inside a
+  `for…of` over `[['headLeft','left'],['headRight','right']]`, the two
+  `bindLen('wallT'…)`/`bindLen('trimD'…)` calls (which register input handlers),
+  and the short-circuited `darkMQ.addEventListener && darkMQ.addEventListener(…)`;
+- **two calls**, `edgePanTick();` and `boot();`, each on the line its IIFE used
+  to occupy;
+- **one `let`**, `libSearchT` — the `#searchBox` debounce handle, whose only
+  reader is the `input` listener that stays. Moving it would separate a timer
+  from its sole user and buy a line, so it was deliberately left, the same call
+  the `canvas/` round made on the ten selection lets.
+
+There is nothing else left to extract. A6 (per-module unit tests), A4 and A5 are
+the remaining work.
 
 ### SCSS rules
 1. Split is a **rename + cut**. SCSS is a superset of CSS; compiled output must be
