@@ -50,7 +50,14 @@ const GLOBALS = [
  */
 export const EPILOGUE = `
 ;import {CANVAS} from './src/canvas/draw.js';
-;import {alignGuides} from './src/core/selection.js';
+;import {alignGuides, alignNote, floorGuides, floorSnapNote} from './src/core/selection.js';
+;import {drawCursor} from './src/canvas/interaction-state.js';
+/* swingPoly is in GLOBALS below, and index.html stopped referencing it when
+   draw() took drawOpening into canvas/draw.js. GLOBALS assigns inside a
+   try/catch, so a name that has left scope fails SILENTLY and surfaces only as
+   "window.swingPoly is not a function" in visual.spec.js -- which is exactly
+   what it did. Import it here, the CANVAS way. */
+;import {swingPoly} from './src/model/openings.js';
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },
