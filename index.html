@@ -6175,10 +6175,7 @@ function addMarketItemToInventory(raw){
   libFlash(sameName ? 'Added — you also have another "'+incoming.name+'" under a different id' : 'Added to your library');
 }
 
-/* ------------------------- nav state (not persisted, except tab + folder) ------------------------- */
-let nav={tab:'library', libFolderId:null, marketFolderId:null, searching:false,
-  marketSubId:null, subPath:null, marketSelItemId:null, marketSelListingId:null, marketTagFilter:null, showMarketContents:false};
-let libTreeOpen=new Set();
+import {nav, libTreeOpen} from './src/library/nav.js';
 
 function goLibFolder(kind,id){
   if(kind==='library'){ nav.libFolderId=id; S.uiLib.libFolderId=id; }
