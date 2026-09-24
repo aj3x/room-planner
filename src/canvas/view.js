@@ -43,6 +43,14 @@ import {S} from '../core/state.js';
 const cv=$('cv'), ctx=cv.getContext('2d');
 let view={scale:.1,ox:0,oy:0};
 
+let W=0, H=0;
+/* W/H are the canvas's CSS-pixel size, and resize() is the only thing that
+   writes them. It stays in index.html (it calls scheduleDraw), so the write has
+   to go through a function once W and H live in canvas/view.js -- the same
+   pattern setS uses in core/state.js. Each setter is a bare assignment. */
+function setW(v){ W = v; }
+function setH(v){ H = v; }
+
 const sx=x=>view.ox+x*view.scale, sy=y=>view.oy+y*view.scale;
 const wx=p=>(p-view.ox)/view.scale, wy=p=>(p-view.oy)/view.scale;
 
@@ -57,4 +65,4 @@ function axisLockFrom(a,pt){
   return Math.abs(dx)>=Math.abs(dy) ? [pt[0],a[1]] : [a[0],pt[1]];
 }
 
-export {cv, ctx, view, sx, sy, wx, wy, snapMM, snapPt, axisLockFrom};
+export {cv, ctx, view, W, H, setW, setH, sx, sy, wx, wy, snapMM, snapPt, axisLockFrom};
