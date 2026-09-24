@@ -386,3 +386,16 @@ layouts are both currently active).
   Phase 2 may not edit application code, and a lint that fails the build over
   findings nobody is allowed to fix would just get switched off. `no-undef`,
   the rule that matters for the extraction, is an error and is clean.
+
+- **A stray `/*$vite$:1*/` comment rides in the shipped CSS.** Since A4 moved the
+  styles to `src/styles/main.scss`, `dist/index.html`'s `<style>` block ends with
+  a 12-byte marker comment: `…{padding-inline:16px}}\n/*$vite$:1*/</style>`. It is
+  `vite-plugin-singlefile`'s own placeholder, left behind when it inlines a real
+  stylesheet asset rather than an already-inline `<style>`; it did not appear
+  before A4, when the CSS never became an asset. It is an inert CSS comment — no
+  rule, no selector, nothing parses it as anything but a comment, and the light
+  and dark screenshot baselines are unmoved — so it is cosmetic, not a defect in
+  behaviour. Left unfixed deliberately: removing it means post-processing another
+  plugin's output in `transformIndexHtml`, which is a change to the build, and A4
+  was a rename and a cut. Worth a look if the single-file artifact is ever
+  byte-compared against something, or when `vite-plugin-singlefile` is upgraded.
