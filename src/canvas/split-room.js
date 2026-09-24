@@ -58,6 +58,22 @@ import {splitDrawState, drawCursor, wallDrawShift} from './interaction-state.js'
 import {setAlignGuides, setAlignNote} from '../core/selection.js';
 import {PAL, drawSquareTick} from './draw.js';
 import {alignPoint, alignRadius, isSquare} from './snap.js';
+import {pointInPoly, polySimple, segHit, worldPoly} from '../core/geometry.js';
+import {floorHist, furnHist, roomHist} from '../core/history.js';
+import {pruneMeasures} from '../core/migrate.js';
+import {mergeSel} from '../core/selection.js';
+import {L, S, clone, uid} from '../core/state.js';
+import {save} from '../core/store.js';
+import {clampOpenings, syncWallOff} from '../model/walls.js';
+import {activateLayout, renderTree} from '../plan/layout-tree.js';
+import {renderAll} from '../plan/mode.js';
+import {flash} from '../ui/flash.js';
+import {$, askConfirm, closeModal, openModal} from '../ui/modal.js';
+import {plural} from '../ui/panels.js';
+import {draw} from './draw.js';
+import {setSplitDrawState} from './interaction-state.js';
+import {mergeSplice} from './merge-rooms.js';
+import {fit} from './view.js';
 
 /* Every existing room corner, and every split point already placed, that the
    NEXT split point can align to — the same {p, bias, edge} shape snapCorner
@@ -151,5 +167,184 @@ function drawSplitOverlay(){
   ctx.restore();
 }
 
-export {boundaryHit, splitAngleSnap,
-        splitRefs, splitCornerRef, splitResolvePoint, drawSplitOverlay};
+
+/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+function cancelSplitDraw(){ setSplitDrawState(null); setAlignGuides([]); setAlignNote(''); draw(); }
+
+/* Once a start hit, any interior points, and an end hit are in hand: validate the
+   drawn path is a genuine interior cut (touches the boundary only at its two
+   ends, never crosses itself or any other wall, runs through the inside), insert
+   the two cut corners, and split the polygon into two chains threaded through
+   whatever interior points were placed. Nothing is committed here — this only
+   gets as far as opening the solid/open choice; the actual S.layouts mutation
+   happens in commitSplit(). */
+function trySplitLine(hitA, mid, hitB){
+  const P=RP(), n=P.length;
+  if(hitA.i===hitB.i){ flash('Pick two different walls to split between'); return; }
+  const path=[hitA.pt, ...mid, hitB.pt];
+  /* a hit that landed (near enough) exactly on an existing corner touches BOTH
+     walls meeting there, not just the one edge index it happened to be recorded
+     against — exclude both, or a segment merely starting/ending at that shared
+     corner can register as "crossing" the other one via a degenerate collinear
+     case in segHit. */
+  const endEdges = hit => {
+    const s=new Set([hit.i]), tAbs=hit.t*hit.len;
+    if(tAbs<=1) s.add((hit.i-1+n)%n);
+    else if(tAbs>=hit.len-1) s.add((hit.i+1)%n);
+    return s;
+  };
+  const exclA=endEdges(hitA), exclB=endEdges(hitB);
+  for(let s=0;s<path.length-1;s++){
+    for(let k=0;k<n;k++){
+      if((s===0 && exclA.has(k)) || (s===path.length-2 && exclB.has(k))) continue;
+      if(segHit(path[s], path[s+1], P[k], P[(k+1)%n])){
+        flash("That line crosses the room's own wall — try a straighter cut");
+        return;
+      }
+    }
+  }
+  for(let s=0;s<path.length-1;s++){
+    for(let t=s+2;t<path.length-1;t++){
+      if(segHit(path[s],path[s+1],path[t],path[t+1])){
+        flash('That line crosses itself — try a simpler cut');
+        return;
+      }
+    }
+  }
+  for(let s=0;s<path.length-1;s++){
+    const segMid=[(path[s][0]+path[s+1][0])/2, (path[s][1]+path[s+1][1])/2];
+    if(!pointInPoly(segMid, P)){ flash('That line runs outside the room'); return; }
+  }
+
+  const work={points:clone(P), wallOff:syncWallOff(L().room).slice(), openings:clone(L().openings), measures:clone(L().measures)};
+  /* insert (or reuse) the vertex at `hit`, reporting where the new point actually
+     landed so a later, lower-edge insertion can tell whether it shifted this one */
+  const resolveHit = hit => {
+    const tAbs=hit.t*hit.len;
+    if(tAbs<=1) return {idx:hit.i, insertAt:null};
+    if(tAbs>=hit.len-1) return {idx:(hit.i+1)%work.points.length, insertAt:null};
+    mergeSplice(work, hit.i, tAbs);
+    return {idx:hit.i+1, insertAt:hit.i+1};
+  };
+  const [hi,lo] = hitA.i>hitB.i ? [hitA,hitB] : [hitB,hitA];
+  const hiRes=resolveHit(hi);
+  let hiIdx=hiRes.idx;
+  const loRes=resolveHit(lo);   // resolved second, against the (possibly hi-inserted) array
+  if(loRes.insertAt!==null && loRes.insertAt<=hiIdx) hiIdx++;   // lo's own insertion just shifted hi's spot
+  const loIdx=loRes.idx;
+  const [pA,pB] = hitA.i>hitB.i ? [hiIdx,loIdx] : [loIdx,hiIdx];
+  if(pA===pB){ flash('Pick two different points to split the room'); return; }
+
+  /* Every corner the drawn path added (the interior points) becomes part of the
+     new shared boundary, threaded through in the direction each new room walks
+     it: A closes q→p via the path backwards, B closes p→q via the path forwards. */
+  const p=Math.min(pA,pB), q=Math.max(pA,pB), n2=work.points.length;
+  const chainA=work.points.slice(p, q+1).concat(mid.slice().reverse());
+  const chainB=work.points.slice(q).concat(work.points.slice(0, p+1)).concat(mid);
+  if(!polySimple(chainA) || !polySimple(chainB)){ flash("That line doesn't leave two usable rooms"); return; }
+  const offA=work.wallOff.slice(p, q);
+  const offB=work.wallOff.slice(q).concat(work.wallOff.slice(0, p));
+  const newEdgeCount=mid.length+1;   // however many segments the drawn path has
+
+  const inA = w => w>=p && w<q;
+  const remapA = w => w-p;
+  const remapB = w => w>=q ? w-q : w+(n2-q);
+  const openingsA=[], openingsB=[];
+  for(const o of work.openings){
+    if(inA(o.wall)) openingsA.push(Object.assign(clone(o), {wall:remapA(o.wall)}));
+    else openingsB.push(Object.assign(clone(o), {wall:remapB(o.wall)}));
+  }
+  const remapMeasureWalls = remapFn => clone(work.measures).map(m=>{
+    for(const anc of [m.a,m.b]) if(anc.k==='wall'){ const w=remapFn(anc.id); anc.id = w==null ? -1 : w; }
+    return m;
+  });
+  const measuresA=remapMeasureWalls(w=>inA(w)?remapA(w):null);
+  const measuresB=remapMeasureWalls(w=>inA(w)?null:remapB(w));
+
+  const room=L();
+  const pillarsA=[], pillarsB=[];
+  for(const pl of room.room.pillars) (pointInPoly([pl.x,pl.y], chainA)?pillarsA:pillarsB).push(clone(pl));
+  const iwallsA=[], iwallsB=[];
+  for(const w of room.room.iwalls){
+    const wmid=[(w.a[0]+w.b[0])/2, (w.a[1]+w.b[1])/2];
+    (pointInPoly(wmid, chainA)?iwallsA:iwallsB).push(clone(w));
+  }
+  const placedA=[], placedB=[];
+  for(const inst of room.placed) (pointInPoly([inst.x,inst.y], chainA)?placedA:placedB).push(clone(inst));
+
+  const crossesCut = poly => {
+    for(let k=0;k<poly.length;k++) for(let s=0;s<path.length-1;s++)
+      if(segHit(path[s],path[s+1],poly[k],poly[(k+1)%poly.length])) return true;
+    return false;
+  };
+  let straddling=0;
+  for(const inst of room.placed){ const item=S.inventory.find(x=>x.id===inst.itemId); if(item && crossesCut(worldPoly(inst,item))) straddling++; }
+  for(const pl of room.room.pillars) if(crossesCut(worldPoly(pl,pl))) straddling++;
+  for(const w of room.room.iwalls) if(pointInPoly(w.a,chainA)!==pointInPoly(w.b,chainA)) straddling++;
+
+  openSplitChoice({chainA,chainB,offA,offB,newEdgeCount,openingsA,openingsB,pillarsA,pillarsB,iwallsA,iwallsB,placedA,placedB,measuresA,measuresB,straddling});
+}
+function openSplitChoice(ctx){
+  /* #moFoot is the shared modal chrome every dialog reuses, so the extra
+     button this one needs has to be added on mount and torn back out again
+     on close — otherwise it would linger in the footer of every later modal. */
+  let openBtn=null;
+  openModal("Split this room into two?",
+    `<p>${ctx.straddling ? plural(ctx.straddling,'item')+' sit on the dividing line and will move fully onto one side. ' : ''}Choose how the new boundary between the two rooms should look.</p>
+     <p class="hint">Leaving it open removes the wall between the two rooms entirely, the same as the “Open this side” option on a wall.</p>`,
+    'Split with a wall',
+    ()=>{ commitSplit(ctx, false); },
+    ()=>{
+      openBtn=document.createElement('button');
+      openBtn.type='button'; openBtn.className='btn primary';
+      openBtn.textContent='Split and leave it open';
+      openBtn.addEventListener('click', ()=>{ closeModal(); commitSplit(ctx, true); });
+      $('moOk').insertAdjacentElement('afterend', openBtn);
+    },
+    {onClose:()=>{ if(openBtn){ openBtn.remove(); openBtn=null; } cancelSplitDraw(); }});
+}
+let lastSplit=null;   // one slot, same "not a stack" precedent as lastMerge
+function commitSplit(ctx, openWall){
+  const A=L(), room=A.room;
+  const {wall, floor, trimOn, trim}=room;
+  const bId=uid();
+  lastSplit={aId:A.id, aBefore:clone(A), bId, aRoomHist:roomHist[A.id], aFurnHist:furnHist[A.id]};
+
+  room.points=ctx.chainA; room.wallOff=ctx.offA.concat(Array(ctx.newEdgeCount).fill(openWall));
+  room.pillars=ctx.pillarsA; room.iwalls=ctx.iwallsA;
+  A.openings=ctx.openingsA; A.placed=ctx.placedA; A.measures=ctx.measuresA;
+  syncWallOff(room); clampOpenings(A); pruneMeasures(A);
+
+  const B={id:bId, name:A.name+' (2)', folderId:A.folderId, floorId:A.floorId, floorPlace:clone(A.floorPlace),
+    room:{points:ctx.chainB, wall, floor, trimOn, trim, pillars:ctx.pillarsB, iwalls:ctx.iwallsB, wallOff:ctx.offB.concat(Array(ctx.newEdgeCount).fill(openWall))},
+    openings:ctx.openingsB, placed:ctx.placedB, measures:ctx.measuresB};
+  syncWallOff(B.room); clampOpenings(B); pruneMeasures(B);
+
+  S.layouts.splice(S.layouts.indexOf(A)+1, 0, B);
+
+  roomHist[A.id]={stack:[JSON.stringify({room:A.room, openings:A.openings})], idx:0};
+  furnHist[A.id]={stack:[JSON.stringify({placed:A.placed})], idx:0};
+  roomHist[bId]={stack:[JSON.stringify({room:B.room, openings:B.openings})], idx:0};
+  furnHist[bId]={stack:[JSON.stringify({placed:B.placed})], idx:0};
+  if(A.floorId) delete floorHist[A.floorId];
+
+  mergeSel.clear();
+  renderTree(); renderAll(); fit(); save();
+  flash('Split into two rooms');
+}
+function splitUndo(){
+  if(!lastSplit) return;
+  const m=lastSplit;
+  askConfirm('Undo this split?', 'The room will be restored as it was before splitting.', 'Undo split', ()=>{
+    const a=S.layouts.find(x=>x.id===m.aId);
+    if(a) Object.assign(a, clone(m.aBefore));
+    S.layouts=S.layouts.filter(x=>x.id!==m.bId);
+    if(m.aRoomHist) roomHist[m.aId]=m.aRoomHist; else delete roomHist[m.aId];
+    if(m.aFurnHist) furnHist[m.aId]=m.aFurnHist; else delete furnHist[m.aId];
+    delete roomHist[m.bId]; delete furnHist[m.bId];
+    lastSplit=null;
+    if(S.active===m.bId) activateLayout(m.aId);
+    renderTree(); renderAll(); fit(); save();
+  });
+}
+export {boundaryHit, splitAngleSnap, splitRefs, splitCornerRef, splitResolvePoint, drawSplitOverlay, cancelSplitDraw, trySplitLine, openSplitChoice, lastSplit, commitSplit, splitUndo};
