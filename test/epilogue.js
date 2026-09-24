@@ -74,6 +74,11 @@ export const EPILOGUE = `
    "window.swingPoly is not a function" in visual.spec.js -- which is exactly
    what it did. Import it here, the CANVAS way. */
 ;import {swingPoly} from './src/model/openings.js';
+/* exportPayload is in GLOBALS below and left index.html's scope with the
+   Export dialog -- savePlanImage was its last reader there. GLOBALS assigns
+   inside a try/catch, so it would have gone missing silently. Import it the
+   CANVAS way. */
+;import {exportPayload} from './src/io/export.js';
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },
