@@ -50,6 +50,7 @@ const GLOBALS = [
  */
 export const EPILOGUE = `
 ;import {CANVAS} from './src/canvas/draw.js';
+;import {alignGuides} from './src/core/selection.js';
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },

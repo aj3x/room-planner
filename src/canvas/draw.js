@@ -68,5 +68,65 @@ function pickText(hex,light){
   return (light||lum>.62)?'#1d1d1b':'#ffffff';
 }
 
+/* Instalment 3: the three overlays that draw what a gesture is doing -- the
+   alignment guides, the 90-degree tick, and the outline being drawn. They
+   could not come until the selection and interaction lets were out of
+   index.html, which is what the commits before this one did. */
+import {alignGuides} from '../core/selection.js';
+import {drawState, drawCursor} from './interaction-state.js';
+
+/* the dashed lines saying which alignment is holding a dragged or hovered point */
+function drawAlignGuides(){
+  if(!alignGuides.length) return;
+  const C=PAL();
+  ctx.save();
+  ctx.setLineDash([6,5]); ctx.lineWidth=1.5; ctx.strokeStyle=C.accent;
+  for(const g of alignGuides){
+    ctx.beginPath(); ctx.moveTo(sx(g[0][0]),sy(g[0][1])); ctx.lineTo(sx(g[1][0]),sy(g[1][1])); ctx.stroke();
+  }
+  ctx.restore();
+}
+/* The square in the corner, the way a plan marks 90°. On a corner that turns the other
+   way it lands on the wall band, so it is drawn twice — a pale line first, then the
+   accent over it — to stay legible whatever is underneath. */
+function drawSquareTick(a,b,c){
+  const C=PAL(), bx=sx(b[0]), by=sy(b[1]);
+  const dir=(q)=>{ const dx=sx(q[0])-bx, dy=sy(q[1])-by, l=Math.hypot(dx,dy); return l<1?null:[dx/l,dy/l]; };
+  const u=dir(a), v=dir(c);
+  if(!u||!v) return;
+  const s=16;
+  ctx.save();
+  ctx.lineJoin='miter';
+  for(const pass of [{w:5, c:C.surface}, {w:2.5, c:C.accent}]){
+    ctx.beginPath();
+    ctx.moveTo(bx+u[0]*s, by+u[1]*s);
+    ctx.lineTo(bx+(u[0]+v[0])*s, by+(u[1]+v[1])*s);
+    ctx.lineTo(bx+v[0]*s, by+v[1]*s);
+    ctx.strokeStyle=pass.c; ctx.lineWidth=pass.w; ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawCustomOverlay(){
+  if(!drawState) return;
+  const pts=drawState.pts, C=PAL();
+  ctx.save();
+  ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.setLineDash([5,4]);
+  ctx.beginPath();
+  if(pts.length){
+    ctx.moveTo(sx(pts[0][0]),sy(pts[0][1]));
+    for(let i=1;i<pts.length;i++) ctx.lineTo(sx(pts[i][0]),sy(pts[i][1]));
+    if(drawCursor) ctx.lineTo(sx(drawCursor[0]),sy(drawCursor[1]));
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+  for(let i=0;i<pts.length;i++){
+    const near0 = i===0 && pts.length>=3 && drawCursor && Math.hypot(sx(pts[0][0])-sx(drawCursor[0]),sy(pts[0][1])-sy(drawCursor[1]))<12;
+    ctx.beginPath(); ctx.arc(sx(pts[i][0]),sy(pts[i][1]), (i===0?7:5), 0, Math.PI*2);
+    ctx.fillStyle = near0 ? C.accent : (i===0?C.accentSoft:C.surface);
+    ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export {CANVAS, darkMQ, PAL, setForceLightCanvas,
-        addPoly, pathPoly, clip, normHex, hexA, pickText};
+        addPoly, pathPoly, clip, normHex, hexA, pickText,
+        drawAlignGuides, drawSquareTick, drawCustomOverlay};
