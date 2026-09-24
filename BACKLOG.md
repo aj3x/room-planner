@@ -153,6 +153,22 @@ layouts are both currently active).
 
 ## Known defects
 
+- **"Added" never appears on a listing's Add button.** In
+  `renderListingDetail` (`index.html` ~7572) the per-item handler is
+  `addMarketItemToInventory(it); b.textContent='Added'; b.disabled=true;` —
+  but `addMarketItemToInventory` ends in `save(); renderLibAll();`, which
+  re-runs `renderListingDetail` and replaces the whole of `#listingBody`. The
+  button the handler then marks is already detached, so what the user sees is
+  the panel flashing back to "Loading…" and returning with every button still
+  reading "Add". An item that was added is indistinguishable from one that was
+  not, and clicking twice is the natural response — which lands on the
+  "Already in your library" collision dialog. "Add all to library" has the
+  same shape and the same outcome. The fix is to mark the buttons before the
+  re-render, or to have the re-render derive the state from `S.inventory`.
+  Found while writing the Phase 3.6 panel coverage; pinned by
+  `test/e2e/panel-library.spec.js` ("renderListingDetail lists the bundle's
+  items and adds them one at a time"). Not fixed: Phase 3 is move-only.
+
 - **`renderSnap()` silently rewrites `S.snap` when the value is not in the
   list.** The picker is rebuilt from `SNAPS.imperial` or `SNAPS.metric`
   depending on `S.unit`, and if the saved snap size is not one of the six

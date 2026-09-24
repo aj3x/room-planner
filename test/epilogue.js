@@ -41,6 +41,9 @@ const GLOBALS = [
   /* the app's own selection entry points -- renderSel reads both `sel` and
      `selSet`, so a test cannot set up a selection by poking one of them. */
   'selectOnly', 'selectSet', 'selectClear',
+  /* the Library half of the same SCC: renderLibAll is what setMode() and
+     itemDialog() call, and what every acting library listener calls. */
+  'renderLibAll',
   'startWallDraw', 'startSplitRoom', 'setMeasure', 'activateLayout',
   'exportPayload', 'readImport', 'applyImport',
   'polySimple', 'swingPoly', 'bpRebuild',
