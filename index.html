@@ -801,6 +801,7 @@ let treeOpen = new Set();  // expanded folder ids in the layout tree
    that move can stay move-only. */
 function setSel(v){ sel = v; }
 function setSelSet(v){ selSet = v; }
+function setRoomSel(v){ roomSel = v; }
 
 function selectOnly(id){ setSelSet(new Set(id?[id]:[])); setSel(id||null); }
 function selectAdd(id){ selSet.add(id); setSel(id); }
@@ -845,7 +846,7 @@ function folderDescendant(id,parentId){
 /* switching into a room under a DIFFERENT folder re-applies that folder's tag filter;
    switching between rooms in the SAME folder leaves whatever filter the person set alone */
 function activateLayout(id){
-  S.active=id; setSel(null); roomSel=null; floorSel=null;
+  S.active=id; setSel(null); setRoomSel(null); floorSel=null;
   resetMeasureState();
   seedHistFor();
   const fid = L() ? (L().folderId||null) : null;
@@ -1291,7 +1292,7 @@ function stepHist(map,snapFn,applyFn,dir){
   updateHistButtons();
 }
 function applyRoomSnap(s){
-  L().room=s.room; L().openings=s.openings; roomSel=null; bumpRev();
+  L().room=s.room; L().openings=s.openings; setRoomSel(null); bumpRev();
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save();
 }
 function applyFurnSnap(s){
@@ -1556,7 +1557,7 @@ function startCustomDraw(){
   if(measureOn) setMeasure(false);
   if(!roomMode()) setMode('room');
   drawState={pts:[]}; drawCursor=null;
-  roomSel=null; renderRoomSel();
+  setRoomSel(null); renderRoomSel();
   $('drawHint').hidden=false;
   draw();
 }
@@ -1567,7 +1568,7 @@ function finishCustomDraw(){
   if(!drawState||drawState.pts.length<3){ flash('Add at least 3 corners first'); return; }
   L().room.points=drawState.pts.map(p=>p.slice());
   L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
-  clampOpenings(); roomSel=null;
+  clampOpenings(); setRoomSel(null);
   drawState=null; alignGuides=[]; alignNote=''; $('drawHint').hidden=true;
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
 }
@@ -1615,7 +1616,7 @@ function startWallDraw(){
   if(measureOn) setMeasure(false);
   if(!roomMode()) setMode('room');
   wallDrawState={a:null}; drawCursor=null;
-  roomSel=null; renderRoomSel();
+  setRoomSel(null); renderRoomSel();
   flash('Click the wall’s start, then its end. Esc cancels.');
   draw();
 }
@@ -1624,7 +1625,7 @@ function finishWallDraw(a,b){
   const w={id:uid(), a, b, t:L().room.wall};
   L().room.iwalls.push(w);
   wallDrawState=null;
-  roomSel={kind:'iwall', id:w.id};
+  setRoomSel({kind:'iwall', id:w.id});
   renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
 }
 
@@ -1645,7 +1646,7 @@ function startSplitRoom(id){
   if(S.active!==id) activateLayout(id);
   setMode('room');
   splitDrawState={pts:[]}; drawCursor=null;
-  roomSel=null; renderRoomSel();
+  setRoomSel(null); renderRoomSel();
   renderAll(); fit();
   flash("Click a point on the room's wall to start the divider. Click inside the room to bend it, or click another wall to finish. Esc cancels.");
   draw();
@@ -2929,7 +2930,7 @@ function setMeasure(on){
     if(wallDrawState) cancelWallDraw();
     if(splitDrawState) cancelSplitDraw();
     // a click now measures, so nothing stays selected for editing
-    setSel(null); roomSel=null; renderSel(); renderRoomSel(); renderWalls(); renderOpen();
+    setSel(null); setRoomSel(null); renderSel(); renderRoomSel(); renderWalls(); renderOpen();
   }
   measureOn=!!on;
   resetMeasureState();
@@ -3234,7 +3235,7 @@ cv.addEventListener('pointerdown', e=>{
   if(roomMode()){
     const hit=pickRoom(px,py);
     if(hit){
-      roomSel=hit; selectClear();
+      setRoomSel(hit); selectClear();
       if(hit.kind==='opening') drag={mode:'open', id:hit.id, ox:px, oy:py, armed:false};
       else if(hit.kind==='corner') drag={mode:'corner', i:hit.i, ox:px, oy:py, armed:false};
       else if(hit.kind==='pillar'){
@@ -3249,7 +3250,7 @@ cv.addEventListener('pointerdown', e=>{
       renderRoomSel(); renderWalls(); renderOpen(); draw();
       return;
     }
-    roomSel=null; renderRoomSel(); renderWalls(); renderOpen();
+    setRoomSel(null); renderRoomSel(); renderWalls(); renderOpen();
     drag={mode:'pan', px, py, ox:view.ox, oy:view.oy};
     draw();
     return;
@@ -3611,7 +3612,7 @@ document.addEventListener('keydown', e=>{
   }
   if(e.key==='Escape'){
     if(!mo.hidden){ closeModal(); return; }
-    selectClear(); roomSel=null; floorSel=null; mergeSel.clear();
+    selectClear(); setRoomSel(null); floorSel=null; mergeSel.clear();
     renderSel(); renderRoomSel(); renderWalls(); renderOpen(); renderFloorSel(); renderTree(); draw(); return;
   }
   if(mo.hidden && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){
@@ -3737,9 +3738,9 @@ let pendingFit=false;
 function setMode(m){
   S.mode=m;
   if(isCanvasMode(m)) S.planMode=m;
-  if(m==='furniture') roomSel=null;
+  if(m==='furniture') setRoomSel(null);
   else if(m==='room') selectClear();
-  else if(m==='floor'){ selectClear(); roomSel=null; floorSel = L().floorId ? L().id : null; floorEntry(); }
+  else if(m==='floor'){ selectClear(); setRoomSel(null); floorSel = L().floorId ? L().id : null; floorEntry(); }
   if(m!=='floor'){ floorGuides=[]; floorSnapNote=''; }
   alignGuides=[]; alignNote='';
   /* measurements belong to one room, so Floor mode leaves the tool behind too */
@@ -4412,14 +4413,14 @@ $('structList').addEventListener('click', e=>{
   const kind=li.dataset.kind, id=li.dataset.id, btn=e.target.closest('button');
   if(btn&&btn.dataset.act==='more'){
     openMenu(btn, [
-      {label:'Select', fn:()=>{ if(!roomMode()) setMode('room'); roomSel={kind,id}; renderRoomSel(); renderObstacles(); draw(); }},
+      {label:'Select', fn:()=>{ if(!roomMode()) setMode('room'); setRoomSel({kind,id}); renderRoomSel(); renderObstacles(); draw(); }},
       {sep:true},
       {label:'Delete', danger:true, fn:()=>kind==='pillar'?deletePillar(id):deleteIWall(id)},
     ], li.querySelector('.nm').textContent);
     return;
   }
   if(!roomMode()) setMode('room');
-  roomSel={kind, id};
+  setRoomSel({kind, id});
   renderRoomSel(); renderObstacles(); draw();
 });
 $('btnAddStruct').addEventListener('click', e=>{
@@ -4442,23 +4443,23 @@ function addPillar(){
   const b=bbox(RP()), c=centroid(RP())||[(b.x0+b.x1)/2,(b.y0+b.y1)/2];
   const pl={id:uid(), x:c[0], y:c[1], rot:0, shape:{type:'rect',w:300,d:300}};
   L().room.pillars.push(pl);
-  roomSel={kind:'pillar', id:pl.id};
+  setRoomSel({kind:'pillar', id:pl.id});
   renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
 }
 function deletePillar(id){
   L().room.pillars=L().room.pillars.filter(p=>p.id!==id);
-  if(roomSel&&roomSel.kind==='pillar'&&roomSel.id===id) roomSel=null;
+  if(roomSel&&roomSel.kind==='pillar'&&roomSel.id===id) setRoomSel(null);
   renderRoomSel(); renderWalls(); draw(); save(); commitRoom();
 }
 function deleteIWall(id){
   L().room.iwalls=L().room.iwalls.filter(w=>w.id!==id);
-  if(roomSel&&roomSel.kind==='iwall'&&roomSel.id===id) roomSel=null;
+  if(roomSel&&roomSel.kind==='iwall'&&roomSel.id===id) setRoomSel(null);
   renderRoomSel(); renderWalls(); draw(); save(); commitRoom();
 }
 $('wallList').addEventListener('click', e=>{
   const li=e.target.closest('li[data-i]'); if(!li) return;
   if(!roomMode()) setMode('room');
-  roomSel={kind:'wall', i:+li.dataset.i};
+  setRoomSel({kind:'wall', i:+li.dataset.i});
   renderWalls(); renderRoomSel(); draw();
 });
 $('wallList').addEventListener('dblclick', e=>{
@@ -4472,7 +4473,7 @@ function wallDialog(i){
   const P=RP();
   if(!(i>=0&&i<P.length)) return;
   const w=wallOf(i);
-  roomSel={kind:'wall', i};
+  setRoomSel({kind:'wall', i});
   renderWalls(); renderRoomSel(); draw();
   openModal('Wall '+(i+1), `
     <div class="field"><label for="wdLen">Length</label><input type="text" class="len" id="wdLen" value="${esc(fmtLen(w.len,S.unit))}"></div>
@@ -4618,7 +4619,7 @@ function renderWallProps(){
 }
 function renderCornerProps(){
   const i=roomSel.i, P=RP(), p=P[i], b=bbox(P);
-  if(!p){ roomSel=null; return renderRoomSel(); }   // the corner went away under the selection
+  if(!p){ setRoomSel(null); return renderRoomSel(); }   // the corner went away under the selection
   $('roomSelTitle').textContent='Corner '+(i+1);
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="cX">From left</label><input type="text" class="len" id="cX" value="${esc(fmtLen(p[0]-b.x0,S.unit))}"></div>
@@ -4689,7 +4690,7 @@ function splitWall(i){
   for(const m of L().measures) for(const a of [m.a,m.b]) if(a.k==='wall' && a.id>i) a.id++;
   syncWallOff(room);
   clampOpenings();
-  roomSel={kind:'corner', i:i+1};
+  setRoomSel({kind:'corner', i:i+1});
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
 }
 function deleteCorner(i){
@@ -4717,12 +4718,12 @@ function deleteCorner(i){
   l.measures = l.measures.filter(m=>!sameEnd(m));
   syncWallOff(room);
   clampOpenings();
-  roomSel=null;
+  setRoomSel(null);
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
 }
 function renderPillarProps(){
   const pl=pillarOf(roomSel.id);
-  if(!pl){ roomSel=null; return renderRoomSel(); }
+  if(!pl){ setRoomSel(null); return renderRoomSel(); }
   $('roomSelTitle').textContent='Pillar';
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="plShape">Shape</label><select id="plShape">
@@ -4750,7 +4751,7 @@ function renderPillarProps(){
 }
 function renderIWallProps(){
   const w=iwallOf(roomSel.id);
-  if(!w){ roomSel=null; return renderRoomSel(); }
+  if(!w){ setRoomSel(null); return renderRoomSel(); }
   const na=nearestOnWalls(w.a), nb=nearestOnWalls(w.b);
   $('roomSelTitle').textContent='Interior wall';
   $('roomSelBox').innerHTML=`
@@ -4812,17 +4813,17 @@ $('openList').addEventListener('click', e=>{
     ], o?KIND(o):'');
   }
   if(!roomMode()) setMode('room');
-  roomSel={kind:'opening', id};
+  setRoomSel({kind:'opening', id});
   renderRoomSel(); renderOpen(); draw();
 });
 function deleteOpening(id){
   L().openings=L().openings.filter(o=>o.id!==id);
-  if(roomSel&&roomSel.id===id) roomSel=null;
+  if(roomSel&&roomSel.id===id) setRoomSel(null);
   renderOpen(); renderRoomSel(); draw(); save(); commitRoom();
 }
 function renderOpeningProps(){
   const o=openOf(roomSel.id);
-  if(!o){ roomSel=null; return renderRoomSel(); }
+  if(!o){ setRoomSel(null); return renderRoomSel(); }
   const len=wallOf(o.wall).len;
   o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
   const isDoor=o.kind==='door';
@@ -5169,7 +5170,7 @@ $('btnPreRect').addEventListener('click', ()=>{
       if(!isFinite(w)||!isFinite(d)||w<500||d<500){ moError('Give a width and depth of at least 500 mm'); return false; }
       L().room.points=rectPts(w,d);
       L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
-  clampOpenings(); roomSel=null;
+  clampOpenings(); setRoomSel(null);
       renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
     });
 });
@@ -5190,7 +5191,7 @@ $('btnPreL').addEventListener('click', ()=>{
       if(cw>=w-100||cd>=d-100){ moError('The notch has to be smaller than the room'); return false; }
       L().room.points=shapePoly({type:'lshape',w,d,cw,cd,corner:$('pC').value}).map(([x,y])=>[x+w/2,y+d/2]);
       L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
-  clampOpenings(); roomSel=null;
+  clampOpenings(); setRoomSel(null);
       renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
     });
 });
@@ -5438,7 +5439,7 @@ function openingDialog(id, kind, wallIdx){
       };
       if(id){ const i=L().openings.findIndex(x=>x.id===id); L().openings[i]=rec; }
       else L().openings.push(rec);
-      roomSel={kind:'opening', id:rec.id};
+      setRoomSel({kind:'opening', id:rec.id});
       if(!roomMode()) setMode('room');
       renderOpen(); renderRoomSel(); draw(); save(); commitRoom();
     },
@@ -8130,7 +8131,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     if(!done){ flash("There was nothing in that file to import"); return; }
     setS(done);
     ensureDefaultMarket().then(()=>{ if(!isCanvasMode(S.mode)) renderLibAll(); });
-    setSel(null); roomSel=null;
+    setSel(null); setRoomSel(null);
     for(const k of Object.keys(roomHist)) delete roomHist[k];
     for(const k of Object.keys(furnHist)) delete furnHist[k];
     seedHistFor();
