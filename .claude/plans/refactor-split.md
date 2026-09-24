@@ -872,6 +872,104 @@ setter that buys a dozen lines. Everything else is listener registrations and
 `boot()`. **The next round is `blueprint/`, and it has no gate in front of it.**
 
 
+### Phase 3 progress — the `blueprint/` round
+
+Done, baseline green (185 Vitest + 532 Playwright) between every one of the
+eight commits that landed. `index.html`: 4,304 -> 1,866 lines. `src/`: 60 -> 80
+modules. **The blueprint region is entirely out**; what remains in `index.html`
+is the CSS, the static HTML, the listener registrations, `boot()` and four small
+drag-state bindings (see "What is left" below).
+
+**§3's file list was right this time, for the first time.** All twenty names it
+guessed — `state`, `image`, `poly`, `pixels`, `walls`, `outlines`, `openings`,
+`rectify`, `labels`, `regions`, `detect`, `ocr`, `draft`, `wizard`,
+`step1-upload`, `step2-crop`, `step3-scale`, `mask-viewer`, `step4-review`,
+`commit` — are real modules with those contents. Nothing had to be renamed or
+refiled. The reason is that the blueprint region was written last, in one go,
+with its own `/* ---- blueprint: x ---- */` banners, and those banners are
+honest: every one of them is a clean cut on a blank line between whole
+declarations. Finding C does not apply to code that was banner-organised from
+the start.
+
+| commit | kind | note |
+|---|---|---|
+| `setBpState`, `setBpRunSeq`, `setBpPasteFn` | **not move-only** | 4 sites; the step dialogs write all three |
+| `state.js` + `image.js` | move-only | two leaves importing nothing |
+| `poly.js`, `pixels.js`, `walls.js`, `outlines.js` | move-only | |
+| `openings.js`, `rectify.js`, `labels.js`, `regions.js` | move-only | |
+| `detect.js` + `ocr.js` | move-only | `bpAnalyse -> bpRunOcr` forces the pair |
+| `draft.js`, `wizard.js`, `mask-viewer.js`, `commit.js` | move-only | |
+| the four step dialogs | move-only | **the region's SCC, one commit** |
+| `paramMode` -> `plan/mode.js`, `floorMenu` -> `plan/floors.js` | move-only | |
+| `setDragTree`, `setDragInv`, `setDragLib` | **not move-only** | 10 sites; written, green, NOT COMMITTED — see below |
+
+**The region was almost a DAG, which is why it bisected so well.** A reference
+graph over the 102 declarations found only four multi-member components, and
+three of them are trivial (`bpRunSeq`/`bpPasteFn`; `bpRenderScaleSide`/
+`bpBindScaleSide`; `bpRenderReview`/`bpBindOpens`/`bpBindReview`). The fourth is
+the real one: **`bpUploadDialog` -> `bpCropDialog` -> `bpScaleDialog` ->
+`bpReviewDialog`, each stage's Back handler calling the one before**, spanning
+all four step modules. As in the `plan/` round, the check was made explicitly —
+is the knot state or code? — and as there, every edge is a plain function call.
+No setter breaks it, so the four step modules landed in one commit.
+
+**Three setters were spent and they were the right three.** `bpState`,
+`bpRunSeq` and `bpPasteFn` are each written from a step dialog, so each had to
+become a setter before `state.js` could move. `setBpRunSeq` returns its
+argument, because one of its two sites is `const runId=++bpRunSeq`. Nothing else
+in the region is reassigned across a module boundary — `bpTessLoad` and
+`bpLastImport` are both written only inside their own module.
+
+**Rule 8's new instance: the step cycle, and then its disappearance.** After the
+step commit the module graph had *three* cycles, the new one being exactly the
+four step modules. That was safe — every edge is a function declaration, and the
+only top-level binding among the four is `BP_STEPS`, an array literal that reads
+no import. One commit later `floorMenu` moved into `plan/floors.js`, which
+imports `blueprint/step1-upload.js`, and the step cycle merged into the big one.
+Two cycles again, 45 modules in the big one, `ui/modal.js` still outside it.
+Checked with Tarjan after every commit, never by eye.
+
+**The epilogue audit fired three times in ten commits, and twice on `GLOBALS`.**
+Ten names lost their last `index.html` reader this round: `roomHist`,
+`furnHist`, `snapRoom`, `normLayout`, `polySimple` (with `bpCommit`/
+`bpSeedHistory`), then `bpState`, `bpRebuild`, `fmtArea`, `PAL` (with the step
+dialogs), then `bpLastImport` (with `floorMenu`). **`polySimple` and `bpRebuild`
+are `GLOBALS` entries**, which assign inside a `try/catch` — both would have
+gone missing silently and surfaced much later as `window.bpRebuild is not a
+function` in `blueprint.spec.js`. All ten are epilogue imports now. The audit
+was run after every commit and cost about a second each time.
+
+**Four tools were built for this round and are worth keeping.** They live
+outside the repo, but the shapes are what matter: (1) a reference graph over
+`index.html`'s script body — espree + eslint-scope + Tarjan — that answers "what
+does this span need" and "who still reads this name"; (2) a **span-integrity
+guard** that refuses to cut a span across a declaration, a top-level statement
+or an `import` line — it caught a real off-by-one immediately, where the
+`labels` and `regions` banners have no blank line between them and a naive
+`nextBanner - 2` swallowed the last line of `bpLabelBlocks`; (3) an **import
+pruner** that removes from `index.html`'s import lines every name the remaining
+monolith no longer references, which is rule 5 mechanised and is what kept the
+warning count at 8 through all ten commits; (4) a **specifier check** — for
+every `import {a, b} from 'x.js'` anywhere in the tree, assert that `x.js`
+really exports `a` and `b`. That last one closes the gap the `plan/` round
+flagged and the `library/` round repeated: **ESLint cannot check a module
+specifier**, and an import resolver that inserts by name can put a real name
+behind the wrong file. 1,385 names checked, all correct.
+
+**What is left, and one thing that is unfinished.** The round stopped short of
+its tail because **commit signing (SSH via 1Password) stopped working partway
+through and did not come back across twelve attempts**. The three drag setters
+(`setDragTree`/`setDragInv`/`setDragLib`) are written, green and staged in the
+working tree but unsigned and therefore uncommitted; the move they unblock —
+`dragTree`+`treeDropSpot` into `plan/layout-tree.js`, `dragInv` into
+`plan/item-list.js`, `dragLib`+`libDropSpot` into `library/tree.js`, about
+thirty lines — was deliberately not started, because starting it would have
+fused a declared not-move-only change and a move into one uncommittable blob.
+`libSearchT` stays regardless: its only reader is the `#searchBox` listener that
+stays, so moving it would separate a timer from its sole user and buy a line —
+the same call the `canvas/` round made on the ten selection lets. After that
+tail, the remaining Phase 3 work is A4 (SCSS) and A5 (HTML partials).
+
 ### SCSS rules
 1. Split is a **rename + cut**. SCSS is a superset of CSS; compiled output must be
    byte-identical to today's CSS on the first commit. Verify with a diff of compiled output.

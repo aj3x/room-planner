@@ -171,7 +171,17 @@ Names the epilogue now imports, in the order they lost their last reader:
 `CANVAS`, `alignGuides`, `alignNote`, `floorGuides`, `floorSnapNote`,
 `drawCursor`, `ctx`, `swingPoly`, `exportPayload`, `idFolder`, `idLeaf`,
 `hasOpen`, `fileSlug`, `applyImport`, `PREF_KEYS`, `INV_SCOPES`, `normItem`,
-`pickValues`, `clone`.
+`pickValues`, `clone`, then the `blueprint/` round's ten: `roomHist`,
+`furnHist`, `snapRoom`, `normLayout`, `polySimple`, `bpState`, `bpRebuild`,
+`fmtArea`, `PAL`, `bpLastImport`.
+
+**The `blueprint/` round fired the audit three times in ten commits, and twice
+on `GLOBALS`.** `polySimple` left with `bpSeedHistory` and `bpRebuild` with the
+four wizard step dialogs; both are `GLOBALS` entries, so both would have failed
+*silently* and surfaced much later as `window.bpRebuild is not a function` in
+`blueprint.spec.js` rather than as a red boot. That is the third time `GLOBALS`
+has been the dangerous half of this check and the second time it was caught only
+because the audit was run rather than because something went red.
 
 All 25 `GLOBALS` entries survived the SCC move inside `index.html`'s scope,
 `setMode` and `renderLibAll` included — index.html still drives both from its
@@ -640,7 +650,15 @@ wants a pass by hand:
   suggestions (chips are asserted; the `.tagsuggest` list is not).
 - **The blueprint dialogs** (`bpUploadDialog` and the rest of the four-stage
   wizard) are covered by `blueprint.spec.js`, which asserts geometry, not the
-  panel HTML around it.
+  panel HTML around it. `blueprint.spec.js` drives the pipeline through
+  `__rp.bpState` and `window.bpRebuild` and never opens the wizard, so **no test
+  clicks through the four stages**: the stepper badges, the drag-and-drop and
+  paste on step 1, the crop handles on step 2, the calibration side panel and
+  its canvas overlay on step 3, and the review list with its per-room and
+  per-opening rows on step 4 are all unverified. A break in any of them that
+  does not throw turns nothing red. This was the largest uncovered surface the
+  `blueprint/` round moved, and it is the first thing to characterize if that
+  region is ever touched again.
 - **`renderCornerProps`, `renderPillarProps`, `renderIWallProps`.** The wall
   and opening editors are asserted; the other three selection kinds are reached
   only far enough to confirm the row selects them.
