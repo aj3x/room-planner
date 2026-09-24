@@ -323,6 +323,21 @@ layouts are both currently active).
   which publishes seven entries and asserts the tile reads six). Not fixed:
   Phase 3 is move-only.
 
+- **Opening a dialog and pressing Save re-rounds its lengths to display
+  precision.** Every length field in `itemDialog` and `openingDialog` is filled
+  with `fmtLen(mm, S.unit)` and read back with `parseLen`, and `fmtLen` rounds
+  to the unit's displayed precision — two decimals for metres. So a field
+  nobody touched still round-trips through that rounding on Save. The default
+  door width is the clearest case: `openingDialog(null,'door')` seeds 813mm
+  (a 32" door), the box reads "0.81 m" on a metric project, and pressing Save
+  without touching anything stores **810**. The same applies to any existing
+  opening or item re-saved from its dialog — the value drifts to whatever the
+  current display unit can express, once per save, silently, and switching
+  units between saves drifts it again. Found while writing the Phase 3.6
+  dialog coverage; pinned by `test/e2e/panel-dialogs.spec.js` ("a new door
+  defaults to 813mm and is added to the wall the menu was opened on"). Not
+  fixed: Phase 3 is move-only.
+
 - **Dead code the linter found.** ESLint (added in Phase 2, correctness rules
   only) reports seven unused bindings and dead stores in `index.html`. None is a
   behaviour bug; all are noise that will be carried into a module for no reason
