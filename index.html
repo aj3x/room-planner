@@ -793,11 +793,20 @@ let alignGuides = [];  // lines a dragged corner is currently latched onto
 let alignNote = '';    // what that alignment is, shown in the readout
 let treeOpen = new Set();  // expanded folder ids in the layout tree
 
-function selectOnly(id){ selSet = new Set(id?[id]:[]); sel = id||null; }
-function selectAdd(id){ selSet.add(id); sel = id; }
-function selectToggle(id){ if(selSet.has(id)){ selSet.delete(id); sel=[...selSet].pop()||null; } else selectAdd(id); }
-function selectSet(ids){ selSet = new Set(ids); sel = ids.length ? ids[ids.length-1] : null; }
-function selectClear(){ selSet.clear(); sel = null; }
+/* Setters for the selection lets above. You cannot assign to an imported
+   binding, so every one of these that is reassigned from outside the module it
+   ends up in needs a function to do it — the same pattern setS uses in
+   src/core/state.js. Each setter does exactly what the assignment did: a bare
+   assignment, nothing else. They are added here, ahead of the draw() move, so
+   that move can stay move-only. */
+function setSel(v){ sel = v; }
+function setSelSet(v){ selSet = v; }
+
+function selectOnly(id){ setSelSet(new Set(id?[id]:[])); setSel(id||null); }
+function selectAdd(id){ selSet.add(id); setSel(id); }
+function selectToggle(id){ if(selSet.has(id)){ selSet.delete(id); setSel([...selSet].pop()||null); } else selectAdd(id); }
+function selectSet(ids){ setSelSet(new Set(ids)); setSel(ids.length ? ids[ids.length-1] : null); }
+function selectClear(){ selSet.clear(); setSel(null); }
 
 import {floorXf, ptsAt, floorPtInv, floorPt, floorPts, floorInst, floorIWall,
         floorBBox, placeOnFloor, INV_SCOPES, availableCount} from './src/core/floor-space.js';
@@ -836,7 +845,7 @@ function folderDescendant(id,parentId){
 /* switching into a room under a DIFFERENT folder re-applies that folder's tag filter;
    switching between rooms in the SAME folder leaves whatever filter the person set alone */
 function activateLayout(id){
-  S.active=id; sel=null; roomSel=null; floorSel=null;
+  S.active=id; setSel(null); roomSel=null; floorSel=null;
   resetMeasureState();
   seedHistFor();
   const fid = L() ? (L().folderId||null) : null;
@@ -2920,7 +2929,7 @@ function setMeasure(on){
     if(wallDrawState) cancelWallDraw();
     if(splitDrawState) cancelSplitDraw();
     // a click now measures, so nothing stays selected for editing
-    sel=null; roomSel=null; renderSel(); renderRoomSel(); renderWalls(); renderOpen();
+    setSel(null); roomSel=null; renderSel(); renderRoomSel(); renderWalls(); renderOpen();
   }
   measureOn=!!on;
   resetMeasureState();
@@ -8121,7 +8130,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     if(!done){ flash("There was nothing in that file to import"); return; }
     setS(done);
     ensureDefaultMarket().then(()=>{ if(!isCanvasMode(S.mode)) renderLibAll(); });
-    sel=null; roomSel=null;
+    setSel(null); roomSel=null;
     for(const k of Object.keys(roomHist)) delete roomHist[k];
     for(const k of Object.keys(furnHist)) delete furnHist[k];
     seedHistFor();
