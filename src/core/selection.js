@@ -12,9 +12,10 @@
    the canvas's own scratch state, and draw() reads all nine of them, which is
    why they had to come out of index.html before draw() could.
 
-   treeOpen, the tenth let declared beside them, stayed behind: it is the
-   layout tree's expanded-folder set, nothing on the canvas reads it, and it is
-   not reassigned from anywhere the tree itself does not own. */
+   treeOpen is the tenth, and it joined them in the plan/ round: it is the
+   layout tree's expanded-folder set, which nothing on the canvas reads, but
+   plan/layout-tree.js does. It needs no setter — it is only ever .add()ed and
+   .delete()d, never reassigned — so it moved as a plain let. */
 
 let selSet = new Set(); // placed furniture ids (multi-select), source of truth
 let sel = null;         // last-added/primary placed furniture id; null when selSet is empty
@@ -25,6 +26,7 @@ let floorGuides = [];  // edges a dragged room is currently lining up with
 let floorSnapNote = ''; // what that alignment is, shown while dragging
 let alignGuides = [];  // lines a dragged corner is currently latched onto
 let alignNote = '';    // what that alignment is, shown in the readout
+let treeOpen = new Set();  // expanded folder ids in the layout tree
 
 /* Setters for the selection lets above. You cannot assign to an imported
    binding, so every one of these that is reassigned from outside the module it
@@ -43,6 +45,6 @@ function setAlignGuides(v){ alignGuides = v; }
 function setAlignNote(v){ alignNote = v; }
 
 export {sel, selSet, roomSel, floorSel, mergeSel,
-        floorGuides, floorSnapNote, alignGuides, alignNote,
+        floorGuides, floorSnapNote, alignGuides, alignNote, treeOpen,
         setSel, setSelSet, setRoomSel, setFloorSel, setMergeSel,
         setFloorGuides, setFloorSnapNote, setAlignGuides, setAlignNote};
