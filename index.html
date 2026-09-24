@@ -2220,6 +2220,17 @@ let measureOn=false,     // the Measure tool is active: clicks pick anchors inst
     measureSel=null,     // the selected measurement's id
     measureCursor=null,  // world point under the pointer, for the preview line
     measureBoxes=[];     // where each measurement was last drawn, in screen px, for hit-testing
+/* Setters for the measure lets above, for the same reason the selection and
+   interaction lets got them: you cannot assign to an imported binding, and
+   drawMeasures is the last of the four draw*() helpers draw() needs. Each body
+   is a bare assignment. */
+function setMeasureOn(v){ measureOn = v; }
+function setMeasureStart(v){ measureStart = v; }
+function setMeasureHover(v){ measureHover = v; }
+function setMeasureHoverId(v){ measureHoverId = v; }
+function setMeasureSel(v){ measureSel = v; }
+function setMeasureCursor(v){ measureCursor = v; }
+function setMeasureBoxes(v){ measureBoxes = v; }
 import {measuresOf, anchorKey, measureObjs, objOfAnchor, anchorGeom,
         closestBetween} from './src/model/measures.js';
 
@@ -2336,7 +2347,7 @@ function drawDimension(r,color,C,dashed){
   return {p,q,x:cx-w/2,y:cy-h/2,w,h};
 }
 function drawMeasures(){
-  measureBoxes=[];
+  setMeasureBoxes([]);
   if(!S.showMeasure && !measureOn) return;
   const C=PAL(), objs=measureObjs();
   if(measureOn){
@@ -2386,41 +2397,41 @@ function setMeasure(on){
     // a click now measures, so nothing stays selected for editing
     setSel(null); setRoomSel(null); renderSel(); renderRoomSel(); renderWalls(); renderOpen();
   }
-  measureOn=!!on;
+  setMeasureOn(!!on);
   resetMeasureState();
   renderMeasureBar(); draw();
 }
-function resetMeasureState(){ measureStart=null; measureHover=null; measureHoverId=null; measureSel=null; measureCursor=null; }
+function resetMeasureState(){ setMeasureStart(null); setMeasureHover(null); setMeasureHoverId(null); setMeasureSel(null); setMeasureCursor(null); }
 function removeMeasure(id){
   L().measures=measuresOf().filter(m=>m.id!==id);
-  if(measureSel===id) measureSel=null;
-  measureHoverId=null;
+  if(measureSel===id) setMeasureSel(null);
+  setMeasureHoverId(null);
   renderMeasureBar(); draw(); save();
 }
 function measurePointerDown(px,py){
   const t=measureTargetAt(px,py);
-  if(t && t.id){ measureSel=t.id; renderMeasureBar(); draw(); return; }
-  measureSel=null;
+  if(t && t.id){ setMeasureSel(t.id); renderMeasureBar(); draw(); return; }
+  setMeasureSel(null);
   if(t && t.a){
-    if(!measureStart) measureStart=t.a;
+    if(!measureStart) setMeasureStart(t.a);
     else if(anchorKey(t.a)!==anchorKey(measureStart)){
       measuresOf().push({id:uid(), a:measureStart, b:t.a});
-      measureStart=null; save();
+      setMeasureStart(null); save();
     }
   } else setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
   renderMeasureBar(); draw();
 }
 function measureHoverAt(px,py){
-  measureCursor=[wx(px),wy(py)];
+  setMeasureCursor([wx(px),wy(py)]);
   const t=measureTargetAt(px,py);
-  measureHover = t&&t.a || null;
-  measureHoverId = t&&t.id || null;
+  setMeasureHover(t&&t.a || null);
+  setMeasureHoverId(t&&t.id || null);
   cv.style.cursor = t ? 'pointer' : '';
   scheduleDraw();
 }
 cv.addEventListener('pointerleave', ()=>{
   if(!measureOn || drag) return;
-  measureHover=null; measureHoverId=null; measureCursor=null; scheduleDraw();
+  setMeasureHover(null); setMeasureHoverId(null); setMeasureCursor(null); scheduleDraw();
 });
 $('btnMeasure').addEventListener('click', ()=>setMeasure(!measureOn));
 $('btnShortcuts').addEventListener('click', showShortcuts);
@@ -2967,8 +2978,8 @@ document.addEventListener('keydown', e=>{
   if(measureOn && mo.hidden){
     // Escape backs out one step at a time: the first end, then the selection, then the tool
     if(e.key==='Escape'){
-      if(measureStart) measureStart=null;
-      else if(measureSel) measureSel=null;
+      if(measureStart) setMeasureStart(null);
+      else if(measureSel) setMeasureSel(null);
       else { setMeasure(false); return; }
       renderMeasureBar(); draw(); return;
     }
@@ -3108,7 +3119,7 @@ function setMode(m){
   if(m!=='floor'){ setFloorGuides([]); setFloorSnapNote(''); }
   setAlignGuides([]); setAlignNote('');
   /* measurements belong to one room, so Floor mode leaves the tool behind too */
-  if((!isCanvasMode(m) || m==='floor') && measureOn){ measureOn=false; resetMeasureState(); renderMeasureBar(); }
+  if((!isCanvasMode(m) || m==='floor') && measureOn){ setMeasureOn(false); resetMeasureState(); renderMeasureBar(); }
   renderMode(); applyLayoutMode();
   if(isCanvasMode(m)){
     resize();
