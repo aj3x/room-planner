@@ -283,6 +283,46 @@ layouts are both currently active).
   discovered as an apparent Phase 2 regression. Pinned by
   `test/e2e/smoke.spec.js` ("dist/index.html boots and paints straight off disk").
 
+- **A marketplace item's folder path does not find a folder that differs only
+  in case.** `addMarketItemToInventory()` files an incoming item under its id
+  path via `ensureItemFolderPath(parts)` (`index.html` ~6385), which matches an
+  existing folder with `x.name===name` — exact, case-sensitive. Marketplace ids
+  are lower-case by convention (`ikea/kallax/4x2`), so a user whose Library
+  already has a folder called "IKEA" gets a second, separate folder called
+  "ikea" beside it, and their IKEA items are split across two folders that look
+  the same in the tree. Nothing warns, and the two never merge. Found while
+  writing the Phase 3.6 marketplace coverage; pinned by
+  `test/e2e/panel-market.spec.js` ("no collision: the item is copied in and
+  filed under its id path"). Not fixed: Phase 3 is move-only.
+
+- **Stepping out of a subscription answers the typed search about a different
+  collection.** `renderLibContent()` routes to `renderMarketSub()` *before* the
+  generic search view (`index.html` ~7625, and the comment there says so
+  deliberately), so while a subscription is open the search box searches that
+  marketplace's index. Press "Marketplaces" to go back and `nav.searching` is
+  still set and the box still holds the query, but the render now falls through
+  to `renderLibSearchResults()`'s marketplace branch — which searches the **ad
+  hoc listings**. The user sees their own query, unchanged, answered with
+  "Nothing matches “kallax” here." under a `Listings /` crumb, about a
+  collection they never searched. Either the back-out should clear the search
+  (as `goLibFolder` does) or the generic search should cover the subscriptions.
+  Pinned by `test/e2e/panel-market.spec.js` ("leaving the subscription with a
+  search still typed falls to the generic search view"). Not fixed: Phase 3 is
+  move-only.
+
+- **An index entry with a malformed id disappears without a word.**
+  `subscribeMarket()` filters shard entries with
+  `if(it&&it.id&&!idProblem(it.id))` (`index.html` ~6488) and says nothing
+  about the ones it drops — not to the user, not to the console. Every other
+  validation failure in that function throws a message the Add dialog shows;
+  this one is silent, so a publisher's typo shows up only as a catalogue that
+  is quietly short of items, on every client, forever. The same filter is the
+  app's only protection against a malicious id, so it should stay — it is the
+  silence that is the defect. Pinned by `test/e2e/panel-market.spec.js`
+  ("a valid manifest plus its shards becomes one subscription and one index",
+  which publishes seven entries and asserts the tile reads six). Not fixed:
+  Phase 3 is move-only.
+
 - **Dead code the linter found.** ESLint (added in Phase 2, correctness rules
   only) reports seven unused bindings and dead stores in `index.html`. None is a
   behaviour bug; all are noise that will be carried into a module for no reason
