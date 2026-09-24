@@ -6190,7 +6190,9 @@ function renameAdhocFolder(id){
 }
 
 /* ---- drag: reparent a library folder, or drop a library item onto one ---- */
-let dragLib=null, gridDragItem=null;
+let dragLib=null;
+let gridDragItem=null;
+function setGridDragItem(v){ gridDragItem = v; }
 libTreeBox.addEventListener('dragstart', e=>{
   const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]'); if(!row) return;
   cancelSingleClick(); closeMenu();
@@ -6235,7 +6237,7 @@ libTreeBox.addEventListener('drop', e=>{
     if(spot.mode!=='root' && !spot.isLib) return;
     const it=S.inventory.find(x=>x.id===gridDragItem); if(!it) return;
     moveItemToFolder(it, spot.mode==='root'?null:spot.id);
-    gridDragItem=null; save(); renderLibAll();
+    setGridDragItem(null); save(); renderLibAll();
     libFlash('Moved “'+it.name+'”');
     return;
   }
@@ -6565,11 +6567,11 @@ function bindLibGrid(box, kind){
       more.addEventListener('click', e=>{ e.stopPropagation(); libItemMenu(t.dataset.item, e.currentTarget); });
       more.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); libItemMenu(t.dataset.item, more); } });
       t.addEventListener('dragstart', e=>{
-        gridDragItem=t.dataset.item; t.classList.add('dragging');
+        setGridDragItem(t.dataset.item); t.classList.add('dragging');
         e.dataTransfer.effectAllowed='move';
         try{ e.dataTransfer.setData('text/plain',gridDragItem); }catch(err){}
       });
-      t.addEventListener('dragend', ()=>{ gridDragItem=null; t.classList.remove('dragging'); clearDropMarks(); });
+      t.addEventListener('dragend', ()=>{ setGridDragItem(null); t.classList.remove('dragging'); clearDropMarks(); });
     });
     box.querySelectorAll('[data-openfolder]').forEach(t=>{
       t.addEventListener('dragover', e=>{ if(!gridDragItem) return; e.preventDefault(); t.classList.add('dragover'); });
@@ -6579,7 +6581,7 @@ function bindLibGrid(box, kind){
         if(!gridDragItem) return;
         const it=S.inventory.find(x=>x.id===gridDragItem); if(!it) return;
         moveItemToFolder(it, t.dataset.openfolder);
-        gridDragItem=null; save(); renderLibAll();
+        setGridDragItem(null); save(); renderLibAll();
         libFlash('Moved “'+it.name+'”');
       });
     });
