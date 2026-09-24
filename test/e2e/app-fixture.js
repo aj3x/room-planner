@@ -301,3 +301,57 @@ export async function clickWorld(page, world, opts = {}) {
   void cam;
   await pointerUp(page, opts);
 }
+
+/**
+ * Park the camera so a world box sits in the middle `fraction` of the canvas.
+ *
+ * `fit()` fills the canvas, which puts the room's own walls within a few pixels
+ * of the edge — inside `edgePanVel`'s 40px auto-pan band and under the floating
+ * island controls. Any gesture that has to click ON a wall (splitting a room,
+ * measuring off a wall, drawing an outline near one) needs the room smaller
+ * than the canvas instead. Setting the camera directly is not a behaviour
+ * change: `view` is mutated exactly as `zoomAt`/`fit` mutate it.
+ */
+export async function frameBox(page, [x0, y0, x1, y1], fraction = 0.55) {
+  await page.evaluate(([bx0, by0, bx1, by1, f]) => {
+    const c = document.getElementById('cv');
+    const w = c.clientWidth, h = c.clientHeight;
+    const v = window.__rp.view;
+    v.scale = Math.min((w * f) / Math.max(bx1 - bx0, 1), (h * f) / Math.max(by1 - by0, 1));
+    v.ox = w / 2 - ((bx0 + bx1) / 2) * v.scale;
+    v.oy = h / 2 - ((by0 + by1) / 2) * v.scale;
+    window.draw();
+  }, [x0, y0, x1, y1, fraction]);
+  await settle(page);
+}
+
+/**
+ * Put the app on a coarse, predictable snap grid.
+ *
+ * Tests that assert an exact landing coordinate need a grid step bigger than
+ * the pointer's own quantisation: at the fixtures' 25.4mm ("1 inch") one grid
+ * cell is under four screen pixels, so which cell a click lands in is not
+ * something a test can predict. 500mm is about 48px, which is.
+ *
+ * The unit has to move with it. `renderSnap()` rebuilds the snap <select> from
+ * SNAPS.imperial or SNAPS.metric depending on S.unit and — this is the part
+ * that bites — resets `S.snap` to the list's third entry if the current value
+ * is not one of its options. 500 is in the metric list only, so setting it on a
+ * ft+in project survives exactly until the next `renderAll()`, which
+ * `startSplitRoom()` calls. Setting the unit too makes it stick.
+ */
+export async function useCoarseSnap(page, mm = '500') {
+  await page.evaluate((v) => {
+    window.__rp.S.unit = 'm';
+    window.__rp.S.snap = v;
+  }, mm);
+}
+
+/** Confirm the app's modal by its primary button, after checking its title. */
+export async function confirmModal(page, title) {
+  if (title !== undefined) {
+    await expect(page.locator('#moTitle')).toHaveText(title);
+  }
+  await page.click('#moOk');
+  await settle(page);
+}

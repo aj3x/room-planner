@@ -153,6 +153,20 @@ layouts are both currently active).
 
 ## Known defects
 
+- **A placement that is already invalid can be dragged *further* out of the
+  room.** `drag.loose` is seeded from `isBad(hit)` at pointerdown, and while it
+  is true the `move` branch of `applyDragAt` (`index.html` ~3424) skips
+  `slideToValid` entirely and accepts any position whose *centre* is still
+  inside the room (`centreInside`). The intent is clear and right — a piece
+  that does not fit has to be draggable at all, or it would be stuck — but the
+  loose path does not distinguish "moving back towards legal" from "moving
+  further out", so a bed already poking through a wall can be pushed another
+  300mm through it. It goes strict again the instant the placement becomes
+  valid (`if(v.ok) drag.loose=false`), so the state is not sticky. Found while
+  writing the Phase 3.5 pointer coverage; pinned by `test/e2e/pointer-item.spec.js`
+  ("CHARACTERIZED, NOT ENDORSED: a placement that already sticks out drags
+  loose"). Not fixed: Phase 3 is move-only.
+
 - **`sel = null` does not clear `selSet`.** Three sites assign `sel = null`
   directly (`index.html` ~1176, ~4205, ~9446) without going through
   `selectClear()`, so the multi-select set can survive a clear of the primary
