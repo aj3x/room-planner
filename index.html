@@ -771,13 +771,11 @@ main,#paneLibrary{grid-row:2;grid-column:1;min-height:0}
    =================================================================== */
 
 /* ------------------------- units ------------------------- */
-import {parseLen, trimNum, unitWord, fmtLen, fmtArea} from './src/core/units.js';
+import {parseLen, unitWord, fmtLen, fmtArea} from './src/core/units.js';
 
 import {norm360, shapePoly, bbox, worldPoly, pointInPoly, segHit, ptSegDist, centroid, signedArea, polyArea, polySimple} from './src/core/geometry.js';
 
-import {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS,
-        L, RP, itemOf, instOf, openOf, roomMode, floorMode,
-        folderOf, childFolders, childLayouts, floorOf, floorLayouts} from './src/core/state.js';
+import {PALETTE, uid, clone, rectPts, blankLayout, S, setS, L, RP, itemOf, instOf, openOf, roomMode, floorMode, folderOf, childFolders, childLayouts, floorOf, floorLayouts} from './src/core/state.js';
 
 import {uniqueId} from './src/core/ids.js';
 
@@ -792,8 +790,7 @@ import {drag, drawState, wallDrawState, splitDrawState,
 
 import {selectOnly, selectAdd, selectToggle, selectSet, selectClear} from './src/core/selection.js';
 
-import {floorXf, floorPts, floorInst, floorIWall,
-        placeOnFloor, INV_SCOPES, availableCount} from './src/core/floor-space.js';
+import {floorPts, placeOnFloor, INV_SCOPES, availableCount} from './src/core/floor-space.js';
 /* folder path from root to id, inclusive */
 function folderPath(id){
   const out=[]; let f=folderOf(id);
@@ -806,16 +803,7 @@ function folderDescendant(id,parentId){
   while(f){ if(f.id===id) return true; f=folderOf(f.parentId); }
   return false;
 }
-/* switching into a room under a DIFFERENT folder re-applies that folder's tag filter;
-   switching between rooms in the SAME folder leaves whatever filter the person set alone */
-function activateLayout(id){
-  S.active=id; setSel(null); setRoomSel(null); setFloorSel(null);
-  resetMeasureState();
-  seedHistFor();
-  const fid = L() ? (L().folderId||null) : null;
-  if(fid !== S.lastFolderId){ S.tagFilter = (folderOf(fid)?.tags||[]).slice(); S.untaggedOnly=false; }
-  S.lastFolderId = fid;
-}
+import {activateLayout} from './src/plan/layout-tree.js';
 
 import {syncWallOff, wallIsOff, wallOf, wallAngle, clampOpenings,
         nearestOnWalls, pillarOf, iwallOf} from './src/model/walls.js';
@@ -1175,7 +1163,7 @@ darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>scheduleDraw())
 import {draw, scheduleDraw, floorMembers, snapFloorPlace,
         pickFloorRoom, floorRotHandle, handlePos} from './src/canvas/draw.js';
 import {normHex} from './src/canvas/draw.js';
-import {mergeSplice, mergeGeometry} from './src/canvas/merge-rooms.js';
+import {mergeSplice} from './src/canvas/merge-rooms.js';
 
 /* ------------------------- measuring -------------------------
    A measurement joins two anchors and shows the shortest distance between them.
@@ -1774,10 +1762,7 @@ import {rotate, removeSel, place, renderSel} from './src/plan/selection-panel.js
 
 /* ------------------------- panels ------------------------- */
 import {esc} from './src/ui/panels.js';
-function renderAll(){
-  renderTree(); renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
-  renderInv(); renderSel(); renderFloorSel(); renderSnap(); renderMode(); renderMeasureBar(); updateHistButtons(); draw();
-}
+import {renderAll} from './src/plan/mode.js';
 /* the mode also lives in ?mode=, so a refresh (or a shared link) lands back in the same mode */
 function paramMode(){
   const m=new URLSearchParams(location.search).get('mode');
@@ -2167,60 +2152,11 @@ function deleteLayout(id){
   askConfirm('Delete this room?', '\u201c'+l.name+'\u201d will be removed. Your library stays.', 'Delete', ()=>{
     S.layouts=S.layouts.filter(x=>x.id!==id);
     if(S.active===id) activateLayout(S.layouts[0].id);
-    if(lastMerge && lastMerge.aId===id) lastMerge=null;
+    if(lastMerge && lastMerge.aId===id) setLastMerge(null);
     renderAll(); fit(); save();
   });
 }
-/* one slot, not a stack \u2014 mirrors bpLastImport's own "undo the last thing" precedent */
-let lastMerge=null;
-/* `A` is whichever room was picked first (it survives, keeping its name/colours/wall
-   thickness); `B` is folded into it and then removed. Both must already share a floor \u2014
-   that's the only place "these rooms share a wall" is well defined. */
-function mergeLayouts(aId, bId){
-  const A=S.layouts.find(x=>x.id===aId), B=S.layouts.find(x=>x.id===bId);
-  if(!A || !B) return;
-  if(!A.floorId || A.floorId!==B.floorId){ flash('Select two rooms on the same floor to merge them'); return; }
-  const geo=mergeGeometry(A,B);
-  if(geo.error){ flash(geo.error); return; }
-  const run=()=>{
-    lastMerge={
-      floorId:A.floorId, aId:A.id, aBefore:clone(A), bId:B.id, bBefore:clone(B), bIndex:S.layouts.indexOf(B),
-      aRoomHist:roomHist[A.id], aFurnHist:furnHist[A.id], bRoomHist:roomHist[B.id], bFurnHist:furnHist[B.id],
-    };
-    /* everything each room owns gets carried into the same shared frame the merged
-       polygon is already expressed in \u2014 floor space \u2014 the same transform floorInst/
-       floorIWall already use to draw one room's things while standing on a floor */
-    const tA=floorXf(A), tB=floorXf(B);
-    const placed=A.placed.map(p=>floorInst(A,p,tA)).concat(B.placed.map(p=>floorInst(B,p,tB)));
-    const pillars=A.room.pillars.map(p=>floorInst(A,p,tA)).concat(B.room.pillars.map(p=>floorInst(B,p,tB)));
-    const iwalls=A.room.iwalls.map(w=>floorIWall(A,w,tA)).concat(B.room.iwalls.map(w=>floorIWall(B,w,tB)));
-
-    A.room.points=geo.points; A.room.wallOff=geo.wallOff;
-    A.floorPlace=blankFloorPlace();
-    syncWallOff(A.room);
-    A.openings=geo.openings;
-    A.placed=placed;
-    A.room.pillars=pillars;
-    A.room.iwalls=iwalls;
-    clampOpenings(A);
-    A.measures=geo.measures;
-    pruneMeasures(A);
-
-    if(S.active===B.id) S.active=A.id;
-    S.layouts=S.layouts.filter(x=>x.id!==B.id);
-    roomHist[A.id]={stack:[JSON.stringify({room:A.room, openings:A.openings})], idx:0};
-    furnHist[A.id]={stack:[JSON.stringify({placed:A.placed})], idx:0};
-    delete roomHist[B.id]; delete furnHist[B.id]; delete floorHist[A.floorId];
-    mergeSel.clear();
-    renderTree(); renderAll(); fit(); save();
-    flash('Merged into \u201c'+A.name+'\u201d');
-  };
-  if(geo.removedOpenings>0){
-    askConfirm('Merge these rooms?', plural(geo.removedOpenings,'door or window')+' on the shared wall will be removed.', 'Merge', run);
-  } else {
-    run();
-  }
-}
+import {lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, turnFloorRoom} from './src/plan/floors.js';
 function mergeUndo(){
   if(!lastMerge) return;
   const m=lastMerge;
@@ -2233,7 +2169,7 @@ function mergeUndo(){
     if(m.bRoomHist) roomHist[m.bId]=m.bRoomHist; else delete roomHist[m.bId];
     if(m.bFurnHist) furnHist[m.bId]=m.bFurnHist; else delete furnHist[m.bId];
     delete floorHist[m.floorId];
-    lastMerge=null;
+    setLastMerge(null);
     mergeSel.clear();
     activateLayout(m.aId);
     renderTree(); renderAll(); fit(); save();
@@ -2248,19 +2184,6 @@ function openFloorMergeMenu(ids, clientX, clientY){
     {sep:true},
     {label:'Delete both rooms\u2026', danger:true, fn:()=>deleteBothDialog(aId,bId)},
   ], a.name+' + '+b.name);
-}
-function deleteBothDialog(aId,bId){
-  const a=S.layouts.find(x=>x.id===aId), b=S.layouts.find(x=>x.id===bId);
-  if(!a||!b) return;
-  if(S.layouts.length<=2){ flash('You need at least one room'); return; }
-  askConfirm('Delete these rooms?', '\u201c'+a.name+'\u201d and \u201c'+b.name+'\u201d will be removed. Your library stays.', 'Delete', ()=>{
-    const kill=new Set([aId,bId]);
-    S.layouts=S.layouts.filter(x=>!kill.has(x.id));
-    for(const id of kill){ delete roomHist[id]; delete furnHist[id]; if(lastMerge && lastMerge.aId===id) lastMerge=null; }
-    if(kill.has(S.active)) activateLayout(S.layouts[0].id);
-    mergeSel.clear();
-    renderTree(); renderAll(); fit(); save();
-  });
 }
 /* the menu's long way round to what dragging does */
 function moveDialog(kind,id){
@@ -2378,87 +2301,6 @@ function wallDialog(i){
     });
 }
 
-/* Floor mode's Properties: the picked room's place on the floor, and the floor itself.
-   Anything about the room's own shape or contents stays in Room/Furniture mode. */
-function renderFloorSel(){
-  const box=$('floorSelBox'), t=$('floorSelTitle'); if(!box) return;
-  if(floorMode() && mergeSel.size===2){
-    const [a,b]=[...mergeSel].map(id=>S.layouts.find(x=>x.id===id));
-    box.closest('section').classList.toggle('is-empty', false);
-    renderFloorProps();
-    if(a && b){
-      const sameFloor=!!(a.floorId && a.floorId===b.floorId);
-      t.textContent=a.name+' + '+b.name;
-      box.innerHTML=`
-        <p class="hint">${sameFloor ? 'Right-click either room, or use the buttons below.' : 'These rooms aren’t on the same floor, so they can’t be merged.'}</p>
-        <div class="row actions">
-          ${sameFloor ? `<button class="btn sm" id="fmMerge">Merge into “${esc(a.name)}”</button>` : ''}
-          <button class="btn sm quiet danger" id="fmDelete">Delete both…</button>
-        </div>`;
-      if(sameFloor) $('fmMerge').addEventListener('click', ()=>mergeLayouts(a.id,b.id));
-      $('fmDelete').addEventListener('click', ()=>deleteBothDialog(a.id,b.id));
-      return;
-    }
-  }
-  const l = floorSel && S.layouts.find(x=>x.id===floorSel);
-  box.closest('section').classList.toggle('is-empty', !(floorMode()&&l));
-  renderFloorProps();
-  if(!floorMode() || !l){
-    t.textContent='Selection';
-    box.innerHTML='<p class="hint">Click a room in the plan to move or turn it here.</p>';
-    return;
-  }
-  const p=l.floorPlace, own=bbox(l.room.points);
-  t.textContent=l.name;
-  box.innerHTML=`
-    <div class="field"><label for="flX">From left</label><input type="text" class="len" id="flX" value="${esc(fmtLen(p.x+own.x0,S.unit))}"></div>
-    <div class="field"><label for="flY">From top</label><input type="text" class="len" id="flY" value="${esc(fmtLen(p.y+own.y0,S.unit))}"></div>
-    <div class="field"><label for="flRot">Angle</label><input type="text" id="flRot" value="${trimNum(p.rot,1)}"><span class="unit">°</span>
-      <button class="btn quiet sm icon" id="flRotL" title="Turn left 90°" aria-label="Turn left 90 degrees">${svgI('rot-l')}</button>
-      <button class="btn quiet sm icon" id="flRotR" title="Turn right 90°" aria-label="Turn right 90 degrees">${svgI('rot-r')}</button></div>
-    <div class="field"><label for="flDim">Label</label><input type="text" id="flDim" value="${esc(l.dimLabel||'')}" placeholder="${esc(fmtLen(own.w,S.unit)+' × '+fmtLen(own.h,S.unit))}"></div>
-    <div class="row actions">
-      <button class="btn sm" id="flEdit">Edit this room</button>
-      <button class="btn sm quiet" id="flOff">Take off floor</button>
-    </div>`;
-  const move=(k,v)=>{ if(v==null||!isFinite(v)) return; l.floorPlace[k]=v-(k==='x'?own.x0:own.y0); commitFloor(); renderFloorSel(); draw(); save(); };
-  $('flX').addEventListener('change',e=>move('x',parseLen(e.target.value,S.unit)));
-  $('flY').addEventListener('change',e=>move('y',parseLen(e.target.value,S.unit)));
-  $('flRot').addEventListener('change',e=>{
-    const v=parseFloat(e.target.value);
-    if(isFinite(v)){ l.floorPlace.rot=norm360(v); commitFloor(); renderFloorSel(); draw(); save(); }
-  });
-  $('flDim').addEventListener('change',e=>{ l.dimLabel=e.target.value.trim(); draw(); save(); });
-  $('flRotL').addEventListener('click',()=>turnFloorRoom(l,-90));
-  $('flRotR').addEventListener('click',()=>turnFloorRoom(l,90));
-  $('flEdit').addEventListener('click',()=>{ activateLayout(l.id); setMode('room'); renderAll(); fit(); save(); });
-  $('flOff').addEventListener('click',()=>{ l.floorId=null; setFloorSel(null); renderAll(); save(); });
-}
-function turnFloorRoom(l,deg){
-  l.floorPlace.rot=norm360((l.floorPlace.rot||0)+deg);
-  commitFloor(); renderFloorSel(); draw(); save();
-}
-function renderFloorProps(){
-  const box=$('floorPropsBox'); if(!box) return;
-  const fl=floorOf(L().floorId);
-  if(!fl){
-    box.innerHTML='<p class="hint">This room is not on a floor yet. Put it on one from its ⋯ menu in the Rooms list.</p>';
-    return;
-  }
-  const n=floorLayouts(fl.id).length;
-  box.innerHTML=`
-    <div class="field"><label for="flName">Name</label><input type="text" id="flName" value="${esc(fl.name)}"></div>
-    <div class="field"><label for="flExt">Outer wall</label><input type="text" class="len" id="flExt" value="${fl.extWall?esc(fmtLen(fl.extWall,S.unit)):''}" placeholder="Same as each room"></div>
-    <p class="hint">${plural(n,'room')} on this floor. Drag one against another and it clicks to a shared wall.</p>
-    <div class="row actions"><button class="btn sm quiet" id="flFit">Fit floor</button></div>`;
-  $('flName').addEventListener('change',e=>{ const v=e.target.value.trim(); if(v){ fl.name=v; renderTree(); save(); } });
-  $('flExt').addEventListener('change',e=>{
-    const raw=e.target.value.trim(), v=raw?parseLen(raw,S.unit):0;
-    fl.extWall = raw && isFinite(v) && v>0 ? v : 0;
-    renderFloorProps(); draw(); save();
-  });
-  $('flFit').addEventListener('click',()=>fit());
-}
 import {deleteCorner} from './src/canvas/corners.js';
 
 import {KIND, renderOpen} from './src/plan/room-panel.js';

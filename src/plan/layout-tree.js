@@ -25,6 +25,10 @@ import {mergeSel, treeOpen} from '../core/selection.js';
 import {curFloorId} from '../core/history.js';
 import {inlineEdit} from '../ui/inline-edit.js';
 import {save} from '../core/store.js';
+import {resetMeasureState} from '../canvas/measure-tool.js';
+import {seedHistFor} from '../core/history.js';
+import {setFloorSel, setRoomSel, setSel} from '../core/selection.js';
+import {L} from '../core/state.js';
 
 /* ------------------------- layout tree (folders + rooms) ------------------------- */
 function folderLabel(f){
@@ -92,5 +96,16 @@ function renameFloor(id){
   inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderTree(); });
 }
 
-export {folderLabel, layoutRowHTML, floorRowHTML, renderTreeLevel, renderTree,
-        treeBox, treeRowEl, renameFolder, renameLayout, renameFloor};
+
+/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+/* switching into a room under a DIFFERENT folder re-applies that folder's tag filter;
+   switching between rooms in the SAME folder leaves whatever filter the person set alone */
+function activateLayout(id){
+  S.active=id; setSel(null); setRoomSel(null); setFloorSel(null);
+  resetMeasureState();
+  seedHistFor();
+  const fid = L() ? (L().folderId||null) : null;
+  if(fid !== S.lastFolderId){ S.tagFilter = (folderOf(fid)?.tags||[]).slice(); S.untaggedOnly=false; }
+  S.lastFolderId = fid;
+}
+export {folderLabel, layoutRowHTML, floorRowHTML, renderTreeLevel, renderTree, treeBox, treeRowEl, renameFolder, renameLayout, renameFloor, activateLayout};

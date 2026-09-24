@@ -29,6 +29,10 @@ import {$} from '../ui/modal.js';
 import {applyPanes} from '../ui/panels.js';
 import {renderOpen, renderRoomSel, renderWalls} from './room-panel.js';
 import {renderSel} from './selection-panel.js';
+import {renderFloorSel} from './floors.js';
+import {renderInv} from './item-list.js';
+import {renderTree} from './layout-tree.js';
+import {renderRoom, renderSnap} from './room-panel.js';
 
 function syncModeParam(){
   const usp=new URLSearchParams(location.search);
@@ -76,4 +80,10 @@ function applyLayoutMode(){
   $('paneLibrary').classList.toggle('on', lib);
   if(!lib) applyPanes();
 }
-export {setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode};
+
+/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+function renderAll(){
+  renderTree(); renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
+  renderInv(); renderSel(); renderFloorSel(); renderSnap(); renderMode(); renderMeasureBar(); updateHistButtons(); draw();
+}
+export {setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode, renderAll};
