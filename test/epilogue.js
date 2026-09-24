@@ -97,6 +97,15 @@ export const EPILOGUE = `
 ;import {normItem} from './src/core/migrate.js';
 ;import {pickValues} from './src/io/pickers.js';
 ;import {clone} from './src/core/state.js';
+/* The blueprint round's turn. bpCommit and bpSeedHistory were index.html's
+   last readers of all five: roomHist/furnHist/snapRoom (__rp), normLayout and
+   polySimple (GLOBALS). polySimple is the dangerous half of that list -- it is
+   a GLOBALS entry, and GLOBALS assigns inside a try/catch, so it would have
+   gone missing silently rather than failing at boot. Import them the CANVAS
+   way. */
+;import {roomHist, furnHist, snapRoom} from './src/core/history.js';
+;import {polySimple} from './src/core/geometry.js';
+;import {normLayout} from './src/core/migrate.js';
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },
