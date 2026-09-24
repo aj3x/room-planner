@@ -5850,7 +5850,7 @@ $('btnSamples').addEventListener('click', ()=>{
 import {pickerHTML, pickerMount, pickValues, fileSlug, folderLine, ancestorFolderIds} from './src/io/pickers.js';
 import {plural} from './src/ui/panels.js';
 
-import {PREF_KEYS, downloadJSON, exportDialog} from './src/io/export.js';
+import {PREF_KEYS, exportDialog} from './src/io/export.js';
 $('btnExport').addEventListener('click', exportDialog);
 
 /* ------------------------- import ------------------------- */
@@ -6609,35 +6609,7 @@ function bindCrumbs(box, kind){
   });
 }
 
-/* ------------------------- library export ------------------------- */
-function itemsExportPayload(items){
-  return {app:'room-planner', version:2, exported:new Date().toISOString(), inventory:items.map(clone)};
-}
-function exportLibItems(items, name){
-  if(!items.length){ libFlash('Nothing to export',true); return; }
-  downloadJSON(itemsExportPayload(items), name);
-  libFlash('Exported '+items.length+' item'+(items.length===1?'':'s'));
-}
-function exportLibFolder(folderId){
-  const ids=itemFolderSubtreeIds(folderId);
-  const items=S.inventory.filter(i=>ids.has(i.folderId||null));
-  const f=itemFolderOf(folderId);
-  exportLibItems(items, 'room-planner-'+fileSlug(f?f.name:'library')+'.json');
-}
-function exportLibraryDialog(){
-  const rows=S.inventory.map(i=>({value:i.id, label:i.name, sub:i.folderId?itemFolderPath(i.folderId).map(f=>f.name).join(' / '):'Top level', checked:true}));
-  openModal('Export items', `
-    <p class="hint">Tick what should go in the file. See <code>ITEM_SCHEMA.md</code> for the format.</p>
-    ${pickerHTML('xLibItems','Items',rows,'Your library is empty')}`,
-    'Export',
-    ()=>{
-      const ids=new Set(pickValues('xLibItems'));
-      if(!ids.size){ moError('Tick at least one item'); return false; }
-      const items=S.inventory.filter(i=>ids.has(i.id));
-      downloadJSON(itemsExportPayload(items), ids.size===S.inventory.length ? 'room-planner-library.json' : 'room-planner-items.json');
-    },
-    ()=>pickerMount('xLibItems'));
-}
+import {exportLibItems, exportLibFolder, exportLibraryDialog} from './src/library/export.js';
 
 /* ------------------------- search, scoped to the folder currently being browsed ------------------------- */
 function renderLibSearchResults(box){
