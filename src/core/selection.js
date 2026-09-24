@@ -44,7 +44,13 @@ function setFloorSnapNote(v){ floorSnapNote = v; }
 function setAlignGuides(v){ alignGuides = v; }
 function setAlignNote(v){ alignNote = v; }
 
+function selectOnly(id){ setSelSet(new Set(id?[id]:[])); setSel(id||null); }
+function selectAdd(id){ selSet.add(id); setSel(id); }
+function selectToggle(id){ if(selSet.has(id)){ selSet.delete(id); setSel([...selSet].pop()||null); } else selectAdd(id); }
+function selectSet(ids){ setSelSet(new Set(ids)); setSel(ids.length ? ids[ids.length-1] : null); }
+function selectClear(){ selSet.clear(); setSel(null); }
 export {sel, selSet, roomSel, floorSel, mergeSel,
         floorGuides, floorSnapNote, alignGuides, alignNote, treeOpen,
         setSel, setSelSet, setRoomSel, setFloorSel, setMergeSel,
-        setFloorGuides, setFloorSnapNote, setAlignGuides, setAlignNote};
+        setFloorGuides, setFloorSnapNote, setAlignGuides, setAlignNote,
+        selectOnly, selectAdd, selectToggle, selectSet, selectClear};

@@ -783,7 +783,7 @@ import {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS,
 import {idParts, idFolder, idLeaf, idProblem, uniqueId} from './src/core/ids.js';
 
 import {sel, selSet, roomSel, floorSel, mergeSel,
-        setSel, setSelSet, setRoomSel, setFloorSel, setMergeSel,
+        setSel, setRoomSel, setFloorSel, setMergeSel,
         setFloorGuides, setFloorSnapNote, setAlignGuides, setAlignNote,
         treeOpen} from './src/core/selection.js';
 
@@ -791,11 +791,7 @@ import {drag, drawState, wallDrawState, splitDrawState,
         setDrag, setDrawState, setDrawCursor, setWallDrawState, setWallDrawShift,
         setSplitDrawState} from './src/canvas/interaction-state.js';
 
-function selectOnly(id){ setSelSet(new Set(id?[id]:[])); setSel(id||null); }
-function selectAdd(id){ selSet.add(id); setSel(id); }
-function selectToggle(id){ if(selSet.has(id)){ selSet.delete(id); setSel([...selSet].pop()||null); } else selectAdd(id); }
-function selectSet(ids){ setSelSet(new Set(ids)); setSel(ids.length ? ids[ids.length-1] : null); }
-function selectClear(){ selSet.clear(); setSel(null); }
+import {selectOnly, selectAdd, selectToggle, selectSet, selectClear} from './src/core/selection.js';
 
 import {floorXf, floorPts, floorInst, floorIWall,
         placeOnFloor, INV_SCOPES, availableCount} from './src/core/floor-space.js';
