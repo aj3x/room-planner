@@ -808,6 +808,7 @@ function setFloorGuides(v){ floorGuides = v; }
 function setFloorSnapNote(v){ floorSnapNote = v; }
 function setAlignGuides(v){ alignGuides = v; }
 function setAlignNote(v){ alignNote = v; }
+function setDrag(v){ drag = v; }
 
 function selectOnly(id){ setSelSet(new Set(id?[id]:[])); setSel(id||null); }
 function selectAdd(id){ selSet.add(id); setSel(id); }
@@ -2959,7 +2960,7 @@ function measurePointerDown(px,py){
       measuresOf().push({id:uid(), a:measureStart, b:t.a});
       measureStart=null; save();
     }
-  } else drag={mode:'pan', px, py, ox:view.ox, oy:view.oy};
+  } else setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
   renderMeasureBar(); draw();
 }
 function measureHoverAt(px,py){
@@ -3150,7 +3151,7 @@ cv.addEventListener('pointerdown', e=>{
   const px=e.offsetX, py=e.offsetY;
 
   if(spaceDown){
-    drag={mode:'pan', px, py, ox:view.ox, oy:view.oy};
+    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
     cv.style.cursor='grabbing';
     draw();
     return;
@@ -3208,8 +3209,8 @@ cv.addEventListener('pointerdown', e=>{
         const h=floorRotHandle(m.P);
         if(Math.hypot(px-h.x,py-h.y)<14){
           const b=bbox(m.P);
-          drag={mode:'floor-rot', id:floorSel, start:m.l.floorPlace.rot||0,
-                a0:Math.atan2(wy(py)-(b.y0+b.y1)/2, wx(px)-(b.x0+b.x1)/2)};
+          setDrag({mode:'floor-rot', id:floorSel, start:m.l.floorPlace.rot||0,
+                a0:Math.atan2(wy(py)-(b.y0+b.y1)/2, wx(px)-(b.x0+b.x1)/2)});
           return;
         }
       }
@@ -3226,14 +3227,14 @@ cv.addEventListener('pointerdown', e=>{
       const l=S.layouts.find(x=>x.id===hit);
       floorEntry();   // baseline the arrangement BEFORE it moves, or there is nothing to undo to
       setFloorSel(hit);
-      drag={mode:'floor-room', id:hit, dx:wx(px)-l.floorPlace.x, dy:wy(py)-l.floorPlace.y};
+      setDrag({mode:'floor-room', id:hit, dx:wx(px)-l.floorPlace.x, dy:wy(py)-l.floorPlace.y});
       renderFloorSel(); draw();
       return;
     }
     if(floorSel){ setFloorSel(null); }
     if(mergeSel.size){ mergeSel.clear(); renderTree(); }
     renderFloorSel();
-    drag={mode:'pan', px, py, ox:view.ox, oy:view.oy};
+    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
     draw();
     return;
   }
@@ -3242,22 +3243,22 @@ cv.addEventListener('pointerdown', e=>{
     const hit=pickRoom(px,py);
     if(hit){
       setRoomSel(hit); selectClear();
-      if(hit.kind==='opening') drag={mode:'open', id:hit.id, ox:px, oy:py, armed:false};
-      else if(hit.kind==='corner') drag={mode:'corner', i:hit.i, ox:px, oy:py, armed:false};
+      if(hit.kind==='opening') setDrag({mode:'open', id:hit.id, ox:px, oy:py, armed:false});
+      else if(hit.kind==='corner') setDrag({mode:'corner', i:hit.i, ox:px, oy:py, armed:false});
       else if(hit.kind==='pillar'){
         const pl=pillarOf(hit.id);
-        drag={mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y, ox:px, oy:py, armed:false};
+        setDrag({mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y, ox:px, oy:py, armed:false});
       }
       else if(hit.kind==='iwall'){
-        if(hit.end) drag={mode:'iwall-end', id:hit.id, end:hit.end, ox:px, oy:py, armed:false};
-        else { const w=iwallOf(hit.id); drag={mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1], ox:px, oy:py, armed:false}; }
+        if(hit.end) setDrag({mode:'iwall-end', id:hit.id, end:hit.end, ox:px, oy:py, armed:false});
+        else { const w=iwallOf(hit.id); setDrag({mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1], ox:px, oy:py, armed:false}); }
       }
-      else drag={mode:'wall', i:hit.i, last:[wx(px),wy(py)], ox:px, oy:py, armed:false};
+      else setDrag({mode:'wall', i:hit.i, last:[wx(px),wy(py)], ox:px, oy:py, armed:false});
       renderRoomSel(); renderWalls(); renderOpen(); draw();
       return;
     }
     setRoomSel(null); renderRoomSel(); renderWalls(); renderOpen();
-    drag={mode:'pan', px, py, ox:view.ox, oy:view.oy};
+    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
     draw();
     return;
   }
@@ -3267,7 +3268,7 @@ cv.addEventListener('pointerdown', e=>{
     if(inst&&it){
       const h=handlePos(inst,it);
       if(Math.hypot(px-h.x,py-h.y)<14){
-        drag={mode:'rot', id:sel, start:inst.rot||0, a0:Math.atan2(wy(py)-inst.y, wx(px)-inst.x), loose:isBad(inst)};
+        setDrag({mode:'rot', id:sel, start:inst.rot||0, a0:Math.atan2(wy(py)-inst.y, wx(px)-inst.x), loose:isBad(inst)});
         return;
       }
     }
@@ -3293,7 +3294,7 @@ cv.addEventListener('pointerdown', e=>{
     selectSet(newIds);
     const anchorNew=idMap.get(hit.id);
     const starts=newIds.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
-    drag={mode:'move', ids:newIds, anchorId:anchorNew, dx:wx(px)-instOf(anchorNew).x, dy:wy(py)-instOf(anchorNew).y, starts, loose:isBad(instOf(anchorNew)), snap};
+    setDrag({mode:'move', ids:newIds, anchorId:anchorNew, dx:wx(px)-instOf(anchorNew).x, dy:wy(py)-instOf(anchorNew).y, starts, loose:isBad(instOf(anchorNew)), snap});
     renderSel(); draw();
     return;
   }
@@ -3303,10 +3304,10 @@ cv.addEventListener('pointerdown', e=>{
     bringToFront([...selSet]);
     const ids=[...selSet];
     const starts=ids.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
-    drag={mode:'move', ids, anchorId:hit.id, dx:wx(px)-hit.x, dy:wy(py)-hit.y, starts, loose:isBad(hit)};
+    setDrag({mode:'move', ids, anchorId:hit.id, dx:wx(px)-hit.x, dy:wy(py)-hit.y, starts, loose:isBad(hit)});
     renderSel(); draw();
   } else {
-    drag={mode:'marquee', x0:px, y0:py, x1:px, y1:py, additive:e.shiftKey};
+    setDrag({mode:'marquee', x0:px, y0:py, x1:px, y1:py, additive:e.shiftKey});
     draw();
   }
 });
@@ -3494,7 +3495,7 @@ function cancelDrag(){
     else L().placed=s.placed;
     if(!wasFloor) bumpRev();
   }
-  drag=null; setFloorGuides([]); setFloorSnapNote(''); setAlignGuides([]); setAlignNote('');
+  setDrag(null); setFloorGuides([]); setFloorSnapNote(''); setAlignGuides([]); setAlignNote('');
   renderSel(); renderRoomSel(); renderWalls(); renderOpen(); renderFloorSel(); draw();
 }
 function endDrag(e){
@@ -3515,7 +3516,7 @@ function endDrag(e){
     if(drag.additive) for(const id of hitIds) selectAdd(id);
     else selectSet(hitIds);
     if(hitIds.length) bringToFront(hitIds);
-    drag=null;
+    setDrag(null);
     renderSel(); draw();
     if(e&&e.pointerId!==undefined){ try{ cv.releasePointerCapture(e.pointerId); }catch(err){} }
     return;
@@ -3529,7 +3530,7 @@ function endDrag(e){
     else if(ROOM_DRAGS.includes(drag.mode)){ commitRoom(); scheduleDraw(); }
     else { commitFurn(); renderSel(); }
   }
-  drag=null;
+  setDrag(null);
   if(e&&e.pointerId!==undefined){ try{ cv.releasePointerCapture(e.pointerId); }catch(err){} }
 }
 cv.addEventListener('pointerup',endDrag);
@@ -3540,12 +3541,12 @@ cv.addEventListener('dblclick', e=>{
   /* double-clicking a room on the floor is the way back to editing it */
   if(floorMode()){
     const id=pickFloorRoom(e.offsetX,e.offsetY);
-    if(id){ drag=null; activateLayout(id); setMode('room'); renderAll(); fit(); save(); }
+    if(id){ setDrag(null); activateLayout(id); setMode('room'); renderAll(); fit(); save(); }
     return;
   }
   if(!roomMode()) return;
   const hit=pickRoom(e.offsetX,e.offsetY);
-  if(hit&&hit.kind==='wall'){ drag=null; wallDialog(hit.i); }
+  if(hit&&hit.kind==='wall'){ setDrag(null); wallDialog(hit.i); }
 });
 /* right-clicking a room marked for merge/delete opens that menu; right-clicking any
    other room collapses the marked set down to just the one under the pointer first */
