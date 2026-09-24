@@ -1342,17 +1342,18 @@ import {renameFolder, renameLayout, renameFloor} from './src/plan/layout-tree.js
 /* ---- drag a room or folder to move it: onto a folder puts it inside, on the
         upper/lower edge of a row drops it beside that row ---- */
 let dragTree=null;
+function setDragTree(v){ dragTree=v; }
 treeBox.addEventListener('dragstart', e=>{
   const row=e.target.closest('.tree-row'); if(!row) return;
   cancelSingleClick(); closeMenu();
   if(row.dataset.floor) return;   // floors don't reorder; rooms are dragged onto them
-  dragTree = row.dataset.folder ? {kind:'folder',id:row.dataset.folder} : {kind:'layout',id:row.dataset.layout};
+  setDragTree(row.dataset.folder ? {kind:'folder',id:row.dataset.folder} : {kind:'layout',id:row.dataset.layout});
   row.classList.add('dragging');
   e.dataTransfer.effectAllowed='move';
   try{ e.dataTransfer.setData('text/plain',dragTree.id); }catch(err){}
 });
 treeBox.addEventListener('dragend', ()=>{
-  dragTree=null;
+  setDragTree(null);
   clearDropMarks(treeBox);
   for(const r of treeBox.querySelectorAll('.dragging')) r.classList.remove('dragging');
 });
@@ -1385,7 +1386,7 @@ treeBox.addEventListener('drop', e=>{
   e.preventDefault();
   if(spot.mode==='onto-floor'){
     const l=S.layouts.find(x=>x.id===d.id);
-    dragTree=null;
+    setDragTree(null);
     if(l && l.floorId!==spot.id) putOnFloor(l, spot.id); else renderTree();
     return;
   }
@@ -1409,7 +1410,7 @@ treeBox.addEventListener('drop', e=>{
     l.floorId=null;   // dragged back into the tree proper, so off the floor it comes
     moveBefore(S.layouts, d.id, targetId, after);
   }
-  dragTree=null;
+  setDragTree(null);
   renderTree(); renderInv(); save();
 });
 
@@ -1524,16 +1525,17 @@ import {placeItem, renameItem, itemMenu} from './src/plan/item-list.js';
 
 /* ---- drag a thing up or down to reorder your list ---- */
 let dragInv=null;
+function setDragInv(v){ dragInv=v; }
 invBox.addEventListener('dragstart', e=>{
   const li=e.target.closest('li[data-id]'); if(!li) return;
   cancelSingleClick(); closeMenu();
-  dragInv=li.dataset.id;
+  setDragInv(li.dataset.id);
   li.classList.add('dragging');
   e.dataTransfer.effectAllowed='move';
   try{ e.dataTransfer.setData('text/plain',dragInv); }catch(err){}
 });
 invBox.addEventListener('dragend', ()=>{
-  dragInv=null;
+  setDragInv(null);
   clearDropMarks(invBox);
   for(const li of invBox.querySelectorAll('.dragging')) li.classList.remove('dragging');
 });
@@ -1554,7 +1556,7 @@ invBox.addEventListener('drop', e=>{
   if(!dragInv || !li || li.dataset.id===dragInv) return;
   e.preventDefault();
   moveBefore(S.inventory, dragInv, li.dataset.id, after);
-  dragInv=null;
+  setDragInv(null);
   renderInv(); save();
 });
 
@@ -1749,17 +1751,18 @@ import {renameLibFolder, renameAdhocFolder, libFolderMenu, adhocFolderMenu} from
 
 /* ---- drag: reparent a library folder, or drop a library item onto one ---- */
 let dragLib=null;
+function setDragLib(v){ dragLib=v; }
 import {gridDragItem, setGridDragItem} from './src/library/grid.js';
 libTreeBox.addEventListener('dragstart', e=>{
   const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]'); if(!row) return;
   cancelSingleClick(); closeMenu();
-  dragLib = row.dataset.folder ? {kind:'folder',id:row.dataset.folder,realm:'library'} : {kind:'folder',id:row.dataset.mfolder,realm:'market'};
+  setDragLib(row.dataset.folder ? {kind:'folder',id:row.dataset.folder,realm:'library'} : {kind:'folder',id:row.dataset.mfolder,realm:'market'});
   row.classList.add('dragging');
   e.dataTransfer.effectAllowed='move';
   try{ e.dataTransfer.setData('text/plain',dragLib.id); }catch(err){}
 });
 libTreeBox.addEventListener('dragend', ()=>{
-  dragLib=null; clearDropMarks(libTreeBox);
+  setDragLib(null); clearDropMarks(libTreeBox);
   for(const r of libTreeBox.querySelectorAll('.dragging')) r.classList.remove('dragging');
 });
 function libDropSpot(e){
@@ -1823,7 +1826,7 @@ libTreeBox.addEventListener('drop', e=>{
     f.parentId=parent;
     moveBefore(S.marketFolders, d.id, targetId, after);
   }
-  dragLib=null; save(); renderLibAll();
+  setDragLib(null); save(); renderLibAll();
 });
 
 
