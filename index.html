@@ -3144,17 +3144,7 @@ function renderIWallProps(){
   $('iwDel').addEventListener('click',()=>deleteIWall(w.id));
 }
 
-const KIND = o => o.kind==='window' ? 'Window' : (o.dtype==='slide'?'Sliding door':o.dtype==='open'?'Doorway':o.dtype==='bifold'?'Bi-fold door':'Hinged door');
-function renderOpen(){
-  const ul=$('openList'), os=L().openings;
-  if(!os.length){ ul.innerHTML=emptyRow('None yet'); return; }
-  ul.innerHTML=os.map(o=>{
-    const on=roomSel&&roomSel.kind==='opening'&&roomSel.id===o.id;
-    return `<li data-id="${o.id}" class="${on?'on':''}">
-      <span class="lmain"><span class="nm">${KIND(o)}</span><span class="meta">Wall ${o.wall+1} · ${esc(fmtLen(o.width,S.unit))} wide</span></span>
-      <span class="lact">${moreBtn('')}</span></li>`;
-  }).join('');
-}
+import {KIND, renderOpen} from './src/plan/room-panel.js';
 $('openList').addEventListener('click', e=>{
   const li=e.target.closest('li[data-id]'); if(!li) return;
   const id=li.dataset.id, btn=e.target.closest('button');
