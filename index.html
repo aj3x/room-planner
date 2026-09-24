@@ -6009,50 +6009,8 @@ $('btnSamples').addEventListener('click', ()=>{
   renderInv(); save();
 });
 
-/* ---- tick-box lists ----
-   Export and import are both "tick what you mean", so they share this. A row can be
-   locked: ticked and not un-tickable, which is how a room drags its things along. */
-function pickerHTML(id, title, rows, emptyMsg){
-  const body = rows.length
-    ? rows.map(r=>`<label class="pick${r.locked?' locked':''}">
-        <input type="checkbox" value="${esc(r.value)}" ${r.checked?'checked':''} ${r.locked?'disabled':''}>
-        <span class="nm" title="${esc(r.label)}">${esc(r.label)}</span>
-        ${r.sub?`<span class="dim" title="${esc(r.sub)}">${esc(r.sub)}</span>`:''}
-      </label>`).join('')
-    : `<div class="empty">${esc(emptyMsg||'Nothing here')}</div>`;
-  return `<div class="picker" id="${id}">
-    <div class="picker-head"><span class="grow">${esc(title)}</span>
-      <button type="button" class="btn quiet sm" data-all="1">All</button>
-      <button type="button" class="btn quiet sm" data-all="0">None</button></div>
-    <div class="picker-body">${body}</div></div>`;
-}
-function pickerMount(id, onChange){
-  const el=$(id); if(!el) return;
-  el.addEventListener('click', e=>{
-    const b=e.target.closest('button[data-all]'); if(!b) return;
-    for(const c of el.querySelectorAll('input[type=checkbox]:not(:disabled)')) c.checked = b.dataset.all==='1';
-    if(onChange) onChange();
-  });
-  el.addEventListener('change', ()=>{ if(onChange) onChange(); });
-}
-/* a locked row is disabled but still ticked, and :checked matches it — so it counts */
-const pickValues = id => [...$(id).querySelectorAll('input[type=checkbox]:checked')].map(c=>c.value);
+import {pickerHTML, pickerMount, pickValues, fileSlug, folderLine, ancestorFolderIds} from './src/io/pickers.js';
 import {plural} from './src/ui/panels.js';
-const fileSlug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'export';
-/* folder path of a room, read out of whichever folder list it belongs to */
-function folderLine(l, folders){
-  const list = folders || S.folders;
-  const names=[];
-  let f = l.folderId ? list.find(x=>x.id===l.folderId) : null;
-  while(f){ names.unshift(f.name); f = f.parentId ? list.find(x=>x.id===f.parentId) : null; }
-  return names.join(' / ');
-}
-function ancestorFolderIds(folders, id){
-  const out=new Set();
-  let f = id ? folders.find(x=>x.id===id) : null;
-  while(f && !out.has(f.id)){ out.add(f.id); f = f.parentId ? folders.find(x=>x.id===f.parentId) : null; }
-  return out;
-}
 
 /* ------------------------- export ------------------------- */
 const PREF_KEYS=['unit','snap','showSwing','showDims','showOpen','showWalk','showMeasure','invScope','onlyAvailable','zoomSpeed'];
