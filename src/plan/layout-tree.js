@@ -19,9 +19,12 @@
 import {esc} from '../ui/panels.js';
 import {moreBtn} from '../ui/menu.js';
 import {$, svgI} from '../ui/modal.js';
-import {S, floorMode, floorLayouts, childFloors, childFolders, childLayouts} from '../core/state.js';
+import {S, floorMode, floorLayouts, childFloors, childFolders, childLayouts,
+        folderOf, floorOf} from '../core/state.js';
 import {mergeSel, treeOpen} from '../core/selection.js';
 import {curFloorId} from '../core/history.js';
+import {inlineEdit} from '../ui/inline-edit.js';
+import {save} from '../core/store.js';
 
 /* ------------------------- layout tree (folders + rooms) ------------------------- */
 function folderLabel(f){
@@ -73,5 +76,21 @@ function renderTree(){ $('layoutTree').innerHTML=renderTreeLevel(null,0); }
 const treeBox=$('layoutTree');
 const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layout="'+id+'"],[data-floor="'+id+'"]');
 
+function renameFolder(id){
+  const f=folderOf(id), row=treeRowEl(id);
+  if(!f||!row) return;
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderTree(); });
+}
+function renameLayout(id){
+  const l=S.layouts.find(x=>x.id===id), row=treeRowEl(id);
+  if(!l||!row) return;
+  inlineEdit(row.querySelector('.nm'), l.name, v=>{ if(v){ l.name=v; save(); } renderTree(); });
+}
+function renameFloor(id){
+  const f=floorOf(id), row=treeRowEl(id);
+  if(!f||!row) return;
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderTree(); });
+}
+
 export {folderLabel, layoutRowHTML, floorRowHTML, renderTreeLevel, renderTree,
-        treeBox, treeRowEl};
+        treeBox, treeRowEl, renameFolder, renameLayout, renameFloor};

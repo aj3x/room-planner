@@ -2216,7 +2216,7 @@ document.addEventListener('keydown', e=>{
   if(h){ e.preventDefault(); toggleSection(h); }
 });
 
-import {renderTree, treeBox, treeRowEl} from './src/plan/layout-tree.js';
+import {renderTree, treeBox} from './src/plan/layout-tree.js';
 import {moreBtn} from './src/ui/menu.js';
 
 /* clicking a floor switches the canvas to that floor's arrangement, not just the tree
@@ -2300,21 +2300,7 @@ treeBox.addEventListener('dblclick', e=>{
   else if(row.dataset.folder) renameFolder(row.dataset.folder);
   else renameLayout(row.dataset.layout);
 });
-function renameFolder(id){
-  const f=folderOf(id), row=treeRowEl(id);
-  if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderTree(); });
-}
-function renameLayout(id){
-  const l=S.layouts.find(x=>x.id===id), row=treeRowEl(id);
-  if(!l||!row) return;
-  inlineEdit(row.querySelector('.nm'), l.name, v=>{ if(v){ l.name=v; save(); } renderTree(); });
-}
-function renameFloor(id){
-  const f=floorOf(id), row=treeRowEl(id);
-  if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderTree(); });
-}
+import {renameFolder, renameLayout, renameFloor} from './src/plan/layout-tree.js';
 
 /* ---- drag a room or folder to move it: onto a folder puts it inside, on the
         upper/lower edge of a row drops it beside that row ---- */
