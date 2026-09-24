@@ -124,10 +124,26 @@ on: when a moved binding is still needed by a test but no longer by the
 monolith, **import it in the epilogue** rather than importing it back into
 `index.html` just to keep `__rp` fed.
 
-Still ahead: the `sel`/`selSet`/`roomSel`/`floorSel`/`mergeSel` getters go when
-the selection lets move (they did *not* move in the `canvas/` round — see the
-plan for why), and `snapRoom`, `commitRoom`/`commitFurn` and the six undo/redo
-entry points go with `core/history.js`.
+The `draw()` round moved the selection lets into `src/core/selection.js`, the
+interaction lets into `src/canvas/interaction-state.js` and the measure lets
+into `src/canvas/measure-state.js` — but `index.html` imports most of them
+back, so `__rp`'s `sel`/`selSet`/`roomSel`/`floorSel`/`mergeSel`/`drag`/
+`drawState`/`wallDrawState`/`splitDrawState`/`measureOn`/`measureStart`/
+`measureSel` getters are untouched. Six names did lose their last reader in
+`index.html` and are now **imported by the epilogue**, the `CANVAS` way:
+`alignGuides`, `alignNote`, `floorGuides`, `floorSnapNote`, `drawCursor` and
+`swingPoly`.
+
+`swingPoly` is the one to learn from. It is in **`GLOBALS`**, not `__rp`, and
+`GLOBALS` assigns inside a `try/catch` — so when `drawOpening` moved into
+`src/canvas/draw.js` and `index.html` stopped referencing it, the name simply
+stopped being on `window`, with no error at boot. It surfaced four tests later
+as `window.swingPoly is not a function` in `visual.spec.js`. **After any move,
+check `GLOBALS` by name as well as the `__rp` getters**: `__rp` fails loudly at
+boot, `GLOBALS` fails silently and late.
+
+Still ahead: `snapRoom`, `commitRoom`/`commitFurn` and the six undo/redo entry
+points go with `core/history.js`.
 
 ### What Phase 2 changed about that, and why
 
@@ -329,10 +345,11 @@ Stated plainly, because this is the part worth knowing:
   `mouse.move` / `mouse.up` on `#cv`. See **Pointer coverage** below for what
   they reach and — more usefully — what they still do not.
 
-  The code is all still in `index.html`. The `canvas/` round moved nothing out
-  of the alignment magnet or the interaction region except `flash()` and the
-  `flashT` half of `let drag=null, flashT=null;`, precisely because a green
-  suite was weak evidence here. Three dependency-free helpers inside the magnet
+  The code is **no longer in `index.html`**: the `draw()` round moved the
+  alignment magnet into `src/canvas/snap.js` and `draw()` with its whole
+  banner into `src/canvas/draw.js`, move-only and byte-identical, and this
+  suite is what stood behind each of those sixteen commits. The gap list below
+  is therefore the manual-review list for that round, not a forecast. Three dependency-free helpers inside the magnet
   (`lineProject`, `lineCross`, `isSquare`) were verified movable and
   deliberately left. Phase 3.5 exists so that the `draw()` move — one
   unbisectable ~1,500-line commit — is made against real evidence rather than

@@ -544,6 +544,95 @@ half of `canvas/merge-rooms.js`, `canvas/corners.js` (which is only
   the better tool for every future case where a test needs a moved binding the
   monolith has stopped using.
 
+### Phase 3 progress — the `draw()` round (the keystone)
+
+Done, baseline green (185 Vitest + 158 Playwright) between every one of the
+sixteen commits. `index.html`: 9,564 → 8,070 lines. `src/`: 22 → 27 modules.
+
+**The `canvas/` round's central finding did not survive contact, and that is
+this round's main result.** It said `draw()` is one connected component of
+~1,500 lines that cannot be cut into green intermediate commits and must land
+as a single unbisectable commit. That was a true reading of the code *as it
+stood*, and it stopped being true the moment the state moved. `draw()` landed
+as an ordinary 766-line move, with eleven green commits in front of it, every
+one of which bisects.
+
+**What changed the shape of the problem.** The fourteen blocking bindings do
+not have to stay in `index.html`. Rule 5 already says mutable shared state
+belongs in leaf modules that import nothing — and once it is in one, every
+region that reads it can move on its own schedule. So: setters first, then the
+state into leaves, then the helpers bottom-up, then `draw()`.
+
+Six **not move-only** setter commits, each stated in its message, each a bare
+assignment and nothing else:
+
+| commit | binding(s) | sites |
+|---|---|---|
+| 1 | `sel`, `selSet` | 8 + 2 |
+| 2 | `roomSel` | 32 |
+| 3 | `floorSel`, `mergeSel` | 6 + 1 |
+| 4 | `alignGuides`, `alignNote`, `floorGuides`, `floorSnapNote` | 12 + 12 + 7 + 7 |
+| 5 | `drag`, `drawState`, `drawCursor`, `wallDrawState`, `wallDrawShift`, `splitDrawState` | 21 + 3 + 3 + 3 + 1 + 2 |
+| 6 | `W`, `H` | 1 + 1 |
+| 7 | the seven measure lets | 22 |
+
+Then ten move-only commits:
+
+| commit | note |
+|---|---|
+| `core/selection.js` | the nine selection lets + setters; a leaf. `treeOpen` stayed |
+| `canvas/interaction-state.js` | six interaction lets + setters, gathered from four regions; a leaf |
+| `W`/`H` → `canvas/view.js` | beside `cv`, `ctx`, `view` |
+| `plural()` → `ui/panels.js` | one line, beside `esc`; eleven call sites all over |
+| `canvas/draw.js` instalment 3 | drawAlignGuides, drawSquareTick, drawCustomOverlay |
+| `canvas/snap.js` | the alignment magnet, down to `snapCorner` |
+| `canvas/split-room.js` instalment 2 | splitRefs, splitCornerRef, splitResolvePoint, drawSplitOverlay |
+| `model/walkpaths.js` | the whole region, 393 lines, in one piece |
+| `canvas/measure-state.js` | the seven measure lets + setters; a leaf |
+| `canvas/draw.js` instalment 4 | the measuring passes, incl. drawDimension and drawMeasures |
+| `canvas/draw.js` instalment 5 | **`draw()` and the whole `drawing` banner, 766 lines** |
+
+**The four `draw*()` blockers each moved separately**, which is what made the
+keystone ordinary: `drawCustomOverlay` (instalment 3), `drawSplitOverlay`
+(`split-room.js`, once `snap.js` existed), `drawWalkOverlay` (`walkpaths.js`,
+which had been listed as blocked since the `model/` round and turned out to
+move whole), `drawMeasures` (instalment 4, once the measure lets were in a
+leaf).
+
+**How the order was found.** Not by eye. A throwaway probe wrote a candidate
+line range into `src/_probe.js` under a preamble importing every existing
+`src/` export, ran ESLint, and read back the `no-undef` names — ESLint's scope
+analysis, so locals and shadowing are handled properly. That is what showed
+`model/walkpaths.js` was movable whole and that the magnet stops cleanly at
+`snapCorner`. Recommended for the next round; it costs a few seconds per query.
+
+**Three things worth knowing for the rounds ahead.**
+
+- **`GLOBALS` in `test/epilogue.js` fails silently.** It assigns inside a
+  `try/catch`, so a name that leaves `index.html`'s scope simply stops being on
+  `window` and surfaces much later as `window.foo is not a function`. It caught
+  us once, for real: `swingPoly` left with `drawOpening` and four
+  `visual.spec.js` tests went red. The fix is the `CANVAS` pattern — the
+  epilogue imports it. **Check `GLOBALS` by name after every move**, not just
+  the `__rp` getters.
+- **The epilogue now imports six names**: `CANVAS`, `alignGuides`, `alignNote`,
+  `floorGuides`, `floorSnapNote`, `drawCursor` and `swingPoly`. Each left
+  `index.html`'s scope with its last reader; importing back would have been an
+  unused import and a lie about the graph.
+- **`canvas/draw.js` closes two import cycles**, with `canvas/split-room.js`
+  and `model/walkpaths.js`. Rule 4's case exactly: every name across those
+  edges is a function declaration or is only read inside a function body, so
+  nothing is touched at module-evaluation time. Do not add a *top-level* read
+  across either edge.
+
+**Everything downstream is now blocked on `plan/`, not on `canvas/`.**
+Re-checked, not assumed: `canvas/room-draw.js`, `canvas/corners.js`,
+`canvas/interaction.js`, the rest of `canvas/split-room.js`, `resize`/`fit`/
+`zoomAt` in `canvas/view.js`, `squareCorner`/`pickAt`/`pickRoom` in
+`canvas/snap.js`, the UI half of `canvas/merge-rooms.js`, `core/history.js` and
+`togglePane` all now want the `render*()` functions, `setMode` and `renderAll`.
+That is one gate, and it is the `plan/` round's.
+
 ### SCSS rules
 1. Split is a **rename + cut**. SCSS is a superset of CSS; compiled output must be
    byte-identical to today's CSS on the first commit. Verify with a diff of compiled output.
