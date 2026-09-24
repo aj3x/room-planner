@@ -127,6 +127,121 @@ function drawCustomOverlay(){
   ctx.restore();
 }
 
+/* Instalment 4: the measuring passes. drawMeasures is the last of the four
+   draw*() helpers the canvas/ round listed as blocking draw() -- the other
+   three were drawCustomOverlay (instalment 3), drawSplitOverlay
+   (canvas/split-room.js) and drawWalkOverlay (model/walkpaths.js).
+
+   They are here rather than with model/measures.js because measures.js is
+   the geometry -- anchorGeom, closestBetween, what a measurement joins --
+   and these six are paint. drawDimension in particular is shared: the item
+   dimension lines use it too.
+
+   The measure tool's pick/hit-test/bar functions stayed in index.html; they
+   call draw(), renderMeasureBar() and save(). */
+import {measureOn, measureStart, measureHover, measureHoverId, measureSel,
+        measureCursor, measureBoxes, setMeasureBoxes} from './measure-state.js';
+import {measuresOf, measureObjs, objOfAnchor, anchorKey, anchorGeom,
+        closestBetween} from '../model/measures.js';
+import {S} from '../core/state.js';
+import {fmtLen} from '../core/units.js';
+
+function drawMeasurePoint(p,on,C,square){
+  const x=sx(p[0]), y=sy(p[1]);
+  ctx.beginPath();
+  if(square) ctx.rect(x-4,y-4,8,8); else ctx.arc(x,y,4.5,0,Math.PI*2);
+  ctx.fillStyle = on?C.accent:C.surface; ctx.fill();
+  ctx.lineWidth=2; ctx.strokeStyle=C.accent; ctx.stroke();
+}
+function strokeWhole(o){
+  if(o.whole.area) pathPoly(o.whole.pts);
+  else { ctx.beginPath(); ctx.moveTo(sx(o.whole.pts[0][0]),sy(o.whole.pts[0][1])); ctx.lineTo(sx(o.whole.pts[1][0]),sy(o.whole.pts[1][1])); }
+  ctx.stroke();
+}
+/* one anchor, marked in accent */
+function drawAnchorPart(a,objs,C){
+  const o=objOfAnchor(a,objs);
+  if(!o) return;
+  ctx.save(); ctx.strokeStyle=C.accent; ctx.lineCap='round'; ctx.lineJoin='round';
+  if(a.part==='corner'){ if(o.corners[a.n]) drawMeasurePoint(o.corners[a.n],true,C,true); }
+  else if(a.part==='side'){
+    const s=o.sides[a.n];
+    if(s){ ctx.beginPath(); ctx.moveTo(sx(s[0][0]),sy(s[0][1])); ctx.lineTo(sx(s[1][0]),sy(s[1][1])); ctx.lineWidth=3.5; ctx.stroke(); }
+  } else if(a.part==='swing'){
+    if(o.swing){ pathPoly(o.swing.pts); ctx.fillStyle=C.accentSoft; ctx.globalAlpha=.5; ctx.fill(); ctx.globalAlpha=1; ctx.lineWidth=2; ctx.stroke(); }
+  } else {
+    ctx.lineWidth = o.whole.area?2:3.5; strokeWhole(o);
+    drawMeasurePoint(o.center,true,C,false);
+  }
+  ctx.restore();
+}
+/* the thing under the pointer: every anchor it offers, with the one a click would take filled in */
+function drawAnchorChoices(a,objs,C){
+  const o=objOfAnchor(a,objs);
+  if(!o) return;
+  ctx.save();
+  ctx.strokeStyle=C.accent; ctx.lineWidth=1; strokeWhole(o);
+  if(o.swing && S.showSwing){ ctx.setLineDash([4,3]); pathPoly(o.swing.pts); ctx.stroke(); ctx.setLineDash([]); }
+  for(const c of o.corners) drawMeasurePoint(c,false,C,true);
+  drawMeasurePoint(o.center,false,C,false);
+  ctx.restore();
+  drawAnchorPart(a,objs,C);
+}
+/* a dimension line with end ticks and its length on a label; returns where it was drawn */
+function drawDimension(r,color,C,dashed){
+  const p=[sx(r.p[0]),sy(r.p[1])], q=[sx(r.q[0]),sy(r.q[1])];
+  const len=Math.hypot(q[0]-p[0],q[1]-p[1]);
+  const u = len>1 ? [(q[0]-p[0])/len,(q[1]-p[1])/len] : [1,0], n=[-u[1],u[0]];
+  ctx.save(); ctx.lineCap='round';
+  ctx.beginPath();
+  if(len>1){
+    ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]);
+    for(const e of [p,q]){ ctx.moveTo(e[0]-n[0]*5,e[1]-n[1]*5); ctx.lineTo(e[0]+n[0]*5,e[1]+n[1]*5); }
+  } else ctx.arc(p[0],p[1],4,0,Math.PI*2);
+  // a surface halo under the line, so it reads on the floor, on furniture and on the stage
+  ctx.lineWidth=4; ctx.strokeStyle=C.surface; ctx.stroke();
+  if(dashed) ctx.setLineDash([5,4]);
+  ctx.lineWidth=1.5; ctx.strokeStyle=color; ctx.stroke();
+  ctx.setLineDash([]);
+  const txt = r.d<0.5 ? 'Touching' : fmtLen(r.d,S.unit);
+  ctx.font='600 11px ui-sans-serif,-apple-system,system-ui,sans-serif';
+  const w=ctx.measureText(txt).width+12, h=20;
+  let cx=(p[0]+q[0])/2, cy=(p[1]+q[1])/2;
+  // a line shorter than its label would disappear under it, so the label steps off to one side
+  if(len<w+16){ const k=(n[1]>0?-1:1)*(len>1?14:18); cx+=n[0]*k; cy+=n[1]*k; }
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(cx-w/2,cy-h/2,w,h,h/2); else ctx.rect(cx-w/2,cy-h/2,w,h);
+  ctx.fillStyle=C.surface; ctx.globalAlpha=.94; ctx.fill(); ctx.globalAlpha=1;
+  ctx.fillStyle=color; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(txt,cx,cy);
+  ctx.restore();
+  return {p,q,x:cx-w/2,y:cy-h/2,w,h};
+}
+function drawMeasures(){
+  setMeasureBoxes([]);
+  if(!S.showMeasure && !measureOn) return;
+  const C=PAL(), objs=measureObjs();
+  if(measureOn){
+    if(measureHover) drawAnchorChoices(measureHover,objs,C);
+    if(measureStart) drawAnchorPart(measureStart,objs,C);
+  }
+  for(const m of measuresOf()){
+    const A=anchorGeom(m.a,objs), B=anchorGeom(m.b,objs);
+    if(!A||!B) continue;
+    const on = measureOn && (m.id===measureSel || m.id===measureHoverId);
+    if(on){ drawAnchorPart(m.a,objs,C); drawAnchorPart(m.b,objs,C); }
+    measureBoxes.push(Object.assign({id:m.id}, drawDimension(closestBetween(A,B), on?C.accent:C.ink, C, false)));
+  }
+  if(measureOn && measureStart){
+    // the measurement being made: to the anchor under the pointer, or to the pointer itself
+    const A=anchorGeom(measureStart,objs);
+    const B = measureHover && anchorKey(measureHover)!==anchorKey(measureStart) ? anchorGeom(measureHover,objs)
+      : measureCursor ? {pts:[measureCursor]} : null;
+    if(A&&B) drawDimension(closestBetween(A,B), C.accent, C, true);
+  }
+}
+
 export {CANVAS, darkMQ, PAL, setForceLightCanvas,
         addPoly, pathPoly, clip, normHex, hexA, pickText,
-        drawAlignGuides, drawSquareTick, drawCustomOverlay};
+        drawAlignGuides, drawSquareTick, drawCustomOverlay,
+        drawDimension, drawMeasures};
