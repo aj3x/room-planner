@@ -27,6 +27,8 @@ import {draw, scheduleDraw, snapFloorPlace} from './draw.js';
 import {drag, setDrag} from './interaction-state.js';
 import {alignRadius, bringToFront, snapCorner} from './snap.js';
 import {H, W, axisLockFrom, cv, snapMM, snapPt, view, wx, wy} from './view.js';
+import {drawState, splitDrawState, wallDrawState} from './interaction-state.js';
+import {applyDrawCursorAt} from './room-draw.js';
 /* ------------------------- interaction ------------------------- */
 let spaceDown=false;
 function setSpaceDown(v){ spaceDown = v; } // held to force pan mode (Space+drag pans; Space+scroll still zooms)
@@ -243,4 +245,19 @@ function endDrag(e){
 const ZOOM_FACTOR = 1.02;
 const ZOOM_ACCEL_K = 0.03; // tuned by feel: higher = faster flicks jump further
 let wheelState = {last:0};
-export {spaceDown, setSpaceDown, ROOM_DRAGS, lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, DEADZONE_MODES, DEADZONE_PX, applyDragAt, EDGE_PAN_ZONE, EDGE_PAN_MAXSPD, edgePanVel, cancelDrag, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState};
+function edgePanTick(){
+  const dragging = drag && drag.mode!=='pan';
+  const drawing = !!(drawState || wallDrawState || splitDrawState);
+  if((dragging||drawing) && lastPX!=null){
+    const {vx,vy}=edgePanVel(lastPX,lastPY);
+    if(vx||vy){
+      view.ox-=vx; view.oy-=vy;
+      if(dragging) applyDragAt(lastPX,lastPY,lastMods);
+      else applyDrawCursorAt(lastPX,lastPY,lastMods.shiftKey);
+      scheduleDraw();
+    }
+  }
+  requestAnimationFrame(edgePanTick);
+}
+
+export {spaceDown, setSpaceDown, ROOM_DRAGS, lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, DEADZONE_MODES, DEADZONE_PX, applyDragAt, EDGE_PAN_ZONE, EDGE_PAN_MAXSPD, edgePanVel, cancelDrag, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState, edgePanTick};

@@ -775,7 +775,7 @@ import {parseLen, fmtLen} from './src/core/units.js';
 
 import {shapePoly, bbox, worldPoly, pointInPoly} from './src/core/geometry.js';
 
-import {PALETTE, uid, rectPts, blankLayout, S, setS, L, RP, itemOf, instOf, openOf, roomMode, floorMode, folderOf, floorOf} from './src/core/state.js';
+import {PALETTE, uid, rectPts, blankLayout, S, L, RP, itemOf, instOf, openOf, roomMode, floorMode, folderOf, floorOf} from './src/core/state.js';
 
 
 import {sel, selSet, roomSel, floorSel, mergeSel, setRoomSel, setFloorSel, setMergeSel, setAlignGuides, setAlignNote, treeOpen} from './src/core/selection.js';
@@ -792,12 +792,11 @@ import {snapWallPoint} from './src/model/walls.js';
 
 import {validate, isBad, centreInside, bisectToValid} from './src/model/validity.js';
 
-import {KEY, Store, save} from './src/core/store.js';
+import {save} from './src/core/store.js';
 
-import {snapFurn, seedHistFor, commitRoom, commitFurn, floorEntry} from './src/core/history.js';
+import {snapFurn, commitRoom, commitFurn, floorEntry} from './src/core/history.js';
 import {undoRoom, redoRoom, undoFurn, redoFurn, undoFloor, redoFloor} from './src/core/history.js';
 
-import {migrate} from './src/core/migrate.js';
 
 import {$, mo, moOkFn, moBackFn, openModal, closeModal, moError} from './src/ui/modal.js';
 /* a wizard's Back replaces the footer's meaning of "leave" with "go to the previous
@@ -893,7 +892,7 @@ $('measureBar').addEventListener('click', e=>{
   }
 });
 
-import {spaceDown, setSpaceDown, lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, applyDragAt, edgePanVel, cancelDrag, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState} from './src/canvas/interaction.js';
+import {spaceDown, setSpaceDown, lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, applyDragAt, cancelDrag, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState} from './src/canvas/interaction.js';
 import {flash} from './src/ui/flash.js';
 import {pickAt, bringToFront, pickRoom} from './src/canvas/snap.js';
 cv.addEventListener('pointerdown', e=>{
@@ -1067,20 +1066,7 @@ cv.addEventListener('pointermove', e=>{
   setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
   applyDragAt(lastPX,lastPY,lastMods);
 });
-function edgePanTick(){
-  const dragging = drag && drag.mode!=='pan';
-  const drawing = !!(drawState || wallDrawState || splitDrawState);
-  if((dragging||drawing) && lastPX!=null){
-    const {vx,vy}=edgePanVel(lastPX,lastPY);
-    if(vx||vy){
-      view.ox-=vx; view.oy-=vy;
-      if(dragging) applyDragAt(lastPX,lastPY,lastMods);
-      else applyDrawCursorAt(lastPX,lastPY,lastMods.shiftKey);
-      scheduleDraw();
-    }
-  }
-  requestAnimationFrame(edgePanTick);
-}
+import {edgePanTick} from './src/canvas/interaction.js';
 edgePanTick();
 cv.addEventListener('pointerup',endDrag);
 cv.addEventListener('pointercancel',endDrag);
@@ -1234,8 +1220,7 @@ import {rotate, removeSel, renderSel} from './src/plan/selection-panel.js';
 /* ------------------------- panels ------------------------- */
 import {esc} from './src/ui/panels.js';
 import {renderAll} from './src/plan/mode.js';
-import {paramMode} from './src/plan/mode.js';
-import {setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode} from './src/plan/mode.js';
+import {setMode, applyLayoutMode} from './src/plan/mode.js';
 import {isCanvasMode} from './src/core/state.js';
 $('modeSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setMode(b.dataset.mode); });
 $('navSeg').addEventListener('click', e=>{
@@ -1254,7 +1239,7 @@ for(const [headId,side] of [['headLeft','left'],['headRight','right']]){
   });
 }
 
-import {applySections, toggleSection} from './src/ui/panels.js';
+import {toggleSection} from './src/ui/panels.js';
 document.addEventListener('click', e=>{
   const h=e.target.closest('.pane-body section[data-sec] > .sec-head > h2');
   if(h) toggleSection(h);
@@ -1683,7 +1668,6 @@ import {itemFolderOf, itemFolderDescendant, recomputeFolderSubtree, moveItemToFo
 
 import {marketFolderOf, marketFolderDescendant} from './src/library/adhoc-folders.js';
 
-import {ensureDefaultMarket} from './src/library/market-subs.js';
 
 
 import {nav, libTreeOpen} from './src/library/nav.js';
@@ -1815,28 +1799,7 @@ import {listingMenu} from './src/library/adhoc-listings.js';
 import {renderLibContent} from './src/library/router.js';
 
 window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
-async function boot(){
-  try{
-    const raw=await Store.get(KEY);
-    if(raw){
-      const data=migrate(JSON.parse(raw));
-      if(data){ setS(data); if(!S.layouts.some(l=>l.id===S.active)) S.active=S.layouts[0].id; }
-    }
-  }catch(e){}
-  const pm=paramMode();
-  if(pm) S.mode=pm;
-  syncModeParam();
-  $('unitSel').value=S.unit;
-  $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure; $('zoomSpeedSel').value=S.zoomSpeed;
-  seedHistFor();
-  nav.tab = S.mode==='marketplace' ? 'market' : 'library';
-  nav.libFolderId = itemFolderOf(S.uiLib.libFolderId) ? S.uiLib.libFolderId : null;
-  nav.marketFolderId = marketFolderOf(S.uiLib.marketFolderId) ? S.uiLib.marketFolderId : null;
-  renderSnap(); applySections(); renderMode(); applyLayoutMode(); renderAll();
-  if(isCanvasMode(S.mode)){ resize(); fit(); } else { setPendingFit(true); }
-  if(!isCanvasMode(S.mode)) renderLibAll();
-  ensureDefaultMarket().then(()=>{ if(!isCanvasMode(S.mode)) renderLibAll(); });
-}
+import {boot} from './src/boot.js';
 boot();
 </script>
 </body>

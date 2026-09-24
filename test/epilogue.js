@@ -118,6 +118,13 @@ export const EPILOGUE = `
 /* And bpLastImport when floorMenu -- index.html's last reader of it -- moved
    into plan/floors.js. __rp, so this one fails loudly at boot. */
 ;import {bpLastImport} from './src/blueprint/commit.js';
+/* And the last four when boot() itself moved into src/boot.js. boot was
+   index.html's only remaining reader of setS (used by __rp's S setter), KEY and
+   Store (__rp), and migrate (GLOBALS -- the silent kind again). With these,
+   index.html imports nothing solely for the epilogue's benefit. */
+;import {setS} from './src/core/state.js';
+;import {KEY, Store} from './src/core/store.js';
+;import {migrate} from './src/core/migrate.js';
 ;globalThis.__rp = {
   get S(){ return S; },        set S(v){ setS(v); },
   get sel(){ return sel; },
