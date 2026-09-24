@@ -802,6 +802,8 @@ let treeOpen = new Set();  // expanded folder ids in the layout tree
 function setSel(v){ sel = v; }
 function setSelSet(v){ selSet = v; }
 function setRoomSel(v){ roomSel = v; }
+function setFloorSel(v){ floorSel = v; }
+function setMergeSel(v){ mergeSel = v; }
 
 function selectOnly(id){ setSelSet(new Set(id?[id]:[])); setSel(id||null); }
 function selectAdd(id){ selSet.add(id); setSel(id); }
@@ -846,7 +848,7 @@ function folderDescendant(id,parentId){
 /* switching into a room under a DIFFERENT folder re-applies that folder's tag filter;
    switching between rooms in the SAME folder leaves whatever filter the person set alone */
 function activateLayout(id){
-  S.active=id; setSel(null); setRoomSel(null); floorSel=null;
+  S.active=id; setSel(null); setRoomSel(null); setFloorSel(null);
   resetMeasureState();
   seedHistFor();
   const fid = L() ? (L().folderId||null) : null;
@@ -3216,15 +3218,15 @@ cv.addEventListener('pointerdown', e=>{
         renderFloorSel(); renderTree(); draw();
         return;   // shift+click only marks rooms for merge/delete — it never moves one
       }
-      mergeSel=new Set([hit]);   // seeds the pair: a plain click here, then shift+click a second room
+      setMergeSel(new Set([hit]));   // seeds the pair: a plain click here, then shift+click a second room
       const l=S.layouts.find(x=>x.id===hit);
       floorEntry();   // baseline the arrangement BEFORE it moves, or there is nothing to undo to
-      floorSel=hit;
+      setFloorSel(hit);
       drag={mode:'floor-room', id:hit, dx:wx(px)-l.floorPlace.x, dy:wy(py)-l.floorPlace.y};
       renderFloorSel(); draw();
       return;
     }
-    if(floorSel){ floorSel=null; }
+    if(floorSel){ setFloorSel(null); }
     if(mergeSel.size){ mergeSel.clear(); renderTree(); }
     renderFloorSel();
     drag={mode:'pan', px, py, ox:view.ox, oy:view.oy};
@@ -3612,7 +3614,7 @@ document.addEventListener('keydown', e=>{
   }
   if(e.key==='Escape'){
     if(!mo.hidden){ closeModal(); return; }
-    selectClear(); setRoomSel(null); floorSel=null; mergeSel.clear();
+    selectClear(); setRoomSel(null); setFloorSel(null); mergeSel.clear();
     renderSel(); renderRoomSel(); renderWalls(); renderOpen(); renderFloorSel(); renderTree(); draw(); return;
   }
   if(mo.hidden && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){
@@ -3740,7 +3742,7 @@ function setMode(m){
   if(isCanvasMode(m)) S.planMode=m;
   if(m==='furniture') setRoomSel(null);
   else if(m==='room') selectClear();
-  else if(m==='floor'){ selectClear(); setRoomSel(null); floorSel = L().floorId ? L().id : null; floorEntry(); }
+  else if(m==='floor'){ selectClear(); setRoomSel(null); setFloorSel(L().floorId ? L().id : null); floorEntry(); }
   if(m!=='floor'){ floorGuides=[]; floorSnapNote=''; }
   alignGuides=[]; alignNote='';
   /* measurements belong to one room, so Floor mode leaves the tool behind too */
@@ -4560,7 +4562,7 @@ function renderFloorSel(){
   $('flRotL').addEventListener('click',()=>turnFloorRoom(l,-90));
   $('flRotR').addEventListener('click',()=>turnFloorRoom(l,90));
   $('flEdit').addEventListener('click',()=>{ activateLayout(l.id); setMode('room'); renderAll(); fit(); save(); });
-  $('flOff').addEventListener('click',()=>{ l.floorId=null; floorSel=null; renderAll(); save(); });
+  $('flOff').addEventListener('click',()=>{ l.floorId=null; setFloorSel(null); renderAll(); save(); });
 }
 function turnFloorRoom(l,deg){
   l.floorPlace.rot=norm360((l.floorPlace.rot||0)+deg);
