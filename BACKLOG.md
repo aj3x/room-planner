@@ -153,6 +153,24 @@ layouts are both currently active).
 
 ## Known defects
 
+- **Filing an item into a folder derives its id prefix from the folder's
+  *display name*, case and all.** `rehomeItemId()` builds the new id from
+  `folderIdPrefix(folderId)`, which is `itemFolderPath(...).map(f=>idSlug(f.name))`
+  (`index.html` ~6378-6402), and `idSlug` only strips characters outside the
+  id charset — it does not case-fold. So dragging "sofa" onto a folder named
+  **IKEA** files it as `IKEA/sofa`, while an item already sitting in that same
+  folder because its id said so (`ikea/kallax`, placed there by
+  `ensureItemFolderPath`) keeps its lowercase path. One folder, two id paths:
+  the S3-style grouping the whole id convention exists for (`ikea/kallax/4x2`
+  and `ikea/kallax/2x4` "sit in the same folder") silently stops holding for
+  whichever half was not dropped there, and the divergence is invisible in the
+  UI because the grid groups by `folderId`, not by id. Renaming the folder
+  afterwards does not re-home anything either, so the prefix is a snapshot of
+  whatever the name was on the day of the drop. Found while writing the
+  `bindLibGrid` drop coverage; pinned by `test/e2e/panel-libgrid.spec.js`
+  ("the drop files the item and renames its id under the folder"). Not fixed:
+  Phase 3 is move-only.
+
 - **"Added" never appears on a listing's Add button.** In
   `renderListingDetail` (`index.html` ~7572) the per-item handler is
   `addMarketItemToInventory(it); b.textContent='Added'; b.disabled=true;` —
