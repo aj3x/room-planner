@@ -77,6 +77,17 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
+      # KNOWN: the first run on a Linux box will fail two blueprint tests.
+      # The blueprint golden is platform-specific — the pipeline starts from
+      # drawImage-scaled pixels — so the snapshot path carries {platform}, and
+      # only the darwin golden is committed today. Playwright will not write a
+      # missing snapshot under CI; it fails. To resolve it once: take the
+      # -actual JSON from the uploaded playwright-report artifact, read the
+      # diff (it should be a few millimetres, not a different floor plan),
+      # commit it as the -linux golden, and say so in the commit message.
+      # See "Re-baselining a golden" in test/README.md. Switching this job to
+      # macos-latest instead would reuse the existing golden, at the cost of a
+      # slower runner.
       - run: npm run test:e2e
 
       - uses: actions/upload-artifact@v4
