@@ -20,12 +20,12 @@ Two consequences worth knowing before you touch anything:
 
 ## How the source is laid out
 
-**[index.html](index.html)** is **1,068 lines** and is a shell: seven lines of `<head>`, a `<link>` to the stylesheet, seven `<!-- @include -->` directives holding the page structure together, and one `<script type="module">` (28-1066) that is 86 import lines, about ninety listener registrations, the two calls that start `edgePanTick()` and `boot()`, and a single `let` (`libSearchT`, the search debounce handle). Everything else lives in **81 JS modules**, **14 SCSS partials** and **7 HTML partials** under `src/`:
+**[index.html](index.html)** is **1,068 lines** and is a shell: seven lines of `<head>`, a `<link>` to the stylesheet, seven `<!-- @include -->` directives holding the page structure together, and one `<script type="module">` (28-1066) that is 86 import lines, about ninety listener registrations, the two calls that start `edgePanTick()` and `boot()`, and a single `let` (`libSearchT`, the search debounce handle). Everything else lives in **82 JS modules**, **14 SCSS partials** and **7 HTML partials** under `src/`:
 
 - **`src/core/`** — `units.js`, `geometry.js`, `open-state.js`, `state.js`, `selection.js`, `ids.js`, `floor-space.js`, `store.js`, `migrate.js`, `history.js`
 - **`src/model/`** — `walls.js`, `openings.js`, `validity.js`, `measures.js`, `walkpaths.js`
 - **`src/ui/`** — `modal.js`, `menu.js`, `inline-edit.js`, `dnd.js`, `tag-input.js`, `panels.js`, `flash.js`
-- **`src/canvas/`** — `view.js`, `draw.js`, `snap.js`, `merge-rooms.js`, `split-room.js`, `room-draw.js`, `wall-draw.js`, `corners.js`, `interaction.js`, `interaction-state.js`, `measure-state.js`, `measure-tool.js`
+- **`src/canvas/`** — `view.js`, `draw.js`, `snap.js`, `merge-rooms.js`, `split-room.js`, `room-draw.js`, `wall-draw.js`, `corners.js`, `interaction.js`, `interaction-state.js`, `measure-state.js`, `measure-tool.js`, `walk-overlay.js`
 - **`src/plan/`** — `layout-tree.js`, `floors.js`, `room-panel.js`, `room-controls.js`, `item-list.js`, `selection-panel.js`, `item-dialog.js`, `opening-dialog.js`, `mode.js`
 - **`src/io/`** — `pickers.js`, `export.js`, `import.js`
 - **`src/library/`** — `item-folders.js`, `adhoc-folders.js`, `market-subs.js`, `add-to-inventory.js`, `nav.js`, `shell.js`, `tree.js`, `folder-menus.js`, `grid.js`, `search.js`, `marketplace.js`, `adhoc-listings.js`, `export.js`, `router.js`

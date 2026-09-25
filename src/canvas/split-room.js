@@ -53,7 +53,8 @@ function splitAngleSnap(prev, raw, hard){
    and splitUndo still call draw() and the render*() functions and stay. */
 import {ctx, sx, sy} from './view.js';
 import {RP} from '../core/state.js';
-import {wallOf, snapWallPoint} from '../model/walls.js';
+import {wallOf} from '../model/walls.js';
+import {snapWallPoint} from './snap.js';
 import {splitDrawState, drawCursor, wallDrawShift} from './interaction-state.js';
 import {setAlignGuides, setAlignNote} from '../core/selection.js';
 import {PAL, drawSquareTick} from './draw.js';

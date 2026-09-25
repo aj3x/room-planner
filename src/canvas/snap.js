@@ -21,7 +21,7 @@ import {RP, L, itemOf} from '../core/state.js';
 import {sx, sy, wx, wy} from './view.js';
 import {pointInPoly, worldPoly} from '../core/geometry.js';
 import {openGeom} from '../model/openings.js';
-import {iwallPoly, nearestOnWalls} from '../model/walls.js';
+import {iwallPoly, magneticWallPoint, nearestOnWalls} from '../model/walls.js';
 import {snapPt} from './view.js';
 import {commitRoom} from '../core/history.js';
 import {save} from '../core/store.js';
@@ -29,6 +29,28 @@ import {tryRoomEdit} from '../model/walls.js';
 import {renderOpen, renderRoom, renderRoomSel, renderWalls} from '../plan/room-panel.js';
 import {flash} from '../ui/flash.js';
 import {draw} from './draw.js';
+
+/* ---- where a dragged wall end lands ----
+   These two were in model/walls.js until the decoupling pass
+   (.claude/plans/decoupling.md §4, step 3). Both are view-dependent — one
+   reads the camera scale, the other falls back to the grid snap — so they
+   could not stay in the domain layer once it stopped importing canvas/.
+   The wall-shaped half of the decision is still model/walls.js's
+   magneticWallPoint; this is the camera's half. */
+
+/* world-space radius a drag should snap within, so pillars/wall ends catch
+   onto a nearby corner, wall or other wall end regardless of zoom */
+const snapRadius = () => 14/Math.max(view.scale,1e-6);
+/* magnetic onto a room corner, a room wall's face, or another interior wall's
+   end or run (so two walls "connect" by simply sharing a point) — falling back
+   to the ordinary grid snap */
+function snapWallPoint(raw, excludeId, magnetic){
+  if(magnetic){
+    const hit=magneticWallPoint(raw, excludeId, snapRadius());
+    if(hit) return hit;
+  }
+  return snapPt(raw);
+}
 
 /* ------------------------- the alignment magnet -------------------------
    A dragged point used to land wherever the grid allowed, which is hopeless on a plan
@@ -193,4 +215,4 @@ function squareCorner(i){
   if(!ok) return;
   renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
 }
-export {pickAt, bringToFront, pickRoom, alignRadius, snapToLines, lineProject, lineCross, guideSeg, alignPoint, isSquare, snapCorner, squareCorner};
+export {snapRadius, snapWallPoint, pickAt, bringToFront, pickRoom, alignRadius, snapToLines, lineProject, lineCross, guideSeg, alignPoint, isSquare, snapCorner, squareCorner};

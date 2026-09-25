@@ -71,7 +71,7 @@ modules so several people can work on it without colliding, and that is
 finished: `index.html` is now a 1,068-line shell — a `<head>`, a stylesheet
 link, seven include directives for the static markup, and one
 `<script type="module">` that is imports, listener registrations and the call
-to `boot()`. Everything else is **81 JS modules, 14 SCSS partials and 7 HTML
+to `boot()`. Everything else is **82 JS modules, 14 SCSS partials and 7 HTML
 partials** under `src/`.
 
 ```

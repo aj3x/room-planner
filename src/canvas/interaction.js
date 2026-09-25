@@ -18,7 +18,8 @@ import {selectAdd, selectSet, setAlignGuides, setAlignNote, setFloorGuides, setF
 import {L, RP, S, instOf, itemOf, openOf} from '../core/state.js';
 import {save} from '../core/store.js';
 import {centreInside, slideToValid, validate} from '../model/validity.js';
-import {clampOpenings, iwallOf, nearestOnWalls, pillarOf, snapWallPoint, wallOf} from '../model/walls.js';
+import {clampOpenings, iwallOf, nearestOnWalls, pillarOf, wallOf} from '../model/walls.js';
+import {snapWallPoint} from './snap.js';
 import {renderFloorSel} from '../plan/floors.js';
 import {renderOpen, renderRoomSel, renderWalls} from '../plan/room-panel.js';
 import {renderSel} from '../plan/selection-panel.js';

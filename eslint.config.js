@@ -18,6 +18,13 @@
    (one `<script>`, browser globals, everything in one scope); `src/**` is
    linted as ESM, so the rules are already right when Phase 3 starts putting
    files there.
+
+   Since the decoupling pass it does one more thing: it enforces the layering
+   that pass established, via `no-restricted-imports` on `src/core/**` and
+   `src/model/**`. See DOMAIN_LAYER below, and
+   `.claude/plans/decoupling.md` §4 step 3 for why. That rule is the actual
+   deliverable of the step — the edits it took to satisfy it are worth much
+   less than the guarantee that they stay satisfied.
    =========================================================================== */
 
 import js from '@eslint/js';
@@ -53,6 +60,42 @@ const RELAXED = {
      editing application code, which this phase forbids, and the rule says
      nothing about whether the code is right. Off. */
   'preserve-caught-error': 'off',
+};
+
+/* ---- the layering rule ------------------------------------------------
+   `src/core/` and `src/model/` are the domain layer: the document's shape, the
+   geometry, the walls, the clearance grid, undo. Together they are the half of
+   the app that would still make sense with no screen attached.
+
+   Nothing in them may import from a layer above. Before the decoupling pass
+   eight edges broke that — core/history.js pulled in six render functions so
+   undo could repaint, model/walkpaths.js drew to the canvas from inside the
+   domain layer — and those edges were load-bearing in a 45-module import
+   cycle. Removing them was step 2 and step 3 of the plan; this rule is what
+   stops them growing back, which is the part that actually matters.
+
+   Imports WITHIN {core, model} stay free. They cannot form a cycle with the UI
+   as long as no edge points upward, which is exactly what this rule says.
+
+   When a domain module genuinely needs something to happen on screen, it asks
+   core/registry.js for a name and boot.js provides it — see tryRoomEdit's
+   `ui.flash`, or core/history.js's `repaint.*`. If you are about to add a path
+   to this allow-list instead, that is the signal that the thing you are moving
+   belongs on the other side of the line. */
+const UPWARD = ['canvas', 'plan', 'library', 'ui', 'io', 'blueprint'];
+const DOMAIN_LAYER = {
+  files: ['src/core/**/*.js', 'src/model/**/*.js'],
+  rules: {
+    'no-restricted-imports': ['error', {
+      patterns: [{
+        group: UPWARD.flatMap(d => [`**/${d}/*`, `**/${d}/**/*`]),
+        message:
+          'src/core/ and src/model/ are the domain layer and may not import from ' +
+          UPWARD.join('/') + '. Invert the call: ask core/registry.js for a name ' +
+          'and let boot.js provide it. See .claude/plans/decoupling.md §4.',
+      }],
+    }],
+  },
 };
 
 export default [
@@ -111,4 +154,7 @@ export default [
     },
     rules: { ...js.configs.recommended.rules, ...RELAXED },
   },
+
+  /* Last, so it layers on top of the general src/ block above. */
+  DOMAIN_LAYER,
 ];

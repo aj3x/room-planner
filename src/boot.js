@@ -17,6 +17,7 @@ import {renderInv} from './plan/item-list.js';
 import {applyLayoutMode, paramMode, renderAll, renderMode, setPendingFit, syncModeParam} from './plan/mode.js';
 import {renderSel} from './plan/selection-panel.js';
 import {renderOpen, renderRoom, renderRoomSel, renderSnap, renderWalls} from './plan/room-panel.js';
+import {flash} from './ui/flash.js';
 import {$} from './ui/modal.js';
 import {applySections} from './ui/panels.js';
 
@@ -35,6 +36,11 @@ function wire(){
   provide('blueprint.uploadDialog', bpUploadDialog);
   provide('blueprint.undoImport', bpUndoImport);
   provide('blueprint.lastImport', () => bpLastImport);
+
+  /* The domain layer reports a rejected edit but does not own the toast:
+     model/walls.js's tryRoomEdit refuses a fold-over and says so through here.
+     See .claude/plans/decoupling.md §4, step 3. */
+  provide('ui.flash', flash);
 
   /* Undo/redo repaint. core/history.js restores a snapshot and says so; which
      panels that makes stale is a question about the UI, and belongs here.

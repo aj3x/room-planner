@@ -1,29 +1,26 @@
 /* Walk paths: can you actually get around this room? The clearance grid, the
-   routes through it, and the overlay that draws them.
+   routes through it, and the solver that threads a line from door to door.
 
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, banner included, and the `export` block
-   at the end is the only line added.
+   Extracted from index.html in Phase 3, move-only. The region arrived whole,
+   drawing included; the decoupling pass (.claude/plans/decoupling.md §2.1,
+   step 3) took the drawing back out. walkShade, walkPinchLabel, drawWalkPath
+   and drawWalkOverlay now live in canvas/walk-overlay.js, unchanged, and with
+   them went the imports of canvas/view.js and canvas/draw.js -- the upward
+   edge that made the domain layer depend on the renderer and helped hold the
+   45-module cycle together.
 
-   The whole region comes at once. Half of it draws (ctx, PAL, view, sx/sy) and
-   that half is why it waited for the canvas/ round; the other half is pure
-   geometry that could have gone earlier but had no reason to travel alone.
+   What is left is pure computation: core/ plus its two model/ siblings, no
+   layer above. Four names are exported, all of them for the overlay: WALK (the three
+   clearance bands), walkGrid (the cached grid), walkPaths (the annotated
+   routes) and walkBand (which band a clearance falls in). Everything else --
+   the solver, the route builder, the raycast graph -- still has no caller
+   outside this file, which is finding D of the units pilot again: export only
+   what is really referenced. */
 
-   Only drawWalkOverlay is exported. Every other name in here -- the grid, the
-   solver, the route builder, the shading passes -- turned out to have no
-   caller outside the region at all, which is finding D of the units pilot
-   again: import back only what is really referenced.
-
-   drawWalkOverlay is the third of the four draw*() helpers draw() cannot move
-   without. */
-
-import {ctx, sx, sy, view} from '../canvas/view.js';
-import {PAL, addPoly} from '../canvas/draw.js';
-import {S, L, RP, itemOf, furnMode} from '../core/state.js';
+import {L, RP, itemOf} from '../core/state.js';
 import {bbox, worldPoly, pointInPoly, segHit, ptSegDist, segDist} from '../core/geometry.js';
 import {obstaclePolys} from './walls.js';
 import {openGeom} from './openings.js';
-import {fmtLen} from '../core/units.js';
 
 /* ------------------------- walk paths -------------------------
    An advisory overlay, off by default: how much floor a person actually has
@@ -344,79 +341,5 @@ function walkPaths(){
   return out;
 }
 function walkBand(clear){ return clear>=WALK.comfortable?'comfortable':clear>=WALK.tight?'tight':clear>=WALK.narrow?'narrow':'impossible'; }
-/* shade every cell matching `test` with one clipped diagonal hatch pass (or,
-   with `cross`, a second pass the other way — an X reads as "not just
-   tight, actually blocked"), the same construction the invalid-placement
-   hatch uses — texture, not just colour, carries the warning (never colour
-   alone, DESIGN.md §3.2) */
-function walkShade(grid,test,color,alpha,step,cross){
-  let any=false;
-  ctx.save(); ctx.beginPath();
-  for(let iy=0; iy<grid.rows; iy++) for(let ix=0; ix<grid.cols; ix++){
-    const c=grid.cells[iy*grid.cols+ix];
-    if(c==null||!test(c)) continue;
-    any=true;
-    const cx=grid.x0+(ix+.5)*grid.res, cy=grid.y0+(iy+.5)*grid.res, half=grid.res/2;
-    addPoly([[cx-half,cy-half],[cx+half,cy-half],[cx+half,cy+half],[cx-half,cy+half]]);
-  }
-  if(!any){ ctx.restore(); return; }
-  ctx.clip();
-  const b=bbox(RP());
-  ctx.strokeStyle=color; ctx.globalAlpha=alpha; ctx.lineWidth=1;
-  ctx.beginPath();
-  for(let d=b.x0-b.h; d<b.x1; d+=step) ctx.moveTo(sx(d),sy(b.y0)), ctx.lineTo(sx(d+b.h),sy(b.y1));
-  if(cross) for(let d=b.x0; d<b.x1+b.h; d+=step) ctx.moveTo(sx(d),sy(b.y0)), ctx.lineTo(sx(d-b.h),sy(b.y1));
-  ctx.stroke();
-  ctx.restore();
-}
-function walkPinchLabel(path,C){
-  let min=path[0];
-  for(const p of path) if(p.clear<min.clear) min=p;
-  if(min.clear>=WALK.comfortable) return;
-  const x=sx(min.pt[0]), y=sy(min.pt[1]);
-  const txt=fmtLen(Math.max(0,min.clear),S.unit)+(min.clear<WALK.narrow?' — too narrow':' clear');
-  ctx.font='600 11px ui-sans-serif,-apple-system,system-ui,sans-serif';
-  const w=ctx.measureText(txt).width;
-  ctx.save();
-  ctx.beginPath();
-  if(ctx.roundRect) ctx.roundRect(x-w/2-6,y-11,w+12,22,11); else ctx.rect(x-w/2-6,y-11,w+12,22);
-  ctx.fillStyle=C.surface; ctx.globalAlpha=.92; ctx.fill();
-  ctx.globalAlpha=1;
-  ctx.fillStyle = min.clear<WALK.tight ? C.danger : C.ink2;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(txt,x,y);
-  ctx.restore();
-}
-function drawWalkPath(path,C){
-  if(path.length<2) return;
-  ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=.85;
-  // samples are dense, so stroke each run of same-band steps as one polyline —
-  // stroking every 50mm step on its own would restart the dash pattern each time
-  let i=1;
-  while(i<path.length){
-    const band=walkBand(Math.min(path[i-1].clear,path[i].clear));
-    ctx.beginPath(); ctx.moveTo(sx(path[i-1].pt[0]),sy(path[i-1].pt[1]));
-    while(i<path.length && walkBand(Math.min(path[i-1].clear,path[i].clear))===band){
-      ctx.lineTo(sx(path[i].pt[0]),sy(path[i].pt[1])); i++;
-    }
-    if(band==='comfortable'){ ctx.setLineDash([]); ctx.lineWidth=4; ctx.strokeStyle=C.ink2; ctx.globalAlpha=.4; }
-    else if(band==='tight'){ ctx.setLineDash([]); ctx.lineWidth=2.5; ctx.strokeStyle=C.ink2; ctx.globalAlpha=.75; }
-    else if(band==='narrow'){ ctx.setLineDash([2,3]); ctx.lineWidth=1.75; ctx.strokeStyle=C.danger; ctx.globalAlpha=.9; }
-    else { ctx.setLineDash([1,4]); ctx.lineWidth=1.25; ctx.strokeStyle=C.danger; ctx.globalAlpha=1; }
-    ctx.stroke();
-  }
-  ctx.restore();
-  walkPinchLabel(path,C);
-}
-function drawWalkOverlay(){
-  if(!S.showWalk || !furnMode()) return;
-  const grid=walkGrid();
-  if(!grid.cols) return;
-  const C=PAL();
-  walkShade(grid, c=>c<WALK.narrow, 'rgba('+C.dangerRGB+',.85)', .9, 5/Math.max(view.scale,1e-4), true);
-  walkShade(grid, c=>c>=WALK.narrow&&c<WALK.tight, 'rgba('+C.dangerRGB+',.6)', .8, 6/Math.max(view.scale,1e-4));
-  walkShade(grid, c=>c>=WALK.tight&&c<WALK.comfortable, C.ink2, .3, 10/Math.max(view.scale,1e-4));
-  for(const path of walkPaths()) drawWalkPath(path,C);
-}
 
-export {drawWalkOverlay};
+export {WALK, walkGrid, walkPaths, walkBand};

@@ -17,7 +17,7 @@
 
    The last four joined in the plan/ round. They close a second import cycle
    with canvas/draw.js, on top of the one draw.js already has with
-   split-room.js and walkpaths.js. It is rule 4's case: every name across the
+   split-room.js and walk-overlay.js. It is rule 4's case: every name across the
    edge is a function declaration or is read inside a function body, and
    draw.js has no module-evaluation-time read of anything at all. Do not add a
    top-level read across this edge either.

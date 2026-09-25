@@ -9,17 +9,24 @@
    because each reached into a phase that had not run yet. All six came home in
    the canvas/ round, in two commits: tryRoomEdit / setWallAngle / setWallLen /
    setRectSize once flash() reached ui/flash.js, then snapRadius (reads view)
-   and snapWallPoint (calls snapPt) once both landed in canvas/view.js. This
-   file is whole again.
+   and snapWallPoint (calls snapPt) once both landed in canvas/view.js.
 
-   snapRadius has no caller outside this module and so is not exported back to
-   index.html -- the same thing that happened to MM and BARE in the units
-   pilot. It stays in the export list for canvas/snap.js, which wants it. */
+   Two of those six have since gone back out, the other way. The decoupling
+   pass (.claude/plans/decoupling.md §4, step 3) made model/ the domain layer
+   proper: nothing here may import from canvas/, plan/, library/, ui/ or io/,
+   and eslint.config.js enforces it. snapRadius reads the camera's scale and
+   snapWallPoint falls back to the grid snap, so both are view-dependent and
+   both now live in canvas/snap.js. What stayed is magneticWallPoint — "the
+   nearest corner, wall face or interior-wall point within R" — which is the
+   half that is actually about walls, and is now pure and testable.
+
+   tryRoomEdit still reports a rejected edit to the user, but through the
+   `ui.flash` hook in core/registry.js rather than an import. The message
+   belongs next to the rule that produced it; the toast does not. */
 
 import {norm360, pointInPoly, ptSegDist, worldPoly, bbox, polySimple} from '../core/geometry.js';
+import {use} from '../core/registry.js';
 import {L, RP} from '../core/state.js';
-import {flash} from '../ui/flash.js';
-import {view, snapPt} from '../canvas/view.js';
 
 /* ------------------------- walls ------------------------- */
 /* ---- walls you can take away ----
@@ -160,7 +167,7 @@ function tryRoomEdit(fn){
   fn();
   if(!polySimple(RP())){
     L().room.points = JSON.parse(before);
-    flash('That would fold the room over itself');
+    use('ui.flash')?.('That would fold the room over itself');
     syncWallOff(L().room);
     return false;
   }
@@ -168,28 +175,25 @@ function tryRoomEdit(fn){
   clampOpenings();
   return true;
 }
-/* world-space radius a drag should snap within, so pillars/wall ends catch
-   onto a nearby corner, wall or other wall end regardless of zoom */
-const snapRadius = () => 14/Math.max(view.scale,1e-6);
-/* where a wall's end should land: magnetic onto a room corner, a room wall's
-   face, or another interior wall's end or run (so two walls "connect" by
-   simply sharing a point) — falling back to the ordinary grid snap */
-function snapWallPoint(raw, excludeId, magnetic){
-  if(magnetic){
-    const R=snapRadius(); let best=null;
-    const consider=c=>{ const d=Math.hypot(c[0]-raw[0],c[1]-raw[1]); if(d<=R&&(!best||d<best.d)) best={pt:c,d}; };
-    for(const v of RP()) consider(v);
-    for(const w of L().room.iwalls){ if(w.id===excludeId) continue; consider(w.a); consider(w.b); }
-    if(best) return best.pt.slice();
-    const nb=nearestOnWalls(raw);
-    if(nb && nb.d<=R){ const w=wallOf(nb.i); return [w.a[0]+w.dir[0]*nb.t*w.len, w.a[1]+w.dir[1]*nb.t*w.len]; }
-    for(const w of L().room.iwalls){
-      if(w.id===excludeId) continue;
-      const r=ptSegDist(raw,w.a,w.b);
-      if(r.d<=R) return [w.a[0]+(w.b[0]-w.a[0])*r.t, w.a[1]+(w.b[1]-w.a[1])*r.t];
-    }
+/* where a wall's end wants to land: magnetic onto a room corner, a room wall's
+   face, or another interior wall's end or run (so two walls "connect" by simply
+   sharing a point). Returns null when nothing is within `R`, and the caller
+   falls back to the ordinary grid snap — see snapWallPoint in canvas/snap.js,
+   which is the only caller and supplies R from the current zoom. */
+function magneticWallPoint(raw, excludeId, R){
+  let best=null;
+  const consider=c=>{ const d=Math.hypot(c[0]-raw[0],c[1]-raw[1]); if(d<=R&&(!best||d<best.d)) best={pt:c,d}; };
+  for(const v of RP()) consider(v);
+  for(const w of L().room.iwalls){ if(w.id===excludeId) continue; consider(w.a); consider(w.b); }
+  if(best) return best.pt.slice();
+  const nb=nearestOnWalls(raw);
+  if(nb && nb.d<=R){ const w=wallOf(nb.i); return [w.a[0]+w.dir[0]*nb.t*w.len, w.a[1]+w.dir[1]*nb.t*w.len]; }
+  for(const w of L().room.iwalls){
+    if(w.id===excludeId) continue;
+    const r=ptSegDist(raw,w.a,w.b);
+    if(r.d<=R) return [w.a[0]+(w.b[0]-w.a[0])*r.t, w.a[1]+(w.b[1]-w.a[1])*r.t];
   }
-  return snapPt(raw);
+  return null;
 }
 function setRectSize(w,d){
   const b=bbox(RP());
@@ -202,5 +206,5 @@ export {syncWallOff, wallIsOff, wallRuns, wallOf, wallAngle, clampOpenings,
         nearestOnWalls, pillarOf, iwallOf, iwallGeom, iwallPoly, iwallLen,
         iwallAngle, setIWallLen, setIWallAngle, setIWallEndDist, obstaclePolys,
         isRectRoom,
-        setWallAngle, setWallLen, tryRoomEdit, snapRadius, snapWallPoint,
+        setWallAngle, setWallLen, tryRoomEdit, magneticWallPoint,
         setRectSize};

@@ -121,7 +121,7 @@ function drawCustomOverlay(){
 /* Instalment 4: the measuring passes. drawMeasures is the last of the four
    draw*() helpers the canvas/ round listed as blocking draw() -- the other
    three were drawCustomOverlay (instalment 3), drawSplitOverlay
-   (canvas/split-room.js) and drawWalkOverlay (model/walkpaths.js).
+   (canvas/split-room.js) and drawWalkOverlay (canvas/walk-overlay.js).
 
    They are here rather than with model/measures.js because measures.js is
    the geometry -- anchorGeom, closestBetween, what a measurement joins --
@@ -249,7 +249,7 @@ function drawMeasures(){
    file and are now local, and two imported from canvas/merge-rooms.js and
    are hoisted to the header below. Nothing else about the 766 lines changed.
 
-   The imports of ./split-room.js and ../model/walkpaths.js close two cycles
+   The imports of ./split-room.js and ./walk-overlay.js close two cycles
    -- both modules import PAL, addPoly or drawSquareTick back from here. That
    is rule 4's case exactly: every name involved is a function declaration or
    is only read inside a function body, so nothing is touched during module
@@ -265,11 +265,12 @@ import {L, RP, floorLayouts, floorMode, floorOf, furnMode, instOf, itemOf, roomM
 import {fmtArea} from '../core/units.js';
 import {blockedOpenings, openGeom, swingPoly} from '../model/openings.js';
 import {getConflicts} from '../model/validity.js';
-import {iwallPoly, snapWallPoint, wallIsOff, wallOf, wallRuns} from '../model/walls.js';
+import {iwallPoly, wallIsOff, wallOf, wallRuns} from '../model/walls.js';
+import {snapWallPoint} from './snap.js';
 import {$} from '../ui/modal.js';
 import {esc, plural} from '../ui/panels.js';
 import {drawSplitOverlay} from './split-room.js';
-import {drawWalkOverlay} from '../model/walkpaths.js';
+import {drawWalkOverlay} from './walk-overlay.js';
 
 /* ------------------------- drawing ------------------------- */
 
