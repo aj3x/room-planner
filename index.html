@@ -145,7 +145,7 @@ $('measureBar').addEventListener('click', e=>{
   }
 });
 
-import {setSpaceDown, lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, onCanvasPointerDown, applyDragAt, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState} from './src/canvas/interaction.js';
+import {lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, onCanvasPointerDown, applyDragAt, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState} from './src/canvas/interaction.js';
 import {flash} from './src/ui/flash.js';
 import {pickRoom} from './src/canvas/snap.js';
 cv.addEventListener('pointerdown', onCanvasPointerDown);
@@ -202,14 +202,9 @@ cv.addEventListener('wheel', e=>{
   zoomAt(Math.pow(ZOOM_FACTOR, (norm<0?1:-1)*magnitude), e.offsetX, e.offsetY);
 }, {passive:false});
 
-import {onDocumentKeyDown} from './src/plan/shortcuts.js';
+import {onDocumentKeyDown, onDocumentKeyUp} from './src/plan/shortcuts.js';
 document.addEventListener('keydown', onDocumentKeyDown);
-document.addEventListener('keyup', e=>{
-  if(e.code==='Space'){
-    setSpaceDown(false);
-    if(!drag||drag.mode!=='pan') cv.style.cursor='';
-  }
-});
+document.addEventListener('keyup', onDocumentKeyUp);
 
 /* ------------------------- panels ------------------------- */
 import {esc} from './src/ui/panels.js';

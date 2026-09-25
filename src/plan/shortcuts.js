@@ -142,4 +142,18 @@ function onDocumentKeyDown(e){
   }
 }
 
-export {onDocumentKeyDown};
+/* Space's other half. It lives here rather than next to setSpaceDown in
+   canvas/interaction.js for the same reason the keydown does: the pair is one
+   binding, and reading them apart is how one of them gets forgotten. Note it
+   does NOT clear the cursor mid-pan -- a pan started with Space keeps its
+   grabbing cursor until the pointer comes up, whatever the key does.
+
+   Moved from index.html with the keydown; its registration stayed behind too. */
+function onDocumentKeyUp(e){
+  if(e.code==='Space'){
+    setSpaceDown(false);
+    if(!drag||drag.mode!=='pan') cv.style.cursor='';
+  }
+}
+
+export {onDocumentKeyDown, onDocumentKeyUp};
