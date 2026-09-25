@@ -55,23 +55,14 @@ function addPoly(p){
 function pathPoly(p){ ctx.beginPath(); addPoly(p); }
 
 function clip(txt,wpx){ const max=Math.floor(wpx/7.2); return txt.length>max?txt.slice(0,Math.max(1,max-1))+'…':txt; }
-/* accepts #abc, #aabbcc, or the same without the # — returns canonical '#aabbcc' or null */
-function normHex(v){
-  let h=String(v==null?'':v).trim().replace(/^#/,'');
-  if(/^[0-9a-f]{3}$/i.test(h)) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
-  return /^[0-9a-f]{6}$/i.test(h) ? '#'+h.toLowerCase() : null;
-}
-function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
-function pickText(hex,light){
-  const n=parseInt(hex.slice(1),16);
-  const lum=(0.299*((n>>16)&255)+0.587*((n>>8)&255)+0.114*(n&255))/255;
-  return (light||lum>.62)?'#1d1d1b':'#ffffff';
-}
+/* normHex, hexA and pickText moved to core/color.js — see the import above.
+   They are re-exported from here, so every existing call site is unchanged. */
 
 /* Instalment 3: the three overlays that draw what a gesture is doing -- the
    alignment guides, the 90-degree tick, and the outline being drawn. They
    could not come until the selection and interaction lets were out of
    index.html, which is what the commits before this one did. */
+import {hexA, normHex, pickText} from '../core/color.js';
 import {alignGuides} from '../core/selection.js';
 import {drawState, drawCursor} from './interaction-state.js';
 

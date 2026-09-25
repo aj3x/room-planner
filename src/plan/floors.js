@@ -33,8 +33,7 @@ import {uid} from '../core/state.js';
 import {folderLine, pickValues, pickerHTML} from '../io/pickers.js';
 import {menuAtPoint} from '../ui/menu.js';
 import {askText, openModal} from '../ui/modal.js';
-import {bpLastImport, bpUndoImport} from '../blueprint/commit.js';
-import {bpUploadDialog} from '../blueprint/step1-upload.js';
+import {has, use} from '../core/registry.js';
 import {openMenu} from '../ui/menu.js';
 import {renameFloor} from './layout-tree.js';
 /* one slot, not a stack \u2014 mirrors bpLastImport's own "undo the last thing" precedent */
@@ -280,13 +279,26 @@ function openFloorMergeMenu(ids, clientX, clientY){
     {label:'Delete both rooms\u2026', danger:true, fn:()=>deleteBothDialog(aId,bId)},
   ], a.name+' + '+b.name);
 }
+/* `blueprint.lastImport` is provided as a getter, not a value: commit.js
+   reassigns its `bpLastImport` binding, and a value captured at boot would
+   freeze at null. */
+function bpUndoableOn(id){
+  const last = use('blueprint.lastImport')?.();
+  return !!(last && last.floorId===id);
+}
 function floorMenu(id, anchor){
   const fl=floorOf(id); if(!fl) return;
   openMenu(anchor, [
     {label:'Rename', fn:()=>renameFloor(id)},
     {label:'Rooms on this floor…', fn:()=>floorRoomsDialog(id)},
-    {label:'Import a blueprint onto this floor…', fn:()=>bpUploadDialog(false, id)},
-    ...(bpLastImport && bpLastImport.floorId===id ? [{label:'Undo the blueprint import…', fn:bpUndoImport}] : []),
+    /* Blueprint import reaches this menu through core/registry.js rather than a
+       direct import: floors.js is what blueprint/commit.js calls back into, so
+       importing it here would close the cycle that keeps all twenty blueprint
+       modules inside the main tangle. boot.js provides both names. */
+    ...(has('blueprint.uploadDialog')
+      ? [{label:'Import a blueprint onto this floor…', fn:()=>use('blueprint.uploadDialog')(false, id)}]
+      : []),
+    ...(bpUndoableOn(id) ? [{label:'Undo the blueprint import…', fn:use('blueprint.undoImport')}] : []),
     {sep:true},
     {label:'Delete floor…', danger:true, fn:()=>deleteFloor(id)},
   ], fl.name);

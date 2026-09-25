@@ -7,24 +7,28 @@
    byte-identical to what stood there, and the `export` block at the end is
    the only line added.
 
-   §3 files all five under core/store.js and they cannot go there. migrate()
-   needs syncWallOff (model/walls.js) and normHex (canvas/draw.js), both
-   inside the big canvas import cycle, and ui/panels.js imports core/store.js
-   — so core/store.js -> canvas/draw.js welds the canvas cycle to the
-   modal.js <-> panels.js one. That merged cycle contains canvas/view.js,
-   whose top-level `const cv=$('cv'), ctx=cv.getContext('2d')` would then run
-   before ui/modal.js had initialised `$`: the exact boot failure that
+   §3 files all five under core/store.js and they cannot go there: ui/panels.js
+   imports core/store.js, so anything core/store.js reaches is welded to the
+   modal.js <-> panels.js cycle, and that cycle contains canvas/view.js, whose
+   top-level `const cv=$('cv'), ctx=cv.getContext('2d')` would then run before
+   ui/modal.js had initialised `$`. That is the exact boot failure that
    reverted togglePane in the plan/ round. Verified with the cycle checker,
    not by eye.
 
+   The decoupling pass (.claude/plans/decoupling.md §4, step 2) removed the
+   two imports that used to reach out of the core layer from here: normHex
+   moved to core/color.js, and reconcileTags to core/item-folders.js. What is
+   left — core/, plus syncWallOff from model/ — is all inside the domain
+   layer, which the lint rule in eslint.config.js now enforces.
+
    Nothing in ui/ or canvas/ imports this file, so it adds no cycle at all.
 */
-import {normHex} from '../canvas/draw.js';
+import {normHex} from '../core/color.js';
 import {INV_SCOPES} from '../core/floor-space.js';
 import {norm360} from '../core/geometry.js';
 import {normOpen} from '../core/open-state.js';
 import {PALETTE, isCanvasMode, rectPts, setS, uid} from '../core/state.js';
-import {reconcileTags} from '../library/item-folders.js';
+import {reconcileTags} from '../core/item-folders.js';
 import {syncWallOff} from '../model/walls.js';
 
 /* older saves used a width/depth rectangle, N/E/S/W doors, tagless/countless items, and no folders.
