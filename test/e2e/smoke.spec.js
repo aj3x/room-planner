@@ -1,29 +1,27 @@
-/* End-to-end smoke: draw a room, place an item, undo, redo, export, re-import.
- *
- * Deliberately the shallowest possible pass over the widest possible surface.
- * Its job is to notice that a module boundary drawn in the wrong place has
- * broken the app outright — which is the failure mode of an extraction commit —
- * not to check any one behaviour in detail.
- *
- * Room edits and item edits have SEPARATE undo stacks (roomHist / furnHist),
- * kept per layout, so both are exercised independently.
- */
+/* End-to-end smoke: draw a room, place an item, undo, redo, export, re-import,
+ * reload — plus the file:// deployment contract. Deliberately the shallowest
+ * possible pass over the widest possible surface: its job is to notice that the
+ * app has broken outright, not to check any one behaviour in detail. Room edits
+ * and item edits have SEPARATE undo stacks, so both are exercised. */
 
 import { test, expect, fixtureState, readS, flushSave, settle } from './app-fixture.js';
 
 test.describe('smoke', () => {
   test.use({ savedState: fixtureState('vis-rect.json') });
 
-  test('the app boots with no page errors', async ({ page, app, baseURL }) => {
+  test('boots, and every mode switch is clean, with no page error', async ({ page, app, baseURL }) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
-    /* Re-navigating, not reload(): a reload is served from Chromium's cache and
-       bypasses the route that appends the capture epilogue, so window.__rp
-       would be missing on the far side. */
+    // re-navigate rather than reload(): a reload is served from cache
     await app.goto(`${baseURL}/index.html`);
     await app.waitForFunction(() => window.__rp && window.__rp.S);
     await settle(app);
+    for (const mode of ['room', 'furniture', 'floor', 'inventory', 'marketplace', 'furniture']) {
+      await app.evaluate((m) => window.setMode(m), mode);
+      await settle(app);
+    }
     expect(errors).toEqual([]);
+    expect((await readS(app)).mode).toBe('furniture');
   });
 
   test('draw a room: the polygon changes and the change is undoable', async ({ app }) => {
@@ -56,8 +54,7 @@ test.describe('smoke', () => {
     const before = await count();
 
     await app.evaluate(() => {
-      const l = window.__rp.S.layouts[0];
-      l.placed.push({ id: 'smoke-placed', itemId: 'table', x: 2500, y: 2000, rot: 0 });
+      window.__rp.S.layouts[0].placed.push({ id: 'smoke-placed', itemId: 'table', x: 2500, y: 2000, rot: 0 });
       window.__rp.commitFurn();
       window.draw();
     });
@@ -104,12 +101,7 @@ test.describe('smoke', () => {
 
     const result = await app.evaluate((file) => {
       const inc = window.readImport(file);
-      window.applyImport(
-        inc,
-        inc.layouts.map((l) => l.id),
-        inc.inventory.map((i) => i.id),
-        true, true, 'mine',
-      );
+      window.applyImport(inc, inc.layouts.map((l) => l.id), inc.inventory.map((i) => i.id), true, true, 'mine');
       const S = window.__rp.S;
       return {
         rooms: S.layouts.map((l) => l.name),
@@ -141,33 +133,13 @@ test.describe('smoke', () => {
     expect((await readS(app)).layouts[0].name).toBe('Persisted room');
   });
 
-  test('switching places does not throw', async ({ app }) => {
-    const errors = [];
-    app.on('pageerror', (e) => errors.push(String(e)));
-    for (const mode of ['room', 'furniture', 'floor', 'inventory', 'marketplace', 'furniture']) {
-      await app.evaluate((m) => window.setMode(m), mode);
-      await settle(app);
-    }
-    expect(errors).toEqual([]);
-    expect((await readS(app)).mode).toBe('furniture');
-  });
 });
 
 test.describe('the file:// deployment contract', () => {
-  /* "Open the file and it works" is the actual deployment model, and it is what
-     the refactor must not break: the shipped artifact has to stay one
-     self-contained HTML file with no network dependency. This opens the built
-     dist/index.html straight off disk — no server, no interception, so no __rp
-     here — and asserts it boots and paints anyway.
-
-     Phase 2 moved the subject of this test from the source index.html to the
-     build output, which is the plan's Tier 3 wording all along ("dist/index.html
-     opened via file:// boots and paints off disk"). It had to move: index.html
-     is now a Vite entry with `<script type="module">`, and module scripts are
-     fetched under CORS rules no file:// origin can satisfy, so the source file
-     no longer runs off disk. Nothing about the *shipped* artifact regressed —
-     dist/index.html is one self-contained file with a classic <script>, and the
-     assertions below are unchanged. */
+  /* "Open the file and it works" IS the product. The shipped artifact has to
+     stay one self-contained HTML file with no network dependency, and this is
+     the only test that proves it: dist/index.html opened straight off disk, no
+     server, no interception — so no __rp here either. */
   test('dist/index.html boots and paints straight off disk', async ({ page }) => {
     const external = [];
     page.on('request', (r) => { if (!r.url().startsWith('file://')) external.push(r.url()); });
@@ -190,15 +162,12 @@ test.describe('the file:// deployment contract', () => {
     await page.waitForTimeout(2000);   // let the boot-time fetches fire
     expect(errors).toEqual([]);
 
-    /* CHARACTERIZED, NOT ENDORSED. The refactor plan states the deployment
-       contract as "opened via file:// works with ZERO network requests". That
-       is not true today and was not made untrue by this branch: ensureDefaultMarket()
-       runs during boot and fetches the built-in marketplace subscription from
-       raw.githubusercontent.com, on file:// as much as anywhere else.
-       The app degrades gracefully when those fail — no page error above — so
-       the app still "works" offline, but it is not request-free.
-       Logged in BACKLOG.md "Known defects"; pinned here so Phase 2 does not
-       discover it as a surprise regression of its own making. */
+    /* CHARACTERIZED, NOT ENDORSED. The plan states the contract as "file://
+       works with ZERO network requests", and that is not true: ensureDefaultMarket()
+       fetches the built-in marketplace from raw.githubusercontent.com at boot,
+       on file:// as much as anywhere else. It degrades gracefully — no page
+       error above — so the app works offline, but it is not request-free.
+       Logged in BACKLOG.md "Known defects". */
     const hosts = [...new Set(external.map((u) => new URL(u).host))];
     expect(hosts).toEqual(['raw.githubusercontent.com']);
     expect(external.every((u) => u.includes('/marketplace/'))).toBe(true);

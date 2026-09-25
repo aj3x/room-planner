@@ -1,10 +1,7 @@
-/* exportPayload() -> readImport() -> applyImport().
- *
- * The one path where the app hands data to the outside world and takes it back,
- * so it is the clearest statement of what the data model actually IS. The
- * collision rules (keep mine / overwrite mine / add as a copy) are the subtle
- * part and are covered case by case.
- */
+/* exportPayload() -> readImport() -> applyImport(): the one path where the app
+ * hands data to the outside world and takes it back, and so the clearest
+ * statement of what the data model actually IS. The three collision rules
+ * (keep mine / overwrite mine / add as a copy) are the subtle part. */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { fixture, clone } from '../unit-setup.js';
@@ -46,11 +43,8 @@ describe('exportPayload()', () => {
 
   it('an items-only export carries no rooms, folders or floors', () => {
     const out = exportPayload([], ['sofa'], false);
-    expect(out.layouts).toEqual([]);
-    expect(out.folders).toEqual([]);
-    expect(out.floors).toEqual([]);
+    expect([out.layouts, out.folders, out.floors, out.active]).toEqual([[], [], [], undefined]);
     expect(out.inventory.map((i) => i.id)).toEqual(['sofa']);
-    expect(out.active).toBeUndefined();
   });
 
   it('deep-clones, so mutating the payload cannot corrupt live state', () => {
@@ -73,34 +67,30 @@ describe('readImport()', () => {
   });
 
   it('rejects a file with neither rooms nor items', () => {
-    expect(readImport(null)).toBeNull();
-    expect(readImport('a string')).toBeNull();
-    expect(readImport({})).toBeNull();
-    expect(readImport({ layouts: [], inventory: [] })).toBeNull();
+    for (const bad of [null, 'a string', {}, { layouts: [], inventory: [] }]) {
+      expect(readImport(bad)).toBeNull();
+    }
   });
 
   it('drops an inventory entry with no shape (it could not be drawn)', () => {
-    const inc = readImport({
-      inventory: [
-        { id: 'ok', name: 'Fine', shape: { type: 'rect', w: 100, d: 100 } },
-        { id: 'shapeless', name: 'Nope' },
-      ],
-    });
+    const inc = readImport({ inventory: [
+      { id: 'ok', name: 'Fine', shape: { type: 'rect', w: 100, d: 100 } },
+      { id: 'shapeless', name: 'Nope' },
+    ] });
     expect(inc.inventory.map((i) => i.id)).toEqual(['ok']);
   });
 
   it('coerces the prefs it accepts and drops the ones it does not', () => {
-    const inc = readImport({
+    const { prefs } = readImport({
       inventory: [{ id: 'x', shape: { type: 'rect', w: 10, d: 10 } }],
       unit: 'parsecs', invScope: 'galaxy', snap: 25.4,
       showSwing: 'yes', showDims: 0, onlyAvailable: 1,
     });
-    expect(inc.prefs.unit).toBeUndefined();
-    expect(inc.prefs.invScope).toBeUndefined();
-    expect(inc.prefs.snap).toBe('25.4');      // numbers become strings
-    expect(inc.prefs.showSwing).toBe(true);   // truthiness becomes a boolean
-    expect(inc.prefs.showDims).toBe(false);
-    expect(inc.prefs.onlyAvailable).toBe(true);
+    expect(prefs.unit).toBeUndefined();       // not a known unit
+    expect(prefs.invScope).toBeUndefined();   // not a known scope
+    expect(prefs.snap).toBe('25.4');          // numbers become strings
+    expect(prefs.showSwing).toBe(true);       // truthiness becomes a boolean
+    expect([prefs.showDims, prefs.onlyAvailable]).toEqual([false, true]);
   });
 });
 
@@ -130,29 +120,24 @@ describe('export -> import round trip is lossless', () => {
 
 describe('the Library folder tree does not survive export/import — characterized defect', () => {
   /* CHARACTERIZED, NOT ENDORSED. exportPayload() writes the LAYOUT folder tree
-     (S.folders) and the floors, but never S.itemFolders — the Inventory tab's
-     own folder tree — while still writing each item's item.folderId. So on
-     import: (1) item.folderId is a dangling reference in the receiving project;
-     and (2) reconcileTags() cannot explain the folder-inherited half of
-     item.tags, so it folds those tags into manualTags, permanently promoting an
-     inherited tag to a hand-picked one — after which re-filing the item no
-     longer removes it. Replace mode does it immediately; merge defers it to the
-     next load, equally permanently. ITEM_SCHEMA.md has no slot for itemFolders
-     either, so the Library tab's own Export has the same hole.
-     Logged in BACKLOG.md "Known defects". */
+     (S.folders) and the floors, but never S.itemFolders — while still writing
+     each item's folderId. So on import the folderId dangles, and reconcileTags()
+     cannot explain the folder-inherited half of item.tags, so it folds them into
+     manualTags: an inherited tag is permanently promoted to a hand-picked one,
+     after which re-filing the item no longer removes it. Full write-up, with
+     the fix, in BACKLOG.md "Known defects". */
 
-  const exported = () => exportPayload(['room-a'], ['ikea/kallax/4x2'], false);
+  let exported0;
+  beforeEach(() => { exported0 = exportPayload(['room-a'], ['ikea/kallax/4x2'], false); });
 
   it('the export envelope has no itemFolders key, but still writes folderId', () => {
-    const payload = exported();
-    expect(payload.itemFolders).toBeUndefined();
-    expect(payload.inventory[0].folderId).toBe('if-ikea');
+    expect(exported0.itemFolders).toBeUndefined();
+    expect(exported0.inventory[0].folderId).toBe('if-ikea');
   });
 
   it('after import the folder id dangles, and replace promotes the tag at once', () => {
-    const payload = exported();
     fresh();
-    applyImport(readImport(clone(payload)), ['room-a'], ['ikea/kallax/4x2'], false, true, 'mine');
+    applyImport(readImport(clone(exported0)), ['room-a'], ['ikea/kallax/4x2'], false, true, 'mine');
     const item = S.inventory.find((i) => i.id === 'ikea/kallax/4x2');
     expect(item.folderId).toBe('if-ikea');
     expect(S.itemFolders.find((f) => f.id === 'if-ikea')).toBeUndefined();
@@ -160,10 +145,8 @@ describe('the Library folder tree does not survive export/import — characteriz
   });
 
   it('merge defers the promotion to the next load, but it is just as permanent', () => {
-    const payload = exported();
     fresh();
-    applyImport(readImport(clone(payload)), ['room-a'], ['ikea/kallax/4x2'], false, false, 'mine');
-
+    applyImport(readImport(clone(exported0)), ['room-a'], ['ikea/kallax/4x2'], false, false, 'mine');
     const inSession = S.inventory.find((i) => i.id === 'ikea/kallax/4x2');
     expect(inSession.manualTags).toEqual(['storage']);                 // still correct here
     expect(inSession.tags.slice().sort()).toEqual(['ikea', 'storage']); // but 'ikea' is unexplained
@@ -175,8 +158,8 @@ describe('the Library folder tree does not survive export/import — characteriz
 });
 
 describe('applyImport() — merge collision rules', () => {
-  /* The incoming file and the project both hold an item with id 'sofa'.
-     The three answers to that are the heart of the merge. */
+  /* Both the incoming file and the project hold an item with id 'sofa'; the
+     three answers to that are the heart of the merge. */
   const incomingFile = () => ({
     app: 'room-planner', version: 2,
     layouts: [{
@@ -190,20 +173,20 @@ describe('applyImport() — merge collision rules', () => {
   const merge = (rule) =>
     applyImport(readImport(incomingFile()), ['incoming-room'], ['sofa'], false, false, rule);
 
+  const sofas = () => S.inventory.filter((i) => i.id === 'sofa');
+
   it('"keep mine": my item wins and their room re-points at it', () => {
     merge('mine');
-    const sofas = S.inventory.filter((i) => i.id === 'sofa');
-    expect(sofas).toHaveLength(1);
-    expect(sofas[0].name).toBe('Sofa');           // mine, untouched
+    expect(sofas()).toHaveLength(1);
+    expect(sofas()[0].name).toBe('Sofa');         // mine, untouched
     expect(S.layouts.find((l) => l.name === 'Their room').placed[0].itemId).toBe('sofa');
   });
 
   it('"overwrite mine": their item replaces mine in place, keeping the id', () => {
     merge('theirs');
-    const sofas = S.inventory.filter((i) => i.id === 'sofa');
-    expect(sofas).toHaveLength(1);
-    expect(sofas[0].name).toBe('THEIR sofa');
-    expect(sofas[0].count).toBe(9);
+    expect(sofas()).toHaveLength(1);
+    expect(sofas()[0].name).toBe('THEIR sofa');
+    expect(sofas()[0].count).toBe(9);
     // my own existing room still points at the same id, so it now shows their item
     expect(S.layouts.find((l) => l.id === 'room-a').placed.some((p) => p.itemId === 'sofa')).toBe(true);
   });
@@ -225,29 +208,22 @@ describe('applyImport() — merge collision rules', () => {
   });
 
   it('a placement whose item was not ticked is dropped', () => {
-    const inc = readImport({
-      layouts: [{
-        id: 'r2', name: 'Orphans',
-        room: { points: [[0, 0], [3000, 0], [3000, 3000], [0, 3000]], wall: 114 },
-        openings: [],
-        placed: [{ id: 'q1', itemId: 'nowhere-item', x: 0, y: 0, rot: 0 }],
-      }],
-      inventory: [],
-    });
+    const inc = readImport({ inventory: [], layouts: [{
+      id: 'r2', name: 'Orphans', openings: [],
+      room: { points: [[0, 0], [3000, 0], [3000, 3000], [0, 3000]], wall: 114 },
+      placed: [{ id: 'q1', itemId: 'nowhere-item', x: 0, y: 0, rot: 0 }],
+    }] });
     applyImport(inc, ['r2'], [], false, false, 'mine');
     expect(S.layouts.find((l) => l.name === 'Orphans').placed).toEqual([]);
   });
 
   it('an incoming folder id that already exists IS that folder, not a second one', () => {
-    const inc = readImport({
-      layouts: [{
-        id: 'r3', name: 'Filed', folderId: 'fold-home',
-        room: { points: [[0, 0], [3000, 0], [3000, 3000], [0, 3000]], wall: 114 },
-        openings: [], placed: [],
-      }],
+    const inc = readImport({ inventory: [],
       folders: [{ id: 'fold-home', name: 'A DIFFERENT NAME', parentId: null }],
-      inventory: [],
-    });
+      layouts: [{
+        id: 'r3', name: 'Filed', folderId: 'fold-home', openings: [], placed: [],
+        room: { points: [[0, 0], [3000, 0], [3000, 3000], [0, 3000]], wall: 114 },
+      }] });
     applyImport(inc, ['r3'], [], false, false, 'mine');
     expect(S.folders.filter((f) => f.id === 'fold-home')).toHaveLength(1);
     expect(S.folders.find((f) => f.id === 'fold-home').name).toBe('Home'); // mine kept
@@ -255,14 +231,10 @@ describe('applyImport() — merge collision rules', () => {
   });
 
   it('an imported room gets a fresh id when its id is already taken', () => {
-    const inc = readImport({
-      layouts: [{
-        id: 'room-a', name: 'Collides with mine',
-        room: { points: [[0, 0], [3000, 0], [3000, 3000], [0, 3000]], wall: 114 },
-        openings: [], placed: [],
-      }],
-      inventory: [],
-    });
+    const inc = readImport({ inventory: [], layouts: [{
+      id: 'room-a', name: 'Collides with mine', openings: [], placed: [],
+      room: { points: [[0, 0], [3000, 0], [3000, 3000], [0, 3000]], wall: 114 },
+    }] });
     applyImport(inc, ['room-a'], [], false, false, 'mine');
     const mine = S.layouts.filter((l) => l.id === 'room-a');
     expect(mine).toHaveLength(1);

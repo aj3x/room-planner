@@ -78,7 +78,7 @@ export default defineConfig({
       /* `npm run test:e2e` builds both dist/ and dist-test/ first; this only
          serves. Keeping the build out of here means a bad build fails as a
          build, with its own error, rather than as a server timeout. */
-      command: 'node test/e2e/static-server.js dist-test 4173',
+      command: 'npx vite preview --outDir dist-test --port 4173 --strictPort',
       url: `${DIST}/index.html`,
       reuseExistingServer: !process.env.CI,
       stdout: 'ignore',

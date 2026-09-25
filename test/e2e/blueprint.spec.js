@@ -1,22 +1,20 @@
 /* Blueprint detection golden — `example blueprints/apartment-1.png`.
  *
- * ~2,450 lines of the file are the blueprint importer, and almost all of it is
- * pixel work: thresholding, connected components, run-length wall banding,
- * region derivation, polygon tracing and cleanup. None of that can run under
- * jsdom, so this is where it is characterized.
+ * ~2,450 lines of the app are the blueprint importer, almost all of it pixel
+ * work: thresholding, connected components, run-length wall banding, region
+ * derivation, polygon tracing and cleanup. It is the most complex pipeline in
+ * the app and the hardest to eyeball, and none of it runs under jsdom.
  *
  * The polygons are the point. A screenshot of the review stage would go green
- * on a pipeline that had drifted by a few millimetres everywhere; a coordinate
- * golden will not. Counts are asserted explicitly on top, because "9 rooms and
- * 14 openings" is the number a human verified against the real photo, and it is
- * what makes the golden meaningful rather than merely self-consistent.
+ * on a pipeline that had drifted a few millimetres everywhere; a coordinate
+ * golden will not. The counts are asserted on top because "9 rooms and 14
+ * openings" is a number a human verified against the real photo, which is what
+ * makes the golden meaningful rather than merely self-consistent.
  *
- * OCR is deliberately not tested: bpLoadTesseract pulls the library from a CDN
- * at run time, so any test of it fails for reasons unrelated to the code. It
- * runs AFTER region derivation and never touches polyPx, so leaving it out
- * costs the geometry golden nothing. The scale it normally supplies is pinned
- * to a fixed 13 mm/px below instead.
- */
+ * OCR is deliberately not tested: it pulls Tesseract from a CDN at run time, so
+ * any test of it fails for reasons unrelated to the code. It runs AFTER region
+ * derivation and never touches polyPx, so leaving it out costs the golden
+ * nothing — the scale it would supply is pinned to 13 mm/px below. */
 
 import { test, expect, BLUEPRINT_PNG, settle } from './app-fixture.js';
 
@@ -28,10 +26,8 @@ async function detect(page) {
   await page.click('#btnImportBlueprint');
   await page.waitForSelector('#bpFile', { state: 'attached' });
   await page.setInputFiles('#bpFile', BLUEPRINT_PNG);
-  // choosing a photo is itself the confirmation; the wizard advances to crop
-  await page.waitForSelector('#bpCrop', { state: 'attached' });
-  // accept the default crop box
-  await page.click('#moOk');
+  await page.waitForSelector('#bpCrop', { state: 'attached' });  // the photo is the confirmation
+  await page.click('#moOk');                                      // accept the default crop box
   await page.waitForFunction(
     () => window.__rp.bpState && window.__rp.bpState.proposal,
     null,
@@ -58,11 +54,10 @@ test.describe('blueprint detection', () => {
 
   test('rooms rebuilt at a fixed scale are a stable golden in millimetres', async ({ app }) => {
     await detect(app);
-    /* Detection runs entirely in pixel space; the scale is a separate, later
-       input. OCR usually supplies it, but OCR needs the network — so pin a
-       fixed 13 mm/px here. That makes this a pure test of bpRebuild ->
-       bpCleanPoly -> polySimple, which is where the "rooms came out
-       permanently uneditable" class of bug lives. */
+    /* Detection is pixel-space; the scale is a separate, later input, so
+       pinning 13 mm/px makes this a pure test of bpRebuild -> bpCleanPoly ->
+       polySimple — where the "rooms came out permanently uneditable" class of
+       bug lives. */
     const draft = await app.evaluate(() => {
       window.__rp.bpState.edits.scale = { x: 13, y: 13, source: 'read' };
       const d = window.bpRebuild();
@@ -89,9 +84,9 @@ test.describe('blueprint detection', () => {
 
   test('every rebuilt room passes the polygon gate that makes it editable', async ({ app }) => {
     /* bpCleanPoly normalises winding, drops collinear vertices and merges
-       sub-50mm edges BEFORE polySimple, which is the only polygon gate in the
-       app. A weakened copy of that gate is what made an earlier attempt's rooms
-       permanently uneditable, so assert the real one directly. */
+       sub-50mm edges before polySimple, the app's only polygon gate. A weakened
+       copy of that gate is what made an earlier attempt's rooms permanently
+       uneditable, so assert the real one. */
     await detect(app);
     const ok = await app.evaluate(() => {
       window.__rp.bpState.edits.scale = { x: 13, y: 13, source: 'read' };
@@ -102,8 +97,8 @@ test.describe('blueprint detection', () => {
   });
 
   test('the photo never reaches S, so save() cannot be poisoned', async ({ app }) => {
-    /* save() serialises the whole of S into localStorage. Megabytes of base64
-       there breaks saving permanently and silently, which is why bpState is a
+    /* save() serialises the whole of S into localStorage; megabytes of base64
+       there breaks saving permanently and silently. That is why bpState is a
        module-level binding and not part of S. */
     await detect(app);
     const leak = await app.evaluate(() => {

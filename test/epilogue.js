@@ -1,29 +1,22 @@
 /* The capture epilogue — Suite B's only way into the app's internals.
  *
  * index.html's one <script> is a Vite entry, `type="module"`, so it has its own
- * scope: its top-level `let`/`const` bindings and its `function` declarations
- * are unreachable from a test no matter how hard you poke. This snippet is
- * APPENDED to an in-memory copy of that script (by vite.config.js, under
- * `--mode instrumented`) so the handful of names the suite needs become
- * reachable on `window.__rp` and on the global object.
+ * scope: its top-level bindings are unreachable from a test no matter how hard
+ * you poke. This snippet is APPENDED to an in-memory copy of that script (by
+ * vite.config.js, under `--mode instrumented`) so the handful of names the
+ * suite needs become reachable on `window.__rp` and on the global object.
+ * Appended, never prepended: "use strict" has to stay the first statement or
+ * the app silently changes semantics. index.html itself is never written to.
  *
- * Appended, never prepended: "use strict" has to stay the first statement of
- * the script or the whole app silently changes semantics.
+ * TWO RULES, both learned the hard way (test/README.md has the long version):
+ * **`__rp` is not linted** — ESLint never sees this file appended to
+ * index.html, so when the last index.html reader of an `__rp` name moves into
+ * src/, the app throws a bare ReferenceError during *module evaluation*, with
+ * a green build and a green browser. And **`GLOBALS` fails silently** — it
+ * assigns inside a try/catch, so such a name just stops being on `window` and
+ * surfaces much later as `window.foo is not a function`.
  *
- * index.html itself is never written to. Only the copy Vite builds is rewritten.
- *
- * ---------------------------------------------------------------------------
- * TWO RULES, both learned the hard way. Read test/README.md before editing.
- *
- * 1. **`__rp` is not linted.** ESLint lints index.html on its own and never
- *    sees this file appended to it. When the last index.html reader of an
- *    `__rp` name moves into src/, the app throws a bare ReferenceError during
- *    *module evaluation* — with a green build and a green browser.
- * 2. **`GLOBALS` fails silently.** It assigns inside a try/catch, so a name
- *    that has left index.html's scope simply stops being on `window`, and you
- *    find out much later as `window.foo is not a function`.
- *
- * So: after any move, check every name below is still declared or imported in
+ * So after any move, check every name below is still declared or imported in
  * index.html — or import it here, which is strictly better and is what the
  * imports below do.
  */

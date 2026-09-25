@@ -1,10 +1,8 @@
 /* Playwright fixture: the real app, in a real browser, made deterministic.
  *
  * index.html is never modified. The copy the browser parses has the capture
- * epilogue appended to it, so the script's let/const bindings are reachable on
- * window.__rp; that copy is made by Vite (`--mode instrumented`), not here.
- * The file on disk stays byte-for-byte what ships.
- */
+ * epilogue appended to it (by Vite, under `--mode instrumented`), so the
+ * script's let/const bindings are reachable on window.__rp. */
 
 import { test as base, expect } from '@playwright/test';
 import fs from 'node:fs';
@@ -15,10 +13,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '../..');
 export const BLUEPRINT_PNG = path.join(REPO_ROOT, 'example blueprints/apartment-1.png');
 
-/* The shipped artifact, and the subject of the file:// contract. The source
-   index.html is a Vite entry whose one <script> is `type="module"`, and a module
-   script is fetched under CORS rules an opaque file:// origin can never satisfy,
-   so the source file does not run off disk. dist/index.html does. */
+/* The shipped artifact, and the subject of the file:// contract: index.html's
+   one <script> is `type="module"`, fetched under CORS rules no file:// origin
+   can satisfy, so the source file does not run off disk. dist/index.html does. */
 export const DIST_HTML = path.join(REPO_ROOT, 'dist/index.html');
 
 export const fixtureState = (name) =>
@@ -59,10 +56,9 @@ export const test = base.extend({
     await page.addInitScript(DETERMINISM);
 
     if (savedState) {
-      /* Seed only when storage is empty. addInitScript runs on EVERY navigation,
-         so an unconditional write would silently undo whatever the app itself
-         had saved and make a re-navigation look like it lost the edit. The
-         context is fresh per test, so this still seeds exactly once. */
+      /* Only when storage is empty: addInitScript runs on EVERY navigation, so
+         an unconditional write would undo whatever the app itself had saved and
+         make a re-navigation look like it lost the edit. */
       await page.addInitScript(
         ([k, v]) => {
           try { if (localStorage.getItem(k) === null) localStorage.setItem(k, v); } catch { /* ignore */ }
@@ -70,9 +66,7 @@ export const test = base.extend({
         [APP_KEY, JSON.stringify(savedState)],
       );
     } else {
-      await page.addInitScript(([k]) => {
-        try { localStorage.removeItem(k); } catch { /* ignore */ }
-      }, [APP_KEY]);
+      await page.addInitScript(([k]) => { try { localStorage.removeItem(k); } catch { /* ignore */ } }, [APP_KEY]);
     }
 
     await page.goto(`${baseURL}/index.html`);
@@ -91,23 +85,18 @@ export async function waitForApp(page) {
 }
 
 /** Let the app's own rAF-scheduled draw land, twice over. */
-export async function settle(page) {
-  await page.evaluate(
-    () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 0)))),
-  );
-}
+export const settle = (page) => page.evaluate(
+  () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 0)))));
 
 /** Read the live state out of the page. */
 export const readS = (page) => page.evaluate(() => JSON.parse(JSON.stringify(window.__rp.S)));
 
-/** Flush the debounced save() and read back what landed in storage.
+/** Flush the debounced save() (350ms) and read back what landed in storage.
  *
- * save() debounces at 350ms. Waiting a fixed 450ms leaves a 100ms margin that a
- * loaded machine eats — that was the one flaky test this suite ever had. So poll
- * for the write instead of sleeping through it. `want` is an optional predicate
- * on the parsed state; pass one whenever the assertion depends on a *particular*
- * write having landed, or a value left by an earlier save satisfies the non-null
- * check and the race is still there, just quieter. */
+ * POLLS — it used to sleep 450ms, and that 100ms margin was the one flake this
+ * suite ever had. `want` is an optional predicate on the parsed state; pass one
+ * whenever the assertion needs a *particular* write, or a value left by an
+ * earlier save satisfies the non-null check and the race is merely quieter. */
 export async function flushSave(page, want, timeout = 5000) {
   const read = () => page.evaluate((k) => {
     const raw = localStorage.getItem(k);
@@ -120,10 +109,7 @@ export async function flushSave(page, want, timeout = 5000) {
     const last = await read();
     if (last !== null && (!want || want(last))) return last;
     if (Date.now() > deadline) {
-      throw new Error(
-        `flushSave: the expected write never landed within ${timeout}ms. `
-        + `Last value in storage: ${JSON.stringify(last)}`,
-      );
+      throw new Error(`flushSave: no matching write within ${timeout}ms. Last: ${JSON.stringify(last)}`);
     }
     await page.waitForTimeout(50);
   }
@@ -132,32 +118,20 @@ export async function flushSave(page, want, timeout = 5000) {
 export { expect };
 
 /* ---------------------------------------------------------------------------
-   Pointer input
+   Pointer input. Three things these exist to get right:
 
-   These drive the app through the browser's real pointer pipeline —
-   `mouse.down` / `mouse.move` / `mouse.up` on `#cv` — because that is the only
-   way the drag deadzone, the alignment magnet and the guide readouts are
-   reached at all. Two things they exist to get right:
+   1. **Coordinates.** Tests are written in world millimetres; `page.mouse`
+      takes viewport CSS px. The camera (`view.ox`/`oy`/`scale`) is set by
+      `fit()` and moves during a pan, so it is read fresh for every gesture.
+   2. **Intermediate moves.** A drag arms only once a `pointermove` lands
+      further than `DEADZONE_PX` (4) from the press. One jump arms it *and*
+      applies the whole travel in a single step, which is not the path a real
+      drag takes — so a drag is always stepped.
+   3. **Guides are readable only MID-drag.** `endDrag()` clears `alignGuides`,
+      `alignNote` and `#readout`'s `.snap` span.
 
-   1. **Coordinates.** Tests are written in world millimetres; `pointerdown`
-      reads `e.offsetX`/`e.offsetY`, canvas-relative CSS px; `page.mouse` takes
-      viewport CSS px. The camera (`view.ox`/`oy`/`scale`) is set by `fit()` and
-      moves during a pan, so it is read fresh for every gesture. `#cv` has no
-      border or padding, so its border box and padding box coincide and
-      `getBoundingClientRect()` is the offset origin.
-
-   2. **Intermediate moves.** `DEADZONE_PX` is 4 canvas px, and a drag arms only
-      once a `pointermove` lands further than that from where the pointer went
-      down. One jump from start to finish arms it and then applies the whole
-      travel in a single step, a different code path from the real thing. So a
-      drag is always stepped.
-
-   Nothing here sleeps. `settle()` waits on the app's own rAF, and the drag's
+   Nothing here sleeps: `settle()` waits on the app's own rAF, and the drag's
    effect on state is synchronous inside `applyDragAt`.
-
-   Guides can only be read MID-drag: `endDrag()` clears `alignGuides`,
-   `alignNote`, `floorGuides` and `floorSnapNote`, and `#readout`'s `.snap` span
-   goes with them.
 --------------------------------------------------------------------------- */
 
 /** The canvas's viewport origin plus the live camera, read together. */
@@ -169,24 +143,19 @@ export const camera = (page) => page.evaluate(() => {
 });
 
 /** Project world mm -> viewport CSS px using a camera snapshot from `camera()`. */
-export const project = (cam, [x, y]) => ({
-  x: cam.left + cam.ox + x * cam.scale,
-  y: cam.top + cam.oy + y * cam.scale,
-});
+export const project = (cam, [x, y]) =>
+  ({ x: cam.left + cam.ox + x * cam.scale, y: cam.top + cam.oy + y * cam.scale });
 
-/* The floating `.island` controls sit over the canvas at its four corners, and
-   `edgePanVel` starts auto-panning inside 40px of any edge. A gesture that
-   strays into either is not testing what it thinks it is. The tallest island is
-   36px tall at a 12px inset, so 56px clears both with one number. */
+/* `edgePanVel` auto-pans inside 40px of any edge, and the floating `.island`
+   controls sit over the corners (36px tall at a 12px inset). A gesture that
+   strays into either is not testing what it thinks it is; 56px clears both. */
 const SAFE_INSET = 56;
 export function assertUsable(cam, p, what) {
   const ox = p.x - cam.left, oy = p.y - cam.top;
   if (ox < SAFE_INSET || oy < SAFE_INSET || ox > cam.width - SAFE_INSET || oy > cam.height - SAFE_INSET) {
-    throw new Error(
-      `${what} projects to canvas px (${ox.toFixed(1)}, ${oy.toFixed(1)}) on a `
-      + `${cam.width}x${cam.height} canvas, within ${SAFE_INSET}px of an edge — that is the `
-      + 'auto-pan zone and the floating island controls. Pick a point nearer the middle.',
-    );
+    throw new Error(`${what} projects to (${ox.toFixed(1)}, ${oy.toFixed(1)}) on a `
+      + `${cam.width}x${cam.height} canvas — within ${SAFE_INSET}px of an edge, which is the `
+      + 'auto-pan zone and the island controls. Pick a point nearer the middle.');
   }
 }
 

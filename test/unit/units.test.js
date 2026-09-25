@@ -39,20 +39,13 @@ describe('parseLen — explicit units win regardless of the display unit', () =>
 describe('parseLen — a bare number takes the display unit', () => {
   const bare = [
     ['12', 'ftin', 12 * 25.4],   // ft+in mode reads a bare number as inches
-    ['12', 'in', 12 * 25.4],
-    ['12', 'cm', 120],
-    ['12', 'mm', 12],
-    ['12', 'm', 12000],
+    ['12', 'in', 12 * 25.4], ['12', 'cm', 120], ['12', 'mm', 12], ['12', 'm', 12000],
   ];
   for (const [input, unit, mm] of bare) {
-    it(`"${input}" in ${unit} -> ${mm}mm`, () => {
-      expect(parseLen(input, unit)).toBeCloseTo(mm, 6);
-    });
+    it(`"${input}" in ${unit} -> ${mm}mm`, () => expect(parseLen(input, unit)).toBeCloseTo(mm, 6));
   }
-
-  it('falls back to millimetres when the display unit is unknown', () => {
-    expect(parseLen('12', 'furlongs')).toBe(12);
-  });
+  it('falls back to millimetres when the display unit is unknown', () =>
+    expect(parseLen('12', 'furlongs')).toBe(12));
 });
 
 describe('parseLen — compound and fractional input', () => {
@@ -60,37 +53,29 @@ describe('parseLen — compound and fractional input', () => {
     expect(parseLen(`3' 6"`, 'ftin')).toBeCloseTo(1066.8, 6);
     expect(parseLen(`3ft 6in`, 'ftin')).toBeCloseTo(1066.8, 6);
   });
-  it('sums three terms', () => {
-    expect(parseLen('1m 20cm 5mm', 'mm')).toBeCloseTo(1205, 6);
-  });
+  it('sums three terms', () => expect(parseLen('1m 20cm 5mm', 'mm')).toBeCloseTo(1205, 6));
   it('reads a fraction', () => {
     expect(parseLen('1/2"', 'ftin')).toBeCloseTo(12.7, 6);
     expect(parseLen('3/8 in', 'ftin')).toBeCloseTo(9.525, 6);
   });
-  it('reads feet plus a fractional inch as two terms', () => {
-    expect(parseLen(`2' 1/2"`, 'ftin')).toBeCloseTo(609.6 + 12.7, 6);
-  });
-  it('is case-insensitive and tolerates surrounding space', () => {
-    expect(parseLen('  10 CM  ', 'mm')).toBeCloseTo(100, 6);
-  });
-  it('divides by zero into NaN, which is then skipped', () => {
-    expect(Number.isNaN(parseLen('1/0"', 'ftin'))).toBe(true);
-  });
+  it('reads feet plus a fractional inch as two terms', () =>
+    expect(parseLen(`2' 1/2"`, 'ftin')).toBeCloseTo(609.6 + 12.7, 6));
+  it('is case-insensitive and tolerates surrounding space', () =>
+    expect(parseLen('  10 CM  ', 'mm')).toBeCloseTo(100, 6));
+  it('divides by zero into NaN, which is then skipped', () =>
+    expect(Number.isNaN(parseLen('1/0"', 'ftin'))).toBe(true));
 });
 
 describe('parseLen — unicode minus signs', () => {
   for (const [label, dash] of [['hyphen-minus', '-'], ['U+2212 minus', '−'], ['en dash', '–'], ['em dash', '—']]) {
-    it(`${label} yields a negative length`, () => {
-      expect(parseLen(`${dash}250mm`, 'mm')).toBeCloseTo(-250, 6);
-    });
+    it(`${label} yields a negative length`, () =>
+      expect(parseLen(`${dash}250mm`, 'mm')).toBeCloseTo(-250, 6));
   }
 });
 
 describe('parseLen — nothing usable is NaN', () => {
   for (const bad of [null, undefined, '', '   ', 'abc', '—', 'wide']) {
-    it(`${JSON.stringify(bad)} -> NaN`, () => {
-      expect(Number.isNaN(parseLen(bad, 'mm'))).toBe(true);
-    });
+    it(`${JSON.stringify(bad)} -> NaN`, () => expect(Number.isNaN(parseLen(bad, 'mm'))).toBe(true));
   }
 });
 
@@ -111,9 +96,7 @@ describe('fmtLen', () => {
     [-1066.8, 'ftin', `-3' 6"`],
   ];
   for (const [mm, unit, out] of cases) {
-    it(`${mm}mm in ${unit} -> ${out}`, () => {
-      expect(fmtLen(mm, unit)).toBe(out);
-    });
+    it(`${mm}mm in ${unit} -> ${out}`, () => expect(fmtLen(mm, unit)).toBe(out));
   }
 
   it('renders a non-finite length as an em dash', () => {
@@ -129,24 +112,21 @@ describe('fmtLen', () => {
 
 describe('round trip: fmtLen -> parseLen', () => {
   const lengths = [0, 1, 12.7, 25.4, 100, 304.8, 1066.8, 2438.4, 4270, 12700];
-  for (const unit of ['mm', 'cm', 'm', 'in', 'ftin']) {
-    for (const mm of lengths) {
-      it(`${mm}mm survives a trip through ${unit}`, () => {
-        const back = parseLen(fmtLen(mm, unit), unit);
-        // each unit only round-trips to its own displayed precision
-        /* each unit round-trips only to the precision it actually displays:
-           mm 0dp, cm 1dp (=1mm), m 2dp (=10mm), in 2dp (=0.254mm), ftin 1/8" */
-        const tol = { mm: 0.5, cm: 0.5, m: 5, in: 0.005 * 25.4, ftin: 25.4 / 16 }[unit];
-        expect(Math.abs(back - mm)).toBeLessThanOrEqual(tol);
-      });
-    }
+  /* each unit round-trips only to the precision it actually displays:
+     mm 0dp, cm 1dp (=1mm), m 2dp (=10mm), in 2dp (=0.254mm), ftin 1/8" */
+  const TOL = { mm: 0.5, cm: 0.5, m: 5, in: 0.005 * 25.4, ftin: 25.4 / 16 };
+  for (const unit of Object.keys(TOL)) {
+    it(`every length survives a trip through ${unit}`, () => {
+      for (const mm of lengths) {
+        expect(Math.abs(parseLen(fmtLen(mm, unit), unit) - mm)).toBeLessThanOrEqual(TOL[unit]);
+      }
+    });
   }
 
   /* CHARACTERIZED DEFECT, NOT ENDORSED. fmtLen puts one leading '-' on the whole
-     string ("-3' 6\""), but parseLen sums each term with its own sign, so it reads
-     that back as -3ft PLUS 6in = -762mm, not -1066.8mm. Negative ft+in is the one
-     lossy round trip in the unit system. Logged in BACKLOG.md "Known defects";
-     pinned here so the split cannot quietly change it in either direction. */
+     string, but parseLen sums each term with its own sign, so it reads that back
+     as -3ft PLUS 6in = -762mm. ft+in is the only compound unit and so the only
+     lossy round trip. Logged in BACKLOG.md "Known defects". */
   it('a negative ft+in length does NOT round-trip (known defect)', () => {
     expect(fmtLen(-1066.8, 'ftin')).toBe(`-3' 6"`);
     expect(parseLen(`-3' 6"`, 'ftin')).toBeCloseTo(-762, 6);
@@ -160,7 +140,7 @@ describe('round trip: fmtLen -> parseLen', () => {
 });
 
 describe('fmtArea', () => {
-  it('reports square feet in imperial modes and square metres otherwise', () => {
+  it('is square feet in imperial modes and square metres otherwise', () => {
     expect(fmtArea(92903.04, 'ftin')).toBe('1 sq ft');
     expect(fmtArea(92903.04, 'in')).toBe('1 sq ft');
     expect(fmtArea(1e6, 'm')).toBe('1 m²');
@@ -171,8 +151,8 @@ describe('fmtArea', () => {
 
 describe('UNIT_RE is stateful — a regression guard', () => {
   /* UNIT_RE is a module-level /g regex and parseLen resets lastIndex itself.
-     If a refactor moves the regex or the reset apart, consecutive calls start
-     returning wrong answers. This catches exactly that. */
+     Move the regex and the reset apart and consecutive calls start returning
+     wrong answers. */
   it('gives the same answer when called repeatedly', () => {
     for (let i = 0; i < 5; i++) {
       expect(parseLen(`3' 6"`, 'ftin')).toBeCloseTo(1066.8, 6);

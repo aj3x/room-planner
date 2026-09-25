@@ -1,12 +1,10 @@
 /* Suite A's environment: enough of a document for src/ to evaluate in.
  *
- * The unit tests import real modules out of src/. Several of them reach the DOM
- * at module-evaluation time -- canvas/view.js does `$('cv').getContext('2d')` on
+ * The unit tests import real modules out of src/, and several reach the DOM at
+ * module-evaluation time -- canvas/view.js does `$('cv').getContext('2d')` on
  * its first line -- so the shell has to exist, and jsdom has to answer
- * getContext, before the first import runs.
- *
- * index.html is never modified. The shell is read off disk.
- */
+ * getContext, before the first import runs. index.html is never modified; the
+ * shell is read off disk. */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,9 +28,8 @@ const close = src.lastIndexOf('</script>');
 document.documentElement.innerHTML =
   src.slice(0, open) + src.slice(close + '</script>'.length);
 
-/* jsdom has no canvas. This records calls rather than rasterising: enough for
-   draw() to run without throwing, which is all Suite A needs. Anything that
-   depends on real PIXELS belongs in Suite B. */
+/* jsdom has no canvas. This records calls rather than rasterising -- enough for
+   draw() to run without throwing. Anything needing real PIXELS is Suite B. */
 function FakeCtx(canvas) { this.canvas = canvas; this.__calls = []; }
 for (const m of ['save','restore','scale','rotate','translate','transform','setTransform',
   'resetTransform','clearRect','fillRect','strokeRect','beginPath','closePath','moveTo',
@@ -46,8 +43,9 @@ FakeCtx.prototype.measureText = (t) => ({
 FakeCtx.prototype.createLinearGradient = () => ({ addColorStop() {} });
 FakeCtx.prototype.createRadialGradient = () => ({ addColorStop() {} });
 FakeCtx.prototype.createPattern = () => null;
-FakeCtx.prototype.getImageData = (x, y, w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(Math.max(0, w * h * 4)) });
-FakeCtx.prototype.createImageData = (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(Math.max(0, w * h * 4)) });
+const pixels = (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(Math.max(0, w * h * 4)) });
+FakeCtx.prototype.getImageData = (x, y, w, h) => pixels(w, h);
+FakeCtx.prototype.createImageData = pixels;
 FakeCtx.prototype.isPointInPath = () => false;
 window.HTMLCanvasElement.prototype.getContext = function (kind) {
   if (kind !== '2d') return null;
@@ -55,13 +53,11 @@ window.HTMLCanvasElement.prototype.getContext = function (kind) {
   return this.__ctx;
 };
 
-/* The app takes matchMedia at top level (darkMQ, and the narrow-layout query).
+/* The app takes matchMedia at top level (darkMQ, and the narrow-layout query);
    jsdom's own lacks addEventListener in some versions. Light, wide. */
-window.matchMedia = (q) => ({
-  media: q, matches: false, onchange: null,
+window.matchMedia = (q) => ({ media: q, matches: false, onchange: null,
   addEventListener() {}, removeEventListener() {},
-  addListener() {}, removeListener() {}, dispatchEvent: () => false,
-});
+  addListener() {}, removeListener() {}, dispatchEvent: () => false });
 
 /* ---- shared test helpers ---------------------------------------------- */
 
@@ -72,10 +68,10 @@ export const fixture = (name) =>
 /** Deep-clone through JSON, the way the app's own clone() does. */
 export const clone = (v) => JSON.parse(JSON.stringify(v));
 
-/* Ids are an implementation detail: one extra uid() call upstream shifts every
-   id downstream and turns a harmless change into a hundred-line snapshot diff.
-   Snapshots normalise them to ordinals, which still proves *identity* -- the
-   same id in two places stays the same ordinal in both. */
+
+/* Ids are an implementation detail: one extra uid() upstream shifts every id
+   downstream and turns a harmless change into a hundred-line snapshot diff.
+   Ordinals still prove *identity* -- the same id maps to the same ordinal. */
 export function stableIds(value) {
   const seen = new Map();
   const tag = (v) => {

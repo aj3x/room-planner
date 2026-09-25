@@ -1,13 +1,10 @@
-/* Golden-file characterization of migrate() / normLayout() / normItem().
+/* Golden-file tests for migrate() / normLayout() / normItem().
  *
- * The single most load-bearing artifact in the suite: migrate() is what every
- * returning user's saved project passes through on every load, and a silent
- * change to it corrupts real data with no error anywhere. If one of these
- * snapshots moves, read the diff before re-baselining.
- *
- * Ids are normalised to ordinals (see stableIds) so that an extra uid() call
- * upstream does not rewrite the whole file; identity is still proven, because
- * the same id in two places maps to the same ordinal in both.
+ * The most load-bearing file in the suite: migrate() is what every returning
+ * user's saved project passes through on every load, and a silent change to it
+ * corrupts real data with no error anywhere. If a snapshot moves, read the diff
+ * before re-baselining. Ids are normalised to ordinals (stableIds) so an extra
+ * uid() upstream does not rewrite the file; identity is still proven.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -40,12 +37,9 @@ describe('migrate() invariants that hold for every fixture', () => {
 
       expect(Array.isArray(st.layouts) && st.layouts.length).toBeTruthy();
       for (const key of ['inventory', 'folders', 'floors', 'tagFilter', 'secClosed',
-        'itemFolders', 'marketFolders', 'marketListings', 'marketSubs']) {
-        expect(Array.isArray(st[key]), `${key} must be an array`).toBe(true);
-      }
+        'itemFolders', 'marketFolders', 'marketListings', 'marketSubs']) expect(Array.isArray(st[key]), key).toBe(true);
       expect(['room', 'furniture', 'floor', 'inventory', 'marketplace']).toContain(st.mode);
       expect(['project', 'folder', 'room']).toContain(st.invScope);
-      expect(typeof st.zoomSpeed).toBe('number');
       expect(Number.isFinite(st.zoomSpeed) && st.zoomSpeed > 0).toBe(true);
       expect(st.layouts.some((l) => l.id === st.active)).toBe(true);
 
@@ -53,16 +47,12 @@ describe('migrate() invariants that hold for every fixture', () => {
       for (const l of st.layouts) {
         expect(Array.isArray(l.room.points)).toBe(true);
         expect(l.room.points.length).toBeGreaterThanOrEqual(3);
-        expect(Array.isArray(l.openings)).toBe(true);
-        expect(Array.isArray(l.placed)).toBe(true);
-        expect(Array.isArray(l.measures)).toBe(true);
-        expect(Array.isArray(l.room.pillars)).toBe(true);
-        expect(Array.isArray(l.room.iwalls)).toBe(true);
+        for (const a of [l.openings, l.placed, l.measures, l.room.pillars, l.room.iwalls]) {
+          expect(Array.isArray(a)).toBe(true);
+        }
         expect(typeof l.dimLabel).toBe('string');
         expect(l.id).toBeTruthy();
-        expect(l.doors).toBeUndefined();
-        expect(l.room.w).toBeUndefined();
-        expect(l.room.d).toBeUndefined();
+        expect([l.doors, l.room.w, l.room.d]).toEqual([undefined, undefined, undefined]);
         if (l.floorId) expect(floorIds.has(l.floorId)).toBe(true);
         for (const o of l.openings) expect(['cw', 'ccw']).toContain(o.corner);
         for (const p of l.placed) expect(p.id && p.itemId).toBeTruthy();
@@ -94,11 +84,10 @@ describe('migrate() repairs a damaged state rather than throwing', () => {
   });
 
   it('CHARACTERIZED, NOT ENDORSED: isFinite(null) is true, so null coordinates survive', () => {
-    /* normLayout guards with isFinite(p.y), and isFinite(null) is true because
-       null coerces to 0 — so the string "nope" is repaired to 0 but null sails
-       straight through, leaving a null where geometry code expects a number.
-       See BACKLOG.md "Known defects". Locked in so a change has to be
-       deliberate; Number.isFinite would be the fix. */
+    /* normLayout guards with isFinite(p.y), and null coerces to 0 — so "nope"
+       is repaired to 0 but null sails through, leaving a null where geometry
+       code expects a number. Number.isFinite would be the fix.
+       See BACKLOG.md "Known defects". */
     const l = migrate(clone(fixture('edge-dangling-refs.json'))).layouts[0];
     expect(l.floorPlace).toEqual({ x: 0, y: null, rot: 90 });
     const pil = l.room.pillars.find((p) => p.id === 'pil-ok');
@@ -122,11 +111,11 @@ describe('migrate() is idempotent', () => {
 
 describe('migrate() does not validate S.unit — characterized defect', () => {
   /* CHARACTERIZED, NOT ENDORSED. migrate() range-checks mode, planMode,
-     invScope and zoomSpeed, but never unit — so a corrupt or hand-edited saved
-     state keeps a nonsense unit forever. readImport() DOES validate the same
-     field, so the import path is stricter than the load path. Downstream the
-     two halves disagree: fmtLen falls through to its ft+in default while
-     parseLen, finding no BARE entry, reads bare numbers as millimetres.
+     invScope and zoomSpeed, but never unit, so a corrupt or hand-edited state
+     keeps a nonsense unit forever — while readImport() DOES validate the same
+     field, making the import path stricter than the load path. The two halves
+     then disagree: fmtLen falls through to its ft+in default while parseLen,
+     finding no BARE entry, reads bare numbers as millimetres.
      Logged in BACKLOG.md "Known defects". */
   it('lets an unknown unit through, and the two halves then disagree', () => {
     const st = migrate(clone(fixture('edge-dangling-refs.json')));
@@ -148,19 +137,16 @@ describe('migrate() does not validate S.unit — characterized defect', () => {
 
 describe('migrate() rejects a state it cannot use', () => {
   it('returns null for anything without layouts', () => {
-    expect(migrate(null)).toBeNull();
-    expect(migrate({})).toBeNull();
-    expect(migrate({ layouts: [] })).toBeNull();
-    expect(migrate({ layouts: 'nope' })).toBeNull();
+    for (const bad of [null, {}, { layouts: [] }, { layouts: 'nope' }]) expect(migrate(bad)).toBeNull();
   });
 });
 
-describe('migrate() has a side effect on S — characterized deliberately', () => {
-  /* migrate() ends with `S = st` so that reconcileTags can read S.itemFolders.
-     Every caller reassigns S from the return value anyway, so this is invisible
-     in practice — but it means migrate() is NOT a pure function, and a refactor
-     that moves it into a module must keep that assignment wired to the same
-     live binding or tag inheritance silently stops working on load. */
+describe('migrate() has a side effect on S — deliberately pinned', () => {
+  /* migrate() ends by assigning S (now setS) so reconcileTags can read
+     S.itemFolders. Callers reassign from the return value anyway, so it is
+     invisible in practice — but migrate() is NOT pure, and that write has to
+     stay wired to the same live binding or tag inheritance stops working on
+     load, with no error. */
   it('leaves S pointing at the migrated object', () => {
     const out = migrate(clone(fixture('v2-modern-full.json')));
     expect(S).toBe(out);
@@ -168,8 +154,8 @@ describe('migrate() has a side effect on S — characterized deliberately', () =
 });
 
 describe('normLayout() and normItem() work standalone', () => {
-  /* The importer lifts a single room or item out of a file and normalises it
-     without pushing a whole state object through migrate(). */
+  /* The importer normalises a single room or item without pushing a whole
+     state object through migrate(). */
   it('normLayout repairs one room on its own', () => {
     const l = normLayout({ name: 'Lonely', room: { w: 3000, d: 2000 } });
     expect(l.id).toBeTruthy();
