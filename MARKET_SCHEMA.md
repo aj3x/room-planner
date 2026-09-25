@@ -51,7 +51,7 @@ Deliberately absent: `author`, `license`, `catalogVersion`, `namespace`, `thumbU
 
 Entry fields, complete list — **nothing else belongs here**, since every byte is paid on every catalog load by every user:
 
-- **`id`** — same rules as an inventory id (`idProblem()` in `index.html`): letters, digits, `! - _ . * ' ( )`, `/` as a folder separator. No leading/trailing/doubled slash, no `..` part, no empty part.
+- **`id`** — same rules as an inventory id (`idProblem()` in [`src/core/ids.js`](src/core/ids.js)): letters, digits, `! - _ . * ' ( )`, `/` as a folder separator. No leading/trailing/doubled slash, no `..` part, no empty part.
 - **`name`** — display name.
 - **`tags`** — array of strings, used for filtering.
 

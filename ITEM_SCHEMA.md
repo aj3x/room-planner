@@ -2,7 +2,7 @@
 
 ## What this is
 
-A field-level reference for the JSON shape of an **item** (a library/inventory entry — furniture, fixtures, anything placeable in a room), for people who want to hand-author their own items. Canonical normalization lives in `normItem()` in **[index.html](index.html)**. All lengths are stored internally in millimetres; `parseLen`/`fmtLen` convert to/from the user's display unit.
+A field-level reference for the JSON shape of an **item** (a library/inventory entry — furniture, fixtures, anything placeable in a room), for people who want to hand-author their own items. Canonical normalization lives in `normItem()` in **[src/core/migrate.js](src/core/migrate.js)**. All lengths are stored internally in millimetres; `parseLen`/`fmtLen` convert to/from the user's display unit.
 
 ## Item
 
@@ -19,10 +19,10 @@ A field-level reference for the JSON shape of an **item** (a library/inventory e
 }
 ```
 
-- **`id`** (`string`): user-editable identifier. Must stay within the `idProblem()` charset — letters, digits, `! - _ . * ' ( )` — and may use `/` as a path separator to group related items (e.g. `ikea/kallax/4x2`), similar to an S3 key.
+- **`id`** (`string`): user-editable identifier. Must stay within the `idProblem()` charset (**[src/core/ids.js](src/core/ids.js)**) — letters, digits, `! - _ . * ' ( )` — and may use `/` as a path separator to group related items (e.g. `ikea/kallax/4x2`), similar to an S3 key.
 - **`name`** (`string`): display name; defaults to `'Untitled'` when missing.
 - **`shape`** (`Shape`): the item's footprint. See [Shape](#shape) below. A missing shape defaults to `{type:'rect', w:900, d:600}`.
-- **`color`** (`string`): hex color, normalized via `normHex()`; falls back to `PALETTE[0]` if invalid/missing.
+- **`color`** (`string`): hex color, normalized via `normHex()` (**[src/canvas/draw.js](src/canvas/draw.js)**); falls back to `PALETTE[0]` (**[src/core/state.js](src/core/state.js)**) if invalid/missing.
 - **`passThrough`** (`boolean`): when `true`, other items/placements are allowed to overlap this one (e.g. rugs, floor mats).
 - **`count`** (`number`): how many of this item the user owns; defaults to `1`.
 - **`tags`** (`string[]`): defaults to `[]`. In the Inventory tab, this is a *derived* field — the union of `manualTags` and any tags inherited from the item's library folder.
@@ -32,8 +32,38 @@ A field-level reference for the JSON shape of an **item** (a library/inventory e
 
 These are used by the Inventory tab for folder/tag management and are not read by Furniture-mode placement logic:
 
-- **`folderId`** (`string | null`): the library folder this item is filed under.
-- **`manualTags`** (`string[]`): the tags picked by hand for this item; the authoritative source. `tags` is recomputed from `manualTags` plus the tags inherited from the folder's ancestry (`ancestorTags`/`applyTags`/`reconcileTags`).
+- **`folderId`** (`string | null`): the library folder this item is filed under. **This is a reference into a tree that no export writes** — see the warning below.
+- **`manualTags`** (`string[]`): the tags picked by hand for this item; the authoritative source. `tags` is recomputed from `manualTags` plus the tags inherited from the folder's ancestry (`ancestorTags`/`applyTags`/`reconcileTags`, **[src/library/item-folders.js](src/library/item-folders.js)**).
+
+#### The Library folder tree is not part of this schema, and `folderId` does not travel
+
+The Library tab's folder tree lives in `S.itemFolders`, a top-level array of
+`{id, name, parentId, tags:[]}`. **No export path writes it** — not
+`exportPayload()` (**[src/io/export.js](src/io/export.js)**), which writes the
+*layout* folder tree `S.folders`, and not the Library tab's own Export
+(**[src/library/export.js](src/library/export.js)**), which writes
+`{app, version, exported, inventory}` and nothing else. `readImport()` and
+`applyImport()` have no notion of it either.
+
+So if you are hand-authoring items for import, **leave `folderId` out** (or set
+it to `null`). An exported item keeps whatever `folderId` it had, and in the
+receiving project that id names nothing: the item is filed under a folder that
+does not exist, so it appears neither in a folder nor at top level
+(`itemsInFolder` matches on `(i.folderId||null)===(fid||null)`).
+
+There is a second consequence worth knowing before you hand-author `tags`.
+`reconcileTags()` explains `tags` as `manualTags` plus whatever the item's
+folder ancestry contributes. With no folder to attribute them to, every tag
+that was inherited gets folded into `manualTags` — permanently promoting an
+inherited tag to a hand-picked one, after which re-filing the item no longer
+removes it.
+
+This is a **known defect, not a design**; it is written up in
+[`BACKLOG.md`](BACKLOG.md) under `## Known defects` and pinned by
+`test/unit/io-roundtrip.test.js`. It is documented here rather than fixed
+because fixing it changes the file format, which is a decision this reference
+does not get to make on its own. If it is fixed, this section and the
+`folderId` bullet above both change.
 
 ## Shape
 
@@ -89,7 +119,7 @@ Every field has a sane default, so the smallest valid item is just:
 { "name": "My Item", "shape": { "type": "rect", "w": 900, "d": 600 } }
 ```
 
-`normItem()` fills in the rest: a generated `id`, `color` from the default palette, `passThrough: false`, `count: 1`, `tags: []`, `open: null`.
+`normItem()` fills in the rest: a generated `id`, `color` from the default palette, `passThrough: false`, `count: 1`, `tags: []`, `open: null`. It does not invent a `folderId`; `migrate()` coerces a missing one to `null`.
 
 ## A note on ids
 

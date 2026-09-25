@@ -154,7 +154,7 @@ layouts are both currently active).
 ## Known defects
 
 - **Arriving in Floor mode leaves both floor panels stale.** `setMode('floor')`
-  (`index.html` ~1988) seeds `floorSel` with the active room, baselines the
+  (**`src/plan/mode.js`**) seeds `floorSel` with the active room, baselines the
   arrangement and fits the camera, so the plan opens with that room drawn
   selected — but the render list it then runs is `renderRoomSel(); renderWalls();
   renderOpen(); renderSel();`, which does not include `renderFloorSel()`. And
@@ -253,9 +253,11 @@ layouts are both currently active).
   — `pointer-item.spec.js` was scaffolding for the `draw()` move and went with
   it.
 
-- **`sel = null` does not clear `selSet`.** Three sites assign `sel = null`
-  directly (`index.html` ~1176, ~4205, ~9446) without going through
-  `selectClear()`, so the multi-select set can survive a clear of the primary
+- **`sel = null` does not clear `selSet`.** Three sites set the primary
+  selection directly — `setSel(null)` in **`src/io/import.js`**,
+  **`src/plan/layout-tree.js`** (`activateLayout`) and
+  **`src/canvas/measure-tool.js`** — without going through `selectClear()`
+  (**`src/core/selection.js`**), so the multi-select set can survive a clear of the primary
   selection and leave the two out of sync. Pre-existing on `main` (not
   introduced by the blueprint merge); found during the Phase 0 merge audit.
   Every other path uses the `selectOnly`/`selectAdd`/`selectToggle`/
@@ -263,7 +265,8 @@ layouts are both currently active).
 
 - **`isFinite(null)` is `true`, so `null` coordinates survive normalisation.**
   `normLayout()` guards its numeric fields with `isFinite(p.y) ? p.y : 0`
-  (`index.html` ~2168 for `floorPlace`, ~2136 for pillar `x`/`y`/`rot`). `null`
+  (**`src/core/migrate.js`**, in `normLayout()`: the `floorPlace` line and the
+  pillar loop's `x`/`y`/`rot`). `null`
   coerces to `0`, so `isFinite(null)` is `true` and a `null` passes straight
   through, while a genuinely bad value like the string `"nope"` is correctly
   repaired to `0`. The result is a `floorPlace.y` or `pillar.rot` of `null`
@@ -287,7 +290,7 @@ layouts are both currently active).
 - **`migrate()` never validates `S.unit`.** It range-checks `mode`, `planMode`,
   `invScope` and `zoomSpeed`, but a saved state carrying a nonsense `unit`
   keeps it forever. `readImport()` *does* validate the same field
-  (`index.html` ~9374), so the import path is stricter than the load path. The
+  (**`src/io/import.js`**), so the import path is stricter than the load path. The
   two halves of the unit system then disagree: `fmtLen` falls through to its
   ft+in `default:` branch while `parseLen`, finding no `BARE` entry, reads bare
   numbers as millimetres — so the app displays feet and inches but silently
@@ -381,15 +384,19 @@ layouts are both currently active).
   was scaffolding for the SCC move and went with it.
 
 - **Dead code the linter found.** ESLint (added in Phase 2, correctness rules
-  only) reports seven unused bindings and dead stores in `index.html`. None is a
-  behaviour bug; all are noise that will be carried into a module for no reason
-  when Phase 3 extracts the regions they sit in, so they are worth clearing in a
-  follow-up — not during extraction, which is move-only.
-  - `folderPath` (~1162) and `walkTrace` (~1767): top-level functions with no
-    caller anywhere in the file.
-  - unused parameters: `len` (~3423), `tPart` (~7449).
-  - dead stores: `a` (~7210), `inc` (~9535), `raw` (~10762) — each assigned and
-    then overwritten or never read.
+  only) reports **six** unused bindings and dead stores. None is a behaviour
+  bug; all are noise, and they are worth clearing in a follow-up. They were
+  seven before Phase 3: `folderPath` gained a caller on the way out of
+  `index.html` and is no longer flagged. The rest came through the split
+  untouched, which is what move-only means, and they now report against the
+  module they landed in:
+  - `walkTrace` (`src/model/walkpaths.js:181`): a top-level function with no
+    caller anywhere.
+  - unused parameters: `len` (`src/canvas/merge-rooms.js:72`), `tPart`
+    (`src/blueprint/openings.js:12`).
+  - dead stores: `a` (`src/blueprint/walls.js:50`), `raw`
+    (`src/library/adhoc-listings.js:120`), `inc` (`index.html:918`) — each
+    assigned and then overwritten or never read.
   They are reported as ESLint **warnings** rather than errors, deliberately:
   Phase 2 may not edit application code, and a lint that fails the build over
   findings nobody is allowed to fix would just get switched off. `no-undef`,
