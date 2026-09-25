@@ -1202,7 +1202,11 @@ new test files.
 1. **GitHub → Settings → Pages → Source: "GitHub Actions"** (currently "Deploy from a
    branch"). Until this is flipped, the site keeps serving the stale committed
    `index.html` and the whole switchover looks like a no-op.
-2. Delete `index.html` from `main`'s root *only after* the Actions deploy is confirmed live.
+2. ~~Delete `index.html` from `main`'s root once the Actions deploy is live.~~ **Do not.**
+   Written when `index.html` *was* the deployed artifact. It is now the app's **source**
+   entry point — the shell that loads `src/styles/main.scss`, the seven HTML partials and
+   the module graph. Deleting it deletes the app. The build output is `dist/index.html`,
+   which is gitignored and published by `.github/workflows/pages.yml`.
 3. Branch protection on `main`: require the CI check.
 
 ---
