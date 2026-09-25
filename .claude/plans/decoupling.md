@@ -5,8 +5,40 @@ out of `index.html` and into 81 modules; it succeeded. This one is about what
 the split did **not** buy, measured rather than felt, and what it would cost to
 finish.
 
-Every number below is reproducible from the import graph — see
-[§6 Measuring](#6-measuring) for the script.
+Every number below is reproducible from the import graph — `npm run cycles`,
+see [§6 Measuring](#6-measuring).
+
+---
+
+## 0. Outcome
+
+Done, 2026-09-25. **The largest import cycle went from 45 modules to 9**, and
+the number that matters more: **no cycle spans more than one directory any
+more.** What is left is five contained groups — `library/` 9, `canvas/` 8,
+`plan/` 8, the blueprint wizard's back/next navigation 4, `ui/` 3 — each of
+which is a directory that is genuinely one component, which is the benign
+shape `blueprint/` already had.
+
+| after | largest cycle | what changed |
+|---|---|---|
+| baseline | 45 | |
+| step 1 | 39 | blueprint/ cut loose by `core/registry.js` |
+| step 2 | 36 | `core/` stops importing renderers |
+| step 3 | 28 | `model/` stops drawing; lint rule added |
+| step 5 | **9** | mutations announce instead of naming views |
+| step 4 | 9 | shell bodies moved; no graph change, by design |
+
+`npm run cycles` now fails the build if the largest cycle exceeds 9 **or** if
+any cycle spans directories. Ratchet it down; the second check is the one to
+keep forever.
+
+**Steps 4 and 5 had to swap order.** §4 below still lists 4 before 5 because
+that was the reasoning at the time, and it was wrong: moving `pointerdown`
+into `canvas/interaction.js` while it still called five `plan/` renderers
+would have pulled `interaction.js` into the cycle and made the headline number
+worse. Step 5 had to land first so the bodies could move with `repaint()`
+already in place. Read that as the general lesson — code motion cannot fix a
+dependency, and doing it first just moves the dependency somewhere new.
 
 ---
 
@@ -198,7 +230,7 @@ external workflows" is right. Blueprint already did it. The others did not.
 Sequenced by ratio of structural payoff to risk. Each step is independently
 shippable and independently revertable.
 
-### Step 1 — Cut blueprint loose  *(small; highest payoff per hour)*
+### Step 1 — Cut blueprint loose  *(small; highest payoff per hour)* — DONE, 45 → 39
 
 Introduce a tiny registry (`core/registry.js`: a `Map`, a `register(key, fn)`,
 a `get(key)`; no imports). `blueprint/` registers `bpUploadDialog`,
@@ -209,7 +241,7 @@ after the shell's listeners are bound.
 Result: all 20 blueprint modules leave SCC 1, taking their wizard cycle with
 them into a 4-module SCC of their own. Verified by re-running §6.
 
-### Step 2 — Invert history's repaint  *(small)*
+### Step 2 — Invert history's repaint  *(small)* — DONE, 39 → 36
 
 `core/history.js` should not know what a side panel is. Give it a
 `onAfterRestore` callback list, populated by `boot.js`. The six renderer imports
@@ -219,9 +251,11 @@ Same shape for `core/migrate.js`: `normHex` is a color utility that is in
 `canvas/draw.js` for historical reasons and belongs in `core/`; `reconcileTags`
 and `syncWallOff` should be passed in, not imported.
 
-Measured effect of Steps 1+2 together: largest SCC **45 → 39**.
+Measured effect of Steps 1+2 together: largest SCC **45 → 36** — better than
+the 39 predicted, because pulling the folder-tree and tag-inheritance code out
+of `library/item-folders.js` into `core/` freed `core/ids.js` too.
 
-### Step 3 — Make `model/` a real domain layer  *(medium)*
+### Step 3 — Make `model/` a real domain layer  *(medium)* — DONE, 36 → 28
 
 Three of the five files are already clean. The other two are not:
 
@@ -230,13 +264,13 @@ Three of the five files are already clean. The other two are not:
 - `model/walkpaths.js`: split. The reachability computation is domain logic and
   belongs in `model/`; the `ctx`/`addPoly` drawing belongs in `canvas/`.
 
-Measured effect of Steps 1+2+3: largest SCC **45 → 32**.
+Measured effect of Steps 1+2+3: largest SCC **45 → 28**, against 32 predicted.
 
 Add an ESLint `no-restricted-imports` rule at this point: nothing in `core/` or
 `model/` may import from `canvas/`, `plan/`, `library/`, `ui/` or `io/`. That
 is what makes the step stick — the rule is the deliverable, not the edits.
 
-### Step 4 — Named handlers out of the shell  *(medium, mechanical, low risk)*
+### Step 4 — Named handlers out of the shell  *(medium, mechanical, low risk)* — DONE, after step 5
 
 Every listener body longer than ~10 lines becomes a named exported function in
 the module that owns the concern; `index.html` keeps a one-line registration at
@@ -249,7 +283,7 @@ same risk profile: it is a move, verified by the existing Playwright pointer
 and smoke specs. It does not reduce the SCC, but it makes ~400 lines of
 behaviour reachable from unit tests for the first time.
 
-### Step 5 — The render knot  *(large; do not start before 1-4)*
+### Step 5 — The render knot  *(large)* — DONE, 28 → 9. Had to run BEFORE step 4; see §0.
 
 What remains at 32 is `canvas/ ↔ plan/ ↔ library/`, held together by the 39
 direct renderer imports (§2.2). The fix is the one real design change here: a
@@ -265,7 +299,16 @@ Views subscribe in `boot.js`. `draw()` stays immediate-mode — this is about wh
 framework (`AGENTS.md:86` still holds).
 
 Do this incrementally, one event at a time, keeping the direct calls working
-alongside until each is migrated. Estimated to take the largest SCC below 10.
+alongside until each is migrated. Took the largest SCC to **9**, and — the actual goal — left zero cycles
+spanning more than one directory.
+
+What it looks like in practice: `core/bus.js`, a leaf with `on`/`emit` and a
+`repaint(...keys)` helper. `repaint` is deliberately NOT one "something
+changed" event; call sites repaint different subsets of the panels on purpose
+(a wall drag rebuilds the wall list but not the room's colour inputs) and
+collapsing that would rebuild inputs under the user's cursor. Each call site
+names exactly the panels it always named, in the same order, so every
+conversion is a provable swap rather than a redesign.
 
 ---
 
@@ -290,7 +333,13 @@ alongside until each is migrated. Estimated to take the largest SCC below 10.
 
 ## 6. Measuring
 
-Rerun after each step; the SCC size is the acceptance criterion.
+`npm run cycles` (`scripts/import-cycles.mjs`). It fails on two conditions:
+the largest cycle exceeding its budget, and — more importantly — any cycle
+spanning more than one directory. Size alone is the wrong target; a cycle
+inside one directory is what a wizard's back/next navigation looks like.
+
+The original snippet is kept below because it is the minimal version, and a
+number nobody can reproduce is a number that goes stale.
 
 ```js
 // scripts/scc.mjs
@@ -325,9 +374,9 @@ console.log('modules:', files.length, '| cyclic groups:', sccs.length);
 sccs.forEach((c, i) => console.log(`SCC ${i+1}: ${c.length}\n  ${c.map(x => x.replace('src/','')).sort().join(', ')}`));
 ```
 
-Targets: **45 → 39** after Step 2, **→ 32** after Step 3, **→ <10** after Step 5.
-Once it is below 10, the `no-restricted-imports` rule from Step 3 can be widened
-into a real layering check and the number stops needing to be watched by hand.
+Actual: **45 → 36** after Step 2, **→ 28** after Step 3, **→ 9** after Step 5.
+The `no-restricted-imports` rule from Step 3 and the spanning-cycle check in
+`npm run cycles` together mean the number no longer needs watching by hand.
 
 ---
 
