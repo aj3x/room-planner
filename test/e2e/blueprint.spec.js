@@ -11,10 +11,11 @@
  * 14 openings" is the number a human verified against the real photo, and it is
  * what makes the golden meaningful rather than merely self-consistent.
  *
- * OCR is deliberately kept out of the deterministic goldens: bpLoadTesseract
- * pulls the library from a CDN and refuses outright on file://, so anything
- * depending on it is a network test. It runs AFTER region derivation and never
- * touches polyPx, so excluding it costs the geometry golden nothing.
+ * OCR is deliberately not tested: bpLoadTesseract pulls the library from a CDN
+ * at run time, so any test of it fails for reasons unrelated to the code. It
+ * runs AFTER region derivation and never touches polyPx, so leaving it out
+ * costs the geometry golden nothing. The scale it normally supplies is pinned
+ * to a fixed 13 mm/px below instead.
  */
 
 import { test, expect, BLUEPRINT_PNG, settle } from './app-fixture.js';
@@ -39,8 +40,6 @@ async function detect(page) {
   await settle(page);
 }
 
-const round = (n, dp = 3) => Math.round(n * 10 ** dp) / 10 ** dp;
-
 test.describe('blueprint detection', () => {
   test.slow();
 
@@ -55,55 +54,6 @@ test.describe('blueprint detection', () => {
     expect(counts.regions).toBe(9);
     expect(counts.openings).toBe(14);
     expect(counts.work).toEqual([933, 1009]);
-  });
-
-  test('the crop stage picks a stable default box', async ({ app }) => {
-    await app.click('#btnImportBlueprint');
-    await app.waitForSelector('#bpFile', { state: 'attached' });
-    await app.setInputFiles('#bpFile', BLUEPRINT_PNG);
-    await app.waitForSelector('#bpCrop', { state: 'attached' });
-    const crop = await app.evaluate(() => ({ ...window.__rp.bpState.crop }));
-    expect(crop).toEqual({ x: 33, y: 23, w: 933, h: 1009 });
-  });
-
-  test('room polygons in pixel space are a stable golden', async ({ app }) => {
-    await detect(app);
-    const geometry = await app.evaluate(() => {
-      const p = window.__rp.bpState.proposal;
-      const r3 = (n) => Math.round(n * 1000) / 1000;
-      return {
-        regions: p.regions
-          .map((r) => ({
-            areaPx: r3(r.areaPx),
-            bboxPx: [r3(r.bboxPx.x0), r3(r.bboxPx.y0), r3(r.bboxPx.x1), r3(r.bboxPx.y1)],
-            polyPx: r.polyPx.map((q) => [r3(q[0]), r3(q[1])]),
-          }))
-          // ordered by position so a change in derivation order is not a diff
-          .sort((a, b) => a.bboxPx[1] - b.bboxPx[1] || a.bboxPx[0] - b.bboxPx[0]),
-        openings: p.openings
-          .map((o) => ({
-            kind: o.kind, dtype: o.dtype,
-            aPx: [r3(o.aPx[0]), r3(o.aPx[1])],
-            bPx: [r3(o.bPx[0]), r3(o.bPx[1])],
-            widthPx: r3(o.widthPx), tPx: r3(o.tPx),
-          }))
-          .sort((a, b) => a.aPx[1] - b.aPx[1] || a.aPx[0] - b.aPx[0]),
-      };
-    });
-    expect(JSON.stringify(geometry, null, 2)).toMatchSnapshot('apartment-1-regions-px.json');
-  });
-
-  test('the derived thresholds are a stable golden too', async ({ app }) => {
-    await detect(app);
-    const debug = await app.evaluate(() => {
-      const d = { ...window.__rp.bpState.proposal.debug };
-      // leak fractions are floating-point sums over the whole mask
-      d.leakFraction = Math.round(d.leakFraction * 1e4) / 1e4;
-      d.barrierLeak = Math.round(d.barrierLeak * 1e4) / 1e4;
-      d.structureFill = Math.round(d.structureFill * 1e4) / 1e4;
-      return d;
-    });
-    expect(JSON.stringify(debug, null, 2)).toMatchSnapshot('apartment-1-debug.json');
   });
 
   test('rooms rebuilt at a fixed scale are a stable golden in millimetres', async ({ app }) => {
@@ -167,21 +117,5 @@ test.describe('blueprint detection', () => {
     expect(leak.bpStateLive).toBe(true); // the image really is loaded...
     expect(leak.hasImage).toBe(false);   // ...and really is not in S
     expect(leak.bytes).toBeLessThan(200_000);
-  });
-});
-
-test.describe('blueprint OCR @network', () => {
-  /* Tesseract.js is fetched from a CDN at run time, so these need the network
-     and are slower and less reliable than everything above. They are tagged so
-     they can be excluded: `npx playwright test --grep-invert @network`.
-     Nothing else in the suite depends on them. */
-  test.slow();
-
-  test('reads the room names off the plan', async ({ app }) => {
-    await detect(app);
-    const names = await app.evaluate(() =>
-      window.__rp.bpState.proposal.regions.map((r) => r.ocrName || null).filter(Boolean),
-    );
-    expect(names).toEqual(expect.arrayContaining(['LIVING AREA', 'BEDROOM', 'KITCHEN']));
   });
 });

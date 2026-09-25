@@ -1,18 +1,11 @@
-/* Characterization: parseLen / fmtLen. Everything is stored in millimetres and
-   formatted at render time, so these two are the boundary the entire app's
-   numbers cross. Round-trips matter more than any individual value. */
+/* parseLen / fmtLen. Everything is stored in millimetres and formatted at
+   render time, so these two are the boundary the entire app's numbers cross.
+   Round-trips matter more than any individual value.
 
-import { describe, it, expect, beforeAll } from 'vitest';
-import { bootApp } from '../harness.js';
+   Pure logic, imported straight from src/ — no harness, no jsdom, no app. */
 
-let parseLen, fmtLen, fmtArea, app;
-
-beforeAll(async () => {
-  const booted = await bootApp();
-  app = booted.app;
-  ({ parseLen, fmtLen } = app);
-  fmtArea = booted.t.fmtArea;
-});
+import { describe, it, expect } from 'vitest';
+import { parseLen, fmtLen, fmtArea } from '../../src/core/units.js';
 
 describe('parseLen — explicit units win regardless of the display unit', () => {
   const cases = [

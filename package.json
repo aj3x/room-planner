@@ -14,7 +14,6 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e": "npm run build && npm run build:test && playwright test",
-    "test:e2e:offline": "npm run build && npm run build:test && playwright test --grep-invert @network",
     "test:e2e:update": "npm run build && npm run build:test && playwright test --update-snapshots"
   },
   "devDependencies": {
