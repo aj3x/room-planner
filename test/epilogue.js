@@ -39,6 +39,9 @@ export const EPILOGUE = `
 /* view left index.html's scope when onCanvasPointerDown moved into
  * canvas/interaction.js — it was the shell's last reader. */
 ;import {view} from './src/canvas/view.js';
+/* commitFurn's last shell reader was the arrow-key nudge, which moved into
+ * plan/shortcuts.js. */
+;import {commitFurn} from './src/core/history.js';
 ;import {exportPayload} from './src/io/export.js';
 ;import {applyImport} from './src/io/import.js';
 ;import {polySimple} from './src/core/geometry.js';
