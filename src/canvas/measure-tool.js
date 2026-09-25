@@ -12,6 +12,7 @@
    not come: it calls renderRoomSel() and renderSel(), both inside the
    plan/library reference cycle.
 */
+import {repaint} from '../core/bus.js';
 import {$} from '../ui/modal.js';
 import {S, L, uid} from '../core/state.js';
 import {save} from '../core/store.js';
@@ -25,8 +26,6 @@ import {measureOn, measureStart, measureSel, measureBoxes,
         setMeasureSel, setMeasureCursor} from './measure-state.js';
 import {setRoomSel, setSel} from '../core/selection.js';
 import {isCanvasMode} from '../core/state.js';
-import {renderOpen, renderRoomSel, renderWalls} from '../plan/room-panel.js';
-import {renderSel} from '../plan/selection-panel.js';
 import {drawState, splitDrawState, wallDrawState} from './interaction-state.js';
 import {setMeasureOn} from './measure-state.js';
 import {cancelCustomDraw} from './room-draw.js';
@@ -133,7 +132,7 @@ function setMeasure(on){
     if(wallDrawState) cancelWallDraw();
     if(splitDrawState) cancelSplitDraw();
     // a click now measures, so nothing stays selected for editing
-    setSel(null); setRoomSel(null); renderSel(); renderRoomSel(); renderWalls(); renderOpen();
+    setSel(null); setRoomSel(null); repaint('sel','roomSel','walls','openings');
   }
   setMeasureOn(!!on);
   resetMeasureState();

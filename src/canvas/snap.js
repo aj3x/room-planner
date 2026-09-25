@@ -26,7 +26,7 @@ import {snapPt} from './view.js';
 import {commitRoom} from '../core/history.js';
 import {save} from '../core/store.js';
 import {tryRoomEdit} from '../model/walls.js';
-import {renderOpen, renderRoom, renderRoomSel, renderWalls} from '../plan/room-panel.js';
+import {repaint} from '../core/bus.js';
 import {flash} from '../ui/flash.js';
 import {draw} from './draw.js';
 
@@ -213,6 +213,6 @@ function squareCorner(i){
   if(len<1){ vx=-(c[1]-a[1]); vy=c[0]-a[0]; len=rad*2; }   // dead centre: step off square to the span
   const ok=tryRoomEdit(()=>{ P[i]=[mx+vx/len*rad, my+vy/len*rad]; });
   if(!ok) return;
-  renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
+  repaint('room','walls','roomSel','openings'); draw(); save(); commitRoom();
 }
 export {snapRadius, snapWallPoint, pickAt, bringToFront, pickRoom, alignRadius, snapToLines, lineProject, lineCross, guideSeg, alignPoint, isSquare, snapCorner, squareCorner};

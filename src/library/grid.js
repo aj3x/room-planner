@@ -14,6 +14,7 @@
    duplicateLibItem, deleteLibItem and libItemMenu did not come: they are
    inside the Plan-panels/Library SCC.
 */
+import {emit, repaint} from '../core/bus.js';
 import {sizeLabel} from '../canvas/draw.js';
 import {marketFolderPath} from './adhoc-folders.js';
 import {childItemFolders, itemFolderPath, itemsInFolder} from './item-folders.js';
@@ -25,9 +26,6 @@ import {selectClear} from '../core/selection.js';
 import {S, clone} from '../core/state.js';
 import {save} from '../core/store.js';
 import {fileSlug} from '../io/pickers.js';
-import {itemDialog} from '../plan/item-dialog.js';
-import {renderInv} from '../plan/item-list.js';
-import {renderSel} from '../plan/selection-panel.js';
 import {clearDropMarks} from '../ui/dnd.js';
 import {libFlash} from '../ui/flash.js';
 import {openMenu} from '../ui/menu.js';
@@ -84,7 +82,7 @@ function crumbsHTML(kind, folderId){
    not move until the whole 49-name component could. Move-only. ---- */
 /* ------------------------- library: item/folder tiles + grid ------------------------- */
 /* nothing is created until Save, so cancelling a new item leaves no "Untitled" behind */
-function createLibItem(){ itemDialog(null); }
+function createLibItem(){ emit('item:edit', null); }
 function duplicateLibItem(id){
   const it=S.inventory.find(x=>x.id===id); if(!it) return;
   const c=clone(it);
@@ -99,7 +97,7 @@ function deleteLibItem(id){
   const n=S.layouts.reduce((a,l)=>a+l.placed.filter(p=>p.itemId===id).length,0);
   const kill=()=>{
     purgeItem(id); selectClear();
-    save(); renderInv(); renderSel(); draw(); renderLibAll();
+    save(); repaint('inv','sel'); draw(); repaint('libAll');
   };
   if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+' across your rooms. Those will be removed too.', 'Delete', kill);
   else askConfirm('Delete this item?', '“'+it.name+'” will be removed for good.', 'Delete', kill);
@@ -107,7 +105,7 @@ function deleteLibItem(id){
 function libItemMenu(id, anchor){
   const it=S.inventory.find(x=>x.id===id); if(!it) return;
   openMenu(anchor, [
-    {label:'Edit…', fn:()=>itemDialog(id)},
+    {label:'Edit…', fn:()=>emit('item:edit', id)},
     {label:'Move to folder…', fn:()=>moveLibItemDialog(it)},
     {label:'Duplicate', fn:()=>duplicateLibItem(id)},
     {label:'Export…', fn:()=>exportLibItems([it], 'room-planner-'+fileSlug(it.name)+'.json')},
@@ -151,11 +149,11 @@ function bindLibGrid(box, kind){
       const cvp=t.querySelector('canvas[data-prev]'); if(cvp&&it) drawPreview(cvp,it);
       t.addEventListener('click', e=>{
         if(e.target.closest('[data-act=more]')) return;
-        itemDialog(t.dataset.item);
+        emit('item:edit', t.dataset.item);
       });
       t.addEventListener('keydown', e=>{
         if(e.target!==t || (e.key!=='Enter'&&e.key!==' ')) return;
-        e.preventDefault(); itemDialog(t.dataset.item);
+        e.preventDefault(); emit('item:edit', t.dataset.item);
       });
       const more=t.querySelector('[data-act=more]');
       more.addEventListener('click', e=>{ e.stopPropagation(); libItemMenu(t.dataset.item, e.currentTarget); });

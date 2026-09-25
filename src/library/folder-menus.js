@@ -6,6 +6,7 @@
    hoc twins are NOT here: they are downstream of the SCC, not in it, and
    follow in a later commit.
 */
+import {repaint} from '../core/bus.js';
 import {save} from '../core/store.js';
 import {$, moError, openModal} from '../ui/modal.js';
 import {esc} from '../ui/panels.js';
@@ -15,7 +16,6 @@ import {childItemFolders, itemFolderOf, moveItemToFolder, recomputeFolderSubtree
 import {libTreeOpen} from './nav.js';
 import {renderLibAll} from './shell.js';
 import {S, uid} from '../core/state.js';
-import {renderInv} from '../plan/item-list.js';
 import {inlineEdit} from '../ui/inline-edit.js';
 import {openMenu} from '../ui/menu.js';
 import {askConfirm, askText} from '../ui/modal.js';
@@ -149,7 +149,7 @@ function deleteLibFolder(id){
     S.itemFolders=S.itemFolders.filter(x=>x.id!==id);
     libTreeOpen.delete(id);
     if(nav.libFolderId===id || (keep===false && folders.some(x=>x.id===nav.libFolderId))) goLibFolder('library',null);
-    save(); renderInv(); renderLibAll();
+    save(); repaint('inv','libAll');
   };
   if(!folders.length && !items.length){
     askConfirm('Delete this folder?', '“'+f.name+'” is empty.', 'Delete folder', ()=>drop(false));

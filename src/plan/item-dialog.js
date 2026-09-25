@@ -1,7 +1,13 @@
 /* The item editor: the same modal Furniture mode's "Add a thing" and the
-   Library tab's edit both open. itemDialog() is one of the six edges that
-   made the Plan side panels and the Library UI one component -- it calls
-   renderLibAll() when the Library is the place that is showing.
+   Library tab's edit both open. itemDialog() was one of the six edges that
+   made the Plan side panels and the Library UI one component: it called
+   renderLibAll() when the Library is the place that is showing, and the
+   Library's grid imported itemDialog() straight back.
+
+   Both edges are gone (.claude/plans/decoupling.md §4, step 5). The repaint
+   goes through the bus, and the Library asks for the editor by emitting
+   'item:edit' rather than importing it. plan/ and library/ are separate
+   components again.
 
    Extracted from index.html in Phase 3 as part of the 49-name SCC commit,
    move-only.
@@ -10,6 +16,7 @@
    all of which came with it, so it moved as a plain `let` and needed no
    setter.
 */
+import {repaint} from '../core/bus.js';
 import {draw, normHex} from '../canvas/draw.js';
 import {idFolder, idLeaf, idProblem, retagItem} from '../core/ids.js';
 import {hasOpen, normOpen} from '../core/open-state.js';
@@ -18,7 +25,6 @@ import {save} from '../core/store.js';
 import {fmtLen, parseLen, unitWord} from '../core/units.js';
 import {applyTags, rehomeItemId} from '../library/item-folders.js';
 import {nav} from '../library/nav.js';
-import {renderLibAll} from '../library/shell.js';
 import {$, moError, openModal} from '../ui/modal.js';
 import {esc} from '../ui/panels.js';
 import {mountTagField, tagFieldHTML, tagFieldValue} from '../ui/tag-input.js';
@@ -136,7 +142,7 @@ function itemDialog(id){
         // an untouched id is filed under the folder it was created in, same as moving it there
         if(nit.folderId && newId===dlgId) rehomeItemId(nit, nit.folderId);
       }
-      renderInv(); renderSel(); draw(); save(); renderLibAll();
+      renderInv(); renderSel(); draw(); save(); repaint('libAll');
     },
     ()=>{
       const sel2=$('iShape');

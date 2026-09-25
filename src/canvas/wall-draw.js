@@ -5,15 +5,14 @@
    the only line added. §3 gives this banner no file of its own; it is its
    own two-function region, so it gets one.
 */
+import {emit, repaint} from '../core/bus.js';
 import {commitRoom} from '../core/history.js';
 import {setRoomSel} from '../core/selection.js';
 import {L, uid} from '../core/state.js';
 import {save} from '../core/store.js';
-import {renderRoomSel, renderWalls} from '../plan/room-panel.js';
 import {draw} from './draw.js';
 import {setWallDrawState} from './interaction-state.js';
 import {roomMode} from '../core/state.js';
-import {setMode} from '../plan/mode.js';
 import {flash} from '../ui/flash.js';
 import {drawState, setDrawCursor, splitDrawState} from './interaction-state.js';
 import {measureOn} from './measure-state.js';
@@ -26,7 +25,7 @@ function finishWallDraw(a,b){
   L().room.iwalls.push(w);
   setWallDrawState(null);
   setRoomSel({kind:'iwall', id:w.id});
-  renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+  repaint('walls','roomSel'); draw(); save(); commitRoom();
 }
 
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */
@@ -35,9 +34,9 @@ function startWallDraw(){
   if(drawState) cancelCustomDraw();
   if(splitDrawState) cancelSplitDraw();
   if(measureOn) setMeasure(false);
-  if(!roomMode()) setMode('room');
+  if(!roomMode()) emit('mode:set','room');
   setWallDrawState({a:null}); setDrawCursor(null);
-  setRoomSel(null); renderRoomSel();
+  setRoomSel(null); repaint('roomSel');
   flash('Click the wall’s start, then its end. Esc cancels.');
   draw();
 }

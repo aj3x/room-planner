@@ -13,7 +13,7 @@ import {setAlignGuides, setAlignNote, setRoomSel} from '../core/selection.js';
 import {L} from '../core/state.js';
 import {save} from '../core/store.js';
 import {clampOpenings, syncWallOff} from '../model/walls.js';
-import {renderOpen, renderRoom, renderRoomSel, renderWalls} from '../plan/room-panel.js';
+import {emit, repaint} from '../core/bus.js';
 import {flash} from '../ui/flash.js';
 import {$} from '../ui/modal.js';
 import {draw, scheduleDraw} from './draw.js';
@@ -21,7 +21,6 @@ import {drawState, setDrawCursor, setDrawState, setWallDrawShift} from './intera
 import {alignPoint, alignRadius, isSquare} from './snap.js';
 import {fit, snapPt, wx, wy} from './view.js';
 import {roomMode} from '../core/state.js';
-import {setMode} from '../plan/mode.js';
 import {splitDrawState, wallDrawState} from './interaction-state.js';
 import {measureOn} from './measure-state.js';
 import {setMeasure} from './measure-tool.js';
@@ -36,7 +35,7 @@ function finishCustomDraw(){
   L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
   clampOpenings(); setRoomSel(null);
   setDrawState(null); setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true;
-  renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
+  repaint('room','walls','roomSel','openings'); fit(); save(); commitRoom();
 }
 /* Where the next corner would land, and why — the same magnet the corner drag uses, so
    an outline comes out straight and square while it is being drawn rather than having to
@@ -75,9 +74,9 @@ function startCustomDraw(){
   if(wallDrawState) cancelWallDraw();
   if(splitDrawState) cancelSplitDraw();
   if(measureOn) setMeasure(false);
-  if(!roomMode()) setMode('room');
+  if(!roomMode()) emit('mode:set','room');
   setDrawState({pts:[]}); setDrawCursor(null);
-  setRoomSel(null); renderRoomSel();
+  setRoomSel(null); repaint('roomSel');
   $('drawHint').hidden=false;
   draw();
 }

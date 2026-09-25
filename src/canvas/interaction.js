@@ -11,6 +11,7 @@
    applyDragAt/cancelDrag/endDrag and the four setters, which landed as a
    declared code change in the commit before this one.
 */
+import {repaint} from '../core/bus.js';
 import {floorPts} from '../core/floor-space.js';
 import {bbox, norm360, polySimple, worldPoly} from '../core/geometry.js';
 import {bumpRev, commitFloor, commitFurn, commitRoom, snapFloor, snapFurn, snapRoom} from '../core/history.js';
@@ -20,9 +21,6 @@ import {save} from '../core/store.js';
 import {centreInside, slideToValid, validate} from '../model/validity.js';
 import {clampOpenings, iwallOf, nearestOnWalls, pillarOf, wallOf} from '../model/walls.js';
 import {snapWallPoint} from './snap.js';
-import {renderFloorSel} from '../plan/floors.js';
-import {renderOpen, renderRoomSel, renderWalls} from '../plan/room-panel.js';
-import {renderSel} from '../plan/selection-panel.js';
 import {flash} from '../ui/flash.js';
 import {draw, scheduleDraw, snapFloorPlace} from './draw.js';
 import {drag, setDrag} from './interaction-state.js';
@@ -62,7 +60,7 @@ function applyDragAt(px,py,mods){
     if(mods.altKey){ setFloorGuides([]); setFloorSnapNote('Free'); }   // alt drops the magnet, same as everywhere else
     else { const s=snapFloorPlace(l,nx,ny); nx=s.x; ny=s.y; setFloorGuides(s.guides); setFloorSnapNote(s.note); }
     l.floorPlace.x=nx; l.floorPlace.y=ny;
-    scheduleDraw(); renderFloorSel(); return;
+    scheduleDraw(); repaint('floorSel'); return;
   }
   if(drag.mode==='floor-rot'){
     const l=S.layouts.find(x=>x.id===drag.id); if(!l) return;
@@ -71,7 +69,7 @@ function applyDragAt(px,py,mods){
     let deg=drag.start+(a-drag.a0)*180/Math.PI;
     if(!mods.altKey) deg=Math.round(deg/15)*15;   // free turn is the exception, not the rule
     l.floorPlace.rot=norm360(deg);
-    scheduleDraw(); renderFloorSel(); return;
+    scheduleDraw(); repaint('floorSel'); return;
   }
   if(drag.mode==='corner'){
     const P=RP(), was=P[drag.i].slice();
@@ -85,7 +83,7 @@ function applyDragAt(px,py,mods){
     P[drag.i]=np;
     if(!polySimple(P)){ P[drag.i]=was; setAlignGuides([]); setAlignNote(''); }
     else clampOpenings();
-    bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
+    bumpRev(); scheduleDraw(); repaint('roomSel','walls'); return;
   }
   if(drag.mode==='wall'){
     const P=RP(), n=P.length, i=drag.i, w=wallOf(i);
@@ -96,7 +94,7 @@ function applyDragAt(px,py,mods){
     P[(i+1)%n]=[b[0]+w.nrm[0]*k, b[1]+w.nrm[1]*k];
     if(!polySimple(P)){ P[i]=a; P[(i+1)%n]=b; }
     else { drag.last=pt; clampOpenings(); }
-    bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
+    bumpRev(); scheduleDraw(); repaint('roomSel','walls'); return;
   }
   if(drag.mode==='open'){
     const o=openOf(drag.id); if(!o) return;
@@ -105,14 +103,14 @@ function applyDragAt(px,py,mods){
     const len=wallOf(near.i).len;
     o.width=Math.min(o.width,len);
     o.offset=Math.max(0,Math.min(near.t*len-o.width/2, len-o.width));
-    bumpRev(); scheduleDraw(); renderRoomSel(); renderOpen(); return;
+    bumpRev(); scheduleDraw(); repaint('roomSel','openings'); return;
   }
   if(drag.mode==='pillar'){
     const pl=pillarOf(drag.id); if(!pl) return;
     let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
     if(!mods.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     pl.x=nx; pl.y=ny;
-    bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
+    bumpRev(); scheduleDraw(); repaint('roomSel','walls'); return;
   }
   if(drag.mode==='iwall'){
     const w=iwallOf(drag.id); if(!w) return;
@@ -120,14 +118,14 @@ function applyDragAt(px,py,mods){
     if(!mods.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     const ddx=nx-w.a[0], ddy=ny-w.a[1];
     w.a=[w.a[0]+ddx, w.a[1]+ddy]; w.b=[w.b[0]+ddx, w.b[1]+ddy];
-    bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
+    bumpRev(); scheduleDraw(); repaint('roomSel','walls'); return;
   }
   if(drag.mode==='iwall-end'){
     const w=iwallOf(drag.id); if(!w) return;
     const other = drag.end==='a' ? w.b : w.a;
     const raw = mods.shiftKey ? axisLockFrom(other,pt) : pt;
     w[drag.end]=snapWallPoint(raw, drag.id, !mods.altKey);
-    bumpRev(); scheduleDraw(); renderRoomSel(); renderWalls(); return;
+    bumpRev(); scheduleDraw(); repaint('roomSel','walls'); return;
   }
 
   if(drag.mode==='marquee'){
@@ -143,7 +141,7 @@ function applyDragAt(px,py,mods){
     const prev=inst.rot;
     inst.rot=norm360(deg);
     if(!drag.loose && !validate(inst,worldPoly(inst,it)).ok) inst.rot=prev;
-    bumpRev(); scheduleDraw(); renderSel(); return;
+    bumpRev(); scheduleDraw(); repaint('sel'); return;
   }
   // drag.mode==='move': one or more furniture items, each clamped/validated
   // independently against walls/collisions (a group can end up slightly
@@ -205,7 +203,7 @@ function cancelDrag(){
     if(!wasFloor) bumpRev();
   }
   setDrag(null); setFloorGuides([]); setFloorSnapNote(''); setAlignGuides([]); setAlignNote('');
-  renderSel(); renderRoomSel(); renderWalls(); renderOpen(); renderFloorSel(); draw();
+  repaint('sel','roomSel','walls','openings','floorSel'); draw();
 }
 function endDrag(e){
   if(drag&&drag.mode==='marquee'){
@@ -226,7 +224,7 @@ function endDrag(e){
     else selectSet(hitIds);
     if(hitIds.length) bringToFront(hitIds);
     setDrag(null);
-    renderSel(); draw();
+    repaint('sel'); draw();
     if(e&&e.pointerId!==undefined){ try{ cv.releasePointerCapture(e.pointerId); }catch(err){} }
     return;
   }
@@ -235,9 +233,9 @@ function endDrag(e){
   } else if(drag){
     save();
     setAlignGuides([]); setAlignNote('');
-    if(drag.mode==='floor-room'||drag.mode==='floor-rot'){ setFloorGuides([]); setFloorSnapNote(''); commitFloor(); renderFloorSel(); draw(); }
+    if(drag.mode==='floor-room'||drag.mode==='floor-rot'){ setFloorGuides([]); setFloorSnapNote(''); commitFloor(); repaint('floorSel'); draw(); }
     else if(ROOM_DRAGS.includes(drag.mode)){ commitRoom(); scheduleDraw(); }
-    else { commitFurn(); renderSel(); }
+    else { commitFurn(); repaint('sel'); }
   }
   setDrag(null);
   if(e&&e.pointerId!==undefined){ try{ cv.releasePointerCapture(e.pointerId); }catch(err){} }

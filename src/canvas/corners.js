@@ -11,7 +11,7 @@ import {setRoomSel} from '../core/selection.js';
 import {L, RP} from '../core/state.js';
 import {save} from '../core/store.js';
 import {clampOpenings, syncWallOff, wallIsOff, wallOf} from '../model/walls.js';
-import {renderOpen, renderRoom, renderRoomSel, renderWalls} from '../plan/room-panel.js';
+import {repaint} from '../core/bus.js';
 import {flash} from '../ui/flash.js';
 import {draw} from './draw.js';
 
@@ -48,7 +48,7 @@ function splitWall(i){
   syncWallOff(room);
   clampOpenings();
   setRoomSel({kind:'corner', i:i+1});
-  renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
+  repaint('room','walls','roomSel','openings'); draw(); save(); commitRoom();
 }
 function deleteCorner(i){
   const P=RP();
@@ -76,6 +76,6 @@ function deleteCorner(i){
   syncWallOff(room);
   clampOpenings();
   setRoomSel(null);
-  renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
+  repaint('room','walls','roomSel','openings'); draw(); save(); commitRoom();
 }
 export {splitWall, deleteCorner};

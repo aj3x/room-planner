@@ -5,6 +5,7 @@ import {fit, resize} from './canvas/view.js';
 import {seedHistFor} from './core/history.js';
 import {migrate} from './core/migrate.js';
 import {S, isCanvasMode, setS} from './core/state.js';
+import {on} from './core/bus.js';
 import {provide} from './core/registry.js';
 import {KEY, Store} from './core/store.js';
 import {marketFolderOf} from './library/adhoc-folders.js';
@@ -13,8 +14,10 @@ import {ensureDefaultMarket} from './library/market-subs.js';
 import {nav} from './library/nav.js';
 import {renderLibAll} from './library/shell.js';
 import {renderFloorSel} from './plan/floors.js';
+import {itemDialog} from './plan/item-dialog.js';
+import {activateLayout, renderTree} from './plan/layout-tree.js';
 import {renderInv} from './plan/item-list.js';
-import {applyLayoutMode, paramMode, renderAll, renderMode, setPendingFit, syncModeParam} from './plan/mode.js';
+import {applyLayoutMode, paramMode, renderAll, renderMode, setMode, setPendingFit, syncModeParam} from './plan/mode.js';
 import {renderSel} from './plan/selection-panel.js';
 import {renderOpen, renderRoom, renderRoomSel, renderSnap, renderWalls} from './plan/room-panel.js';
 import {flash} from './ui/flash.js';
@@ -41,6 +44,29 @@ function wire(){
      model/walls.js's tryRoomEdit refuses a fold-over and says so through here.
      See .claude/plans/decoupling.md §4, step 3. */
   provide('ui.flash', flash);
+
+  /* Who repaints when. Every mutation site that used to import a render
+     function now names the panel instead (core/bus.js), and this is the only
+     list of what those names mean. The order inside each repaint() call at the
+     call site is preserved, so this is a swap, not a redesign. */
+  on('paint:room',     renderRoom);
+  on('paint:walls',    renderWalls);
+  on('paint:roomSel',  renderRoomSel);
+  on('paint:openings', renderOpen);
+  on('paint:sel',      renderSel);
+  on('paint:inv',      renderInv);
+  on('paint:floorSel', renderFloorSel);
+  on('paint:tree',     renderTree);
+  on('paint:all',      renderAll);
+  on('paint:libAll',   renderLibAll);
+
+  /* Two commands rather than notifications: a canvas gesture can finish by
+     putting the app in Room mode, or by making a different room the active
+     one. Both used to be direct imports of plan/, which is the edge that fused
+     canvas/ and plan/ into one cycle. */
+  on('item:edit',       id => itemDialog(id));
+  on('mode:set',        m  => setMode(m));
+  on('layout:activate', id => activateLayout(id));
 
   /* Undo/redo repaint. core/history.js restores a snapshot and says so; which
      panels that makes stale is a question about the UI, and belongs here.

@@ -17,6 +17,7 @@
    The region's banner and its introductory comment stayed with the code they
    describe, which is the part still in index.html. */
 
+import {emit, repaint} from '../core/bus.js';
 import {nearestOnWalls} from '../model/walls.js';
 
 /* is `pt` (already snapped) essentially exactly on the room's own outline? Returns
@@ -66,8 +67,6 @@ import {mergeSel} from '../core/selection.js';
 import {L, S, clone, uid} from '../core/state.js';
 import {save} from '../core/store.js';
 import {clampOpenings, syncWallOff} from '../model/walls.js';
-import {activateLayout, renderTree} from '../plan/layout-tree.js';
-import {renderAll} from '../plan/mode.js';
 import {flash} from '../ui/flash.js';
 import {$, askConfirm, closeModal, openModal} from '../ui/modal.js';
 import {plural} from '../ui/panels.js';
@@ -76,8 +75,6 @@ import {setSplitDrawState} from './interaction-state.js';
 import {mergeSplice} from './merge-rooms.js';
 import {fit} from './view.js';
 import {setRoomSel} from '../core/selection.js';
-import {setMode} from '../plan/mode.js';
-import {renderRoomSel} from '../plan/room-panel.js';
 import {drawState, setDrawCursor, wallDrawState} from './interaction-state.js';
 import {measureOn} from './measure-state.js';
 import {setMeasure} from './measure-tool.js';
@@ -338,7 +335,7 @@ function commitSplit(ctx, openWall){
   if(A.floorId) delete floorHist[A.floorId];
 
   mergeSel.clear();
-  renderTree(); renderAll(); fit(); save();
+  repaint('tree','all'); fit(); save();
   flash('Split into two rooms');
 }
 function splitUndo(){
@@ -352,8 +349,8 @@ function splitUndo(){
     if(m.aFurnHist) furnHist[m.aId]=m.aFurnHist; else delete furnHist[m.aId];
     delete roomHist[m.bId]; delete furnHist[m.bId];
     lastSplit=null;
-    if(S.active===m.bId) activateLayout(m.aId);
-    renderTree(); renderAll(); fit(); save();
+    if(S.active===m.bId) emit('layout:activate', m.aId);
+    repaint('tree','all'); fit(); save();
   });
 }
 
@@ -364,11 +361,10 @@ function startSplitRoom(id){
   if(drawState) cancelCustomDraw();
   if(wallDrawState) cancelWallDraw();
   if(measureOn) setMeasure(false);
-  if(S.active!==id) activateLayout(id);
-  setMode('room');
+  if(S.active!==id) emit('layout:activate', id);
+  emit('mode:set','room');
   setSplitDrawState({pts:[]}); setDrawCursor(null);
-  setRoomSel(null); renderRoomSel();
-  renderAll(); fit();
+  setRoomSel(null); repaint('roomSel','all'); fit();
   flash("Click a point on the room's wall to start the divider. Click inside the room to bend it, or click another wall to finish. Esc cancels.");
   draw();
 }

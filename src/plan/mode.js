@@ -1,7 +1,12 @@
-/* The mode switch. setMode() is one of the six edges that made the Plan side
-   panels and the Library UI a single strongly-connected component: it calls
+/* The mode switch. setMode() was one of the six edges that made the Plan side
+   panels and the Library UI a single strongly-connected component: it called
    renderLibAll() for the two library places and draw()/render*() for the three
    canvas ones.
+
+   The library half now goes through the bus (.claude/plans/decoupling.md §4,
+   step 5), so this file no longer imports library/. The canvas half stays a
+   direct call: plan/ sits above canvas/ and is allowed to drive it — what was
+   not allowed, and is now gone, is canvas/ reaching back up here.
 
    Extracted from index.html in Phase 3 as part of the 49-name SCC commit,
    move-only.
@@ -16,6 +21,7 @@
    index.html: the listeners under rule 6, renderAll because it is in a
    second, smaller SCC of its own with renderFloorSel and the floor dialogs.
 */
+import {repaint} from '../core/bus.js';
 import {draw} from '../canvas/draw.js';
 import {measureOn, setMeasureOn} from '../canvas/measure-state.js';
 import {renderMeasureBar, resetMeasureState} from '../canvas/measure-tool.js';
@@ -24,7 +30,6 @@ import {floorEntry, updateHistButtons} from '../core/history.js';
 import {selectClear, setAlignGuides, setAlignNote, setFloorGuides, setFloorSel, setFloorSnapNote, setRoomSel} from '../core/selection.js';
 import {L, S, isCanvasMode} from '../core/state.js';
 import {save} from '../core/store.js';
-import {renderLibAll} from '../library/shell.js';
 import {$} from '../ui/modal.js';
 import {applyPanes} from '../ui/panels.js';
 import {renderOpen, renderRoomSel, renderWalls} from './room-panel.js';
@@ -61,7 +66,7 @@ function setMode(m){
     else if(m==='floor') fit();   // arriving at a floor, frame the whole arrangement
     renderRoomSel(); renderWalls(); renderOpen(); renderSel(); updateHistButtons(); draw();
   }
-  else renderLibAll();
+  else repaint('libAll');
   save();
   syncModeParam();
 }
