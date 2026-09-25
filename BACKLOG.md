@@ -164,16 +164,19 @@ layouts are both currently active).
   Label fields never appear, and the Floor section shows whatever was last
   rendered into it. Clicking the room on the plan, shift-clicking a row in the
   tree, or anything else that calls `renderFloorSel()`/`renderAll()` puts it
-  right. The one-word fix is to add `renderFloorSel()` to that list; not done
-  here because Phase 3 is move-only. Found while writing the Floor-mode panel
-  coverage; pinned by `test/e2e/panel-select.spec.js` ("CHARACTERIZED, NOT
-  ENDORSED: arriving in Floor mode leaves both floor sections stale").
+  right. `setMode` now lives in **`src/plan/mode.js`** and both render
+  functions in **`src/plan/floors.js`**; the one-word fix is to add
+  `renderFloorSel()` to that list. Found while writing the Floor-mode panel
+  coverage. **No longer pinned by a test** — `panel-select.spec.js` was
+  scaffolding for the Plan+Library SCC move and went with the rest of it (see
+  `test/README.md`), so a fix here will turn nothing red either way.
 
 - **Filing an item into a folder derives its id prefix from the folder's
   *display name*, case and all.** `rehomeItemId()` builds the new id from
   `folderIdPrefix(folderId)`, which is `itemFolderPath(...).map(f=>idSlug(f.name))`
-  (`index.html` ~6378-6402), and `idSlug` only strips characters outside the
-  id charset — it does not case-fold. So dragging "sofa" onto a folder named
+  (now **`src/core/ids.js`**, used from **`src/library/item-folders.js`**), and
+  `idSlug` only strips characters outside the id charset — it does not
+  case-fold. So dragging "sofa" onto a folder named
   **IKEA** files it as `IKEA/sofa`, while an item already sitting in that same
   folder because its id said so (`ikea/kallax`, placed there by
   `ensureItemFolderPath`) keeps its lowercase path. One folder, two id paths:
@@ -182,13 +185,14 @@ layouts are both currently active).
   whichever half was not dropped there, and the divergence is invisible in the
   UI because the grid groups by `folderId`, not by id. Renaming the folder
   afterwards does not re-home anything either, so the prefix is a snapshot of
-  whatever the name was on the day of the drop. Found while writing the
-  `bindLibGrid` drop coverage; pinned by `test/e2e/panel-libgrid.spec.js`
-  ("the drop files the item and renames its id under the folder"). Not fixed:
-  Phase 3 is move-only.
+  whatever the name was on the day of the drop. The fix is to case-fold in `folderIdPrefix`, or to match
+  case-insensitively in `ensureItemFolderPath` — but either changes existing
+  ids, so it needs a migration. Found while writing the `bindLibGrid` drop
+  coverage. **No longer pinned by a test** — `panel-libgrid.spec.js` was
+  scaffolding for the SCC move and went with it.
 
 - **"Added" never appears on a listing's Add button.** In
-  `renderListingDetail` (`index.html` ~7572) the per-item handler is
+  `renderListingDetail` (**`src/library/adhoc-listings.js`**) the per-item handler is
   `addMarketItemToInventory(it); b.textContent='Added'; b.disabled=true;` —
   but `addMarketItemToInventory` ends in `save(); renderLibAll();`, which
   re-runs `renderListingDetail` and replaces the whole of `#listingBody`. The
@@ -199,9 +203,9 @@ layouts are both currently active).
   "Already in your library" collision dialog. "Add all to library" has the
   same shape and the same outcome. The fix is to mark the buttons before the
   re-render, or to have the re-render derive the state from `S.inventory`.
-  Found while writing the Phase 3.6 panel coverage; pinned by
-  `test/e2e/panel-library.spec.js` ("renderListingDetail lists the bundle's
-  items and adds them one at a time"). Not fixed: Phase 3 is move-only.
+  Found while writing the Phase 3.6 panel coverage. **No longer pinned by a
+  test** — `panel-library.spec.js` was scaffolding for the SCC move and went
+  with it.
 
 - **`renderSnap()` silently rewrites `S.snap` when the value is not in the
   list.** The picker is rebuilt from `SNAPS.imperial` or `SNAPS.metric`
@@ -217,9 +221,10 @@ layouts are both currently active).
   to set the unit too, and why `startSplitRoom()` (which calls `renderAll()`)
   drops a snap set just before it. Pre-existing; named by the `plan/` round and
   deliberately not fixed there because extraction commits are move-only.
-  Pinned by `test/e2e/panel-room.spec.js` ("CHARACTERIZED, NOT ENDORSED:
-  renderSnap silently rewrites S.snap…" and "…a snap set behind the picker
-  survives until the next renderAll").
+  **No longer pinned by a test** — `panel-room.spec.js` was scaffolding for
+  the SCC move and went with it. The fix is to keep `S.snap` when it is not in
+  the list (or convert it to the nearest equivalent in the new unit) rather
+  than resetting to `list[2]`.
 
 - **A room standing on a floor is invisible in the tree at boot.** `treeOpen`
   (`src/core/selection.js`) starts as an empty `Set` and is never persisted, so
@@ -227,25 +232,26 @@ layouts are both currently active).
   sits on a floor — the normal case once floors are used at all — the left pane
   opens with no row for the room the canvas is showing, no `.active` row
   anywhere, and nothing that reveals it short of finding and expanding the
-  right floor by hand. `renderTree` has all it needs to auto-expand the
-  ancestors of `S.active`; it does not. Pinned by
-  `test/e2e/panel-tree.spec.js` ("CHARACTERIZED, NOT ENDORSED: the active room
-  is not visible at boot when its floor is collapsed"). Not fixed: Phase 3 is
-  move-only, and this is behaviour, not a move.
+  right floor by hand. `renderTree` (**`src/plan/layout-tree.js`**) has all it needs to auto-expand
+  the ancestors of `S.active`; it does not. The fix is to seed `treeOpen` with
+  those ancestors at boot, or to expand them in `renderTree` when nothing else
+  has. **No longer pinned by a test** — `panel-tree.spec.js` was scaffolding
+  for the SCC move and went with it.
 
 - **A placement that is already invalid can be dragged *further* out of the
   room.** `drag.loose` is seeded from `isBad(hit)` at pointerdown, and while it
-  is true the `move` branch of `applyDragAt` (`index.html` ~3424) skips
+  is true the `move` branch of `applyDragAt` (**`src/canvas/interaction.js`**) skips
   `slideToValid` entirely and accepts any position whose *centre* is still
   inside the room (`centreInside`). The intent is clear and right — a piece
   that does not fit has to be draggable at all, or it would be stuck — but the
   loose path does not distinguish "moving back towards legal" from "moving
   further out", so a bed already poking through a wall can be pushed another
   300mm through it. It goes strict again the instant the placement becomes
-  valid (`if(v.ok) drag.loose=false`), so the state is not sticky. Found while
-  writing the Phase 3.5 pointer coverage; pinned by `test/e2e/pointer-item.spec.js`
-  ("CHARACTERIZED, NOT ENDORSED: a placement that already sticks out drags
-  loose"). Not fixed: Phase 3 is move-only.
+  valid (`if(v.ok) drag.loose=false`), so the state is not sticky. The fix is
+  to accept a loose position only when it does not increase the overlap. Found
+  while writing the Phase 3.5 pointer coverage. **No longer pinned by a test**
+  — `pointer-item.spec.js` was scaffolding for the `draw()` move and went with
+  it.
 
 - **`sel = null` does not clear `selSet`.** Three sites assign `sel = null`
   directly (`index.html` ~1176, ~4205, ~9446) without going through
@@ -265,9 +271,9 @@ layouts are both currently active).
   downstream because `null` coerces again in arithmetic, which is exactly why
   it has gone unnoticed. `Number.isFinite` would reject it, as would an
   explicit `typeof x === 'number'` test. Found while writing the Phase 1
-  characterization baseline; pinned by
-  `test/unit/boot.test.js` ("edge: every dangling reference is repaired…" and
-  "edge: the same isFinite(null) hole shows up on pillars").
+  characterization baseline; pinned by `test/unit/migrate.golden.test.js`
+  ("CHARACTERIZED, NOT ENDORSED: isFinite(null) is true, so null coordinates
+  survive").
 
 - **A negative ft+in length does not survive a `fmtLen` → `parseLen` round
   trip.** `fmtLen` renders the sign once, on the front of the whole string
@@ -300,9 +306,9 @@ layouts are both currently active).
   so it folds those tags into `manualTags`, permanently promoting an inherited
   tag to a hand-picked one — after which re-filing the item no longer removes
   it. Replace-mode import does this immediately; merge-mode defers it to the
-  next load, but it is equally permanent. Pinned by
-  `test/unit/io-roundtrip.test.js` ("the Library folder tree does not survive
-  export/import").
+  next load, but it is equally permanent. Pinned by `test/unit/io-roundtrip.test.js`
+  ("the Library folder tree does not survive export/import — characterized
+  defect").
 
 - **The app is not request-free on `file://`.** `ensureDefaultMarket()` runs
   during boot and fetches the built-in marketplace subscription from
@@ -318,21 +324,23 @@ layouts are both currently active).
   `test/e2e/smoke.spec.js` ("dist/index.html boots and paints straight off disk").
 
 - **A marketplace item's folder path does not find a folder that differs only
-  in case.** `addMarketItemToInventory()` files an incoming item under its id
-  path via `ensureItemFolderPath(parts)` (`index.html` ~6385), which matches an
-  existing folder with `x.name===name` — exact, case-sensitive. Marketplace ids
+  in case.** `addMarketItemToInventory()` (**`src/library/add-to-inventory.js`**) files an
+  incoming item under its id path via `ensureItemFolderPath(parts)`
+  (**`src/library/item-folders.js`**), which matches an existing folder with
+  `x.name===name` — exact, case-sensitive. Marketplace ids
   are lower-case by convention (`ikea/kallax/4x2`), so a user whose Library
   already has a folder called "IKEA" gets a second, separate folder called
   "ikea" beside it, and their IKEA items are split across two folders that look
-  the same in the tree. Nothing warns, and the two never merge. Found while
-  writing the Phase 3.6 marketplace coverage; pinned by
-  `test/e2e/panel-market.spec.js` ("no collision: the item is copied in and
-  filed under its id path"). Not fixed: Phase 3 is move-only.
+  the same in the tree. Nothing warns, and the two never merge. Same root cause as the
+  `folderIdPrefix` case defect above, and one case-insensitive match would fix
+  both. Found while writing the Phase 3.6 marketplace coverage. **No longer
+  pinned by a test** — `panel-market.spec.js` and its `page.route` stub
+  marketplace were scaffolding for the SCC move and went with it.
 
 - **Stepping out of a subscription answers the typed search about a different
-  collection.** `renderLibContent()` routes to `renderMarketSub()` *before* the
-  generic search view (`index.html` ~7625, and the comment there says so
-  deliberately), so while a subscription is open the search box searches that
+  collection.** `renderLibContent()` (**`src/library/router.js`**) routes to
+  `renderMarketSub()` *before* the generic search view (the comment there says
+  so deliberately), so while a subscription is open the search box searches that
   marketplace's index. Press "Marketplaces" to go back and `nav.searching` is
   still set and the box still holds the query, but the render now falls through
   to `renderLibSearchResults()`'s marketplace branch — which searches the **ad
@@ -340,22 +348,21 @@ layouts are both currently active).
   "Nothing matches “kallax” here." under a `Listings /` crumb, about a
   collection they never searched. Either the back-out should clear the search
   (as `goLibFolder` does) or the generic search should cover the subscriptions.
-  Pinned by `test/e2e/panel-market.spec.js` ("leaving the subscription with a
-  search still typed falls to the generic search view"). Not fixed: Phase 3 is
-  move-only.
+  **No longer pinned by a test** — `panel-market.spec.js` went with the rest of
+  the SCC scaffolding.
 
 - **An index entry with a malformed id disappears without a word.**
-  `subscribeMarket()` filters shard entries with
-  `if(it&&it.id&&!idProblem(it.id))` (`index.html` ~6488) and says nothing
+  `subscribeMarket()` (**`src/library/market-subs.js`**) filters shard entries
+  with `if(it&&it.id&&!idProblem(it.id))` and says nothing
   about the ones it drops — not to the user, not to the console. Every other
   validation failure in that function throws a message the Add dialog shows;
   this one is silent, so a publisher's typo shows up only as a catalogue that
   is quietly short of items, on every client, forever. The same filter is the
   app's only protection against a malicious id, so it should stay — it is the
-  silence that is the defect. Pinned by `test/e2e/panel-market.spec.js`
-  ("a valid manifest plus its shards becomes one subscription and one index",
-  which publishes seven entries and asserts the tile reads six). Not fixed:
-  Phase 3 is move-only.
+  silence that is the defect; the fix is a console warning, or a dropped-entry
+  count in the subscription tile. **No longer pinned by a test** —
+  `panel-market.spec.js` proved it by publishing seven entries and asserting
+  the tile read six, and went with the rest of the SCC scaffolding.
 
 - **Opening a dialog and pressing Save re-rounds its lengths to display
   precision.** Every length field in `itemDialog` and `openingDialog` is filled
@@ -367,10 +374,11 @@ layouts are both currently active).
   without touching anything stores **810**. The same applies to any existing
   opening or item re-saved from its dialog — the value drifts to whatever the
   current display unit can express, once per save, silently, and switching
-  units between saves drifts it again. Found while writing the Phase 3.6
-  dialog coverage; pinned by `test/e2e/panel-dialogs.spec.js` ("a new door
-  defaults to 813mm and is added to the wall the menu was opened on"). Not
-  fixed: Phase 3 is move-only.
+  units between saves drifts it again. The dialogs are now **`src/plan/item-dialog.js`** and
+  **`src/plan/opening-dialog.js`**; the fix is to keep the original millimetre
+  value when the field's text is unchanged. Found while writing the Phase 3.6
+  dialog coverage. **No longer pinned by a test** — `panel-dialogs.spec.js`
+  was scaffolding for the SCC move and went with it.
 
 - **Dead code the linter found.** ESLint (added in Phase 2, correctness rules
   only) reports seven unused bindings and dead stores in `index.html`. None is a
