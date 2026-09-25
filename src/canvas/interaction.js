@@ -28,6 +28,20 @@ import {alignRadius, bringToFront, snapCorner} from './snap.js';
 import {H, W, axisLockFrom, cv, snapMM, snapPt, view, wx, wy} from './view.js';
 import {drawState, splitDrawState, wallDrawState} from './interaction-state.js';
 import {applyDrawCursorAt} from './room-draw.js';
+/* the rest are here for onCanvasPointerDown, which moved in from the shell */
+import {pointInPoly} from '../core/geometry.js';
+import {floorEntry} from '../core/history.js';
+import {floorSel, mergeSel, sel, selSet, selectClear, selectOnly, selectToggle, setFloorSel, setMergeSel, setRoomSel} from '../core/selection.js';
+import {floorMode, floorOf, roomMode, uid} from '../core/state.js';
+import {isBad} from '../model/validity.js';
+import {floorMembers, floorRotHandle, handlePos, pickFloorRoom} from './draw.js';
+import {measureOn} from './measure-state.js';
+import {measurePointerDown} from './measure-tool.js';
+import {drawSnapPoint, finishCustomDraw} from './room-draw.js';
+import {boundaryHit, splitResolvePoint, trySplitLine} from './split-room.js';
+import {pickAt, pickRoom} from './snap.js';
+import {sx, sy} from './view.js';
+import {finishWallDraw} from './wall-draw.js';
 /* ------------------------- interaction ------------------------- */
 let spaceDown=false;
 function setSpaceDown(v){ spaceDown = v; } // held to force pan mode (Space+drag pans; Space+scroll still zooms)
@@ -39,6 +53,194 @@ function setLastPY(v){ lastPY = v; }
 function setLastMods(v){ lastMods = v; }
 const DEADZONE_MODES=['open','corner','pillar','iwall','iwall-end','wall'];
 const DEADZONE_PX=4;
+/* Where a gesture on the canvas begins: one dispatcher over every mode the
+   canvas can be in. Order matters and is not arbitrary — space-to-pan wins
+   over everything, the three draw modes (room outline, freestanding wall,
+   split line) each swallow the click while they are live, measuring comes
+   next, and only then do Floor / Room / Furniture get a look at it.
+
+   Moved out of index.html's <script> as part of Step 4 of
+   .claude/plans/decoupling.md. The registration itself stayed behind, at the
+   exact line it occupied — AGENTS.md rule 3: a module that calls
+   addEventListener at import time is a top-level side effect AND jumps that
+   listener ahead of every other one in the file. The rule is about the
+   registration, not the body, so index.html now reads
+   `cv.addEventListener('pointerdown', onCanvasPointerDown)` and the 165 lines
+   of mode dispatch live here, where a unit test can reach them.
+
+   The one thing that is not byte-identical: the calls to renderFloorSel,
+   renderTree, renderRoomSel, renderWalls, renderOpen and renderSel are now
+   repaint() on core/bus.js. Importing them from plan/ would re-fuse canvas/
+   and plan/ into the cycle Step 5 just took apart (npm run cycles enforces
+   it). repaint runs its subscribers synchronously in the order named, so
+   `repaint('roomSel','walls','openings')` is exactly the three calls it
+   replaced, on the same tick. */
+function onCanvasPointerDown(e){
+  try{ cv.setPointerCapture(e.pointerId); }catch(err){}
+  const px=e.offsetX, py=e.offsetY;
+
+  if(spaceDown){
+    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
+    cv.style.cursor='grabbing';
+    draw();
+    return;
+  }
+
+  if(drawState){
+    const raw=[wx(px),wy(py)];
+    if(drawState.pts.length>=3){
+      const s0=[sx(drawState.pts[0][0]), sy(drawState.pts[0][1])];
+      if(Math.hypot(px-s0[0], py-s0[1])<12){ finishCustomDraw(); return; }
+    }
+    drawState.pts.push(drawSnapPoint(raw,e.shiftKey));
+    setAlignGuides([]); setAlignNote('');
+    draw();
+    return;
+  }
+
+  if(wallDrawState){
+    const raw0=[wx(px),wy(py)];
+    const raw = (wallDrawState.a && e.shiftKey) ? axisLockFrom(wallDrawState.a,raw0) : raw0;
+    const snapped=snapWallPoint(raw,null,!e.altKey);
+    if(!wallDrawState.a){ wallDrawState.a=snapped; draw(); return; }
+    if(Math.hypot(snapped[0]-wallDrawState.a[0], snapped[1]-wallDrawState.a[1])<50){ flash('Drag out a longer wall'); return; }
+    finishWallDraw(wallDrawState.a, snapped);
+    return;
+  }
+
+  if(splitDrawState){
+    const raw0=[wx(px),wy(py)];
+    const pts=splitDrawState.pts;
+    const resolved=splitResolvePoint(raw0, e.shiftKey);
+    const snapped=snapWallPoint(resolved.pt,null,!e.altKey);
+    const hit=boundaryHit(snapped);
+    if(hit){
+      if(!pts.length){ pts.push(hit); draw(); return; }
+      trySplitLine(pts[0], pts.slice(1), hit);
+      return;
+    }
+    if(!pts.length){ flash("Click a point on the room's wall"); return; }
+    if(!pointInPoly(snapped, RP())){ flash('Stay inside the room'); return; }
+    pts.push(snapped);
+    draw();
+    return;
+  }
+
+  if(measureOn){ measurePointerDown(px,py); return; }
+
+  /* Floor mode positions whole rooms; their walls and items are edited in Room/Furniture */
+  if(floorMode()){
+    if(e.button===2) return;   // a right-click's own pointerdown; contextmenu handles the click itself
+    const fl=floorOf(L().floorId);
+    if(fl && floorSel){
+      const m=floorMembers(fl).find(x=>x.l.id===floorSel);
+      if(m){
+        const h=floorRotHandle(m.P);
+        if(Math.hypot(px-h.x,py-h.y)<14){
+          const b=bbox(m.P);
+          setDrag({mode:'floor-rot', id:floorSel, start:m.l.floorPlace.rot||0,
+                a0:Math.atan2(wy(py)-(b.y0+b.y1)/2, wx(px)-(b.x0+b.x1)/2)});
+          return;
+        }
+      }
+    }
+    const hit=pickFloorRoom(px,py);
+    if(hit){
+      if(e.shiftKey){
+        mergeSel.has(hit) ? mergeSel.delete(hit) : mergeSel.add(hit);
+        while(mergeSel.size>2) mergeSel.delete(mergeSel.values().next().value);
+        repaint('floorSel','tree'); draw();
+        return;   // shift+click only marks rooms for merge/delete — it never moves one
+      }
+      setMergeSel(new Set([hit]));   // seeds the pair: a plain click here, then shift+click a second room
+      const l=S.layouts.find(x=>x.id===hit);
+      floorEntry();   // baseline the arrangement BEFORE it moves, or there is nothing to undo to
+      setFloorSel(hit);
+      setDrag({mode:'floor-room', id:hit, dx:wx(px)-l.floorPlace.x, dy:wy(py)-l.floorPlace.y});
+      repaint('floorSel'); draw();
+      return;
+    }
+    if(floorSel){ setFloorSel(null); }
+    if(mergeSel.size){ mergeSel.clear(); repaint('tree'); }
+    repaint('floorSel');
+    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
+    draw();
+    return;
+  }
+
+  if(roomMode()){
+    const hit=pickRoom(px,py);
+    if(hit){
+      setRoomSel(hit); selectClear();
+      if(hit.kind==='opening') setDrag({mode:'open', id:hit.id, ox:px, oy:py, armed:false});
+      else if(hit.kind==='corner') setDrag({mode:'corner', i:hit.i, ox:px, oy:py, armed:false});
+      else if(hit.kind==='pillar'){
+        const pl=pillarOf(hit.id);
+        setDrag({mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y, ox:px, oy:py, armed:false});
+      }
+      else if(hit.kind==='iwall'){
+        if(hit.end) setDrag({mode:'iwall-end', id:hit.id, end:hit.end, ox:px, oy:py, armed:false});
+        else { const w=iwallOf(hit.id); setDrag({mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1], ox:px, oy:py, armed:false}); }
+      }
+      else setDrag({mode:'wall', i:hit.i, last:[wx(px),wy(py)], ox:px, oy:py, armed:false});
+      repaint('roomSel','walls','openings'); draw();
+      return;
+    }
+    setRoomSel(null); repaint('roomSel','walls','openings');
+    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
+    draw();
+    return;
+  }
+
+  if(!e.altKey && selSet.size===1 && sel){
+    const inst=instOf(sel), it=inst&&itemOf(inst.itemId);
+    if(inst&&it){
+      const h=handlePos(inst,it);
+      if(Math.hypot(px-h.x,py-h.y)<14){
+        setDrag({mode:'rot', id:sel, start:inst.rot||0, a0:Math.atan2(wy(py)-inst.y, wx(px)-inst.x), loose:isBad(inst)});
+        return;
+      }
+    }
+  }
+  const hit=pickAt(wx(px),wy(py));
+  if(hit && e.altKey){
+    // Alt+drag: duplicate the clicked item (or the whole selection, if the
+    // clicked item is already part of a multi-selection) and drag the copies,
+    // leaving the originals in place. Snapshot BEFORE pushing the duplicates
+    // so undo removes them entirely, as one step with the drag that follows.
+    const srcIds = selSet.has(hit.id) && selSet.size>1 ? [...selSet] : [hit.id];
+    const snap = snapFurn();
+    const idMap = new Map();
+    for(const id of srcIds){
+      const src=instOf(id); if(!src) continue;
+      const dupe={...src, id:uid()};
+      L().placed.push(dupe);
+      idMap.set(id, dupe.id);
+    }
+    const newIds=[...idMap.values()];
+    if(!newIds.length) return;
+    bringToFront(newIds);
+    selectSet(newIds);
+    const anchorNew=idMap.get(hit.id);
+    const starts=newIds.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
+    setDrag({mode:'move', ids:newIds, anchorId:anchorNew, dx:wx(px)-instOf(anchorNew).x, dy:wy(py)-instOf(anchorNew).y, starts, loose:isBad(instOf(anchorNew)), snap});
+    repaint('sel'); draw();
+    return;
+  }
+  if(hit){
+    if(e.shiftKey) selectToggle(hit.id);
+    else if(!selSet.has(hit.id)) selectOnly(hit.id);
+    bringToFront([...selSet]);
+    const ids=[...selSet];
+    const starts=ids.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
+    setDrag({mode:'move', ids, anchorId:hit.id, dx:wx(px)-hit.x, dy:wy(py)-hit.y, starts, loose:isBad(hit)});
+    repaint('sel'); draw();
+  } else {
+    setDrag({mode:'marquee', x0:px, y0:py, x1:px, y1:py, additive:e.shiftKey});
+    draw();
+  }
+}
+
 function applyDragAt(px,py,mods){
   if(!drag) return;
   if(!drag.armed && DEADZONE_MODES.includes(drag.mode)){
@@ -259,4 +461,4 @@ function edgePanTick(){
   requestAnimationFrame(edgePanTick);
 }
 
-export {spaceDown, setSpaceDown, ROOM_DRAGS, lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, DEADZONE_MODES, DEADZONE_PX, applyDragAt, EDGE_PAN_ZONE, EDGE_PAN_MAXSPD, edgePanVel, cancelDrag, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState, edgePanTick};
+export {onCanvasPointerDown, spaceDown, setSpaceDown, ROOM_DRAGS, lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, DEADZONE_MODES, DEADZONE_PX, applyDragAt, EDGE_PAN_ZONE, EDGE_PAN_MAXSPD, edgePanVel, cancelDrag, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState, edgePanTick};

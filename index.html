@@ -35,28 +35,27 @@
 /* ------------------------- units ------------------------- */
 import {parseLen, fmtLen} from './src/core/units.js';
 
-import {shapePoly, bbox, worldPoly, pointInPoly} from './src/core/geometry.js';
+import {shapePoly, bbox, worldPoly} from './src/core/geometry.js';
 
-import {PALETTE, uid, rectPts, blankLayout, S, L, RP, itemOf, instOf, openOf, roomMode, floorMode, folderOf, floorOf} from './src/core/state.js';
+import {PALETTE, uid, rectPts, blankLayout, S, L, RP, itemOf, instOf, openOf, roomMode, floorMode, folderOf} from './src/core/state.js';
 
 
-import {sel, selSet, roomSel, floorSel, mergeSel, setRoomSel, setFloorSel, setMergeSel, setAlignGuides, setAlignNote, treeOpen} from './src/core/selection.js';
+import {selSet, roomSel, floorSel, mergeSel, setRoomSel, setFloorSel, treeOpen} from './src/core/selection.js';
 
 import {drag, drawState, wallDrawState, splitDrawState, setDrag} from './src/canvas/interaction-state.js';
 
-import {selectOnly, selectToggle, selectSet, selectClear} from './src/core/selection.js';
+import {selectClear} from './src/core/selection.js';
 
 import {folderDescendant, enterFloor, folderMenu, layoutMenu, newFolder} from './src/plan/layout-tree.js';
 import {activateLayout} from './src/plan/layout-tree.js';
 
-import {syncWallOff, clampOpenings, pillarOf, iwallOf} from './src/model/walls.js';
-import {snapWallPoint} from './src/canvas/snap.js';
+import {syncWallOff, clampOpenings} from './src/model/walls.js';
 
 import {validate, isBad, centreInside, bisectToValid} from './src/model/validity.js';
 
 import {save} from './src/core/store.js';
 
-import {snapFurn, commitRoom, commitFurn, floorEntry} from './src/core/history.js';
+import {commitRoom, commitFurn} from './src/core/history.js';
 import {undoRoom, redoRoom, undoFurn, redoFurn, undoFloor, redoFloor} from './src/core/history.js';
 
 
@@ -84,14 +83,12 @@ import {moveBefore, clearDropMarks, dropHalf} from './src/ui/dnd.js';
 
 /* ------------------------- view ------------------------- */
 import {cv} from './src/canvas/view.js';
-import {view} from './src/canvas/view.js';
 import {W, H} from './src/canvas/view.js';
 import {resize, fit, zoomAt} from './src/canvas/view.js';
-import {sx, sy, wx, wy} from './src/canvas/view.js';
-import {snapMM, axisLockFrom} from './src/canvas/view.js';
+import {snapMM} from './src/canvas/view.js';
 
 import {startCustomDraw} from './src/canvas/room-draw.js';
-import {cancelCustomDraw, finishCustomDraw, drawSnapPoint, applyDrawCursorAt} from './src/canvas/room-draw.js';
+import {cancelCustomDraw, finishCustomDraw, applyDrawCursorAt} from './src/canvas/room-draw.js';
 cv.addEventListener('mousemove', e=>{
   if(!drawState && !wallDrawState && !splitDrawState) return;
   setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
@@ -99,7 +96,7 @@ cv.addEventListener('mousemove', e=>{
 });
 
 import {startWallDraw} from './src/canvas/wall-draw.js';
-import {cancelWallDraw, finishWallDraw} from './src/canvas/wall-draw.js';
+import {cancelWallDraw} from './src/canvas/wall-draw.js';
 
 /* ------------------------- splitting a room in two ------------------------- */
 /* A room's own dividing line is drawn the same way a freestanding wall is (same
@@ -107,16 +104,14 @@ import {cancelWallDraw, finishWallDraw} from './src/canvas/wall-draw.js';
    freestanding wall, a split has nowhere else to start or end. Between the two
    ends the user can drop as many interior points as they like, bending the cut
    into a polyline; each one must stay strictly inside the room. */
-import {boundaryHit} from './src/canvas/split-room.js';
 import {startSplitRoom} from './src/canvas/split-room.js';
-import {cancelSplitDraw, trySplitLine} from './src/canvas/split-room.js';
-import {splitResolvePoint} from './src/canvas/split-room.js';
+import {cancelSplitDraw} from './src/canvas/split-room.js';
 
 import {darkMQ} from './src/canvas/draw.js';
 darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>scheduleDraw());
 
 
-import {draw, scheduleDraw, floorMembers, pickFloorRoom, floorRotHandle, handlePos} from './src/canvas/draw.js';
+import {draw, scheduleDraw, pickFloorRoom} from './src/canvas/draw.js';
 import {normHex} from './src/canvas/draw.js';
 
 /* ------------------------- measuring -------------------------
@@ -135,7 +130,7 @@ import {normHex} from './src/canvas/draw.js';
 import {measureOn, measureStart, measureSel, setMeasureStart, setMeasureHover, setMeasureHoverId, setMeasureSel, setMeasureCursor} from './src/canvas/measure-state.js';
 import {liveMeasures, renderMeasureBar} from './src/canvas/measure-tool.js';
 import {setMeasure} from './src/canvas/measure-tool.js';
-import {resetMeasureState, removeMeasure, measurePointerDown, measureHoverAt} from './src/canvas/measure-tool.js';
+import {resetMeasureState, removeMeasure, measureHoverAt} from './src/canvas/measure-tool.js';
 cv.addEventListener('pointerleave', ()=>{
   if(!measureOn || drag) return;
   setMeasureHover(null); setMeasureHoverId(null); setMeasureCursor(null); scheduleDraw();
@@ -154,174 +149,10 @@ $('measureBar').addEventListener('click', e=>{
   }
 });
 
-import {spaceDown, setSpaceDown, lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, applyDragAt, cancelDrag, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState} from './src/canvas/interaction.js';
+import {setSpaceDown, lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, onCanvasPointerDown, applyDragAt, cancelDrag, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState} from './src/canvas/interaction.js';
 import {flash} from './src/ui/flash.js';
-import {pickAt, bringToFront, pickRoom} from './src/canvas/snap.js';
-cv.addEventListener('pointerdown', e=>{
-  try{ cv.setPointerCapture(e.pointerId); }catch(err){}
-  const px=e.offsetX, py=e.offsetY;
-
-  if(spaceDown){
-    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
-    cv.style.cursor='grabbing';
-    draw();
-    return;
-  }
-
-  if(drawState){
-    const raw=[wx(px),wy(py)];
-    if(drawState.pts.length>=3){
-      const s0=[sx(drawState.pts[0][0]), sy(drawState.pts[0][1])];
-      if(Math.hypot(px-s0[0], py-s0[1])<12){ finishCustomDraw(); return; }
-    }
-    drawState.pts.push(drawSnapPoint(raw,e.shiftKey));
-    setAlignGuides([]); setAlignNote('');
-    draw();
-    return;
-  }
-
-  if(wallDrawState){
-    const raw0=[wx(px),wy(py)];
-    const raw = (wallDrawState.a && e.shiftKey) ? axisLockFrom(wallDrawState.a,raw0) : raw0;
-    const snapped=snapWallPoint(raw,null,!e.altKey);
-    if(!wallDrawState.a){ wallDrawState.a=snapped; draw(); return; }
-    if(Math.hypot(snapped[0]-wallDrawState.a[0], snapped[1]-wallDrawState.a[1])<50){ flash('Drag out a longer wall'); return; }
-    finishWallDraw(wallDrawState.a, snapped);
-    return;
-  }
-
-  if(splitDrawState){
-    const raw0=[wx(px),wy(py)];
-    const pts=splitDrawState.pts;
-    const resolved=splitResolvePoint(raw0, e.shiftKey);
-    const snapped=snapWallPoint(resolved.pt,null,!e.altKey);
-    const hit=boundaryHit(snapped);
-    if(hit){
-      if(!pts.length){ pts.push(hit); draw(); return; }
-      trySplitLine(pts[0], pts.slice(1), hit);
-      return;
-    }
-    if(!pts.length){ flash("Click a point on the room's wall"); return; }
-    if(!pointInPoly(snapped, RP())){ flash('Stay inside the room'); return; }
-    pts.push(snapped);
-    draw();
-    return;
-  }
-
-  if(measureOn){ measurePointerDown(px,py); return; }
-
-  /* Floor mode positions whole rooms; their walls and items are edited in Room/Furniture */
-  if(floorMode()){
-    if(e.button===2) return;   // a right-click's own pointerdown; contextmenu handles the click itself
-    const fl=floorOf(L().floorId);
-    if(fl && floorSel){
-      const m=floorMembers(fl).find(x=>x.l.id===floorSel);
-      if(m){
-        const h=floorRotHandle(m.P);
-        if(Math.hypot(px-h.x,py-h.y)<14){
-          const b=bbox(m.P);
-          setDrag({mode:'floor-rot', id:floorSel, start:m.l.floorPlace.rot||0,
-                a0:Math.atan2(wy(py)-(b.y0+b.y1)/2, wx(px)-(b.x0+b.x1)/2)});
-          return;
-        }
-      }
-    }
-    const hit=pickFloorRoom(px,py);
-    if(hit){
-      if(e.shiftKey){
-        mergeSel.has(hit) ? mergeSel.delete(hit) : mergeSel.add(hit);
-        while(mergeSel.size>2) mergeSel.delete(mergeSel.values().next().value);
-        renderFloorSel(); renderTree(); draw();
-        return;   // shift+click only marks rooms for merge/delete — it never moves one
-      }
-      setMergeSel(new Set([hit]));   // seeds the pair: a plain click here, then shift+click a second room
-      const l=S.layouts.find(x=>x.id===hit);
-      floorEntry();   // baseline the arrangement BEFORE it moves, or there is nothing to undo to
-      setFloorSel(hit);
-      setDrag({mode:'floor-room', id:hit, dx:wx(px)-l.floorPlace.x, dy:wy(py)-l.floorPlace.y});
-      renderFloorSel(); draw();
-      return;
-    }
-    if(floorSel){ setFloorSel(null); }
-    if(mergeSel.size){ mergeSel.clear(); renderTree(); }
-    renderFloorSel();
-    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
-    draw();
-    return;
-  }
-
-  if(roomMode()){
-    const hit=pickRoom(px,py);
-    if(hit){
-      setRoomSel(hit); selectClear();
-      if(hit.kind==='opening') setDrag({mode:'open', id:hit.id, ox:px, oy:py, armed:false});
-      else if(hit.kind==='corner') setDrag({mode:'corner', i:hit.i, ox:px, oy:py, armed:false});
-      else if(hit.kind==='pillar'){
-        const pl=pillarOf(hit.id);
-        setDrag({mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y, ox:px, oy:py, armed:false});
-      }
-      else if(hit.kind==='iwall'){
-        if(hit.end) setDrag({mode:'iwall-end', id:hit.id, end:hit.end, ox:px, oy:py, armed:false});
-        else { const w=iwallOf(hit.id); setDrag({mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1], ox:px, oy:py, armed:false}); }
-      }
-      else setDrag({mode:'wall', i:hit.i, last:[wx(px),wy(py)], ox:px, oy:py, armed:false});
-      renderRoomSel(); renderWalls(); renderOpen(); draw();
-      return;
-    }
-    setRoomSel(null); renderRoomSel(); renderWalls(); renderOpen();
-    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
-    draw();
-    return;
-  }
-
-  if(!e.altKey && selSet.size===1 && sel){
-    const inst=instOf(sel), it=inst&&itemOf(inst.itemId);
-    if(inst&&it){
-      const h=handlePos(inst,it);
-      if(Math.hypot(px-h.x,py-h.y)<14){
-        setDrag({mode:'rot', id:sel, start:inst.rot||0, a0:Math.atan2(wy(py)-inst.y, wx(px)-inst.x), loose:isBad(inst)});
-        return;
-      }
-    }
-  }
-  const hit=pickAt(wx(px),wy(py));
-  if(hit && e.altKey){
-    // Alt+drag: duplicate the clicked item (or the whole selection, if the
-    // clicked item is already part of a multi-selection) and drag the copies,
-    // leaving the originals in place. Snapshot BEFORE pushing the duplicates
-    // so undo removes them entirely, as one step with the drag that follows.
-    const srcIds = selSet.has(hit.id) && selSet.size>1 ? [...selSet] : [hit.id];
-    const snap = snapFurn();
-    const idMap = new Map();
-    for(const id of srcIds){
-      const src=instOf(id); if(!src) continue;
-      const dupe={...src, id:uid()};
-      L().placed.push(dupe);
-      idMap.set(id, dupe.id);
-    }
-    const newIds=[...idMap.values()];
-    if(!newIds.length) return;
-    bringToFront(newIds);
-    selectSet(newIds);
-    const anchorNew=idMap.get(hit.id);
-    const starts=newIds.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
-    setDrag({mode:'move', ids:newIds, anchorId:anchorNew, dx:wx(px)-instOf(anchorNew).x, dy:wy(py)-instOf(anchorNew).y, starts, loose:isBad(instOf(anchorNew)), snap});
-    renderSel(); draw();
-    return;
-  }
-  if(hit){
-    if(e.shiftKey) selectToggle(hit.id);
-    else if(!selSet.has(hit.id)) selectOnly(hit.id);
-    bringToFront([...selSet]);
-    const ids=[...selSet];
-    const starts=ids.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
-    setDrag({mode:'move', ids, anchorId:hit.id, dx:wx(px)-hit.x, dy:wy(py)-hit.y, starts, loose:isBad(hit)});
-    renderSel(); draw();
-  } else {
-    setDrag({mode:'marquee', x0:px, y0:py, x1:px, y1:py, additive:e.shiftKey});
-    draw();
-  }
-});
+import {pickRoom} from './src/canvas/snap.js';
+cv.addEventListener('pointerdown', onCanvasPointerDown);
 cv.addEventListener('pointermove', e=>{
   if(measureOn && !drag){ measureHoverAt(e.offsetX,e.offsetY); return; }
   if(!drag) return;

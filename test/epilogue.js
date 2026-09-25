@@ -36,6 +36,9 @@ const GLOBALS = [
  */
 export const EPILOGUE = `
 ;import {alignGuides, alignNote} from './src/core/selection.js';
+/* view left index.html's scope when onCanvasPointerDown moved into
+ * canvas/interaction.js — it was the shell's last reader. */
+;import {view} from './src/canvas/view.js';
 ;import {exportPayload} from './src/io/export.js';
 ;import {applyImport} from './src/io/import.js';
 ;import {polySimple} from './src/core/geometry.js';
