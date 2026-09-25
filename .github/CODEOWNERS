@@ -1,0 +1,43 @@
+# Review routing. The last matching pattern wins, so the specific entries below
+# the default are the ones that decide.
+#
+# @aj3x is the only maintainer today, so every line names the same person and
+# nothing here gates anything yet. It is written anyway because the code is now
+# 100+ files: when a second contributor arrives, the question "who should look
+# at this?" has to have an answer that does not depend on recognising a path.
+# The specific entries are not ceremony — each one is a place where a change
+# that looks harmless, lints clean and leaves the suite green can still do real
+# damage.
+
+*                           @aj3x
+
+# Saved-state shape and its migrations. migrate() runs on every load of every
+# returning user's data; a wrong step here rewrites real projects with no error
+# anywhere, and the damage is already on disk by the time anyone notices.
+# S is also reassigned wholesale (setS), so its module is the one place the
+# whole state object is defined.
+/src/core/state.js          @aj3x
+/src/core/migrate.js        @aj3x
+
+# The 24 design tokens. They must stay CSS custom properties: dark mode works
+# by re-declaring them under @media (prefers-color-scheme:dark), so converting
+# one to a Sass $variable silently deletes dark mode with every test green.
+/src/styles/_tokens.scss    @aj3x
+
+# Import/export is the only path a user's data leaves and re-enters the app by,
+# and the collision rules decide whether a merge keeps or overwrites their work.
+/src/io/                    @aj3x
+
+# CI, Pages deployment and this file. A bad change here can publish the wrong
+# thing to the live site, or quietly stop running the gate.
+/.github/                   @aj3x
+
+# The suite is capped at 20% of the codebase (ideally under 10%, it is at
+# 9.98%). Additions need an argument about what they catch, and deletions need
+# to be distinguished from removing scaffolding that has finished its job —
+# both are review questions, not mechanical ones. See test/README.md.
+/test/                      @aj3x
+
+# The build is what makes the one-file deployment model work: the include
+# plugin, the classic script tag and the singlefile inlining are load-bearing.
+/vite.config.js             @aj3x

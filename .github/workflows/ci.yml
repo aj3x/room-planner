@@ -1,0 +1,89 @@
+# Pull-request gate: lint, unit tests, build, browser suite.
+#
+# The browser suite (`npm run test:e2e`) builds both artifacts itself and then
+# runs Playwright over two Chromium projects — `chromium-light` (the Vite dev
+# server) and `dist-light` (the bundled single file), sharing one set of
+# goldens. See test/README.md.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A new push to a PR cancels the run still going for the previous one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  no-build-output:
+    # dist/ is generated, 322 kB, and touched by every change. Committing it
+    # would put a merge conflict on every PR — the exact problem the module
+    # split exists to remove. It is gitignored; this is the check that keeps it
+    # that way if somebody ever forces it in.
+    name: dist/ is not committed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if build output is tracked
+        run: |
+          tracked="$(git ls-files dist dist-test)"
+          if [ -n "$tracked" ]; then
+            echo "::error::Build output is committed. Remove it and keep dist/ gitignored:"
+            echo "$tracked"
+            exit 1
+          fi
+          echo "No tracked files under dist/ or dist-test/."
+
+  build-and-test:
+    name: lint, unit, build, e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run test:unit
+
+      - run: npm run build
+
+      # Playwright's browser download is the slowest step in the run, so cache
+      # it. The key is the lockfile, which is what pins the Playwright version:
+      # bump the dependency and you get a fresh browser.
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Chromium system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
