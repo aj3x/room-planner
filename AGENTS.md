@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## What this is
-Room Planner is a client-only web app with **zero runtime dependencies**. What ships is still one self-contained HTML file you can open off disk — that deployment model is not negotiable — but as of the `refactor/modularize` branch it is *built* rather than hand-maintained:
+Room Planner is a client-only web app with **zero runtime dependencies**. What ships is one self-contained HTML file you can open off disk — that deployment model is not negotiable — but it is *built* rather than hand-maintained:
 
 ```sh
 npm install && npx playwright install chromium   # once
@@ -11,14 +11,16 @@ npm test           # 109 Vitest + 26 Playwright, ~45s
 npm run lint       # ESLint, correctness rules only
 ```
 
-`dist/` is **never committed** — a generated 547 KB file touched by every PR conflicts on every merge, which is the exact problem this refactor exists to solve.
+`dist/` is **never committed** — a generated 322 kB file touched by every PR conflicts on every merge, which is the exact problem the module split exists to solve. It is gitignored, and CI fails if it is ever tracked. Both workflows live in [`.github/workflows/`](.github/workflows): `ci.yml` runs lint, unit, build and the browser suite on every pull request; `pages.yml` builds and publishes `dist/` to GitHub Pages on every push to `main`. Review routing is in [`.github/CODEOWNERS`](.github/CODEOWNERS).
 
 Two consequences worth knowing before you touch anything:
 
-- **`index.html`'s one `<script>` is now `type="module"`** (a Vite entry point). The code inside it is unchanged, but the source file no longer runs from `file://` — module scripts are fetched under CORS rules an opaque `file://` origin cannot satisfy. Open `dist/index.html` for that, which is what actually ships.
+- **`index.html`'s one `<script>` is `type="module"`** (a Vite entry point), so the source file does **not** run from `file://` — module scripts are fetched under CORS rules an opaque `file://` origin cannot satisfy. Open `dist/index.html` for that, which is what actually ships.
 - **All tooling is a devDependency.** `dependencies` in `package.json` is empty and must stay that way.
 
-**Phase 3 is finished — JS, CSS and markup.** **[index.html](index.html)** is now **1,068 lines** and is a shell: seven lines of `<head>`, a `<link>` to the stylesheet, seven `<!-- @include -->` directives holding the page structure together, and one `<script type="module">` (28-1066) that is 86 import lines, 91 listener registrations, the two calls that start `edgePanTick()` and `boot()`, and a single `let` (`libSearchT`, the search debounce handle). Everything else lives in **81 JS modules**, **14 SCSS partials** and **7 HTML partials** under `src/`:
+## How the source is laid out
+
+**[index.html](index.html)** is **1,068 lines** and is a shell: seven lines of `<head>`, a `<link>` to the stylesheet, seven `<!-- @include -->` directives holding the page structure together, and one `<script type="module">` (28-1066) that is 86 import lines, about ninety listener registrations, the two calls that start `edgePanTick()` and `boot()`, and a single `let` (`libSearchT`, the search debounce handle). Everything else lives in **81 JS modules**, **14 SCSS partials** and **7 HTML partials** under `src/`:
 
 - **`src/core/`** — `units.js`, `geometry.js`, `open-state.js`, `state.js`, `selection.js`, `ids.js`, `floor-space.js`, `store.js`, `migrate.js`, `history.js`
 - **`src/model/`** — `walls.js`, `openings.js`, `validity.js`, `measures.js`, `walkpaths.js`
@@ -26,23 +28,30 @@ Two consequences worth knowing before you touch anything:
 - **`src/canvas/`** — `view.js`, `draw.js`, `snap.js`, `merge-rooms.js`, `split-room.js`, `room-draw.js`, `wall-draw.js`, `corners.js`, `interaction.js`, `interaction-state.js`, `measure-state.js`, `measure-tool.js`
 - **`src/plan/`** — `layout-tree.js`, `floors.js`, `room-panel.js`, `room-controls.js`, `item-list.js`, `selection-panel.js`, `item-dialog.js`, `opening-dialog.js`, `mode.js`
 - **`src/io/`** — `pickers.js`, `export.js`, `import.js`
+- **`src/library/`** — `item-folders.js`, `adhoc-folders.js`, `market-subs.js`, `add-to-inventory.js`, `nav.js`, `shell.js`, `tree.js`, `folder-menus.js`, `grid.js`, `search.js`, `marketplace.js`, `adhoc-listings.js`, `export.js`, `router.js`
 - **`src/blueprint/`** — `state.js`, `image.js`, `poly.js`, `pixels.js`, `walls.js`, `outlines.js`, `openings.js`, `rectify.js`, `labels.js`, `regions.js`, `detect.js`, `ocr.js`, `draft.js`, `wizard.js`, `step1-upload.js`, `step2-crop.js`, `step3-scale.js`, `mask-viewer.js`, `step4-review.js`, `commit.js`
 - **`src/boot.js`** — `boot()`, exported and called from `index.html`
 - **`src/styles/`** — `main.scss` (the `@use` manifest) plus `_tokens`, `_base`, `_header`, `_buttons`, `_inputs`, `_plan`, `_canvas`, `_modal`, `_blueprint`, `_menus`, `_dnd`, `_library`, `_touch`, `_narrow`
 - **`src/html/`** — `sprite`, `header`, `pane-left`, `stage`, `pane-right`, `pane-library`, `modal`
-- **`src/library/`** — `item-folders.js`, `adhoc-folders.js`, `market-subs.js`, `add-to-inventory.js`, `nav.js`, `shell.js`, `tree.js`, `folder-menus.js`, `grid.js`, `search.js`, `marketplace.js`, `adhoc-listings.js`, `export.js`, `router.js`
 
-**The lesson from the `draw()` round still applies.** `draw()` was once called an unbisectable 1,500-line component; it moved as an ordinary 766-line commit once the *state* it read had moved out ahead of it. **When a big function looks unmovable, check whether what is really stuck is the mutable state it reads, not the code.** Mutable shared state belongs in leaf modules that import nothing — `core/state.js` (`S`), `core/selection.js` (the ten selection lets), `canvas/interaction-state.js`, `canvas/measure-state.js`, `library/nav.js`. That trick does **not** dissolve every knot: the 49-name SCC below was checked for it and its six edges were plain function calls, not shared state, so it had to move whole.
+### Moving code between modules
 
-**The SCC is gone.** The Plan side panels and the Library UI used to be one strongly-connected component of 49 names — `setMode()` and `itemDialog()` called `renderLibAll()`, and four library functions called back into `itemDialog()`/`renderSel()`. It could not be split, so it moved in **one commit** of 1,326 lines into 15 modules. Everything that had been blocked behind it followed: `canvas/interaction.js`, `canvas/room-draw.js`, `canvas/corners.js`, the rest of `split-room.js`, the replaying half of `core/history.js`, `io/import.js`, `renderAll` and `togglePane`.
+The split is done, but code still moves, and the two findings that cost the most to learn are worth having before you start.
 
-**Three rules carry forward, and all three drew blood in that round.**
+**When a big function looks unmovable, check whether what is really stuck is the mutable state it reads, not the code.** `draw()` was called an unbisectable 1,500-line component; it moved as an ordinary 766-line commit once the state it reads had moved out ahead of it. **Mutable shared state belongs in leaf modules that import nothing** — `core/state.js` (`S`), `core/selection.js` (the ten selection lets), `canvas/interaction-state.js`, `canvas/measure-state.js`, `library/nav.js`. Keep it that way.
 
-1. **No import edge that drags an existing top-level read into a cycle.** `canvas/view.js` runs `const cv=$('cv'), ctx=cv.getContext('2d')` at module-eval time, and `$` comes from `ui/modal.js`. The module graph now has exactly two cycles: `modal.js ↔ panels.js ↔ tag-input.js`, and a 45-module one holding nearly everything else (the blueprint round briefly made a third, of the four wizard step dialogs, until `floorMenu` moved into `plan/floors.js` and merged it into the big one). **`ui/modal.js` must stay outside the big one** — that is the whole reason `migrate()` is in `core/migrate.js` and not `core/store.js` (which `ui/panels.js` imports), `setMode` and `togglePane` are in `plan/mode.js` and not `ui/panels.js`, and `savePlanImage` is in `io/export.js` and not `canvas/`. Nothing in `ui/` may import `plan/` or `library/`. Check any new edge with a Tarjan run over the import graph, not by eye.
+**That does not dissolve every knot, so check which kind you have.** The Plan side panels and the Library UI were once one strongly-connected component of 49 names, and its six edges were plain function calls rather than shared state — no setter breaks that, and it had to move whole, in one commit of 1,326 lines into 15 modules. Ask the question explicitly (state, or calls?) rather than assuming the `draw()` answer.
+
+**A move is a move.** Byte-identical lines, no renames, no reordering, no reformatting, no fixes folded in; `git blame` survives a pure move and that history is what settles an argument later. A behaviour change — a `setX(v)` setter, say — goes in its own commit and says so in the message. Bugs you spot go in `BACKLOG.md`.
+
+**Four more rules carry forward, and all four have drawn blood.**
+
+1. **No import edge that drags an existing top-level read into a cycle.** `canvas/view.js` runs `const cv=$('cv'), ctx=cv.getContext('2d')` at module-eval time, and `$` comes from `ui/modal.js`. The module graph has exactly two cycles: `modal.js ↔ panels.js ↔ tag-input.js`, and a 45-module one holding nearly everything else. **`ui/modal.js` must stay outside the big one** — that is the whole reason `migrate()` is in `core/migrate.js` and not `core/store.js` (which `ui/panels.js` imports), `setMode` and `togglePane` are in `plan/mode.js` and not `ui/panels.js`, and `savePlanImage` is in `io/export.js` and not `canvas/`. Nothing in `ui/` may import `plan/` or `library/`. Check any new edge with a Tarjan run over the import graph, not by eye.
 2. **`test/epilogue.js` is not linted.** `__rp` names a binding that must still be in `index.html`'s scope; when the last reader moves out, you get a bare `ReferenceError` at module evaluation, with a green build and a green browser. Where a name has moved, the epilogue **imports** it rather than `index.html` importing it back. Worse are the `GLOBALS` entries, which assign inside a `try/catch` and so fail *silently* and late. There is a standing audit for both; see `test/README.md`.
-3. **Listener registrations stay in `index.html`**, at their exact spot. A module that calls `addEventListener` at import time breaks the "only `boot.js` has top-level side effects" rule *and* reorders that listener ahead of every other one in the file. The pointer handlers drive `canvas/interaction.js` through `applyDragAt`/`cancelDrag`/`endDrag`; the pane heads drive `togglePane`; and so on. A binding a staying listener writes needs a `setX(v)` setter, because you cannot assign to an imported binding.
+3. **Listener registrations stay in `index.html`**, at their exact spot. A module that calls `addEventListener` at import time introduces a top-level side effect *and* reorders that listener ahead of every other one in the file. The pointer handlers drive `canvas/interaction.js` through `applyDragAt`/`cancelDrag`/`endDrag`; the pane heads drive `togglePane`; and so on. A binding a staying listener writes needs a `setX(v)` setter, because you cannot assign to an imported binding.
+4. **ESLint cannot check a module specifier.** `import {sizeLabel} from '../model/measures.js'` lints clean even though `sizeLabel` is exported by `canvas/draw.js` — `no-undef` sees the name as declared by the import either way, and there is no import resolver in `eslint.config.js`. A real name behind the wrong file is invisible to lint and is found only by running the suite. Verify the *module*, not just the name.
 
-**There are no top-level side effects anywhere in `src/`.** Every module defines and exports; nothing runs at import time. §3 reserved that exemption for `boot.js` and it went unused: **`src/boot.js` exports `boot()` and `index.html` calls it**, at the exact line its IIFE occupied. That is deliberate and worth not undoing — importing a `boot.js` that called `boot()` itself would run boot *before* `index.html`'s 91 listener registrations, since imports hoist and evaluate ahead of the importing module's body. It would happen to work, because `boot()` suspends on its first `await`, but nothing in the suite would catch it if that stopped being true. The `edgePanTick` rAF loop is the same shape, exported from `canvas/interaction.js`.
+**There are no top-level side effects anywhere in `src/`.** Every module defines and exports; nothing runs at import time. **`src/boot.js` exports `boot()` and `index.html` calls it**, at the exact line its IIFE occupied. That is deliberate and worth not undoing — importing a `boot.js` that called `boot()` itself would run boot *before* `index.html`'s listener registrations, since imports hoist and evaluate ahead of the importing module's body. It would happen to work, because `boot()` suspends on its first `await`, but nothing in the suite would catch it if that stopped being true. The `edgePanTick` rAF loop is the same shape, exported from `canvas/interaction.js`.
 
 **Styles are SCSS, and `src/styles/main.scss` is where the cascade order is stated.** The partials are plain CSS cut on the banners that were already in the `<style>` block, so `@use` order *is* source order and later rules still win ties on equal specificity — put a rule where it belongs in the sequence, not at the end. Nothing is nested and nothing uses `@extend`; if you nest, the cap is two levels plus `&` modifiers. **The design tokens are CSS custom properties and must stay that way** — dark mode re-declares all 24 under `@media (prefers-color-scheme:dark)`, and a Sass `$variable` is compile-time and cannot cascade, so converting one deletes dark mode with every test still green. See [DESIGN.md](DESIGN.md) §3.2.
 
@@ -55,7 +64,7 @@ The header nav (`#navSeg`) switches between three **places**: **Plan** (the canv
 To preview: `npm run dev`, or `npm run build && open dist/index.html` to check the shipped artifact.
 
 ## Verifying changes
-`npm test` is the gate. Read [`test/README.md`](test/README.md) before touching anything under `test/` — it opens with the rule that shapes the directory: **test code stays under 20% of the codebase, and ideally under 10%** (it is 1,435 lines against 12,948 today). The characterization baseline that guarded the module split has been removed now that the split has landed; what is left is a permanent suite, and every addition to it needs an argument about what it catches that nothing else does.
+`npm test` is the gate, and CI (`.github/workflows/ci.yml`) runs the same commands on every pull request, plus a check that nothing under `dist/` is tracked. Read [`test/README.md`](test/README.md) before touching anything under `test/` — it opens with the rule that shapes the directory: **test code stays under 20% of the codebase, and ideally under 10%** (it is 1,435 lines against 12,948 today). The characterization baseline that guarded the module split has been removed now that the split has landed; what is left is a permanent suite, and every addition to it needs an argument about what it catches that nothing else does.
 
 - `npm run test:unit` (~2s) — Vitest + jsdom: units, `migrate()` goldens and import/export round-trips, imported straight out of `src/`, plus the build-pipeline tests.
 - `npm run test:e2e` (~40s) — builds, then Playwright + Chromium against **both** the dev server and `dist/index.html`, sharing one set of goldens so the build cannot move a coordinate unnoticed. Covers the smoke path, the blueprint geometry golden, two pointer gestures and the `file://` deployment contract.
@@ -64,7 +73,7 @@ To preview: `npm run dev`, or `npm run build && open dist/index.html` to check t
 
 Still worth doing by hand for anything visual: `npm run dev` and exercise the area you changed (draw/resize a room, place furniture, undo/redo, switch units).
 
-## Architecture (all inside index.html)
+## Architecture
 - **Units** (**[src/core/units.js](src/core/units.js)**, imported at the top of `<script>`): everything is stored internally in **millimetres**; `parseLen`/`fmtLen` convert to/from the user's display unit (ft+in, in, cm, mm, m). Don't introduce a second unit system — always store mm and format at render time. Geometry helpers are in **[src/core/geometry.js](src/core/geometry.js)**.
 - **State** (**[src/core/state.js](src/core/state.js)**): a single global `S` object holds `layouts` (rooms), `inventory` (furniture items), `folders`, and UI prefs (unit, snap, mode). Each layout's room is a closed polygon: `room.points = [[x,y], ...]` (clockwise, mm).
 - **Persistence**: `Store` wraps `window.storage` (if present) or falls back to `localStorage`. `save()` debounces writes. `migrate(st)` (**[src/core/migrate.js](src/core/migrate.js)**, *not* `store.js` — see the cycle rule above) upgrades older saved-state shapes on load — **when changing the shape of `S`, add a migration step here** rather than assuming fresh state. `S` itself is reassigned wholesale on load and on import; it lives in a module now and you cannot assign to an imported binding, so every such write goes through `setS(v)` (**[src/core/state.js](src/core/state.js)**), never a bare `S = …`.
@@ -92,6 +101,8 @@ Still worth doing by hand for anything visual: `npm run dev` and exercise the ar
 
 ## Conventions
 - No semicolon-free style; ES2017-ish, `"use strict"`, no TypeScript. Keep new code consistent with the surrounding style.
-- **Phase 3's split is done** (see [`.claude/plans/refactor-split.md`](.claude/plans/refactor-split.md); the mechanical recipe is in §4, and it is worth reading before any large move). New code goes in the `src/` module, partial or stylesheet where it belongs — **not** in `index.html`, which is now a shell. The one thing that still belongs there is a listener registration, at the spot its markup implies.
+- New code goes in the `src/` module, partial or stylesheet where it belongs — **not** in `index.html`, which is a shell. The one thing that still belongs there is a listener registration, at the spot its markup implies. (The split that got here is written up in [`.claude/plans/refactor-split.md`](.claude/plans/refactor-split.md); the mechanical recipe in §4 is worth reading before any large move.)
+- **No runtime dependencies.** `dependencies` in `package.json` is empty and stays empty.
+- Contributor-facing setup and review expectations are in [`CONTRIBUTING.md`](CONTRIBUTING.md); it is the same ground as this file, written for a person arriving cold.
 - `function` declarations stay `function` declarations — never rewritten as `const f = () => {}`. ESM tolerates import cycles for hoisted function declarations but not for `const` bindings read during module evaluation, and this graph is dense and almost certainly cyclic.
 - Angles: 0° points right, 90° points up (screen-plan convention), see `wallAngle`/`setWallAngle`.
