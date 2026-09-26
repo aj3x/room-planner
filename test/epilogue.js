@@ -43,7 +43,11 @@ export const EPILOGUE = `
  * plan/shortcuts.js. */
 ;import {commitFurn} from './src/core/history.js';
 ;import {exportPayload} from './src/io/export.js';
-;import {applyImport} from './src/io/import.js';
+/* readImport's last shell reader was the #fileIn change handler, which moved
+ * into bind/header.js when the header's wiring went to its partial. It was in
+ * GLOBALS, where a missing name fails silently inside a try/catch — the
+ * round-trip spec went red and lint said nothing, which is rule 2 exactly. */
+;import {applyImport, readImport} from './src/io/import.js';
 ;import {polySimple} from './src/core/geometry.js';
 ;import {bpState} from './src/blueprint/state.js';
 ;import {bpRebuild} from './src/blueprint/draft.js';

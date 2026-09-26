@@ -210,14 +210,8 @@ document.addEventListener('keyup', onDocumentKeyUp);
 import {esc} from './src/ui/panels.js';
 import {renderAll} from './src/plan/mode.js';
 import {setMode, applyLayoutMode} from './src/plan/mode.js';
-import {isCanvasMode} from './src/core/state.js';
+
 $('modeSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setMode(b.dataset.mode); });
-$('navSeg').addEventListener('click', e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  const n=b.dataset.nav;
-  if(n==='plan'){ if(!isCanvasMode(S.mode)) setMode(S.planMode||'furniture'); }
-  else if(n!==S.mode) setMode(n);
-});
 
 import {togglePane} from './src/plan/mode.js';
 for(const [headId,side] of [['headLeft','left'],['headRight','right']]){
@@ -394,7 +388,7 @@ $('btnNewLayout').addEventListener('click', ()=>{
 });
 
 import {renderRoom, deletePillar, deleteIWall, renderRoomSel, deleteOpening} from './src/plan/room-panel.js';
-import {renderSnap, renderWalls, renderObstacles} from './src/plan/room-panel.js';
+import {renderWalls, renderObstacles} from './src/plan/room-panel.js';
 $('structList').addEventListener('click', e=>{
   const li=e.target.closest('li[data-id]'); if(!li) return;
   const kind=li.dataset.kind, id=li.dataset.id, btn=e.target.closest('button');
@@ -577,7 +571,6 @@ $('btnDrawCustom').addEventListener('click', ()=>{
   if(drawState) cancelCustomDraw(); else startCustomDraw();
 });
 
-$('unitSel').addEventListener('change', e=>{ S.unit=e.target.value; renderSnap(); renderAll(); save(); });
 $('snapSel').addEventListener('change', e=>{ S.snap=e.target.value; save(); });
 $('zoomSpeedSel').addEventListener('change', e=>{ S.zoomSpeed=parseFloat(e.target.value)||1; save(); });
 $('showSwing').addEventListener('change', e=>{ S.showSwing=e.target.checked; draw(); save(); });
@@ -632,23 +625,6 @@ $('btnSamples').addEventListener('click', ()=>{
 });
 
 
-import {exportDialog} from './src/io/export.js';
-$('btnExport').addEventListener('click', exportDialog);
-
-import {readImport, importDialog} from './src/io/import.js';
-$('btnImport').addEventListener('click',()=>$('fileIn').click());
-$('fileIn').addEventListener('change', e=>{
-  const f=e.target.files[0]; if(!f) return;
-  const rd=new FileReader();
-  rd.onload=()=>{
-    let inc=null;
-    try{ inc=readImport(JSON.parse(rd.result)); }catch(err){ inc=null; }
-    if(!inc){ flash("That file isn't a Room Planner export"); return; }
-    importDialog(inc);
-  };
-  rd.readAsText(f);
-  e.target.value='';
-});
 
 import {libFlash} from './src/ui/flash.js';
 
