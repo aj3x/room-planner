@@ -68,11 +68,13 @@ cover is written down rather than left to be discovered. See
 
 The app was a single 10,893-line `index.html`. It has been taken apart into
 modules so several people can work on it without colliding, and that is
-finished: `index.html` is now a 1,068-line shell — a `<head>`, a stylesheet
-link, seven include directives for the static markup, and one
-`<script type="module">` that is imports, listener registrations and the call
-to `boot()`. Everything else is **82 JS modules, 14 SCSS partials and 7 HTML
-partials** under `src/`.
+finished: `index.html` is now a 111-line shell — a `<head>`, a stylesheet
+link, seven include directives for the static markup, and a short script
+holding the dozen listeners that belong to no single pane, plus the call to
+`boot()`. Each pane's own wiring sits with its markup: every HTML partial
+ends with a module script that calls one `bind*()` from `src/bind/`.
+Everything else is **93 JS modules, 14 SCSS partials and 7 HTML partials**
+under `src/`.
 
 ```
 src/core/       units, geometry, ids, state, selection, storage, migrations, undo/redo
