@@ -35,12 +35,12 @@
 /* ------------------------- units ------------------------- */
 
 
-import {PALETTE, uid, blankLayout, S, L, openOf, roomMode, floorMode, folderOf} from './src/core/state.js';
+import {PALETTE, uid, blankLayout, S, openOf, roomMode, folderOf} from './src/core/state.js';
 
 
 import {roomSel, mergeSel, setRoomSel, treeOpen} from './src/core/selection.js';
 
-import {drag, drawState, wallDrawState, splitDrawState, setDrag} from './src/canvas/interaction-state.js';
+import {wallDrawState} from './src/canvas/interaction-state.js';
 
 
 import {folderDescendant, enterFloor, folderMenu, layoutMenu, newFolder} from './src/plan/layout-tree.js';
@@ -50,11 +50,10 @@ import {activateLayout} from './src/plan/layout-tree.js';
 
 import {save} from './src/core/store.js';
 
-import {undoRoom, redoRoom, undoFurn, redoFurn, undoFloor, redoFloor} from './src/core/history.js';
 
 
 import {$} from './src/ui/modal.js';
-import {askText, askConfirm, showShortcuts} from './src/ui/modal.js';
+import {askText} from './src/ui/modal.js';
 
 import {menuEl, closeMenu, openMenu, menuAtPoint} from './src/ui/menu.js';
 document.addEventListener('pointerdown', e=>{ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }, true);
@@ -68,125 +67,24 @@ import {moveBefore, clearDropMarks, dropHalf} from './src/ui/dnd.js';
 
 
 /* ------------------------- view ------------------------- */
-import {cv} from './src/canvas/view.js';
-import {W, H} from './src/canvas/view.js';
-import {resize, fit, zoomAt} from './src/canvas/view.js';
+import {resize, fit} from './src/canvas/view.js';
 
-import {applyDrawCursorAt} from './src/canvas/room-draw.js';
-cv.addEventListener('mousemove', e=>{
-  if(!drawState && !wallDrawState && !splitDrawState) return;
-  setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
-  applyDrawCursorAt(lastPX,lastPY,e.shiftKey);
-});
 
 import {startWallDraw} from './src/canvas/wall-draw.js';
 import {cancelWallDraw} from './src/canvas/wall-draw.js';
 
-/* ------------------------- splitting a room in two ------------------------- */
-/* A room's own dividing line is drawn the same way a freestanding wall is (same
-   snapping), except both ends must land ON the room's own boundary — unlike a
-   freestanding wall, a split has nowhere else to start or end. Between the two
-   ends the user can drop as many interior points as they like, bending the cut
-   into a polyline; each one must stay strictly inside the room. */
 import {startSplitRoom} from './src/canvas/split-room.js';
 
 import {darkMQ} from './src/canvas/draw.js';
 darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>scheduleDraw());
 
 
-import {draw, scheduleDraw, pickFloorRoom} from './src/canvas/draw.js';
+import {draw, scheduleDraw} from './src/canvas/draw.js';
 
-/* ------------------------- measuring -------------------------
-   A measurement joins two anchors and shows the shortest distance between them.
-   An anchor is part of something on the plan — an item, pillar, interior wall, door or
-   window, or a room wall:
-     corner  a point;
-     side    one edge of a footprint;
-     whole   the footprint itself (solid, so anything overlapping it is 0 away), or for a
-             door, window or room wall the span of its face. Picked at its centre point.
-     swing   a hinged door's swing: the area the door sweeps as it opens.
-   Stored as l.measures = [{id, a, b}], anchor = {k, id, part, n}; k is the kind, id the
-   thing's id (a room wall's index), n which corner or side. Ends are looked up live, so a
-   measurement follows what it joins as things move. It is a note on the plan, not part of
-   the room or the furniture, so it has no undo history of its own. */
-import {measureOn, measureSel, setMeasureHover, setMeasureHoverId, setMeasureCursor} from './src/canvas/measure-state.js';
-import {liveMeasures, renderMeasureBar} from './src/canvas/measure-tool.js';
-import {setMeasure} from './src/canvas/measure-tool.js';
-import {resetMeasureState, removeMeasure, measureHoverAt} from './src/canvas/measure-tool.js';
-cv.addEventListener('pointerleave', ()=>{
-  if(!measureOn || drag) return;
-  setMeasureHover(null); setMeasureHoverId(null); setMeasureCursor(null); scheduleDraw();
-});
-$('btnMeasure').addEventListener('click', ()=>setMeasure(!measureOn));
-$('btnShortcuts').addEventListener('click', showShortcuts);
-$('measureBar').addEventListener('click', e=>{
-  const b=e.target.closest('button[data-act]'); if(!b) return;
-  if(b.dataset.act==='done') setMeasure(false);
-  else if(b.dataset.act==='remove' && measureSel) removeMeasure(measureSel);
-  else if(b.dataset.act==='clear'){
-    const n=liveMeasures().length;
-    askConfirm('Clear measurements', 'Remove '+(n===1?'the measurement':'all '+n+' measurements')+' from '+L().name+'?', 'Clear measurements', ()=>{
-      L().measures=[]; resetMeasureState(); renderMeasureBar(); draw(); save();
-    });
-  }
-});
 
-import {lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, onCanvasPointerDown, applyDragAt, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState} from './src/canvas/interaction.js';
 import {flash} from './src/ui/flash.js';
-import {pickRoom} from './src/canvas/snap.js';
-cv.addEventListener('pointerdown', onCanvasPointerDown);
-cv.addEventListener('pointermove', e=>{
-  if(measureOn && !drag){ measureHoverAt(e.offsetX,e.offsetY); return; }
-  if(!drag) return;
-  setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
-  applyDragAt(lastPX,lastPY,lastMods);
-});
 import {edgePanTick} from './src/canvas/interaction.js';
 edgePanTick();
-cv.addEventListener('pointerup',endDrag);
-cv.addEventListener('pointercancel',endDrag);
-/* in Room mode, double-clicking a wall types its length in rather than dragging for it */
-cv.addEventListener('dblclick', e=>{
-  if(drawState) return;
-  /* double-clicking a room on the floor is the way back to editing it */
-  if(floorMode()){
-    const id=pickFloorRoom(e.offsetX,e.offsetY);
-    if(id){ setDrag(null); activateLayout(id); setMode('room'); renderAll(); fit(); save(); }
-    return;
-  }
-  if(!roomMode()) return;
-  const hit=pickRoom(e.offsetX,e.offsetY);
-  if(hit&&hit.kind==='wall'){ setDrag(null); wallDialog(hit.i); }
-});
-/* right-clicking a room marked for merge/delete opens that menu; right-clicking any
-   other room collapses the marked set down to just the one under the pointer first */
-cv.addEventListener('contextmenu', e=>{
-  if(roomMode() && !drawState && !wallDrawState && !splitDrawState && !measureOn){
-    e.preventDefault();
-    menuAtPoint(e.clientX, e.clientY, [{label:'Split room…', fn:()=>startSplitRoom(S.active)}]);
-    return;
-  }
-  if(!floorMode()) return;
-  const hit=pickFloorRoom(e.offsetX,e.offsetY);
-  if(!hit) return;
-  e.preventDefault();
-  if(!mergeSel.has(hit)){ mergeSel.clear(); mergeSel.add(hit); renderFloorSel(); renderTree(); draw(); }
-  if(mergeSel.size!==2) return;
-  openFloorMergeMenu([...mergeSel], e.clientX, e.clientY);
-});
-cv.addEventListener('wheel', e=>{
-  e.preventDefault();
-  const now = performance.now();
-  const dt = wheelState.last ? Math.max(1, now-wheelState.last) : 100;
-  wheelState.last = now;
-  // deltaMode 1 = DOM_DELTA_LINE (mouse wheel notches, chunky); 0 = DOM_DELTA_PIXEL (trackpad, many small events)
-  const norm = e.deltaMode===1 ? e.deltaY*16 : e.deltaY;
-  const velocity = Math.abs(norm)/dt;
-  const accel = Math.min(4, 1+velocity*ZOOM_ACCEL_K);
-  const speed = S.zoomSpeed||1;
-  const magnitude = accel*speed*Math.min(3, Math.abs(norm)/4);
-  zoomAt(Math.pow(ZOOM_FACTOR, (norm<0?1:-1)*magnitude), e.offsetX, e.offsetY);
-}, {passive:false});
 
 import {onDocumentKeyDown, onDocumentKeyUp} from './src/plan/shortcuts.js';
 document.addEventListener('keydown', onDocumentKeyDown);
@@ -196,7 +94,6 @@ document.addEventListener('keyup', onDocumentKeyUp);
 import {renderAll} from './src/plan/mode.js';
 import {setMode, applyLayoutMode} from './src/plan/mode.js';
 
-$('modeSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setMode(b.dataset.mode); });
 
 import {togglePane} from './src/plan/mode.js';
 for(const [headId,side] of [['headLeft','left'],['headRight','right']]){
@@ -500,11 +397,6 @@ invBox.addEventListener('drop', e=>{
 
 
 
-$('btnUndo').addEventListener('click',()=>{ floorMode()?undoFloor():roomMode()?undoRoom():undoFurn(); });
-$('btnRedo').addEventListener('click',()=>{ floorMode()?redoFloor():roomMode()?redoRoom():redoFurn(); });
-$('btnZoomIn').addEventListener('click',()=>zoomAt(1.25,W/2,H/2));
-$('btnZoomOut').addEventListener('click',()=>zoomAt(1/1.25,W/2,H/2));
-$('btnFit').addEventListener('click',fit);
 
 import {itemDialog} from './src/plan/item-dialog.js';
 $('btnAddItem').addEventListener('click',()=>itemDialog(null));

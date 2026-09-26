@@ -42,6 +42,11 @@ export const EPILOGUE = `
 /* commitFurn's last shell reader was the arrow-key nudge, which moved into
  * plan/shortcuts.js. */
 ;import {commitFurn} from './src/core/history.js';
+/* drag and the four undo/redo entry points were last read by the stage — the
+ * canvas pointer handlers and the toolbar's undo/redo buttons — and went with
+ * it. All five are __rp members. */
+;import {drag} from './src/canvas/interaction-state.js';
+;import {undoRoom, redoRoom, undoFurn, redoFurn} from './src/core/history.js';
 ;import {exportPayload} from './src/io/export.js';
 /* readImport's last shell reader was the #fileIn change handler, which moved
  * into bind/header.js when the header's wiring went to its partial. It was in
