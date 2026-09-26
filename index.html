@@ -33,11 +33,9 @@
    =================================================================== */
 
 /* ------------------------- units ------------------------- */
-import {parseLen, fmtLen} from './src/core/units.js';
 
-import {shapePoly, bbox} from './src/core/geometry.js';
 
-import {PALETTE, uid, rectPts, blankLayout, S, L, RP, openOf, roomMode, floorMode, folderOf} from './src/core/state.js';
+import {PALETTE, uid, blankLayout, S, L, openOf, roomMode, floorMode, folderOf} from './src/core/state.js';
 
 
 import {roomSel, mergeSel, setRoomSel, treeOpen} from './src/core/selection.js';
@@ -48,16 +46,14 @@ import {drag, drawState, wallDrawState, splitDrawState, setDrag} from './src/can
 import {folderDescendant, enterFloor, folderMenu, layoutMenu, newFolder} from './src/plan/layout-tree.js';
 import {activateLayout} from './src/plan/layout-tree.js';
 
-import {syncWallOff, clampOpenings} from './src/model/walls.js';
 
 
 import {save} from './src/core/store.js';
 
-import {commitRoom} from './src/core/history.js';
 import {undoRoom, redoRoom, undoFurn, redoFurn, undoFloor, redoFloor} from './src/core/history.js';
 
 
-import {$, openModal, moError} from './src/ui/modal.js';
+import {$} from './src/ui/modal.js';
 import {askText, askConfirm, showShortcuts} from './src/ui/modal.js';
 
 import {menuEl, closeMenu, openMenu, menuAtPoint} from './src/ui/menu.js';
@@ -76,8 +72,7 @@ import {cv} from './src/canvas/view.js';
 import {W, H} from './src/canvas/view.js';
 import {resize, fit, zoomAt} from './src/canvas/view.js';
 
-import {startCustomDraw} from './src/canvas/room-draw.js';
-import {cancelCustomDraw, applyDrawCursorAt} from './src/canvas/room-draw.js';
+import {applyDrawCursorAt} from './src/canvas/room-draw.js';
 cv.addEventListener('mousemove', e=>{
   if(!drawState && !wallDrawState && !splitDrawState) return;
   setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
@@ -100,7 +95,6 @@ darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>scheduleDraw())
 
 
 import {draw, scheduleDraw, pickFloorRoom} from './src/canvas/draw.js';
-import {normHex} from './src/canvas/draw.js';
 
 /* ------------------------- measuring -------------------------
    A measurement joins two anchors and shows the shortest distance between them.
@@ -199,7 +193,6 @@ document.addEventListener('keydown', onDocumentKeyDown);
 document.addEventListener('keyup', onDocumentKeyUp);
 
 /* ------------------------- panels ------------------------- */
-import {esc} from './src/ui/panels.js';
 import {renderAll} from './src/plan/mode.js';
 import {setMode, applyLayoutMode} from './src/plan/mode.js';
 
@@ -379,7 +372,7 @@ $('btnNewLayout').addEventListener('click', ()=>{
   });
 });
 
-import {renderRoom, deletePillar, deleteIWall, renderRoomSel, deleteOpening} from './src/plan/room-panel.js';
+import {deletePillar, deleteIWall, renderRoomSel, deleteOpening} from './src/plan/room-panel.js';
 import {renderWalls, renderObstacles} from './src/plan/room-panel.js';
 $('structList').addEventListener('click', e=>{
   const li=e.target.closest('li[data-id]'); if(!li) return;
@@ -453,7 +446,6 @@ $('tagChips').addEventListener('click', e=>{
 $('onlyAvail').addEventListener('change', e=>{ S.onlyAvailable=e.target.checked; renderInv(); save(); });
 $('invSearch').addEventListener('input', e=>{ S.invSearch=e.target.value; renderInv(); save(); });
 
-$('invScope').addEventListener('change', e=>{ S.invScope=e.target.value; renderInv(); save(); });
 
 invBox.addEventListener('click', e=>{
   const li=e.target.closest('li[data-id]'); if(!li) return;
@@ -507,69 +499,7 @@ invBox.addEventListener('drop', e=>{
 });
 
 
-import {bindLen, setFloorColor} from './src/plan/room-controls.js';
-bindLen('wallT', v=>{ L().room.wall=v; });
-bindLen('trimD', v=>{ L().room.trim=v; });
-$('floorCol').addEventListener('input', e=>{ setFloorColor(e.target.value); $('floorHex').value=e.target.value; $('floorHex').classList.remove('bad'); });
-$('floorCol').addEventListener('change', ()=>commitRoom());
-$('floorHex').addEventListener('input', e=>{
-  const c=normHex(e.target.value);
-  e.target.classList.toggle('bad', !c);
-  if(c) setFloorColor(c);
-});
-/* typing an unfinished/bad code leaves the plan alone — snap the box back on the way out */
-$('floorHex').addEventListener('change', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); commitRoom(); });
-$('floorHex').addEventListener('blur', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); });
-$('trimOn').addEventListener('change', e=>{ L().room.trimOn=e.target.checked; renderRoom(); draw(); save(); commitRoom(); });
 
-$('btnPreRect').addEventListener('click', ()=>{
-  const b=bbox(RP());
-  openModal('Rectangular room',
-    `<div class="field"><label for="pW">Width</label><input type="text" class="len" id="pW" value="${esc(fmtLen(b.w,S.unit))}"></div>
-     <div class="field"><label for="pD">Depth</label><input type="text" class="len" id="pD" value="${esc(fmtLen(b.h,S.unit))}"></div>
-     <p class="hint">This replaces the current outline. Doors and windows move to the nearest wall.</p>`,
-    'Use this shape', ()=>{
-      const w=parseLen($('pW').value,S.unit), d=parseLen($('pD').value,S.unit);
-      if(!isFinite(w)||!isFinite(d)||w<500||d<500){ moError('Give a width and depth of at least 500 mm'); return false; }
-      L().room.points=rectPts(w,d);
-      L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
-  clampOpenings(); setRoomSel(null);
-      renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
-    });
-});
-$('btnPreL').addEventListener('click', ()=>{
-  const b=bbox(RP());
-  openModal('L-shaped room',
-    `<div class="field"><label for="pW">Width</label><input type="text" class="len" id="pW" value="${esc(fmtLen(b.w,S.unit))}"></div>
-     <div class="field"><label for="pD">Depth</label><input type="text" class="len" id="pD" value="${esc(fmtLen(b.h,S.unit))}"></div>
-     <div class="field"><label for="pCW">Notch across</label><input type="text" class="len" id="pCW" value="${esc(fmtLen(b.w/3,S.unit))}"></div>
-     <div class="field"><label for="pCD">Notch down</label><input type="text" class="len" id="pCD" value="${esc(fmtLen(b.h/3,S.unit))}"></div>
-     <div class="field"><label for="pC">Notch at</label><select id="pC">
-       <option value="ne">Top right</option><option value="nw">Top left</option>
-       <option value="se">Bottom right</option><option value="sw">Bottom left</option></select></div>`,
-    'Use this shape', ()=>{
-      const w=parseLen($('pW').value,S.unit), d=parseLen($('pD').value,S.unit);
-      const cw=parseLen($('pCW').value,S.unit), cd=parseLen($('pCD').value,S.unit);
-      if(![w,d,cw,cd].every(v=>isFinite(v)&&v>100)){ moError('Fill in all four measurements'); return false; }
-      if(cw>=w-100||cd>=d-100){ moError('The notch has to be smaller than the room'); return false; }
-      L().room.points=shapePoly({type:'lshape',w,d,cw,cd,corner:$('pC').value}).map(([x,y])=>[x+w/2,y+d/2]);
-      L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
-  clampOpenings(); setRoomSel(null);
-      renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
-    });
-});
-$('btnDrawCustom').addEventListener('click', ()=>{
-  if(wallDrawState) cancelWallDraw();
-  if(drawState) cancelCustomDraw(); else startCustomDraw();
-});
-
-$('snapSel').addEventListener('change', e=>{ S.snap=e.target.value; save(); });
-$('zoomSpeedSel').addEventListener('change', e=>{ S.zoomSpeed=parseFloat(e.target.value)||1; save(); });
-$('showSwing').addEventListener('change', e=>{ S.showSwing=e.target.checked; draw(); save(); });
-$('showWalk').addEventListener('change', e=>{ S.showWalk=e.target.checked; draw(); save(); });
-$('showMeasure').addEventListener('change', e=>{ S.showMeasure=e.target.checked; draw(); save(); });
-$('showDims').addEventListener('change', e=>{ S.showDims=e.target.checked; draw(); save(); });
-$('showOpen').addEventListener('change', e=>{ S.showOpen=e.target.checked; draw(); save(); });
 $('btnUndo').addEventListener('click',()=>{ floorMode()?undoFloor():roomMode()?undoRoom():undoFurn(); });
 $('btnRedo').addEventListener('click',()=>{ floorMode()?redoFloor():roomMode()?redoRoom():redoFurn(); });
 $('btnZoomIn').addEventListener('click',()=>zoomAt(1.25,W/2,H/2));

@@ -48,6 +48,13 @@ export const EPILOGUE = `
  * GLOBALS, where a missing name fails silently inside a try/catch — the
  * round-trip spec went red and lint said nothing, which is rule 2 exactly. */
 ;import {applyImport, readImport} from './src/io/import.js';
+/* RP, commitRoom and startCustomDraw all left the shell with the right-hand
+ * Room pane's wiring — the outline presets and the colour/trim controls were
+ * their last readers there. RP and commitRoom are __rp getters, which fail
+ * loudly; startCustomDraw is a GLOBALS entry, which does not. */
+;import {RP} from './src/core/state.js';
+;import {commitRoom} from './src/core/history.js';
+;import {startCustomDraw} from './src/canvas/room-draw.js';
 ;import {polySimple} from './src/core/geometry.js';
 ;import {bpState} from './src/blueprint/state.js';
 ;import {bpRebuild} from './src/blueprint/draft.js';
