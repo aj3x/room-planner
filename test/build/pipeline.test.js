@@ -6,6 +6,7 @@
      1. SCSS compiles, and design tokens survive as CSS custom properties.
      2. The output is ONE file. No sibling .js, .css or asset.
      3. The script tag is classic, so the file opens from file://.
+     4. Several module script blocks merge into ONE bundle, in document order.
 
    A fixture rather than index.html, so a break reads as "the pipeline is wrong"
    rather than "the app is wrong". */
@@ -57,6 +58,39 @@ describe('the Vite build', () => {
     expect(html).not.toMatch(/<script[^>]*type=["']module["']/);
     expect(html).toContain('scss pipeline fixture');
     expect(html.search(/<script\s*>/)).toBeGreaterThan(html.indexOf('<body'));
+  });
+});
+
+describe('several script blocks', () => {
+  /* The app puts a <script type="module"> inside each src/html/ partial, so
+     that a pane's wiring sits with its markup. That only works because Vite
+     merges every module block in the document into one entry — and because it
+     keeps them in document order, which is what AGENTS.md rule 3 depends on:
+     a listener registered out of order runs ahead of listeners that were
+     meant to precede it, and nothing anywhere else would notice.
+
+     Vite documents neither behaviour. This test is the reason we can rely on
+     both anyway: if a Vite upgrade splits the blocks into separate chunks, or
+     reorders them, it fails here rather than as a listener that mysteriously
+     stops firing. */
+
+  it('merges every block into a single inlined script', () => {
+    const tags = html.match(/<script\b/g) || [];
+    expect(tags).toHaveLength(1);
+    expect(html).toContain('BLOCK_ALPHA');
+    expect(html).toContain('BLOCK_OMEGA');
+  });
+
+  it('keeps the blocks in document order', () => {
+    const alpha = html.indexOf('BLOCK_ALPHA');
+    /* A marker inside main.js, NOT the string 'scss pipeline fixture' — that
+       is also the fixture's <title> and would match in <head>, which is how
+       this test first passed for the wrong reason. */
+    const main = html.indexOf('BLOCK_MAIN');
+    const omega = html.indexOf('BLOCK_OMEGA');
+    expect(alpha).toBeGreaterThan(-1);
+    expect(main).toBeGreaterThan(alpha);
+    expect(omega).toBeGreaterThan(main);
   });
 });
 
