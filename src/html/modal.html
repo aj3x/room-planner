@@ -12,3 +12,13 @@
     </div>
   </div>
 </div>
+
+<!-- This pane's listeners. The bind function is called here rather than at
+     import time so that nothing in src/ has a top-level side effect, and so
+     the registrations happen at the point in the document this markup
+     occupies. Path is relative to index.html, which is where this file is
+     spliced, not to src/html/. -->
+<script type="module">
+import {bindModal} from './src/bind/modal.js';
+bindModal();
+</script>

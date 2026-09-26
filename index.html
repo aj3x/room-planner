@@ -57,15 +57,7 @@ import {commitRoom} from './src/core/history.js';
 import {undoRoom, redoRoom, undoFurn, redoFurn, undoFloor, redoFloor} from './src/core/history.js';
 
 
-import {$, mo, moOkFn, moBackFn, openModal, closeModal, moError} from './src/ui/modal.js';
-/* a wizard's Back replaces the footer's meaning of "leave" with "go to the previous
-   step" — it must not run the dialog's onClose, unlike Cancel/Esc/backdrop */
-$('moCancel').addEventListener('click', ()=>{ if(moBackFn) moBackFn(); else closeModal(); });
-$('moOk').addEventListener('click', ()=>{ if(!moOkFn) return closeModal(); if(moOkFn()===false) return; closeModal(); });
-mo.addEventListener('click', e=>{ if(e.target===mo) closeModal(); });
-mo.addEventListener('keydown', e=>{
-  if(e.key==='Enter' && e.target.tagName!=='TEXTAREA'){ e.preventDefault(); $('moOk').click(); }
-});
+import {$, openModal, moError} from './src/ui/modal.js';
 import {askText, askConfirm, showShortcuts} from './src/ui/modal.js';
 
 import {menuEl, closeMenu, openMenu, menuAtPoint} from './src/ui/menu.js';
