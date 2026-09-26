@@ -30,58 +30,58 @@
 /* ===================================================================
    Room Planner. All lengths are stored internally in millimetres.
    Rooms are closed polygons: room.points = [[x,y], ...] clockwise.
+
+   This file is a shell. The markup is seven @include directives above;
+   each partial ends with a module script that binds its own pane's
+   listeners, so a pane's markup and the things listening to it live in
+   one file (src/bind/, and .claude/plans/decoupling.md).
+
+   What is left here is what belongs to no single pane: the listeners on
+   `document` and `window`, the colour-scheme query, the pane-header
+   toggles — which bind BOTH panes and so belong to neither — and the two
+   calls that start the app.
+
+   Order still matters, and only here. Registration order decides nothing
+   between listeners on different elements; it decides everything between
+   listeners on the SAME element and phase, and `document` is the one
+   element several unrelated features all listen to. The four capture-phase
+   handlers run ahead of every bubble-phase one regardless, but the two
+   bubble keydowns below — shortcuts, then section toggling — are in the
+   order they must stay in.
    =================================================================== */
 
-/* ------------------------- units ------------------------- */
-
-
-
-
-
-
-
-
-
-
-
-
-
+import {darkMQ, scheduleDraw} from './src/canvas/draw.js';
+import {edgePanTick} from './src/canvas/interaction.js';
+import {resize} from './src/canvas/view.js';
+import {applyLayoutMode, togglePane} from './src/plan/mode.js';
+import {onDocumentKeyDown, onDocumentKeyUp} from './src/plan/shortcuts.js';
+import {closeMenu, menuEl} from './src/ui/menu.js';
 import {$} from './src/ui/modal.js';
+import {toggleSection} from './src/ui/panels.js';
+import {boot} from './src/boot.js';
 
-import {menuEl, closeMenu} from './src/ui/menu.js';
+/* Any open menu closes on a click outside it, Escape, a resize or a scroll.
+   Capture phase, so it runs before whatever was actually clicked. */
 document.addEventListener('pointerdown', e=>{ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }, true);
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && menuEl) closeMenu(); }, true);
 window.addEventListener('resize', closeMenu);
 document.addEventListener('scroll', closeMenu, true);
 
-
-
-
-/* ------------------------- view ------------------------- */
-import {resize} from './src/canvas/view.js';
-
-
-
-
-import {darkMQ} from './src/canvas/draw.js';
+/* Light/dark is a canvas concern too — the plan repaints in the new palette. */
 darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>scheduleDraw());
 
-
-import {scheduleDraw} from './src/canvas/draw.js';
-
-
-import {edgePanTick} from './src/canvas/interaction.js';
+/* The edge-pan rAF loop. Exported and started here rather than running at
+   import time, for the same reason boot() is: nothing in src/ may have a
+   top-level side effect. */
 edgePanTick();
 
-import {onDocumentKeyDown, onDocumentKeyUp} from './src/plan/shortcuts.js';
+/* Keyboard shortcuts: canvas gestures, nudging, undo. Bubble phase. */
 document.addEventListener('keydown', onDocumentKeyDown);
 document.addEventListener('keyup', onDocumentKeyUp);
 
-/* ------------------------- panels ------------------------- */
-import {applyLayoutMode} from './src/plan/mode.js';
-
-
-import {togglePane} from './src/plan/mode.js';
+/* The two pane headers collapse their pane. One loop, two elements, one in
+   pane-left.html and one in pane-right.html — it belongs to neither partial,
+   so it stays in the shell. */
 for(const [headId,side] of [['headLeft','left'],['headRight','right']]){
   const h=$(headId);
   h.addEventListener('click', ()=>togglePane(side));
@@ -90,7 +90,9 @@ for(const [headId,side] of [['headLeft','left'],['headRight','right']]){
   });
 }
 
-import {toggleSection} from './src/ui/panels.js';
+/* Section folding is delegated from `document` because every pane has
+   sections and they are rebuilt by innerHTML on every render — a listener
+   bound to the heading itself would not survive the next repaint. */
 document.addEventListener('click', e=>{
   const h=e.target.closest('.pane-body section[data-sec] > .sec-head > h2');
   if(h) toggleSection(h);
@@ -101,49 +103,8 @@ document.addEventListener('keydown', e=>{
   if(h){ e.preventDefault(); toggleSection(h); }
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
-import {boot} from './src/boot.js';
+
 boot();
 </script>
 </body>
