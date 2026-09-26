@@ -36,6 +36,14 @@ const GLOBALS = [
  */
 export const EPILOGUE = `
 ;import {alignGuides, alignNote} from './src/core/selection.js';
+/* S, and the four GLOBALS entries draw/fit/save/setMode, were last read by the
+ * left-hand pane — the layout tree and the inventory list — and went with it.
+ * index.html now imports nothing the app's own listeners do not need. */
+;import {S} from './src/core/state.js';
+;import {save} from './src/core/store.js';
+;import {draw} from './src/canvas/draw.js';
+;import {fit} from './src/canvas/view.js';
+;import {setMode} from './src/plan/mode.js';
 /* view left index.html's scope when onCanvasPointerDown moved into
  * canvas/interaction.js — it was the shell's last reader. */
 ;import {view} from './src/canvas/view.js';
