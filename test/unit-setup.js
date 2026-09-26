@@ -23,10 +23,26 @@ const expandIncludes = (html) => html.replace(INCLUDE_RE, (_, rel) =>
   fs.readFileSync(path.resolve(REPO_ROOT, rel), 'utf8').replace(/\n$/, ''));
 
 const src = expandIncludes(fs.readFileSync(path.join(REPO_ROOT, 'index.html'), 'utf8'));
-const open = src.indexOf('<script');
-const close = src.lastIndexOf('</script>');
-document.documentElement.innerHTML =
-  src.slice(0, open) + src.slice(close + '</script>'.length);
+
+/* Strip EVERY script block, not the span from the first <script to the last
+   </script>. That shortcut was exact while index.html held a single script,
+   and became silently destructive the moment each src/html/ partial started
+   carrying its own: the first <script> is now the header partial's, near the
+   top of <body>, so cutting to the last </script> deleted every pane between
+   them. The DOM still looked plausible — it just had no #cv, and the failure
+   surfaced as `Cannot read properties of null (reading 'getContext')` from
+   canvas/view.js, three imports deep and nowhere near the cause. */
+const SCRIPTS = /<script\b[^>]*>[\s\S]*?<\/script>/gi;
+document.documentElement.innerHTML = src.replace(SCRIPTS, '');
+
+/* Fail loudly and here, rather than as a null dereference deep inside a
+   module. One id per partial: if a future change to the stripping above, or
+   to the include expansion, drops a pane again, this names the pane. */
+for (const [id, partial] of [['modal', 'modal'], ['cv', 'stage'],
+  ['layoutTree', 'pane-left'], ['paneStuff', 'pane-right'], ['tree', 'pane-library']]) {
+  if (!document.getElementById(id))
+    throw new Error(`unit-setup: #${id} is missing — src/html/${partial}.html did not survive into the harness DOM`);
+}
 
 /* jsdom has no canvas. This records calls rather than rasterising -- enough for
    draw() to run without throwing. Anything needing real PIXELS is Suite B. */
