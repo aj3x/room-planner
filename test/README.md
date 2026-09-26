@@ -188,9 +188,16 @@ been the dangerous half of this check every time.
 
 **So: after any move, audit the epilogue.** Read every name `__rp` and `GLOBALS`
 reference and check each is still declared or imported in `index.html` — or
-**import it in the epilogue**, which is strictly better and is what the six
+**import it in the epilogue**, which is strictly better and is what the eighteen
 imports at the top of `EPILOGUE` do. Never add an export to `index.html` to feed
 a test.
+
+Do it *before* running the suite, not after. Moving every pane's wiring into
+`src/bind/` took ten names out of `index.html`'s scope in one pass — `readImport`,
+`startCustomDraw`, `draw`, `fit`, `save`, `setMode` among them, six of those in
+`GLOBALS` and therefore silent. `index.html` now holds twelve registrations and
+thirteen imports, so the shell's scope is small and most moves of any size will
+touch this file.
 
 ### 3. `expandIncludes` must stay in step with the Vite plugin
 
@@ -198,11 +205,19 @@ The static markup lives in `src/html/`, behind `<!-- @include src/html/foo.html 
 directives that a Vite plugin (`rp:html-includes`) substitutes in
 `transformIndexHtml`. Suite B is served by Vite and never sees a directive.
 **[`unit-setup.js`](unit-setup.js) is not** — it reads `index.html` off disk to
-build the jsdom shell — so it carries the same four-line substitution. If it
-stops expanding, or expands differently, the shell has no `#cv`,
-`canvas/view.js` throws on `getContext('2d')` at module evaluation, and you get a
-wall of red unit tests **with a green build and a green browser** — the same
-signature as a stale `__rp` name, and for the same reason.
+build the jsdom shell — so it carries the same substitution. If it stops
+expanding, or expands differently, the shell has no `#cv`, `canvas/view.js`
+throws on `getContext('2d')` at module evaluation, and you get a wall of red
+unit tests **with a green build and a green browser** — the same signature as a
+stale `__rp` name, and for the same reason.
+
+The same applies to how it strips the scripts. It used to cut from the first
+`<script` to the last `</script>`, which was exact while `index.html` held one
+script and became silently destructive once each `src/html/` partial carried
+its own: the first `<script>` is the header partial's, near the top of `<body>`,
+so the cut deleted every pane between. It strips every block by regex now, and
+asserts one id per partial afterwards so a repeat names the pane that vanished
+instead of surfacing as a null dereference three imports deep.
 
 ## Determinism
 
