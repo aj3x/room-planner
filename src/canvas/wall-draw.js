@@ -6,10 +6,9 @@
    own two-function region, so it gets one.
 */
 import {emit, repaint} from '../core/bus.js';
-import {commitRoom} from '../core/history.js';
 import {setRoomSel} from '../core/selection.js';
 import {L, uid} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {draw} from './draw.js';
 import {setWallDrawState} from './interaction-state.js';
 import {roomMode} from '../core/state.js';
@@ -22,10 +21,12 @@ import {cancelSplitDraw} from './split-room.js';
 function cancelWallDraw(){ setWallDrawState(null); draw(); }
 function finishWallDraw(a,b){
   const w={id:uid(), a, b, t:L().room.wall};
-  L().room.iwalls.push(w);
-  setWallDrawState(null);
-  setRoomSel({kind:'iwall', id:w.id});
-  repaint('walls','roomSel'); draw(); save(); commitRoom();
+  transact('room', ()=>{
+    L().room.iwalls.push(w);
+    setWallDrawState(null);
+    setRoomSel({kind:'iwall', id:w.id});
+  });
+  repaint('walls','roomSel');
 }
 
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */

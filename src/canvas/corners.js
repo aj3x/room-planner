@@ -6,14 +6,12 @@
    move-only.
 */
 import {polySimple} from '../core/geometry.js';
-import {commitRoom} from '../core/history.js';
 import {setRoomSel} from '../core/selection.js';
 import {L, RP} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {clampOpenings, syncWallOff, wallIsOff, wallOf} from '../model/walls.js';
 import {repaint} from '../core/bus.js';
 import {flash} from '../ui/flash.js';
-import {draw} from './draw.js';
 
 /* ------------------------- adding and taking away a corner -------------------------
    A wall has no id: it IS the gap between points i and i+1, so it is addressed by that
@@ -33,22 +31,24 @@ function splitWall(i){
   const P=RP(), room=L().room, w=wallOf(i);
   P.splice(i+1, 0, [w.mid[0], w.mid[1]]);
   if(!polySimple(P)){ P.splice(i+1,1); flash('That would fold the room over itself'); return; }
-  room.wallOff.splice(i+1, 0, wallIsOff(room,i));   // both halves inherit whether that wall was there
-  /* One wall became two, so every wall past it moves up a number. A door or window in
-     the far half changes wall as well, and starts that much further back along it; one
-     straddling the join goes wherever most of it is, since an opening cannot span two
-     walls. */
-  const half=wallOf(i,P).len;
-  for(const o of L().openings){
-    if(o.wall>i){ o.wall++; continue; }
-    if(o.wall!==i || o.offset+o.width/2 < half) continue;
-    o.wall=i+1; o.offset=Math.max(0, o.offset-half);
-  }
-  for(const m of L().measures) for(const a of [m.a,m.b]) if(a.k==='wall' && a.id>i) a.id++;
-  syncWallOff(room);
-  clampOpenings();
-  setRoomSel({kind:'corner', i:i+1});
-  repaint('room','walls','roomSel','openings'); draw(); save(); commitRoom();
+  transact('room', ()=>{
+    room.wallOff.splice(i+1, 0, wallIsOff(room,i));   // both halves inherit whether that wall was there
+    /* One wall became two, so every wall past it moves up a number. A door or window in
+       the far half changes wall as well, and starts that much further back along it; one
+       straddling the join goes wherever most of it is, since an opening cannot span two
+       walls. */
+    const half=wallOf(i,P).len;
+    for(const o of L().openings){
+      if(o.wall>i){ o.wall++; continue; }
+      if(o.wall!==i || o.offset+o.width/2 < half) continue;
+      o.wall=i+1; o.offset=Math.max(0, o.offset-half);
+    }
+    for(const m of L().measures) for(const a of [m.a,m.b]) if(a.k==='wall' && a.id>i) a.id++;
+    syncWallOff(room);
+    clampOpenings();
+    setRoomSel({kind:'corner', i:i+1});
+  });
+  repaint('room','walls','roomSel','openings');
 }
 function deleteCorner(i){
   const P=RP();
@@ -59,23 +59,25 @@ function deleteCorner(i){
   const absorbed=wallOf(prev,P).len;
   const removed=P.splice(i,1);
   if(!polySimple(P)){ P.splice(i,0,removed[0]); flash("That corner can't be removed"); return; }
-  room.wallOff.splice(i,1);   // the two edges merge; the one before keeps its state
-  // walls i-1 and i are now one wall, numbered i-1, and everything past i drops a number
-  const to = w => { const t = w===i ? prev : w; return t>i ? t-1 : t; };
-  for(const o of L().openings){
-    if(o.wall===i) o.offset+=absorbed;
-    o.wall=to(o.wall);
-  }
-  const l=L();
-  for(const m of l.measures) for(const a of [m.a,m.b]) if(a.k==='wall') a.id=to(a.id);
-  /* a measurement that ran between the two walls now joins one wall to itself and reads
-     zero, so it goes with them */
-  const sameEnd = m => m.a.k==='wall' && m.b.k==='wall' && m.a.id===m.b.id
-                    && m.a.part===m.b.part && m.a.n===m.b.n;
-  l.measures = l.measures.filter(m=>!sameEnd(m));
-  syncWallOff(room);
-  clampOpenings();
-  setRoomSel(null);
-  repaint('room','walls','roomSel','openings'); draw(); save(); commitRoom();
+  transact('room', ()=>{
+    room.wallOff.splice(i,1);   // the two edges merge; the one before keeps its state
+    // walls i-1 and i are now one wall, numbered i-1, and everything past i drops a number
+    const to = w => { const t = w===i ? prev : w; return t>i ? t-1 : t; };
+    for(const o of L().openings){
+      if(o.wall===i) o.offset+=absorbed;
+      o.wall=to(o.wall);
+    }
+    const l=L();
+    for(const m of l.measures) for(const a of [m.a,m.b]) if(a.k==='wall') a.id=to(a.id);
+    /* a measurement that ran between the two walls now joins one wall to itself and reads
+       zero, so it goes with them */
+    const sameEnd = m => m.a.k==='wall' && m.b.k==='wall' && m.a.id===m.b.id
+                      && m.a.part===m.b.part && m.a.n===m.b.n;
+    l.measures = l.measures.filter(m=>!sameEnd(m));
+    syncWallOff(room);
+    clampOpenings();
+    setRoomSel(null);
+  });
+  repaint('room','walls','roomSel','openings');
 }
 export {splitWall, deleteCorner};

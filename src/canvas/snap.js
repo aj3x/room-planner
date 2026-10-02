@@ -1,14 +1,9 @@
 /* The alignment magnet: pulling a dragged point onto the lines the rest of the
    room already lies on.
 
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, banner included, and the `export` block
-   at the end is the only line added.
-
-   It stops at snapCorner. squareCorner, which follows it under the same
-   banner, calls commitRoom(), draw() and four render*() functions and is still
-   in the monolith; so are pickAt/pickRoom, the hit-testing that shares the
-   region. §3 files this as canvas/snap.js and that is what it is, minus those.
+   After the magnet come squareCorner, which commits its edit through
+   transact() and repaints the room panels, and pickAt/pickRoom, the
+   hit-testing that shares the region.
 
    This is the least-covered code in the app by the Phase 3.5 audit's own
    account: every magnet assertion in the pointer suite is on a rectangle, so
@@ -23,12 +18,10 @@ import {pointInPoly, worldPoly} from '../core/geometry.js';
 import {openGeom} from '../model/openings.js';
 import {iwallPoly, magneticWallPoint, nearestOnWalls} from '../model/walls.js';
 import {snapPt} from './view.js';
-import {commitRoom} from '../core/history.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {tryRoomEdit} from '../model/walls.js';
 import {repaint} from '../core/bus.js';
 import {flash} from '../ui/flash.js';
-import {draw} from './draw.js';
 
 /* ---- where a dragged wall end lands ----
    These two were in model/walls.js until the decoupling pass
@@ -166,7 +159,7 @@ function pickAt(x,y){
 }
 /* moves the given placed-item ids to the end of the array (drawn/hit-tested on
    top within their pass-through tier) without touching undo history — this is
-   a view-order change, not an edit, so it must never call commitFurn()/save() */
+   a view-order change, not an edit, so it must never go through transact() */
 function bringToFront(ids){
   const idSet=new Set(ids);
   const arr=L().placed;
@@ -211,8 +204,8 @@ function squareCorner(i){
   if(rad<1){ flash('Those two walls meet at the same point'); return; }
   let vx=b[0]-mx, vy=b[1]-my, len=Math.hypot(vx,vy);
   if(len<1){ vx=-(c[1]-a[1]); vy=c[0]-a[0]; len=rad*2; }   // dead centre: step off square to the span
-  const ok=tryRoomEdit(()=>{ P[i]=[mx+vx/len*rad, my+vy/len*rad]; });
+  const ok=transact('room', ()=>tryRoomEdit(()=>{ P[i]=[mx+vx/len*rad, my+vy/len*rad]; }));
   if(!ok) return;
-  repaint('room','walls','roomSel','openings'); draw(); save(); commitRoom();
+  repaint('room','walls','roomSel','openings');
 }
 export {snapRadius, snapWallPoint, pickAt, bringToFront, pickRoom, alignRadius, snapToLines, lineProject, lineCross, guideSeg, alignPoint, isSquare, snapCorner, squareCorner};

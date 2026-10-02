@@ -128,8 +128,7 @@ function drawCustomOverlay(){
    and these six are paint. drawDimension in particular is shared: the item
    dimension lines use it too.
 
-   The measure tool's pick/hit-test/bar functions stayed in index.html; they
-   call draw(), renderMeasureBar() and save(). */
+   The measure tool's pick/hit-test/bar functions live in measure-tool.js. */
 import {measureOn, measureStart, measureHover, measureHoverId, measureSel,
         measureCursor, measureBoxes, setMeasureBoxes} from './measure-state.js';
 import {measuresOf, measureObjs, objOfAnchor, anchorKey, anchorGeom,

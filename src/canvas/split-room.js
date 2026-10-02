@@ -65,7 +65,7 @@ import {floorHist, furnHist, roomHist} from '../core/history.js';
 import {pruneMeasures} from '../core/migrate.js';
 import {mergeSel} from '../core/selection.js';
 import {L, S, clone, uid} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {clampOpenings, syncWallOff} from '../model/walls.js';
 import {flash} from '../ui/flash.js';
 import {$, askConfirm, closeModal, openModal} from '../ui/modal.js';
@@ -316,41 +316,47 @@ function commitSplit(ctx, openWall){
   const bId=uid();
   lastSplit={aId:A.id, aBefore:clone(A), bId, aRoomHist:roomHist[A.id], aFurnHist:furnHist[A.id]};
 
-  room.points=ctx.chainA; room.wallOff=ctx.offA.concat(Array(ctx.newEdgeCount).fill(openWall));
-  room.pillars=ctx.pillarsA; room.iwalls=ctx.iwallsA;
-  A.openings=ctx.openingsA; A.placed=ctx.placedA; A.measures=ctx.measuresA;
-  syncWallOff(room); clampOpenings(A); pruneMeasures(A);
+  /* Not an undo step: the two rooms get fresh stacks below, and splitUndo is
+     how this is taken back. */
+  transact('project', ()=>{
+    room.points=ctx.chainA; room.wallOff=ctx.offA.concat(Array(ctx.newEdgeCount).fill(openWall));
+    room.pillars=ctx.pillarsA; room.iwalls=ctx.iwallsA;
+    A.openings=ctx.openingsA; A.placed=ctx.placedA; A.measures=ctx.measuresA;
+    syncWallOff(room); clampOpenings(A); pruneMeasures(A);
 
-  const B={id:bId, name:A.name+' (2)', folderId:A.folderId, floorId:A.floorId, floorPlace:clone(A.floorPlace),
-    room:{points:ctx.chainB, wall, floor, trimOn, trim, pillars:ctx.pillarsB, iwalls:ctx.iwallsB, wallOff:ctx.offB.concat(Array(ctx.newEdgeCount).fill(openWall))},
-    openings:ctx.openingsB, placed:ctx.placedB, measures:ctx.measuresB};
-  syncWallOff(B.room); clampOpenings(B); pruneMeasures(B);
+    const B={id:bId, name:A.name+' (2)', folderId:A.folderId, floorId:A.floorId, floorPlace:clone(A.floorPlace),
+      room:{points:ctx.chainB, wall, floor, trimOn, trim, pillars:ctx.pillarsB, iwalls:ctx.iwallsB, wallOff:ctx.offB.concat(Array(ctx.newEdgeCount).fill(openWall))},
+      openings:ctx.openingsB, placed:ctx.placedB, measures:ctx.measuresB};
+    syncWallOff(B.room); clampOpenings(B); pruneMeasures(B);
 
-  S.layouts.splice(S.layouts.indexOf(A)+1, 0, B);
+    S.layouts.splice(S.layouts.indexOf(A)+1, 0, B);
 
-  roomHist[A.id]={stack:[JSON.stringify({room:A.room, openings:A.openings})], idx:0};
-  furnHist[A.id]={stack:[JSON.stringify({placed:A.placed})], idx:0};
-  roomHist[bId]={stack:[JSON.stringify({room:B.room, openings:B.openings})], idx:0};
-  furnHist[bId]={stack:[JSON.stringify({placed:B.placed})], idx:0};
-  if(A.floorId) delete floorHist[A.floorId];
+    roomHist[A.id]={stack:[JSON.stringify({room:A.room, openings:A.openings})], idx:0};
+    furnHist[A.id]={stack:[JSON.stringify({placed:A.placed})], idx:0};
+    roomHist[bId]={stack:[JSON.stringify({room:B.room, openings:B.openings})], idx:0};
+    furnHist[bId]={stack:[JSON.stringify({placed:B.placed})], idx:0};
+    if(A.floorId) delete floorHist[A.floorId];
 
-  mergeSel.clear();
-  repaint('tree','all'); fit(); save();
+    mergeSel.clear();
+  });
+  repaint('tree','all'); fit();
   flash('Split into two rooms');
 }
 function splitUndo(){
   if(!lastSplit) return;
   const m=lastSplit;
   askConfirm('Undo this split?', 'The room will be restored as it was before splitting.', 'Undo split', ()=>{
-    const a=S.layouts.find(x=>x.id===m.aId);
-    if(a) Object.assign(a, clone(m.aBefore));
-    S.layouts=S.layouts.filter(x=>x.id!==m.bId);
-    if(m.aRoomHist) roomHist[m.aId]=m.aRoomHist; else delete roomHist[m.aId];
-    if(m.aFurnHist) furnHist[m.aId]=m.aFurnHist; else delete furnHist[m.aId];
-    delete roomHist[m.bId]; delete furnHist[m.bId];
-    lastSplit=null;
-    if(S.active===m.bId) emit('layout:activate', m.aId);
-    repaint('tree','all'); fit(); save();
+    transact('project', ()=>{
+      const a=S.layouts.find(x=>x.id===m.aId);
+      if(a) Object.assign(a, clone(m.aBefore));
+      S.layouts=S.layouts.filter(x=>x.id!==m.bId);
+      if(m.aRoomHist) roomHist[m.aId]=m.aRoomHist; else delete roomHist[m.aId];
+      if(m.aFurnHist) furnHist[m.aId]=m.aFurnHist; else delete furnHist[m.aId];
+      delete roomHist[m.bId]; delete furnHist[m.bId];
+      lastSplit=null;
+      if(S.active===m.bId) emit('layout:activate', m.aId);
+    });
+    repaint('tree','all'); fit();
   });
 }
 

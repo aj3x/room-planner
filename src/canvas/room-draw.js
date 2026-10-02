@@ -8,10 +8,9 @@
    startCustomDraw did not come with it: it calls setMeasure, which is still
    in the monolith behind the two other cancel* functions.
 */
-import {commitRoom} from '../core/history.js';
 import {setAlignGuides, setAlignNote, setRoomSel} from '../core/selection.js';
 import {L} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {clampOpenings, syncWallOff} from '../model/walls.js';
 import {emit, repaint} from '../core/bus.js';
 import {flash} from '../ui/flash.js';
@@ -31,11 +30,13 @@ function cancelCustomDraw(){
 }
 function finishCustomDraw(){
   if(!drawState||drawState.pts.length<3){ flash('Add at least 3 corners first'); return; }
-  L().room.points=drawState.pts.map(p=>p.slice());
-  L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
-  clampOpenings(); setRoomSel(null);
-  setDrawState(null); setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true;
-  repaint('room','walls','roomSel','openings'); fit(); save(); commitRoom();
+  transact('room', ()=>{
+    L().room.points=drawState.pts.map(p=>p.slice());
+    L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
+    clampOpenings(); setRoomSel(null);
+    setDrawState(null); setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true;
+  });
+  repaint('room','walls','roomSel','openings'); fit();
 }
 /* Where the next corner would land, and why — the same magnet the corner drag uses, so
    an outline comes out straight and square while it is being drawn rather than having to

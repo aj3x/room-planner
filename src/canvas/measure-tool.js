@@ -15,7 +15,7 @@
 import {repaint} from '../core/bus.js';
 import {$} from '../ui/modal.js';
 import {S, L, uid} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {pointInPoly, ptSegDist} from '../core/geometry.js';
 import {cv, view, sx, sy, wx, wy} from './view.js';
 import {draw, scheduleDraw} from './draw.js';
@@ -95,11 +95,14 @@ function renderMeasureBar(){
 }
 
 function resetMeasureState(){ setMeasureStart(null); setMeasureHover(null); setMeasureHoverId(null); setMeasureSel(null); setMeasureCursor(null); }
+/* Measurements have no undo history, hence history:false on both writes. */
 function removeMeasure(id){
-  L().measures=measuresOf().filter(m=>m.id!==id);
-  if(measureSel===id) setMeasureSel(null);
-  setMeasureHoverId(null);
-  renderMeasureBar(); draw(); save();
+  transact('room', ()=>{
+    L().measures=measuresOf().filter(m=>m.id!==id);
+    if(measureSel===id) setMeasureSel(null);
+    setMeasureHoverId(null);
+  }, {history:false});
+  renderMeasureBar();
 }
 function measurePointerDown(px,py){
   const t=measureTargetAt(px,py);
@@ -108,8 +111,7 @@ function measurePointerDown(px,py){
   if(t && t.a){
     if(!measureStart) setMeasureStart(t.a);
     else if(anchorKey(t.a)!==anchorKey(measureStart)){
-      measuresOf().push({id:uid(), a:measureStart, b:t.a});
-      setMeasureStart(null); save();
+      transact('room', ()=>{ measuresOf().push({id:uid(), a:measureStart, b:t.a}); setMeasureStart(null); }, {history:false});
     }
   } else setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
   renderMeasureBar(); draw();
