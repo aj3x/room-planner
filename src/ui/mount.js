@@ -1,5 +1,5 @@
 /* mountPanel(): run a panel's render as an effect, without rebuilding a field
-   the user is typing in.
+   while the user is typing in it.
 
    `deps()` reads the signals the panel shows (core/signals.js `rev.*`,
    `pref(...)`, the selection); `render()` may read more, and those are
@@ -7,15 +7,23 @@
    project names the panel: it subscribes.
 
    The focus rule. A render rebuilds its markup (innerHTML) or resets field
-   values, so running one under the caret would throw away what is being
-   typed — the hex code half-entered in the floor colour box, the name in an
-   inline rename, a select being stepped through with the arrow keys. So
-   while a text-entry control inside `root` has focus, the render is held,
-   and it runs once focus leaves `root` (moving between fields inside it
-   keeps holding, so tabbing through a form does not tear it down under the
-   next field). A checkbox, colour swatch or button does not hold: those are
-   not typed into, and the panel should answer them at once (the Baseboard
-   tick enabling its depth box).
+   values, so running one mid-keystroke would throw away what is being typed —
+   a hex code half-entered in the floor colour box, which commits on every
+   `input`. So a render that arrives while a text-entry control inside `root`
+   has focus is held, and it runs as soon as the user is done with that
+   field, which is the first of:
+     - `change` inside `root`: the field committed (Enter, or leaving it). The
+       panel then shows what the model holds — including when the edit was
+       refused and nothing changed, so a value the model turned down does not
+       stay on screen;
+     - a click inside `root` on anything but the focused field (a button in
+       the panel: Safari does not move focus to a clicked button);
+     - focus leaving `root`.
+   Moving focus between fields inside `root` keeps a hold, so tabbing through
+   a form does not tear it down under the next field. When a render rebuilds
+   the field that had focus, focus goes back to its replacement (same id), so
+   Enter in a field, or stepping a select with the arrow keys, keeps your
+   place. A checkbox, colour swatch or button never holds.
 
    `root` is the smallest element whose fields the render rewrites — the list
    for a list, the section for a form — and not the whole pane: the item
@@ -38,22 +46,24 @@ function typingIn(root){
 function mountPanel(root, deps, render){
   const el = typeof root === 'string' ? document.getElementById(root) : root;
   const retry = signal(0);
-  let held = false;
-  function release(e){
-    if(e.relatedTarget && el.contains(e.relatedTarget)) return;   // still working inside the panel
-    el.removeEventListener('focusout', release);
-    held = false;
-    retry.value++;
+  let held = false, force = false;
+  function release(){ if(held){ held = false; force = true; retry.value++; } }
+  if(el){
+    el.addEventListener('change', release);
+    el.addEventListener('click', e => { if(e.target !== document.activeElement) release(); });
+    el.addEventListener('focusout', e => { if(!(e.relatedTarget && el.contains(e.relatedTarget))) release(); });
   }
   return effect(() => {
     retry.value;
     deps();
-    if(typingIn(el)){
-      if(!held){ held = true; el.addEventListener('focusout', release); }
-      return;
-    }
-    if(held){ held = false; el.removeEventListener('focusout', release); }
+    if(!force && typingIn(el)){ held = true; return; }
+    force = held = false;
+    const a = el && document.activeElement, id = a && el.contains(a) && a.id;
     render();
+    if(id && !el.contains(document.activeElement)){
+      const n = document.getElementById(id);
+      if(n && el.contains(n)) n.focus();
+    }
   });
 }
 
