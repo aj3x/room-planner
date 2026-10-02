@@ -16,7 +16,7 @@ import {floorIWall, floorInst, floorXf} from '../core/floor-space.js';
 import {bbox, norm360} from '../core/geometry.js';
 import {floorHist, furnHist, roomHist} from '../core/history.js';
 import {pruneMeasures} from '../core/migrate.js';
-import {floorSel, mergeSel, setFloorSel} from '../core/selection.js';
+import {floorSel, mergeSel, mergeClear, treeExpand, treeCollapse} from '../core/selection.js';
 import {L, S, blankFloorPlace, clone, floorLayouts, floorMode, floorOf} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {fmtLen, parseLen, trimNum} from '../core/units.js';
@@ -27,7 +27,6 @@ import {esc, plural} from '../ui/panels.js';
 import {activateLayout, renderTree} from './layout-tree.js';
 import {renderAll, setMode} from './mode.js';
 import {placeOnFloor} from '../core/floor-space.js';
-import {treeOpen} from '../core/selection.js';
 import {uid} from '../core/state.js';
 import {folderLine, pickValues, pickerHTML} from '../io/pickers.js';
 import {menuAtPoint} from '../ui/menu.js';
@@ -78,7 +77,7 @@ function mergeLayouts(aId, bId){
       roomHist[A.id]={stack:[JSON.stringify({room:A.room, openings:A.openings})], idx:0};
       furnHist[A.id]={stack:[JSON.stringify({placed:A.placed})], idx:0};
       delete roomHist[B.id]; delete furnHist[B.id]; delete floorHist[A.floorId];
-      mergeSel.clear();
+      mergeClear();
     });
     renderTree(); renderAll(); fit();
     flash('Merged into \u201c'+A.name+'\u201d');
@@ -100,7 +99,7 @@ function deleteBothDialog(aId,bId){
       S.layouts=S.layouts.filter(x=>!kill.has(x.id));
       for(const id of kill){ delete roomHist[id]; delete furnHist[id]; if(lastMerge && lastMerge.aId===id) lastMerge=null; }
       if(kill.has(S.active)) activateLayout(S.layouts[0].id);
-      mergeSel.clear();
+      mergeClear();
     });
     renderTree(); renderAll(); fit();
   });
@@ -110,8 +109,8 @@ function deleteBothDialog(aId,bId){
    Anything about the room's own shape or contents stays in Room/Furniture mode. */
 function renderFloorSel(){
   const box=$('floorSelBox'), t=$('floorSelTitle'); if(!box) return;
-  if(floorMode() && mergeSel.size===2){
-    const [a,b]=[...mergeSel].map(id=>S.layouts.find(x=>x.id===id));
+  if(floorMode() && mergeSel.value.size===2){
+    const [a,b]=[...mergeSel.value].map(id=>S.layouts.find(x=>x.id===id));
     box.closest('section').classList.toggle('is-empty', false);
     renderFloorProps();
     if(a && b){
@@ -128,7 +127,7 @@ function renderFloorSel(){
       return;
     }
   }
-  const l = floorSel && S.layouts.find(x=>x.id===floorSel);
+  const l = floorSel.value && S.layouts.find(x=>x.id===floorSel.value);
   box.closest('section').classList.toggle('is-empty', !(floorMode()&&l));
   renderFloorProps();
   if(!floorMode() || !l){
@@ -161,7 +160,7 @@ function renderFloorSel(){
   $('flRotL').addEventListener('click',()=>turnFloorRoom(l,-90));
   $('flRotR').addEventListener('click',()=>turnFloorRoom(l,90));
   $('flEdit').addEventListener('click',()=>{ transact('project', ()=>{ activateLayout(l.id); setMode('room'); }); renderAll(); fit(); });
-  $('flOff').addEventListener('click',()=>{ transact('project', ()=>{ l.floorId=null; setFloorSel(null); }); renderAll(); });
+  $('flOff').addEventListener('click',()=>{ transact('project', ()=>{ l.floorId=null; floorSel.value = null; }); renderAll(); });
 }
 function turnFloorRoom(l,deg){
   transact('floor', ()=>{ l.floorPlace.rot=norm360((l.floorPlace.rot||0)+deg); });
@@ -195,7 +194,7 @@ function renderFloorProps(){
 function newFloor(){
   askText('New floor','Name','Floor', n=>{
     const fl={id:uid(), name:n, parentId:null, extWall:0};
-    transact('project', ()=>{ S.floors.push(fl); treeOpen.add(fl.id); });
+    transact('project', ()=>{ S.floors.push(fl); treeExpand(fl.id); });
     renderTree();
   });
 }
@@ -216,7 +215,7 @@ function floorRoomsDialog(id){
             if(picked.has(l.id)){ if(l.floorId!==id){ placeOnFloor(l,id); l.floorId=id; } }
             else if(l.floorId===id) l.floorId=null;
           }
-          treeOpen.add(id);
+          treeExpand(id);
       });
       renderAll();
     });
@@ -229,7 +228,7 @@ function deleteFloor(id){
     transact('project', ()=>{
         for(const l of rooms) l.floorId=null;
         S.floors=S.floors.filter(x=>x.id!==id);
-        treeOpen.delete(id);
+        treeCollapse(id);
     });
     renderAll();
   };
@@ -238,7 +237,7 @@ function deleteFloor(id){
     n+' room'+(n>1?'s':'')+' stand'+(n>1?'':'s')+' on it. Deleting the floor keeps every room — they go back to their folders.',
     'Delete floor', drop);
 }
-function putOnFloor(l, fid){ transact('project', ()=>{ placeOnFloor(l,fid); l.floorId=fid; treeOpen.add(fid); }); renderAll(); }
+function putOnFloor(l, fid){ transact('project', ()=>{ placeOnFloor(l,fid); l.floorId=fid; treeExpand(fid); }); renderAll(); }
 function newFloorWith(l){
   askText('New floor','Name','Floor', n=>{
     const fl={id:uid(), name:n, parentId:null, extWall:0};
@@ -274,7 +273,7 @@ function mergeUndo(){
       if(m.bFurnHist) furnHist[m.bId]=m.bFurnHist; else delete furnHist[m.bId];
       delete floorHist[m.floorId];
       setLastMerge(null);
-      mergeSel.clear();
+      mergeClear();
       activateLayout(m.aId);
     });
     renderTree(); renderAll(); fit();

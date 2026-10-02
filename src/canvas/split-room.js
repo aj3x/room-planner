@@ -57,13 +57,12 @@ import {RP} from '../core/state.js';
 import {wallOf} from '../model/walls.js';
 import {snapWallPoint} from './snap.js';
 import {splitDrawState, drawCursor, wallDrawShift} from './interaction-state.js';
-import {setAlignGuides, setAlignNote} from '../core/selection.js';
+import {alignGuides, alignNote, roomSel, mergeClear} from '../core/selection.js';
 import {PAL, drawSquareTick} from './draw.js';
 import {alignPoint, alignRadius, isSquare} from './snap.js';
 import {pointInPoly, polySimple, segHit, worldPoly} from '../core/geometry.js';
 import {floorHist, furnHist, roomHist} from '../core/history.js';
 import {pruneMeasures} from '../core/migrate.js';
-import {mergeSel} from '../core/selection.js';
 import {L, S, clone, uid} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {clampOpenings, syncWallOff} from '../model/walls.js';
@@ -71,11 +70,11 @@ import {flash} from '../ui/flash.js';
 import {$, askConfirm, closeModal, openModal} from '../ui/modal.js';
 import {plural} from '../ui/panels.js';
 import {draw} from './draw.js';
-import {setSplitDrawState} from './interaction-state.js';
+
 import {mergeSplice} from './merge-rooms.js';
 import {fit} from './view.js';
-import {setRoomSel} from '../core/selection.js';
-import {drawState, setDrawCursor, wallDrawState} from './interaction-state.js';
+
+import {drawState, wallDrawState} from './interaction-state.js';
 import {measureOn} from './measure-state.js';
 import {setMeasure} from './measure-tool.js';
 import {cancelCustomDraw} from './room-draw.js';
@@ -94,7 +93,7 @@ function splitRefs(){
     refs.push({p:P[i], bias:0.3, edge:wallOf(i).dir});
     refs.push({p:P[i], bias:0.3, edge:wallOf((i-1+n)%n).dir});
   }
-  const pts=splitDrawState.pts;
+  const pts=splitDrawState.value.pts;
   for(let k=0;k<pts.length;k++){
     const p=pts[k].pt||pts[k], last=k===pts.length-1;
     let edge=null;
@@ -127,7 +126,7 @@ function splitCornerRef(pts, candidatePt){
    corner, same as dragging a room corner does), falling back to the plain
    45°-ish soft angle magnet, and finally to whatever raw point was given. */
 function splitResolvePoint(raw0, hard){
-  const pts=splitDrawState.pts;
+  const pts=splitDrawState.value.pts;
   const prev=pts.length ? (pts[pts.length-1].pt||pts[pts.length-1]) : null;
   if(hard && prev) return {pt:splitAngleSnap(prev, raw0, true), guides:[], note:'Straight'};
   const aligned=alignPoint(raw0, splitRefs(), alignRadius());
@@ -142,17 +141,17 @@ function splitResolvePoint(raw0, hard){
   return {pt:raw0, guides:[], note:''};
 }
 function drawSplitOverlay(){
-  if(!splitDrawState) return;
-  const worldPts=splitDrawState.pts.map(p=>p.pt||p);
+  if(!splitDrawState.value) return;
+  const worldPts=splitDrawState.value.pts.map(p=>p.pt||p);
   let b=null;
-  if(drawCursor){
-    const resolved=splitResolvePoint(drawCursor, wallDrawShift);
-    setAlignGuides(resolved.guides); setAlignNote(resolved.note);
+  if(drawCursor.value){
+    const resolved=splitResolvePoint(drawCursor.value, wallDrawShift.value);
+    alignGuides.value = resolved.guides; alignNote.value = resolved.note;
     const snapped=snapWallPoint(resolved.pt, null, true);
     const hit=boundaryHit(snapped);
     b=hit?hit.pt:snapped;
     if(resolved.note==='Right angle'){
-      const cr=splitCornerRef(splitDrawState.pts, b);
+      const cr=splitCornerRef(splitDrawState.value.pts, b);
       if(cr) drawSquareTick(cr[0], cr[1], cr[2]);
     }
   }
@@ -175,7 +174,7 @@ function drawSplitOverlay(){
 
 
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */
-function cancelSplitDraw(){ setSplitDrawState(null); setAlignGuides([]); setAlignNote(''); draw(); }
+function cancelSplitDraw(){ splitDrawState.value = null; alignGuides.value = []; alignNote.value = ''; draw(); }
 
 /* Once a start hit, any interior points, and an end hit are in hand: validate the
    drawn path is a genuine interior cut (touches the boundary only at its two
@@ -337,7 +336,7 @@ function commitSplit(ctx, openWall){
     furnHist[bId]={stack:[JSON.stringify({placed:B.placed})], idx:0};
     if(A.floorId) delete floorHist[A.floorId];
 
-    mergeSel.clear();
+    mergeClear();
   });
   repaint('tree','all'); fit();
   flash('Split into two rooms');
@@ -364,13 +363,13 @@ function splitUndo(){
 function startSplitRoom(id){
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
   if(!polySimple(l.room.points)){ flash("Straighten this room's outline before splitting it"); return; }
-  if(drawState) cancelCustomDraw();
-  if(wallDrawState) cancelWallDraw();
+  if(drawState.value) cancelCustomDraw();
+  if(wallDrawState.value) cancelWallDraw();
   if(measureOn) setMeasure(false);
   if(S.active!==id) emit('layout:activate', id);
   emit('mode:set','room');
-  setSplitDrawState({pts:[]}); setDrawCursor(null);
-  setRoomSel(null); repaint('roomSel','all'); fit();
+  splitDrawState.value = {pts:[]}; drawCursor.value = null;
+  roomSel.value = null; repaint('roomSel','all'); fit();
   flash("Click a point on the room's wall to start the divider. Click inside the room to bend it, or click another wall to finish. Esc cancels.");
   draw();
 }

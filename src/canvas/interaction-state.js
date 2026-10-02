@@ -1,33 +1,17 @@
-/* Interaction state: what gesture is in flight. Six mutable lets and a setter
-   for each. A leaf: this module imports nothing.
+/* Interaction state: what gesture is in flight. Each is a signal
+   (core/signals.js); draw() and the pointer handlers read `.value`.
 
-   Extracted from index.html in Phase 3, move-only: every line below is
-   byte-identical to what stood there, in the same relative order, and the
-   `export` block at the end is the only line added. The setters landed in
-   index.html in their own commit first, so this one could stay a move.
+   The signal changes when a gesture starts, is cancelled or ends. Within one
+   gesture the handlers mutate the object in place (drag.value.armed = true,
+   drawState.value.pts.push(...)), which notifies nobody — on purpose: the
+   frame that changed it already asks for a redraw through preview() or
+   scheduleDraw(), and nothing but the canvas reads these. */
 
-   They are gathered here rather than left with the regions that own them --
-   drawState/drawCursor head the custom-room-drawing region, wallDrawState/
-   wallDrawShift the freestanding-wall one, splitDrawState the split, and drag
-   the interaction region -- because draw() reads all six and they are the
-   second half of what was keeping it in index.html. The functions that drive
-   each gesture have not moved and are still in index.html; only the state has.
+import {signal} from '../core/signals.js';
 
-   `spaceDown`, declared beside drag, stayed: nothing outside the interaction
-   region reads it. */
+const drawState = signal(null), drawCursor = signal(null);
+const wallDrawState = signal(null), wallDrawShift = signal(false);
+const splitDrawState = signal(null);   // {pts:[hit, ...world points]} — pts[0] is always a boundary hit
+const drag = signal(null);
 
-function setDrag(v){ drag = v; }
-function setDrawState(v){ drawState = v; }
-function setDrawCursor(v){ drawCursor = v; }
-function setWallDrawState(v){ wallDrawState = v; }
-function setWallDrawShift(v){ wallDrawShift = v; }
-function setSplitDrawState(v){ splitDrawState = v; }
-
-let drawState=null, drawCursor=null;
-let wallDrawState=null, wallDrawShift=false;
-let splitDrawState=null;   // {pts:[hit, ...world points]} — pts[0] is always a boundary hit
-let drag=null;
-
-export {drag, drawState, drawCursor, wallDrawState, wallDrawShift, splitDrawState,
-        setDrag, setDrawState, setDrawCursor, setWallDrawState, setWallDrawShift,
-        setSplitDrawState};
+export {drag, drawState, drawCursor, wallDrawState, wallDrawShift, splitDrawState};

@@ -8,12 +8,7 @@
 
    `S.active = S.layouts[0].id;` is a top-level statement, and stays one: it is
    part of initialising this module's own state, the same as the object literal
-   above it. Nothing here reaches outside the module at import time.
-
-   The selection lets (sel, selSet, roomSel, floorSel, mergeSel, the guide
-   arrays, treeOpen) did NOT come along. They are reassigned from dozens of
-   sites all over the monolith and would each need the setS treatment; that is a
-   decision for a later phase, not a move. */
+   above it. Nothing here reaches outside the module at import time. */
 
 /* ------------------------- state ------------------------- */
 const PALETTE=['#6e8b7a','#a8735a','#5c7a99','#b8975a','#8a6e96','#4f6b63','#a55b57','#7e8c99','#6b7f4e','#9c6b8e','#57707d','#8c8577'];

@@ -15,7 +15,7 @@ import {INV_SCOPES} from '../core/floor-space.js';
 import {furnHist, roomHist, seedHistFor} from '../core/history.js';
 import {uniqueId} from '../core/ids.js';
 import {migrate, normItem, normLayout, remapMeasures} from '../core/migrate.js';
-import {setRoomSel, setSel} from '../core/selection.js';
+import {roomSel, sel} from '../core/selection.js';
 import {S, clone, floorLayouts, isCanvasMode, setS, uid} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {ensureDefaultMarket} from '../library/market-subs.js';
@@ -127,7 +127,7 @@ function importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     if(!done){ flash("There was nothing in that file to import"); return; }
     setS(done);
     ensureDefaultMarket().then(()=>{ if(!isCanvasMode(S.mode)) renderLibAll(); });
-    setSel(null); setRoomSel(null);
+    sel.value = null; roomSel.value = null;
     for(const k of Object.keys(roomHist)) delete roomHist[k];
     for(const k of Object.keys(furnHist)) delete furnHist[k];
     seedHistFor();

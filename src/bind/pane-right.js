@@ -23,12 +23,12 @@
 import { parseLen, fmtLen } from '../core/units.js';
 import { shapePoly, bbox } from '../core/geometry.js';
 import { rectPts, S, L, RP } from '../core/state.js';
-import { setRoomSel } from '../core/selection.js';
+import {roomSel} from '../core/selection.js';
 import { transact } from '../core/tx.js';
 import { syncWallOff, clampOpenings } from '../model/walls.js';
 import { $, openModal, moError } from '../ui/modal.js';
 import { esc } from '../ui/panels.js';
-import { drawState, wallDrawState } from '../canvas/interaction-state.js';
+import {drawState, wallDrawState} from '../canvas/interaction-state.js';
 import { fit } from '../canvas/view.js';
 import { normHex } from '../canvas/draw.js';
 import { startCustomDraw, cancelCustomDraw } from '../canvas/room-draw.js';
@@ -67,7 +67,7 @@ function bindPaneRight(){
         transact('room', ()=>{
           L().room.points=rectPts(w,d);
           L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
-          clampOpenings(); setRoomSel(null);
+          clampOpenings(); roomSel.value = null;
         });
         renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit();
       });
@@ -90,14 +90,14 @@ function bindPaneRight(){
         transact('room', ()=>{
           L().room.points=shapePoly({type:'lshape',w,d,cw,cd,corner:$('pC').value}).map(([x,y])=>[x+w/2,y+d/2]);
           L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
-          clampOpenings(); setRoomSel(null);
+          clampOpenings(); roomSel.value = null;
         });
         renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit();
       });
   });
   $('btnDrawCustom').addEventListener('click', ()=>{
-    if(wallDrawState) cancelWallDraw();
-    if(drawState) cancelCustomDraw(); else startCustomDraw();
+    if(wallDrawState.value) cancelWallDraw();
+    if(drawState.value) cancelCustomDraw(); else startCustomDraw();
   });
 
   $('snapSel').addEventListener('change', e=>transact('prefs', ()=>{ S.snap=e.target.value; }, {canvas:false}));

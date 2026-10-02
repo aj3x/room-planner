@@ -17,14 +17,14 @@
    Do not reorder them. */
 
 import { PALETTE, uid, blankLayout, S, openOf, roomMode, folderOf } from '../core/state.js';
-import { roomSel, mergeSel, setRoomSel, treeOpen } from '../core/selection.js';
+import {roomSel, mergeSel, mergeToggle, mergeClear, mergeOnly, treeExpand, treeToggle} from '../core/selection.js';
 import { transact } from '../core/tx.js';
 import { $, askText } from '../ui/modal.js';
 import { closeMenu, openMenu, menuAtPoint } from '../ui/menu.js';
 import { singleClick, cancelSingleClick } from '../ui/inline-edit.js';
 import { moveBefore, clearDropMarks, dropHalf } from '../ui/dnd.js';
 import { flash } from '../ui/flash.js';
-import { wallDrawState } from '../canvas/interaction-state.js';
+import {wallDrawState} from '../canvas/interaction-state.js';
 import { fit } from '../canvas/view.js';
 import { draw } from '../canvas/draw.js';
 import { startWallDraw, cancelWallDraw } from '../canvas/wall-draw.js';
@@ -55,7 +55,7 @@ function bindPaneLeft(){
     if(caret){
       cancelSingleClick();
       const id = flRow ? flRow.dataset.floor : fRow.dataset.folder;
-      treeOpen.has(id)?treeOpen.delete(id):treeOpen.add(id);
+      treeToggle(id);
       renderTree();
       return;
     }
@@ -67,19 +67,18 @@ function bindPaneLeft(){
     }
     if(fRow){
       const id=fRow.dataset.folder;
-      singleClick(()=>{ treeOpen.has(id)?treeOpen.delete(id):treeOpen.add(id); renderTree(); });
+      singleClick(()=>{ treeToggle(id); renderTree(); });
       return;
     }
     if(lRow){
       const id=lRow.dataset.layout;
       if(e.shiftKey){
         cancelSingleClick();
-        mergeSel.has(id) ? mergeSel.delete(id) : mergeSel.add(id);
-        while(mergeSel.size>2) mergeSel.delete(mergeSel.values().next().value);
+        mergeToggle(id);
         renderTree(); renderFloorSel(); draw();
         return;
       }
-      mergeSel.clear();
+      mergeClear();
       singleClick(()=>{ transact('project', ()=>{ activateLayout(id); setMode('room'); }); renderAll(); fit(); });
     }
   });
@@ -87,16 +86,16 @@ function bindPaneLeft(){
     const lRow=e.target.closest('.layout-row'); if(!lRow) return;
     e.preventDefault();
     const id=lRow.dataset.layout;
-    if(!mergeSel.has(id)){ mergeSel.clear(); mergeSel.add(id); renderTree(); }
-    if(mergeSel.size!==2){
+    if(!mergeSel.value.has(id)){ mergeOnly(id); renderTree(); }
+    if(mergeSel.value.size!==2){
       menuAtPoint(e.clientX, e.clientY, [{label:'Split room…', fn:()=>startSplitRoom(id)}]);
       return;
     }
-    const ids=[...mergeSel];
+    const ids=[...mergeSel.value];
     const l0=S.layouts.find(x=>x.id===ids[0]), l1=S.layouts.find(x=>x.id===ids[1]);
     if(!l0||!l1||!l0.floorId||l0.floorId!==l1.floorId){
       flash('Select two rooms on the same floor to merge them');
-      mergeSel.clear(); renderTree();
+      mergeClear(); renderTree();
       return;
     }
     openFloorMergeMenu(ids, e.clientX, e.clientY);
@@ -147,7 +146,7 @@ function bindPaneLeft(){
       return;
     }
     let parent=null, targetId=null, after=false;
-    if(spot.mode==='into'){ parent=spot.id; treeOpen.add(parent); }
+    if(spot.mode==='into'){ parent=spot.id; treeExpand(parent); }
     else if(spot.mode!=='root'){
       const t = spot.isFolder ? folderOf(spot.id) : S.layouts.find(x=>x.id===spot.id);
       if(!t) return;
@@ -191,24 +190,24 @@ function bindPaneLeft(){
     const kind=li.dataset.kind, id=li.dataset.id, btn=e.target.closest('button');
     if(btn&&btn.dataset.act==='more'){
       openMenu(btn, [
-        {label:'Select', fn:()=>{ if(!roomMode()) setMode('room'); setRoomSel({kind,id}); renderRoomSel(); renderObstacles(); draw(); }},
+        {label:'Select', fn:()=>{ if(!roomMode()) setMode('room'); roomSel.value = {kind,id}; renderRoomSel(); renderObstacles(); draw(); }},
         {sep:true},
         {label:'Delete', danger:true, fn:()=>kind==='pillar'?deletePillar(id):deleteIWall(id)},
       ], li.querySelector('.nm').textContent);
       return;
     }
     if(!roomMode()) setMode('room');
-    setRoomSel({kind, id});
+    roomSel.value = {kind, id};
     renderRoomSel(); renderObstacles(); draw();
   });
   $('btnAddStruct').addEventListener('click', e=>{
     openMenu(e.currentTarget, [
       {label:'Pillar', fn:addPillar},
-      {label:'Interior wall', fn:()=>{ wallDrawState?cancelWallDraw():startWallDraw(); }},
+      {label:'Interior wall', fn:()=>{ wallDrawState.value?cancelWallDraw():startWallDraw(); }},
     ]);
   });
   $('btnAddOpening').addEventListener('click', e=>{
-    const wi = roomSel&&roomSel.kind==='wall' ? roomSel.i : 0;
+    const wi = roomSel.value&&roomSel.value.kind==='wall' ? roomSel.value.i : 0;
     openMenu(e.currentTarget, [
       {label:'Door…', fn:()=>openingDialog(null,'door',wi)},
       {label:'Window…', fn:()=>openingDialog(null,'window',wi)},
@@ -217,7 +216,7 @@ function bindPaneLeft(){
   $('wallList').addEventListener('click', e=>{
     const li=e.target.closest('li[data-i]'); if(!li) return;
     if(!roomMode()) setMode('room');
-    setRoomSel({kind:'wall', i:+li.dataset.i});
+    roomSel.value = {kind:'wall', i:+li.dataset.i};
     renderWalls(); renderRoomSel(); draw();
   });
   $('wallList').addEventListener('dblclick', e=>{
@@ -236,7 +235,7 @@ function bindPaneLeft(){
       ], o?KIND(o):'');
     }
     if(!roomMode()) setMode('room');
-    setRoomSel({kind:'opening', id});
+    roomSel.value = {kind:'opening', id};
     renderRoomSel(); renderOpen(); draw();
   });
 

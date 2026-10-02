@@ -8,7 +8,7 @@
    startCustomDraw did not come with it: it calls setMeasure, which is still
    in the monolith behind the two other cancel* functions.
 */
-import {setAlignGuides, setAlignNote, setRoomSel} from '../core/selection.js';
+import {alignGuides, alignNote, roomSel} from '../core/selection.js';
 import {L} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {clampOpenings, syncWallOff} from '../model/walls.js';
@@ -16,7 +16,7 @@ import {emit, repaint} from '../core/bus.js';
 import {flash} from '../ui/flash.js';
 import {$} from '../ui/modal.js';
 import {draw, scheduleDraw} from './draw.js';
-import {drawState, setDrawCursor, setDrawState, setWallDrawShift} from './interaction-state.js';
+import {drawState, drawCursor, wallDrawShift} from './interaction-state.js';
 import {alignPoint, alignRadius, isSquare} from './snap.js';
 import {fit, snapPt, wx, wy} from './view.js';
 import {roomMode} from '../core/state.js';
@@ -26,15 +26,15 @@ import {setMeasure} from './measure-tool.js';
 import {cancelSplitDraw} from './split-room.js';
 import {cancelWallDraw} from './wall-draw.js';
 function cancelCustomDraw(){
-  setDrawState(null); setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true; draw();
+  drawState.value = null; alignGuides.value = []; alignNote.value = ''; $('drawHint').hidden=true; draw();
 }
 function finishCustomDraw(){
-  if(!drawState||drawState.pts.length<3){ flash('Add at least 3 corners first'); return; }
+  if(!drawState.value||drawState.value.pts.length<3){ flash('Add at least 3 corners first'); return; }
   transact('room', ()=>{
-    L().room.points=drawState.pts.map(p=>p.slice());
+    L().room.points=drawState.value.pts.map(p=>p.slice());
     L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
-    clampOpenings(); setRoomSel(null);
-    setDrawState(null); setAlignGuides([]); setAlignNote(''); $('drawHint').hidden=true;
+    clampOpenings(); roomSel.value = null;
+    drawState.value = null; alignGuides.value = []; alignNote.value = ''; $('drawHint').hidden=true;
   });
   repaint('room','walls','roomSel','openings'); fit();
 }
@@ -42,15 +42,15 @@ function finishCustomDraw(){
    an outline comes out straight and square while it is being drawn rather than having to
    be tidied up afterwards. Shift still means the old 45° lock off the last corner. */
 function drawSnapPoint(raw,shift){
-  const pts=drawState.pts;
+  const pts=drawState.value.pts;
   if(shift&&pts.length){
     const prev=pts[pts.length-1];
     const v=[raw[0]-prev[0], raw[1]-prev[1]], len=Math.hypot(v[0],v[1])||1;
     const ang=Math.round(Math.atan2(v[1],v[0])/(Math.PI/4))*(Math.PI/4);
-    setAlignGuides([]); setAlignNote('Straight');
+    alignGuides.value = []; alignNote.value = 'Straight';
     return snapPt([prev[0]+Math.cos(ang)*len, prev[1]+Math.sin(ang)*len]);
   }
-  if(!pts.length){ setAlignGuides([]); setAlignNote(''); return snapPt(raw); }
+  if(!pts.length){ alignGuides.value = []; alignNote.value = ''; return snapPt(raw); }
   const last=pts.length-1;
   const refs=pts.map((p,k)=>({
     p,
@@ -58,26 +58,26 @@ function drawSnapPoint(raw,shift){
     edge: k===last && k>0 ? [p[0]-pts[k-1][0], p[1]-pts[k-1][1]] : null
   }));
   const s=alignPoint(raw, refs, alignRadius());
-  setAlignGuides(s.guides);
-  setAlignNote(s.guides.length ? (pts.length>1 && isSquare(pts[last-1], pts[last], s.pt) ? 'Right angle' : 'Lined up') : '');
+  alignGuides.value = s.guides;
+  alignNote.value = s.guides.length ? (pts.length>1 && isSquare(pts[last-1], pts[last], s.pt) ? 'Right angle' : 'Lined up') : '';
   return s.pt;
 }
 function applyDrawCursorAt(px,py,shift){
   const raw=[wx(px),wy(py)];
-  setDrawCursor(drawState ? drawSnapPoint(raw, shift) : raw);
-  setWallDrawShift(shift);
+  drawCursor.value = drawState ? drawSnapPoint(raw, shift) : raw;
+  wallDrawShift.value = shift;
   scheduleDraw();
 }
 
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */
 /* ------------------------- custom room drawing (walls may cross) ------------------------- */
 function startCustomDraw(){
-  if(wallDrawState) cancelWallDraw();
-  if(splitDrawState) cancelSplitDraw();
+  if(wallDrawState.value) cancelWallDraw();
+  if(splitDrawState.value) cancelSplitDraw();
   if(measureOn) setMeasure(false);
   if(!roomMode()) emit('mode:set','room');
-  setDrawState({pts:[]}); setDrawCursor(null);
-  setRoomSel(null); repaint('roomSel');
+  drawState.value = {pts:[]}; drawCursor.value = null;
+  roomSel.value = null; repaint('roomSel');
   $('drawHint').hidden=false;
   draw();
 }

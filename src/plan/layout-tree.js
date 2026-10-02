@@ -21,13 +21,13 @@ import {moreBtn} from '../ui/menu.js';
 import {$, svgI} from '../ui/modal.js';
 import {S, floorMode, floorLayouts, childFloors, childFolders, childLayouts,
         folderOf, floorOf} from '../core/state.js';
-import {mergeSel, treeOpen} from '../core/selection.js';
+import {mergeSel, treeOpen, floorSel, roomSel, sel, treeExpand, treeCollapse} from '../core/selection.js';
 import {curFloorId} from '../core/history.js';
 import {inlineEdit} from '../ui/inline-edit.js';
 import {transact} from '../core/tx.js';
 import {resetMeasureState} from '../canvas/measure-tool.js';
 import {seedHistFor} from '../core/history.js';
-import {setFloorSel, setRoomSel, setSel} from '../core/selection.js';
+
 import {L} from '../core/state.js';
 
 import {lastSplit, splitUndo, startSplitRoom} from '../canvas/split-room.js';
@@ -48,14 +48,14 @@ function folderLabel(f){
   return `<span class="nm">${esc(f.name)}</span>${tags}`;
 }
 const layoutRowHTML = (l,depth) =>
-  `<div class="tree-row layout-row ${l.id===S.active?'active':''} ${mergeSel.size>=2 && mergeSel.has(l.id)?'merge-sel':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*12+26}px" ${l.id===S.active?'aria-current="true"':''}>
+  `<div class="tree-row layout-row ${l.id===S.active?'active':''} ${mergeSel.value.size>=2 && mergeSel.value.has(l.id)?'merge-sel':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*12+26}px" ${l.id===S.active?'aria-current="true"':''}>
       <span class="ico">${svgI('room')}</span><span class="nm">${esc(l.name)}</span>
       ${moreBtn('tree-more')}
     </div>`;
 /* a floor holds its rooms directly: a room standing on one shows up here, not
    back under its folder, so it is only ever in the tree once */
 function floorRowHTML(fl,depth){
-  const open=treeOpen.has(fl.id), rooms=floorLayouts(fl.id);
+  const open=treeOpen.value.has(fl.id), rooms=floorLayouts(fl.id);
   const active=floorMode() && curFloorId()===fl.id;
   let html=`<div class="tree-row floor-row ${active?'active':''}" data-floor="${fl.id}" style="padding-left:${depth*12+4}px" aria-expanded="${open}" ${active?'aria-current="true"':''}>`+`
       <button type="button" class="caret" data-act="toggle" aria-label="${open?'Collapse':'Expand'}">${svgI(open?'chev-d':'chev-r')}</button>
@@ -73,7 +73,7 @@ function renderTreeLevel(parentId,depth){
   let html='';
   if(!parentId) for(const fl of childFloors(null)) html+=floorRowHTML(fl,depth);
   for(const f of childFolders(parentId)){
-    const open=treeOpen.has(f.id);
+    const open=treeOpen.value.has(f.id);
     html+=`<div class="tree-row folder-row" draggable="true" data-folder="${f.id}" style="padding-left:${depth*12+4}px" aria-expanded="${open}">
       <button type="button" class="caret" data-act="toggle" aria-label="${open?'Collapse':'Expand'}">${svgI(open?'chev-d':'chev-r')}</button>
       <span class="ico">${svgI('folder')}</span>${folderLabel(f)}
@@ -113,7 +113,7 @@ function renameFloor(id){
 /* switching into a room under a DIFFERENT folder re-applies that folder's tag filter;
    switching between rooms in the SAME folder leaves whatever filter the person set alone */
 function activateLayout(id){
-  S.active=id; setSel(null); setRoomSel(null); setFloorSel(null);
+  S.active=id; sel.value = null; roomSel.value = null; floorSel.value = null;
   resetMeasureState();
   seedHistFor();
   const fid = L() ? (L().folderId||null) : null;
@@ -153,11 +153,11 @@ function folderMenu(id, anchor){
   openMenu(anchor, [
     {label:'Rename', fn:()=>renameFolder(id)},
     {label:'Add a room here', fn:()=>askText('New room','Name','Room', n=>{
-      transact('project', ()=>{ const l=blankLayout(n,id); S.layouts.push(l); treeOpen.add(id); activateLayout(l.id); });
+      transact('project', ()=>{ const l=blankLayout(n,id); S.layouts.push(l); treeExpand(id); activateLayout(l.id); });
       renderAll(); fit();
     })},
     {label:'Add a subfolder', fn:()=>askText('New folder','Name','Folder', n=>{
-      transact('project', ()=>{ S.folders.push({id:uid(),name:n,parentId:id,tags:[]}); treeOpen.add(id); }); renderTree();
+      transact('project', ()=>{ S.folders.push({id:uid(),name:n,parentId:id,tags:[]}); treeExpand(id); }); renderTree();
     })},
     {sep:true},
     {label:'Move to folder\u2026', fn:()=>moveDialog('folder',id)},
@@ -221,10 +221,10 @@ function deleteFolder(id){
         const killF=new Set(folders.map(x=>x.id)), killL=new Set(layouts.map(x=>x.id));
         S.layouts=S.layouts.filter(l=>!killL.has(l.id));
         S.folders=S.folders.filter(x=>!killF.has(x.id));
-        for(const k of killF) treeOpen.delete(k);
+        for(const k of killF) treeCollapse(k);
       }
       S.folders=S.folders.filter(x=>x.id!==id);
-      treeOpen.delete(id);
+      treeCollapse(id);
       if(!S.layouts.length) S.layouts=[blankLayout()];
       if(!S.layouts.some(l=>l.id===S.active)) activateLayout(S.layouts[0].id);
     });
@@ -291,7 +291,7 @@ function moveDialog(kind,id){
       const v=$('moFolder').value||null;
       transact('project', ()=>{
         if(kind==='folder') obj.parentId=v; else { obj.folderId=v; obj.floorId=null; }
-        if(v) treeOpen.add(v);
+        if(v) treeExpand(v);
       });
       renderTree(); renderInv();
     });

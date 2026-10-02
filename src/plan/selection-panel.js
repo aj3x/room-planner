@@ -21,7 +21,7 @@ import {renderInv} from './item-list.js';
 import {setMode} from './mode.js';
 
 function rotate(deg){
-  const inst=instOf(sel); if(!inst) return;
+  const inst=instOf(sel.value); if(!inst) return;
   const it=itemOf(inst.itemId); if(!it) return;
   const loose=isBad(inst), prev=inst.rot||0;
   transact('furn', ()=>{
@@ -31,8 +31,8 @@ function rotate(deg){
   renderSel();
 }
 function removeSel(){
-  if(!selSet.size) return;
-  transact('furn', ()=>{ L().placed=L().placed.filter(p=>!selSet.has(p.id)); selectClear(); });
+  if(!selSet.value.size) return;
+  transact('furn', ()=>{ L().placed=L().placed.filter(p=>!selSet.value.has(p.id)); selectClear(); });
   renderSel(); renderInv();
 }
 function place(itemId){
@@ -66,8 +66,8 @@ function place(itemId){
 }
 
 function duplicateSel(){
-  if(selSet.size<2) return;
-  const srcIds=[...selSet];
+  if(selSet.value.size<2) return;
+  const srcIds=[...selSet.value];
   const newIds=[];
   transact('furn', ()=>{
     for(const id of srcIds){
@@ -85,7 +85,7 @@ function duplicateSel(){
 }
 function renderSel(){
   const box=$('selBox');
-  if(!furnMode() || selSet.size===0){
+  if(!furnMode() || selSet.value.size===0){
     box.closest('section').classList.toggle('is-empty', true);
     box.innerHTML=`<p class="hint">Click an item in the plan to move, turn or remove it.</p>
       <dl class="kbd">
@@ -97,10 +97,10 @@ function renderSel(){
       </dl>`;
     return;
   }
-  if(selSet.size>1){
+  if(selSet.value.size>1){
     box.closest('section').classList.toggle('is-empty', false);
     box.innerHTML=`
-      <div class="selhead"><span class="nm">${selSet.size} items selected</span></div>
+      <div class="selhead"><span class="nm">${selSet.value.size} items selected</span></div>
       <div class="row actions">
         <button class="btn sm" id="sDupG">Duplicate</button>
         <button class="btn sm danger" id="sDelG">Remove</button>
@@ -113,7 +113,7 @@ function renderSel(){
     $('sDupG').addEventListener('click', duplicateSel);
     return;
   }
-  const inst=instOf(sel), it=inst&&itemOf(inst.itemId);
+  const inst=instOf(sel.value), it=inst&&itemOf(inst.itemId);
   box.closest('section').classList.toggle('is-empty', !(inst&&it));
   if(!inst||!it){
     selectClear();

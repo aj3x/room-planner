@@ -1,56 +1,59 @@
-/* The selection. Nine mutable lets saying what is picked, what is being dragged
-   onto what, and what the guide readout should say — plus the setter for each.
-   A leaf: this module imports nothing.
-
-   Extracted from index.html in Phase 3, move-only: the two chunks below are
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. The setters landed in index.html in their own commits
-   first, precisely so this one could stay a move.
+/* The selection: what is picked, what is marked, and what the guide readout
+   says. Each is a signal (core/signals.js), so whatever shows it — the canvas,
+   the Selection panels, the layout tree — subscribes by reading `.value`, and
+   whoever changes it writes `.value` and names no view.
 
    They live here rather than in core/state.js because they are not part of the
-   saved project — S is what `save()` serialises, and none of this is. They are
-   the canvas's own scratch state, and draw() reads all nine of them, which is
-   why they had to come out of index.html before draw() could.
+   saved project — S is what `save()` serialises, and none of this is.
 
-   treeOpen is the tenth, and it joined them in the plan/ round: it is the
-   layout tree's expanded-folder set, which nothing on the canvas reads, but
-   plan/layout-tree.js does. It needs no setter — it is only ever .add()ed and
-   .delete()d, never reassigned — so it moved as a plain let. */
+   The Set-valued ones (selSet, mergeSel, treeOpen) are replaced, never mutated
+   in place: a signal notifies on assignment, and `selSet.value.add(id)` would
+   change the set behind every reader's back with nobody told. Use the helpers
+   below, which build a new Set. */
 
-let selSet = new Set(); // placed furniture ids (multi-select), source of truth
-let sel = null;         // last-added/primary placed furniture id; null when selSet is empty
-let roomSel = null;    // {kind:'wall'|'corner'|'opening', i} / {kind:'opening', id}
-let floorSel = null;   // id of the room picked up in Floor mode
-let mergeSel = new Set();  // up to 2 layout ids marked for merge/delete (Floor canvas + room list, shift+click)
-let floorGuides = [];  // edges a dragged room is currently lining up with
-let floorSnapNote = ''; // what that alignment is, shown while dragging
-let alignGuides = [];  // lines a dragged corner is currently latched onto
-let alignNote = '';    // what that alignment is, shown in the readout
-let treeOpen = new Set();  // expanded folder ids in the layout tree
+import {signal} from './signals.js';
 
-/* Setters for the selection lets above. You cannot assign to an imported
-   binding, so every one of these that is reassigned from outside the module it
-   ends up in needs a function to do it — the same pattern setS uses in
-   src/core/state.js. Each setter does exactly what the assignment did: a bare
-   assignment, nothing else. They are added here, ahead of the draw() move, so
-   that move can stay move-only. */
-function setSel(v){ sel = v; }
-function setSelSet(v){ selSet = v; }
-function setRoomSel(v){ roomSel = v; }
-function setFloorSel(v){ floorSel = v; }
-function setMergeSel(v){ mergeSel = v; }
-function setFloorGuides(v){ floorGuides = v; }
-function setFloorSnapNote(v){ floorSnapNote = v; }
-function setAlignGuides(v){ alignGuides = v; }
-function setAlignNote(v){ alignNote = v; }
+const selSet = signal(new Set());   // placed furniture ids (multi-select), source of truth
+const sel = signal(null);           // last-added/primary placed furniture id; null when selSet is empty
+const roomSel = signal(null);       // {kind:'wall'|'corner', i} / {kind:'opening'|'pillar'|'iwall', id}
+const floorSel = signal(null);      // id of the room picked up in Floor mode
+const mergeSel = signal(new Set()); // up to 2 layout ids marked for merge/delete (Floor canvas + room list, shift+click)
+const floorGuides = signal([]);     // edges a dragged room is currently lining up with
+const floorSnapNote = signal('');   // what that alignment is, shown while dragging
+const alignGuides = signal([]);     // lines a dragged corner is currently latched onto
+const alignNote = signal('');       // what that alignment is, shown in the readout
+const treeOpen = signal(new Set()); // expanded folder and floor ids in the layout tree
 
-function selectOnly(id){ setSelSet(new Set(id?[id]:[])); setSel(id||null); }
-function selectAdd(id){ selSet.add(id); setSel(id); }
-function selectToggle(id){ if(selSet.has(id)){ selSet.delete(id); setSel([...selSet].pop()||null); } else selectAdd(id); }
-function selectSet(ids){ setSelSet(new Set(ids)); setSel(ids.length ? ids[ids.length-1] : null); }
-function selectClear(){ selSet.clear(); setSel(null); }
+function selectOnly(id){ selSet.value = new Set(id?[id]:[]); sel.value = id||null; }
+function selectAdd(id){ selSet.value = new Set([...selSet.value, id]); sel.value = id; }
+function selectToggle(id){
+  if(!selSet.value.has(id)) return selectAdd(id);
+  const s = new Set(selSet.value); s.delete(id);
+  selSet.value = s; sel.value = [...s].pop()||null;
+}
+function selectSet(ids){ selSet.value = new Set(ids); sel.value = ids.length ? ids[ids.length-1] : null; }
+function selectClear(){ selSet.value = new Set(); sel.value = null; }
+
+/* Shift+click marking for merge/delete: toggles `id`, keeping at most the two
+   most recent. */
+function mergeToggle(id){
+  const s = new Set(mergeSel.value);
+  if(s.has(id)) s.delete(id); else s.add(id);
+  while(s.size>2) s.delete(s.values().next().value);
+  mergeSel.value = s;
+}
+function mergeOnly(id){ mergeSel.value = new Set([id]); }
+function mergeClear(){ if(mergeSel.value.size) mergeSel.value = new Set(); }
+
+function treeExpand(id){ if(!treeOpen.value.has(id)) treeOpen.value = new Set([...treeOpen.value, id]); }
+function treeCollapse(...ids){
+  if(!ids.some(id => treeOpen.value.has(id))) return;
+  const s = new Set(treeOpen.value); for(const id of ids) s.delete(id);
+  treeOpen.value = s;
+}
+function treeToggle(id){ if(treeOpen.value.has(id)) treeCollapse(id); else treeExpand(id); }
+
 export {sel, selSet, roomSel, floorSel, mergeSel,
         floorGuides, floorSnapNote, alignGuides, alignNote, treeOpen,
-        setSel, setSelSet, setRoomSel, setFloorSel, setMergeSel,
-        setFloorGuides, setFloorSnapNote, setAlignGuides, setAlignNote,
-        selectOnly, selectAdd, selectToggle, selectSet, selectClear};
+        selectOnly, selectAdd, selectToggle, selectSet, selectClear,
+        mergeToggle, mergeOnly, mergeClear, treeExpand, treeCollapse, treeToggle};

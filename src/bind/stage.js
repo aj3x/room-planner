@@ -22,13 +22,13 @@
    behind in a shell that no longer contains their readers. */
 
 import { S, L, roomMode, floorMode } from '../core/state.js';
-import { mergeSel } from '../core/selection.js';
+import {mergeSel, mergeOnly} from '../core/selection.js';
 import { transact } from '../core/tx.js';
 import { undoRoom, redoRoom, undoFurn, redoFurn, undoFloor, redoFloor } from '../core/history.js';
 import { $, askConfirm, showShortcuts } from '../ui/modal.js';
 import { menuAtPoint } from '../ui/menu.js';
 import { cv, W, H, fit, zoomAt } from '../canvas/view.js';
-import { drag, drawState, wallDrawState, splitDrawState, setDrag } from '../canvas/interaction-state.js';
+import {drag, drawState, wallDrawState, splitDrawState} from '../canvas/interaction-state.js';
 import { lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, onCanvasPointerDown, applyDragAt, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState } from '../canvas/interaction.js';
 import { applyDrawCursorAt } from '../canvas/room-draw.js';
 import { startSplitRoom } from '../canvas/split-room.js';
@@ -43,7 +43,7 @@ import { renderFloorSel, openFloorMergeMenu } from '../plan/floors.js';
 
 function bindStage(){
   cv.addEventListener('mousemove', e=>{
-    if(!drawState && !wallDrawState && !splitDrawState) return;
+    if(!drawState.value && !wallDrawState.value && !splitDrawState.value) return;
     setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
     applyDrawCursorAt(lastPX,lastPY,e.shiftKey);
   });
@@ -62,7 +62,7 @@ function bindStage(){
      measurement follows what it joins as things move. It is a note on the plan, not part of
      the room or the furniture, so it has no undo history of its own. */
   cv.addEventListener('pointerleave', ()=>{
-    if(!measureOn || drag) return;
+    if(!measureOn || drag.value) return;
     setMeasureHover(null); setMeasureHoverId(null); setMeasureCursor(null); scheduleDraw();
   });
   $('btnMeasure').addEventListener('click', ()=>setMeasure(!measureOn));
@@ -82,8 +82,8 @@ function bindStage(){
 
   cv.addEventListener('pointerdown', onCanvasPointerDown);
   cv.addEventListener('pointermove', e=>{
-    if(measureOn && !drag){ measureHoverAt(e.offsetX,e.offsetY); return; }
-    if(!drag) return;
+    if(measureOn && !drag.value){ measureHoverAt(e.offsetX,e.offsetY); return; }
+    if(!drag.value) return;
     setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
     applyDragAt(lastPX,lastPY,lastMods);
   });
@@ -91,16 +91,16 @@ function bindStage(){
   cv.addEventListener('pointercancel',endDrag);
   /* in Room mode, double-clicking a wall types its length in rather than dragging for it */
   cv.addEventListener('dblclick', e=>{
-    if(drawState) return;
+    if(drawState.value) return;
     /* double-clicking a room on the floor is the way back to editing it */
     if(floorMode()){
       const id=pickFloorRoom(e.offsetX,e.offsetY);
-      if(id){ setDrag(null); transact('project', ()=>{ activateLayout(id); setMode('room'); }); renderAll(); fit(); }
+      if(id){ drag.value = null; transact('project', ()=>{ activateLayout(id); setMode('room'); }); renderAll(); fit(); }
       return;
     }
     if(!roomMode()) return;
     const hit=pickRoom(e.offsetX,e.offsetY);
-    if(hit&&hit.kind==='wall'){ setDrag(null); wallDialog(hit.i); }
+    if(hit&&hit.kind==='wall'){ drag.value = null; wallDialog(hit.i); }
   });
   /* ------------------------- splitting a room in two ------------------------- */
   /* A room's own dividing line is drawn the same way a freestanding wall is (same
@@ -111,7 +111,7 @@ function bindStage(){
   /* right-clicking a room marked for merge/delete opens that menu; right-clicking any
      other room collapses the marked set down to just the one under the pointer first */
   cv.addEventListener('contextmenu', e=>{
-    if(roomMode() && !drawState && !wallDrawState && !splitDrawState && !measureOn){
+    if(roomMode() && !drawState.value && !wallDrawState.value && !splitDrawState.value && !measureOn){
       e.preventDefault();
       menuAtPoint(e.clientX, e.clientY, [{label:'Split room…', fn:()=>startSplitRoom(S.active)}]);
       return;
@@ -120,9 +120,9 @@ function bindStage(){
     const hit=pickFloorRoom(e.offsetX,e.offsetY);
     if(!hit) return;
     e.preventDefault();
-    if(!mergeSel.has(hit)){ mergeSel.clear(); mergeSel.add(hit); renderFloorSel(); renderTree(); draw(); }
-    if(mergeSel.size!==2) return;
-    openFloorMergeMenu([...mergeSel], e.clientX, e.clientY);
+    if(!mergeSel.value.has(hit)){ mergeOnly(hit); renderFloorSel(); renderTree(); draw(); }
+    if(mergeSel.value.size!==2) return;
+    openFloorMergeMenu([...mergeSel.value], e.clientX, e.clientY);
   });
   cv.addEventListener('wheel', e=>{
     e.preventDefault();

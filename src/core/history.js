@@ -23,7 +23,7 @@
 */
 import {L, roomMode, floorMode, floorLayouts} from './state.js';
 import {use} from './registry.js';
-import {selectClear, setRoomSel} from './selection.js';
+import {selectClear, roomSel} from './selection.js';
 import {S} from './state.js';
 import {save} from './store.js';
 
@@ -98,7 +98,7 @@ function updateHistButtons(){ use('repaint.histAvail')?.(histAvail()); }
 
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */
 function applyRoomSnap(s){
-  L().room=s.room; L().openings=s.openings; setRoomSel(null); bumpRev();
+  L().room=s.room; L().openings=s.openings; roomSel.value = null; bumpRev();
   use('repaint.afterRoomRestore')?.(); save();
 }
 function applyFurnSnap(s){

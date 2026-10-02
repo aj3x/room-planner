@@ -26,7 +26,7 @@ import {deleteCorner, splitWall} from '../canvas/corners.js';
 import {draw} from '../canvas/draw.js';
 import {squareCorner} from '../canvas/snap.js';
 import {bbox, norm360, polyArea} from '../core/geometry.js';
-import {setRoomSel} from '../core/selection.js';
+
 import {openOf, roomMode} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {fmtArea, parseLen} from '../core/units.js';
@@ -56,7 +56,7 @@ function renderWalls(){
   const ul=$('wallList'), P=RP(), room=L().room;
   ul.innerHTML=P.map((_,i)=>{
     const w=wallOf(i);
-    const on=roomSel&&roomSel.kind==='wall'&&roomSel.i===i;
+    const on=roomSel.value&&roomSel.value.kind==='wall'&&roomSel.value.i===i;
     const meta = wallIsOff(room,i) ? 'Open · '+esc(fmtLen(w.len,S.unit))
                                    : esc(fmtLen(w.len,S.unit))+' · '+Math.round(wallAngle(i))+'°';
     return `<li data-i="${i}" class="${on?'on':''}">
@@ -76,7 +76,7 @@ function renderObstacles(){
   ];
   if(!rows.length){ ul.innerHTML=emptyRow('None yet'); return; }
   ul.innerHTML=rows.map(r=>{
-    const on=roomSel&&roomSel.kind===r.kind&&roomSel.id===r.id;
+    const on=roomSel.value&&roomSel.value.kind===r.kind&&roomSel.value.id===r.id;
     return `<li data-kind="${r.kind}" data-id="${r.id}" class="${on?'on':''}">
       <span class="nm">${esc(r.label)}</span><span class="lmeta">${esc(r.dim)}</span>
       <span class="lact">${moreBtn('')}</span></li>`;
@@ -88,7 +88,7 @@ function renderOpen(){
   const ul=$('openList'), os=L().openings;
   if(!os.length){ ul.innerHTML=emptyRow('None yet'); return; }
   ul.innerHTML=os.map(o=>{
-    const on=roomSel&&roomSel.kind==='opening'&&roomSel.id===o.id;
+    const on=roomSel.value&&roomSel.value.kind==='opening'&&roomSel.value.id===o.id;
     return `<li data-id="${o.id}" class="${on?'on':''}">
       <span class="lmain"><span class="nm">${KIND(o)}</span><span class="meta">Wall ${o.wall+1} · ${esc(fmtLen(o.width,S.unit))} wide</span></span>
       <span class="lact">${moreBtn('')}</span></li>`;
@@ -128,35 +128,35 @@ function renderRoom(){
 function deletePillar(id){
   transact('room', ()=>{
     L().room.pillars=L().room.pillars.filter(p=>p.id!==id);
-    if(roomSel&&roomSel.kind==='pillar'&&roomSel.id===id) setRoomSel(null);
+    if(roomSel.value&&roomSel.value.kind==='pillar'&&roomSel.value.id===id) roomSel.value = null;
   });
   renderRoomSel(); renderWalls();
 }
 function deleteIWall(id){
   transact('room', ()=>{
     L().room.iwalls=L().room.iwalls.filter(w=>w.id!==id);
-    if(roomSel&&roomSel.kind==='iwall'&&roomSel.id===id) setRoomSel(null);
+    if(roomSel.value&&roomSel.value.kind==='iwall'&&roomSel.value.id===id) roomSel.value = null;
   });
   renderRoomSel(); renderWalls();
 }
 
 function renderRoomSel(){
   const box=$('roomSelBox'), t=$('roomSelTitle');
-  box.closest('section').classList.toggle('is-empty', !(roomMode()&&roomSel));
-  if(!roomMode() || !roomSel){
+  box.closest('section').classList.toggle('is-empty', !(roomMode()&&roomSel.value));
+  if(!roomMode() || !roomSel.value){
     t.textContent='Selection';
     box.innerHTML='<p class="hint">Click a wall, corner, door or pillar in the plan to change it here.</p>';
     return;
   }
-  if(roomSel.kind==='wall') return renderWallProps();
-  if(roomSel.kind==='corner') return renderCornerProps();
-  if(roomSel.kind==='pillar') return renderPillarProps();
-  if(roomSel.kind==='iwall') return renderIWallProps();
+  if(roomSel.value.kind==='wall') return renderWallProps();
+  if(roomSel.value.kind==='corner') return renderCornerProps();
+  if(roomSel.value.kind==='pillar') return renderPillarProps();
+  if(roomSel.value.kind==='iwall') return renderIWallProps();
   return renderOpeningProps();
 }
 
 function renderWallProps(){
-  const i=roomSel.i, w=wallOf(i), room=L().room, off=wallIsOff(room,i);
+  const i=roomSel.value.i, w=wallOf(i), room=L().room, off=wallIsOff(room,i);
   $('roomSelTitle').textContent='Wall '+(i+1);
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="wLen">Length</label><input type="text" class="len" id="wLen" value="${esc(fmtLen(w.len,S.unit))}"></div>
@@ -186,8 +186,8 @@ function renderWallProps(){
   $('wSplit').addEventListener('click',()=>splitWall(i));
 }
 function renderCornerProps(){
-  const i=roomSel.i, P=RP(), p=P[i], b=bbox(P);
-  if(!p){ setRoomSel(null); return renderRoomSel(); }   // the corner went away under the selection
+  const i=roomSel.value.i, P=RP(), p=P[i], b=bbox(P);
+  if(!p){ roomSel.value = null; return renderRoomSel(); }   // the corner went away under the selection
   $('roomSelTitle').textContent='Corner '+(i+1);
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="cX">From left</label><input type="text" class="len" id="cX" value="${esc(fmtLen(p[0]-b.x0,S.unit))}"></div>
@@ -230,8 +230,8 @@ function toggleWallOff(i){
 }
 
 function renderPillarProps(){
-  const pl=pillarOf(roomSel.id);
-  if(!pl){ setRoomSel(null); return renderRoomSel(); }
+  const pl=pillarOf(roomSel.value.id);
+  if(!pl){ roomSel.value = null; return renderRoomSel(); }
   $('roomSelTitle').textContent='Pillar';
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="plShape">Shape</label><select id="plShape">
@@ -260,8 +260,8 @@ function renderPillarProps(){
   $('plDel').addEventListener('click',()=>deletePillar(pl.id));
 }
 function renderIWallProps(){
-  const w=iwallOf(roomSel.id);
-  if(!w){ setRoomSel(null); return renderRoomSel(); }
+  const w=iwallOf(roomSel.value.id);
+  if(!w){ roomSel.value = null; return renderRoomSel(); }
   const na=nearestOnWalls(w.a), nb=nearestOnWalls(w.b);
   $('roomSelTitle').textContent='Interior wall';
   $('roomSelBox').innerHTML=`
@@ -303,13 +303,13 @@ function renderIWallProps(){
 function deleteOpening(id){
   transact('room', ()=>{
     L().openings=L().openings.filter(o=>o.id!==id);
-    if(roomSel&&roomSel.id===id) setRoomSel(null);
+    if(roomSel.value&&roomSel.value.id===id) roomSel.value = null;
   });
   renderOpen(); renderRoomSel();
 }
 function renderOpeningProps(){
-  const o=openOf(roomSel.id);
-  if(!o){ setRoomSel(null); return renderRoomSel(); }
+  const o=openOf(roomSel.value.id);
+  if(!o){ roomSel.value = null; return renderRoomSel(); }
   const len=wallOf(o.wall).len;
   o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
   const isDoor=o.kind==='door';
@@ -376,14 +376,14 @@ function renderOpeningProps(){
 
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */
 function addPillar(){
-  if(wallDrawState) cancelWallDraw();
-  if(drawState) cancelCustomDraw();
+  if(wallDrawState.value) cancelWallDraw();
+  if(drawState.value) cancelCustomDraw();
   if(!roomMode()) setMode('room');
   const b=bbox(RP()), c=centroid(RP())||[(b.x0+b.x1)/2,(b.y0+b.y1)/2];
   const pl={id:uid(), x:c[0], y:c[1], rot:0, shape:{type:'rect',w:300,d:300}};
   transact('room', ()=>{
     L().room.pillars.push(pl);
-    setRoomSel({kind:'pillar', id:pl.id});
+    roomSel.value = {kind:'pillar', id:pl.id};
   });
   renderWalls(); renderRoomSel();
 }
@@ -395,7 +395,7 @@ function wallDialog(i){
   const P=RP();
   if(!(i>=0&&i<P.length)) return;
   const w=wallOf(i);
-  setRoomSel({kind:'wall', i});
+  roomSel.value = {kind:'wall', i};
   renderWalls(); renderRoomSel(); draw();
   openModal('Wall '+(i+1), `
     <div class="field"><label for="wdLen">Length</label><input type="text" class="len" id="wdLen" value="${esc(fmtLen(w.len,S.unit))}"></div>

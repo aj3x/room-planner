@@ -77,10 +77,10 @@ export const EPILOGUE = `
   /* The guide readouts, reassigned from all over the interaction region and
      cleared again by endDrag() — so the only way to see them is to look while
      the pointer is still down. */
-  get alignGuides(){ return alignGuides; },
-  get alignNote(){ return alignNote; },
+  get alignGuides(){ return alignGuides.value; },
+  get alignNote(){ return alignNote.value; },
   /* drag says whether the deadzone has armed yet. */
-  get drag(){ return drag; },
+  get drag(){ return drag.value; },
   get bpState(){ return bpState; },
   RP: RP,
   /* undo/redo. Room edits and item edits have separate per-layout stacks. */

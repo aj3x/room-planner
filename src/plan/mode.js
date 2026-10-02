@@ -27,7 +27,7 @@ import {measureOn, setMeasureOn} from '../canvas/measure-state.js';
 import {renderMeasureBar, resetMeasureState} from '../canvas/measure-tool.js';
 import {fit, resize} from '../canvas/view.js';
 import {floorEntry, updateHistButtons} from '../core/history.js';
-import {selectClear, setAlignGuides, setAlignNote, setFloorGuides, setFloorSel, setFloorSnapNote, setRoomSel} from '../core/selection.js';
+import {selectClear, alignGuides, alignNote, floorGuides, floorSel, floorSnapNote, roomSel} from '../core/selection.js';
 import {L, S, isCanvasMode} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {$} from '../ui/modal.js';
@@ -51,11 +51,11 @@ let pendingFit=false;
 function setPendingFit(v){ pendingFit = v; }
 function setMode(m){
   transact('prefs', ()=>{ S.mode=m; if(isCanvasMode(m)) S.planMode=m; });
-  if(m==='furniture') setRoomSel(null);
+  if(m==='furniture') roomSel.value = null;
   else if(m==='room') selectClear();
-  else if(m==='floor'){ selectClear(); setRoomSel(null); setFloorSel(L().floorId ? L().id : null); floorEntry(); }
-  if(m!=='floor'){ setFloorGuides([]); setFloorSnapNote(''); }
-  setAlignGuides([]); setAlignNote('');
+  else if(m==='floor'){ selectClear(); roomSel.value = null; floorSel.value = L().floorId ? L().id : null; floorEntry(); }
+  if(m!=='floor'){ floorGuides.value = []; floorSnapNote.value = ''; }
+  alignGuides.value = []; alignNote.value = '';
   /* measurements belong to one room, so Floor mode leaves the tool behind too */
   if((!isCanvasMode(m) || m==='floor') && measureOn){ setMeasureOn(false); resetMeasureState(); renderMeasureBar(); }
   renderMode(); applyLayoutMode();

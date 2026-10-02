@@ -1,7 +1,7 @@
 import {fit} from '../canvas/view.js';
 import {floorHist, furnHist, histEntry, roomHist, snapFurn, snapRoom} from '../core/history.js';
 import {normLayout} from '../core/migrate.js';
-import {treeOpen} from '../core/selection.js';
+import {treeExpand, treeCollapse} from '../core/selection.js';
 import {S, blankLayout, floorOf, uid} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {clampOpenings} from '../model/walls.js';
@@ -37,7 +37,7 @@ function bpCommit(){
     bpSeedHistory(d.layouts, floor.id);
     bpLastImport={floorId:floor.id, layoutIds:ids, prevActive:S.active, createdFloor:!target};
     bpDispose();
-    treeOpen.add(floor.id);
+    treeExpand(floor.id);
     activateLayout(ids[0]);
     setMode('floor');
   });
@@ -72,7 +72,7 @@ function bpUndoImport(){
         if(imp.createdFloor) S.floors=S.floors.filter(f=>f.id!==imp.floorId);
         for(const id of kill){ delete roomHist[id]; delete furnHist[id]; }
         delete floorHist[imp.floorId];
-        treeOpen.delete(imp.floorId);
+        treeCollapse(imp.floorId);
         if(!S.layouts.length) S.layouts=[blankLayout()];
         activateLayout(S.layouts.some(l=>l.id===imp.prevActive) ? imp.prevActive : S.layouts[0].id);
         bpLastImport=null;

@@ -3,7 +3,7 @@
    Extracted from index.html in Phase 3 as part of the 49-name SCC commit,
    move-only.
 */
-import {setRoomSel} from '../core/selection.js';
+import {roomSel} from '../core/selection.js';
 import {L, RP, S, openOf, roomMode, uid} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {fmtLen, parseLen} from '../core/units.js';
@@ -61,7 +61,7 @@ function openingDialog(id, kind, wallIdx){
       transact('room', ()=>{
         if(id){ const i=L().openings.findIndex(x=>x.id===id); L().openings[i]=rec; }
         else L().openings.push(rec);
-        setRoomSel({kind:'opening', id:rec.id});
+        roomSel.value = {kind:'opening', id:rec.id};
         if(!roomMode()) setMode('room');
       });
       renderOpen(); renderRoomSel();

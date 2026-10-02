@@ -68,11 +68,11 @@ import {drawState, drawCursor} from './interaction-state.js';
 
 /* the dashed lines saying which alignment is holding a dragged or hovered point */
 function drawAlignGuides(){
-  if(!alignGuides.length) return;
+  if(!alignGuides.value.length) return;
   const C=PAL();
   ctx.save();
   ctx.setLineDash([6,5]); ctx.lineWidth=1.5; ctx.strokeStyle=C.accent;
-  for(const g of alignGuides){
+  for(const g of alignGuides.value){
     ctx.beginPath(); ctx.moveTo(sx(g[0][0]),sy(g[0][1])); ctx.lineTo(sx(g[1][0]),sy(g[1][1])); ctx.stroke();
   }
   ctx.restore();
@@ -98,19 +98,19 @@ function drawSquareTick(a,b,c){
   ctx.restore();
 }
 function drawCustomOverlay(){
-  if(!drawState) return;
-  const pts=drawState.pts, C=PAL();
+  if(!drawState.value) return;
+  const pts=drawState.value.pts, C=PAL();
   ctx.save();
   ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.setLineDash([5,4]);
   ctx.beginPath();
   if(pts.length){
     ctx.moveTo(sx(pts[0][0]),sy(pts[0][1]));
     for(let i=1;i<pts.length;i++) ctx.lineTo(sx(pts[i][0]),sy(pts[i][1]));
-    if(drawCursor) ctx.lineTo(sx(drawCursor[0]),sy(drawCursor[1]));
+    if(drawCursor.value) ctx.lineTo(sx(drawCursor.value[0]),sy(drawCursor.value[1]));
   }
   ctx.stroke(); ctx.setLineDash([]);
   for(let i=0;i<pts.length;i++){
-    const near0 = i===0 && pts.length>=3 && drawCursor && Math.hypot(sx(pts[0][0])-sx(drawCursor[0]),sy(pts[0][1])-sy(drawCursor[1]))<12;
+    const near0 = i===0 && pts.length>=3 && drawCursor.value && Math.hypot(sx(pts[0][0])-sx(drawCursor.value[0]),sy(pts[0][1])-sy(drawCursor.value[1]))<12;
     ctx.beginPath(); ctx.arc(sx(pts[i][0]),sy(pts[i][1]), (i===0?7:5), 0, Math.PI*2);
     ctx.fillStyle = near0 ? C.accent : (i===0?C.accentSoft:C.surface);
     ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
@@ -304,7 +304,7 @@ function draw(){
     const oa = pa&&pa.passThrough ? 0 : 1, ob = pb&&pb.passThrough ? 0 : 1;
     return oa-ob || a.i-b.i;
   });
-  for(const {p} of drawOrder) drawItem(p, furnMode()&&selSet.has(p.id), bad.has(p.id));
+  for(const {p} of drawOrder) drawItem(p, furnMode()&&selSet.value.has(p.id), bad.has(p.id));
   ctx.globalAlpha = 1;
 
   drawWallLabels();
@@ -422,13 +422,13 @@ function drawFloor(){
     ctx.fillStyle='rgba('+C.dangerRGB+',.22)'; ctx.fill();
     ctx.restore();
   }
-  for(const g of floorGuides){
+  for(const g of floorGuides.value){
     ctx.save();
     ctx.setLineDash([6,5]); ctx.lineWidth=1.5; ctx.strokeStyle=C.stageAccent;
     ctx.beginPath(); ctx.moveTo(sx(g[0][0]),sy(g[0][1])); ctx.lineTo(sx(g[1][0]),sy(g[1][1])); ctx.stroke();
     ctx.restore();
   }
-  const selM=members.find(m=>m.l.id===floorSel);
+  const selM=members.find(m=>m.l.id===floorSel.value);
   if(selM){
     ctx.save();
     pathPoly(selM.P);
@@ -443,7 +443,7 @@ function drawFloor(){
   // rooms marked for merge/delete get a dashed outline — distinct from floorSel's solid
   // one, since these aren't being picked up to move, just earmarked for an action. Only
   // once a pair is actually marked, so a plain click's 1-room seed stays visually quiet.
-  for(const id of mergeSel.size>=2 ? mergeSel : []){
+  for(const id of mergeSel.value.size>=2 ? mergeSel.value : []){
     const m=members.find(x=>x.l.id===id); if(!m) continue;
     ctx.save();
     ctx.setLineDash([6,4]);
@@ -664,7 +664,7 @@ function drawFloorEmpty(fl){
 function updateFloorReadout(fl, members){
   const el=$('readout'); if(!el) return;
   if(!fl || !members.length){ el.textContent = fl ? 'No rooms on this floor' : 'Not on a floor'; return; }
-  if(floorSnapNote){ el.textContent = floorSnapNote; return; }
+  if(floorSnapNote.value){ el.textContent = floorSnapNote.value; return; }
   let area=0; for(const m of members) area+=Math.abs(polyArea(m.P));
   el.textContent = plural(members.length,'room')+' · '+fmtArea(area,S.unit);
 }
@@ -737,17 +737,17 @@ function drawPillars(){
   }
 }
 function drawWallDrawOverlay(){
-  if(!wallDrawState) return;
+  if(!wallDrawState.value) return;
   ctx.save();
-  if(wallDrawState.a && drawCursor){
-    const raw=wallDrawShift?axisLockFrom(wallDrawState.a,drawCursor):drawCursor;
+  if(wallDrawState.value.a && drawCursor.value){
+    const raw=wallDrawShift.value?axisLockFrom(wallDrawState.value.a,drawCursor.value):drawCursor.value;
     const b=snapWallPoint(raw, null, true);
     ctx.setLineDash([5,4]); ctx.lineWidth=2; ctx.strokeStyle=PAL().accent;
-    ctx.beginPath(); ctx.moveTo(sx(wallDrawState.a[0]),sy(wallDrawState.a[1])); ctx.lineTo(sx(b[0]),sy(b[1])); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx(wallDrawState.value.a[0]),sy(wallDrawState.value.a[1])); ctx.lineTo(sx(b[0]),sy(b[1])); ctx.stroke();
     ctx.setLineDash([]);
   }
-  if(wallDrawState.a){
-    ctx.beginPath(); ctx.arc(sx(wallDrawState.a[0]),sy(wallDrawState.a[1]),6,0,Math.PI*2);
+  if(wallDrawState.value.a){
+    ctx.beginPath(); ctx.arc(sx(wallDrawState.value.a[0]),sy(wallDrawState.value.a[1]),6,0,Math.PI*2);
     ctx.fillStyle=PAL().accent; ctx.fill();
   }
   ctx.restore();
@@ -818,7 +818,7 @@ function drawOpening(o,blocked,room,poly){
 }
 /* the open footprint is always drawn for whatever you have hold of, so you can
    see where it will reach as you place it, toggle on or off */
-const showOpenFor = p => S.showOpen || (furnMode() && selSet.has(p.id));
+const showOpenFor = p => S.showOpen || (furnMode() && selSet.value.has(p.id));
 function drawOpenRegion(p,bad){
   const it=itemOf(p.itemId);
   const poly=it&&openPoly(p,it);
@@ -881,10 +881,10 @@ function drawItem(p,isSel,isBadPos){
 }
 /* the selected item's outline and rotate handle, drawn after everything else so nothing covers them */
 function drawItemTools(){
-  if(!selSet.size) return;
+  if(!selSet.value.size) return;
   const C=PAL(), {bad}=getConflicts();
   // selection: a surface halo under a crisp accent line, so it reads on any furniture colour
-  for(const id of selSet){
+  for(const id of selSet.value){
     const p=L().placed.find(q=>q.id===id), it=p&&itemOf(p.itemId);
     if(!it) continue;
     const isBadPos=bad.has(p.id);
@@ -895,8 +895,8 @@ function drawItemTools(){
     ctx.lineJoin='miter';
   }
   // rotate handle only makes sense for a single selected item
-  if(selSet.size!==1) return;
-  const p=instOf(sel), it=p&&itemOf(p.itemId);
+  if(selSet.value.size!==1) return;
+  const p=instOf(sel.value), it=p&&itemOf(p.itemId);
   if(!it) return;
   const isBadPos=bad.has(p.id);
   const h=handlePos(p,it);
@@ -910,9 +910,9 @@ function drawItemTools(){
   if(S.showDims) drawItemDims(p,it,C);
 }
 function drawMarquee(){
-  if(!drag||drag.mode!=='marquee') return;
-  const x0=Math.min(drag.x0,drag.x1), x1=Math.max(drag.x0,drag.x1);
-  const y0=Math.min(drag.y0,drag.y1), y1=Math.max(drag.y0,drag.y1);
+  if(!drag.value||drag.value.mode!=='marquee') return;
+  const x0=Math.min(drag.value.x0,drag.value.x1), x1=Math.max(drag.value.x0,drag.value.x1);
+  const y0=Math.min(drag.value.y0,drag.value.y1), y1=Math.max(drag.value.y0,drag.value.y1);
   const C=PAL();
   ctx.save();
   ctx.fillStyle=hexA(C.accent,.08);
@@ -970,7 +970,7 @@ function drawWallLabels(){
     let a=Math.atan2(w.dir[1],w.dir[0]);
     if(a>Math.PI/2||a<-Math.PI/2) a+=Math.PI;
     ctx.save(); ctx.translate(x,y); ctx.rotate(a);
-    const on = roomSel&&roomSel.kind==='wall'&&roomSel.i===i;
+    const on = roomSel.value&&roomSel.value.kind==='wall'&&roomSel.value.i===i;
     ctx.fillStyle = on?C.stageAccent:C.ink2;
     ctx.font = (on?'600 ':'500 ')+'11.5px ui-sans-serif,-apple-system,system-ui,sans-serif';
     ctx.fillText(fmtLen(w.len,S.unit),0,0);
@@ -980,16 +980,16 @@ function drawWallLabels(){
 function drawHandles(){
   const P=RP(), C=PAL(), r=L().room;
   drawAlignGuides();
-  if(alignNote==='Right angle' && drag && drag.mode==='corner' && P.length>2){
-    const n=P.length, i=drag.i;
+  if(alignNote.value==='Right angle' && drag.value && drag.value.mode==='corner' && P.length>2){
+    const n=P.length, i=drag.value.i;
     drawSquareTick(P[(i-1+n)%n], P[i], P[(i+1)%n]);
   }
-  const pl=roomSel&&roomSel.kind==='pillar'&&r.pillars.find(q=>q.id===roomSel.id);
+  const pl=roomSel.value&&roomSel.value.kind==='pillar'&&r.pillars.find(q=>q.id===roomSel.value.id);
   if(pl){
     pathPoly(worldPoly(pl,pl));
     ctx.lineWidth=2.5; ctx.strokeStyle=C.accent; ctx.stroke();
   }
-  const iw=roomSel&&roomSel.kind==='iwall'&&r.iwalls.find(q=>q.id===roomSel.id);
+  const iw=roomSel.value&&roomSel.value.kind==='iwall'&&r.iwalls.find(q=>q.id===roomSel.value.id);
   if(iw){
     pathPoly(iwallPoly(iw));
     ctx.lineWidth=2.5; ctx.strokeStyle=C.accent; ctx.stroke();
@@ -998,19 +998,19 @@ function drawHandles(){
       ctx.fillStyle=C.surface; ctx.fill(); ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
     }
   }
-  if(roomSel&&roomSel.kind==='wall'){
-    const w=wallOf(roomSel.i);
+  if(roomSel.value&&roomSel.value.kind==='wall'){
+    const w=wallOf(roomSel.value.i);
     ctx.beginPath(); ctx.moveTo(sx(w.a[0]),sy(w.a[1])); ctx.lineTo(sx(w.b[0]),sy(w.b[1]));
     ctx.strokeStyle=C.accent; ctx.lineWidth=4; ctx.lineCap='round'; ctx.stroke(); ctx.lineCap='butt';
   }
   for(let i=0;i<P.length;i++){
-    const on = roomSel&&roomSel.kind==='corner'&&roomSel.i===i;
+    const on = roomSel.value&&roomSel.value.kind==='corner'&&roomSel.value.i===i;
     ctx.beginPath(); ctx.rect(sx(P[i][0])-5,sy(P[i][1])-5,10,10);
     ctx.fillStyle = on?C.accent:C.surface; ctx.fill();
     ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
   }
   for(const o of L().openings){
-    const g=openGeom(o), on=roomSel&&roomSel.kind==='opening'&&roomSel.id===o.id;
+    const g=openGeom(o), on=roomSel.value&&roomSel.value.kind==='opening'&&roomSel.value.id===o.id;
     ctx.beginPath(); ctx.arc(sx(g.mid[0]),sy(g.mid[1]),7,0,Math.PI*2);
     ctx.fillStyle = on?C.accent:C.surface; ctx.fill();
     ctx.strokeStyle=C.accent; ctx.lineWidth=2; ctx.stroke();
@@ -1032,7 +1032,7 @@ function updateReadout(bad,openBad){
     bits.push(L().placed.length+' placed', Math.round(used/total*100)+'% covered');
   }
   let html=bits.join(' · ');
-  if(alignNote) html=`<span class="snap">${esc(alignNote)}</span> · `+html;
+  if(alignNote.value) html=`<span class="snap">${esc(alignNote.value)}</span> · `+html;
   if(n) html+=`<span class="bad">${n} ${n===1?"doesn't":"don't"} fit</span>`;
   if(no) html+=`<span class="bad">${no} can't open</span>`;
   el.innerHTML=html;

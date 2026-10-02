@@ -6,7 +6,7 @@
    move-only.
 */
 import {polySimple} from '../core/geometry.js';
-import {setRoomSel} from '../core/selection.js';
+import {roomSel} from '../core/selection.js';
 import {L, RP} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {clampOpenings, syncWallOff, wallIsOff, wallOf} from '../model/walls.js';
@@ -46,7 +46,7 @@ function splitWall(i){
     for(const m of L().measures) for(const a of [m.a,m.b]) if(a.k==='wall' && a.id>i) a.id++;
     syncWallOff(room);
     clampOpenings();
-    setRoomSel({kind:'corner', i:i+1});
+    roomSel.value = {kind:'corner', i:i+1};
   });
   repaint('room','walls','roomSel','openings');
 }
@@ -76,7 +76,7 @@ function deleteCorner(i){
     l.measures = l.measures.filter(m=>!sameEnd(m));
     syncWallOff(room);
     clampOpenings();
-    setRoomSel(null);
+    roomSel.value = null;
   });
   repaint('room','walls','roomSel','openings');
 }

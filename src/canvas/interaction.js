@@ -15,7 +15,7 @@ import {repaint} from '../core/bus.js';
 import {floorPts} from '../core/floor-space.js';
 import {bbox, norm360, polySimple, worldPoly} from '../core/geometry.js';
 import {snapFloor, snapFurn, snapRoom} from '../core/history.js';
-import {selectAdd, selectSet, setAlignGuides, setAlignNote, setFloorGuides, setFloorSnapNote} from '../core/selection.js';
+import {selectAdd, selectSet, alignGuides, alignNote, floorGuides, floorSnapNote, roomSel, mergeToggle, mergeClear} from '../core/selection.js';
 import {L, RP, S, instOf, itemOf, openOf} from '../core/state.js';
 import {preview, transact} from '../core/tx.js';
 import {centreInside, slideToValid, validate} from '../model/validity.js';
@@ -23,7 +23,7 @@ import {clampOpenings, iwallOf, nearestOnWalls, pillarOf, wallOf} from '../model
 import {snapWallPoint} from './snap.js';
 import {flash} from '../ui/flash.js';
 import {draw, scheduleDraw, snapFloorPlace} from './draw.js';
-import {drag, setDrag} from './interaction-state.js';
+import {drag} from './interaction-state.js';
 import {alignRadius, bringToFront, snapCorner} from './snap.js';
 import {H, W, axisLockFrom, cv, snapMM, snapPt, view, wx, wy} from './view.js';
 import {drawState, splitDrawState, wallDrawState} from './interaction-state.js';
@@ -31,7 +31,7 @@ import {applyDrawCursorAt} from './room-draw.js';
 /* the rest are here for onCanvasPointerDown, which moved in from the shell */
 import {pointInPoly} from '../core/geometry.js';
 import {floorEntry} from '../core/history.js';
-import {floorSel, mergeSel, sel, selSet, selectClear, selectOnly, selectToggle, setFloorSel, setMergeSel, setRoomSel} from '../core/selection.js';
+import {floorSel, mergeSel, sel, selSet, selectClear, selectOnly, selectToggle} from '../core/selection.js';
 import {floorMode, floorOf, roomMode, uid} from '../core/state.js';
 import {isBad} from '../model/validity.js';
 import {floorMembers, floorRotHandle, handlePos, pickFloorRoom} from './draw.js';
@@ -80,37 +80,37 @@ function onCanvasPointerDown(e){
   const px=e.offsetX, py=e.offsetY;
 
   if(spaceDown){
-    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
+    drag.value = {mode:'pan', px, py, ox:view.ox, oy:view.oy};
     cv.style.cursor='grabbing';
     draw();
     return;
   }
 
-  if(drawState){
+  if(drawState.value){
     const raw=[wx(px),wy(py)];
-    if(drawState.pts.length>=3){
-      const s0=[sx(drawState.pts[0][0]), sy(drawState.pts[0][1])];
+    if(drawState.value.pts.length>=3){
+      const s0=[sx(drawState.value.pts[0][0]), sy(drawState.value.pts[0][1])];
       if(Math.hypot(px-s0[0], py-s0[1])<12){ finishCustomDraw(); return; }
     }
-    drawState.pts.push(drawSnapPoint(raw,e.shiftKey));
-    setAlignGuides([]); setAlignNote('');
+    drawState.value.pts.push(drawSnapPoint(raw,e.shiftKey));
+    alignGuides.value = []; alignNote.value = '';
     draw();
     return;
   }
 
-  if(wallDrawState){
+  if(wallDrawState.value){
     const raw0=[wx(px),wy(py)];
-    const raw = (wallDrawState.a && e.shiftKey) ? axisLockFrom(wallDrawState.a,raw0) : raw0;
+    const raw = (wallDrawState.value.a && e.shiftKey) ? axisLockFrom(wallDrawState.value.a,raw0) : raw0;
     const snapped=snapWallPoint(raw,null,!e.altKey);
-    if(!wallDrawState.a){ wallDrawState.a=snapped; draw(); return; }
-    if(Math.hypot(snapped[0]-wallDrawState.a[0], snapped[1]-wallDrawState.a[1])<50){ flash('Drag out a longer wall'); return; }
-    finishWallDraw(wallDrawState.a, snapped);
+    if(!wallDrawState.value.a){ wallDrawState.value.a=snapped; draw(); return; }
+    if(Math.hypot(snapped[0]-wallDrawState.value.a[0], snapped[1]-wallDrawState.value.a[1])<50){ flash('Drag out a longer wall'); return; }
+    finishWallDraw(wallDrawState.value.a, snapped);
     return;
   }
 
-  if(splitDrawState){
+  if(splitDrawState.value){
     const raw0=[wx(px),wy(py)];
-    const pts=splitDrawState.pts;
+    const pts=splitDrawState.value.pts;
     const resolved=splitResolvePoint(raw0, e.shiftKey);
     const snapped=snapWallPoint(resolved.pt,null,!e.altKey);
     const hit=boundaryHit(snapped);
@@ -132,14 +132,14 @@ function onCanvasPointerDown(e){
   if(floorMode()){
     if(e.button===2) return;   // a right-click's own pointerdown; contextmenu handles the click itself
     const fl=floorOf(L().floorId);
-    if(fl && floorSel){
-      const m=floorMembers(fl).find(x=>x.l.id===floorSel);
+    if(fl && floorSel.value){
+      const m=floorMembers(fl).find(x=>x.l.id===floorSel.value);
       if(m){
         const h=floorRotHandle(m.P);
         if(Math.hypot(px-h.x,py-h.y)<14){
           const b=bbox(m.P);
-          setDrag({mode:'floor-rot', id:floorSel, start:m.l.floorPlace.rot||0,
-                a0:Math.atan2(wy(py)-(b.y0+b.y1)/2, wx(px)-(b.x0+b.x1)/2)});
+          drag.value = {mode:'floor-rot', id:floorSel.value, start:m.l.floorPlace.rot||0,
+                a0:Math.atan2(wy(py)-(b.y0+b.y1)/2, wx(px)-(b.x0+b.x1)/2)};
           return;
         }
       }
@@ -147,23 +147,22 @@ function onCanvasPointerDown(e){
     const hit=pickFloorRoom(px,py);
     if(hit){
       if(e.shiftKey){
-        mergeSel.has(hit) ? mergeSel.delete(hit) : mergeSel.add(hit);
-        while(mergeSel.size>2) mergeSel.delete(mergeSel.values().next().value);
+        mergeToggle(hit);
         repaint('floorSel','tree'); draw();
         return;   // shift+click only marks rooms for merge/delete — it never moves one
       }
-      setMergeSel(new Set([hit]));   // seeds the pair: a plain click here, then shift+click a second room
+      mergeSel.value = new Set([hit]);   // seeds the pair: a plain click here, then shift+click a second room
       const l=S.layouts.find(x=>x.id===hit);
       floorEntry();   // baseline the arrangement BEFORE it moves, or there is nothing to undo to
-      setFloorSel(hit);
-      setDrag({mode:'floor-room', id:hit, dx:wx(px)-l.floorPlace.x, dy:wy(py)-l.floorPlace.y});
+      floorSel.value = hit;
+      drag.value = {mode:'floor-room', id:hit, dx:wx(px)-l.floorPlace.x, dy:wy(py)-l.floorPlace.y};
       repaint('floorSel'); draw();
       return;
     }
-    if(floorSel){ setFloorSel(null); }
-    if(mergeSel.size){ mergeSel.clear(); repaint('tree'); }
+    if(floorSel.value){ floorSel.value = null; }
+    if(mergeSel.value.size){ mergeClear(); repaint('tree'); }
     repaint('floorSel');
-    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
+    drag.value = {mode:'pan', px, py, ox:view.ox, oy:view.oy};
     draw();
     return;
   }
@@ -171,33 +170,33 @@ function onCanvasPointerDown(e){
   if(roomMode()){
     const hit=pickRoom(px,py);
     if(hit){
-      setRoomSel(hit); selectClear();
-      if(hit.kind==='opening') setDrag({mode:'open', id:hit.id, ox:px, oy:py, armed:false});
-      else if(hit.kind==='corner') setDrag({mode:'corner', i:hit.i, ox:px, oy:py, armed:false});
+      roomSel.value = hit; selectClear();
+      if(hit.kind==='opening') drag.value = {mode:'open', id:hit.id, ox:px, oy:py, armed:false};
+      else if(hit.kind==='corner') drag.value = {mode:'corner', i:hit.i, ox:px, oy:py, armed:false};
       else if(hit.kind==='pillar'){
         const pl=pillarOf(hit.id);
-        setDrag({mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y, ox:px, oy:py, armed:false});
+        drag.value = {mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y, ox:px, oy:py, armed:false};
       }
       else if(hit.kind==='iwall'){
-        if(hit.end) setDrag({mode:'iwall-end', id:hit.id, end:hit.end, ox:px, oy:py, armed:false});
-        else { const w=iwallOf(hit.id); setDrag({mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1], ox:px, oy:py, armed:false}); }
+        if(hit.end) drag.value = {mode:'iwall-end', id:hit.id, end:hit.end, ox:px, oy:py, armed:false};
+        else { const w=iwallOf(hit.id); drag.value = {mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1], ox:px, oy:py, armed:false}; }
       }
-      else setDrag({mode:'wall', i:hit.i, last:[wx(px),wy(py)], ox:px, oy:py, armed:false});
+      else drag.value = {mode:'wall', i:hit.i, last:[wx(px),wy(py)], ox:px, oy:py, armed:false};
       repaint('roomSel','walls','openings'); draw();
       return;
     }
-    setRoomSel(null); repaint('roomSel','walls','openings');
-    setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
+    roomSel.value = null; repaint('roomSel','walls','openings');
+    drag.value = {mode:'pan', px, py, ox:view.ox, oy:view.oy};
     draw();
     return;
   }
 
-  if(!e.altKey && selSet.size===1 && sel){
-    const inst=instOf(sel), it=inst&&itemOf(inst.itemId);
+  if(!e.altKey && selSet.value.size===1 && sel.value){
+    const inst=instOf(sel.value), it=inst&&itemOf(inst.itemId);
     if(inst&&it){
       const h=handlePos(inst,it);
       if(Math.hypot(px-h.x,py-h.y)<14){
-        setDrag({mode:'rot', id:sel, start:inst.rot||0, a0:Math.atan2(wy(py)-inst.y, wx(px)-inst.x), loose:isBad(inst)});
+        drag.value = {mode:'rot', id:sel.value, start:inst.rot||0, a0:Math.atan2(wy(py)-inst.y, wx(px)-inst.x), loose:isBad(inst)};
         return;
       }
     }
@@ -208,7 +207,7 @@ function onCanvasPointerDown(e){
     // clicked item is already part of a multi-selection) and drag the copies,
     // leaving the originals in place. Snapshot BEFORE pushing the duplicates
     // so undo removes them entirely, as one step with the drag that follows.
-    const srcIds = selSet.has(hit.id) && selSet.size>1 ? [...selSet] : [hit.id];
+    const srcIds = selSet.value.has(hit.id) && selSet.value.size>1 ? [...selSet.value] : [hit.id];
     const snap = snapFurn();
     const idMap = new Map();
     for(const id of srcIds){
@@ -223,83 +222,83 @@ function onCanvasPointerDown(e){
     selectSet(newIds);
     const anchorNew=idMap.get(hit.id);
     const starts=newIds.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
-    setDrag({mode:'move', ids:newIds, anchorId:anchorNew, dx:wx(px)-instOf(anchorNew).x, dy:wy(py)-instOf(anchorNew).y, starts, loose:isBad(instOf(anchorNew)), snap});
+    drag.value = {mode:'move', ids:newIds, anchorId:anchorNew, dx:wx(px)-instOf(anchorNew).x, dy:wy(py)-instOf(anchorNew).y, starts, loose:isBad(instOf(anchorNew)), snap};
     preview('furn'); repaint('sel');   // the copies are committed with the drag, by endDrag
     return;
   }
   if(hit){
     if(e.shiftKey) selectToggle(hit.id);
-    else if(!selSet.has(hit.id)) selectOnly(hit.id);
-    bringToFront([...selSet]);
-    const ids=[...selSet];
+    else if(!selSet.value.has(hit.id)) selectOnly(hit.id);
+    bringToFront([...selSet.value]);
+    const ids=[...selSet.value];
     const starts=ids.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
-    setDrag({mode:'move', ids, anchorId:hit.id, dx:wx(px)-hit.x, dy:wy(py)-hit.y, starts, loose:isBad(hit)});
+    drag.value = {mode:'move', ids, anchorId:hit.id, dx:wx(px)-hit.x, dy:wy(py)-hit.y, starts, loose:isBad(hit)};
     repaint('sel'); draw();
   } else {
-    setDrag({mode:'marquee', x0:px, y0:py, x1:px, y1:py, additive:e.shiftKey});
+    drag.value = {mode:'marquee', x0:px, y0:py, x1:px, y1:py, additive:e.shiftKey};
     draw();
   }
 }
 
 function applyDragAt(px,py,mods){
-  if(!drag) return;
-  if(!drag.armed && DEADZONE_MODES.includes(drag.mode)){
-    if(Math.hypot(px-drag.ox, py-drag.oy)<DEADZONE_PX) return;   // ignore tiny jitter so a click on the point doesn't nudge it
-    drag.armed=true;
+  if(!drag.value) return;
+  if(!drag.value.armed && DEADZONE_MODES.includes(drag.value.mode)){
+    if(Math.hypot(px-drag.value.ox, py-drag.value.oy)<DEADZONE_PX) return;   // ignore tiny jitter so a click on the point doesn't nudge it
+    drag.value.armed=true;
   }
   const pt=[wx(px),wy(py)];
-  const floorDrag = drag.mode==='floor-room'||drag.mode==='floor-rot';
+  const floorDrag = drag.value.mode==='floor-room'||drag.value.mode==='floor-rot';
   // nothing has moved yet: remember how things stood so Escape can put them back
-  if(drag.mode!=='pan' && !drag.snap) drag.snap = floorDrag ? snapFloor() : ROOM_DRAGS.includes(drag.mode) ? snapRoom() : snapFurn();
+  if(drag.value.mode!=='pan' && !drag.value.snap) drag.value.snap = floorDrag ? snapFloor() : ROOM_DRAGS.includes(drag.value.mode) ? snapRoom() : snapFurn();
 
-  if(drag.mode==='pan'){
-    view.ox=drag.ox+(px-drag.px); view.oy=drag.oy+(py-drag.py);
+  if(drag.value.mode==='pan'){
+    view.ox=drag.value.ox+(px-drag.value.px); view.oy=drag.value.oy+(py-drag.value.py);
     scheduleDraw(); return;
   }
-  if(drag.mode==='floor-room'){
-    const l=S.layouts.find(x=>x.id===drag.id); if(!l) return;
-    let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
-    if(mods.altKey){ setFloorGuides([]); setFloorSnapNote('Free'); }   // alt drops the magnet, same as everywhere else
-    else { const s=snapFloorPlace(l,nx,ny); nx=s.x; ny=s.y; setFloorGuides(s.guides); setFloorSnapNote(s.note); }
+  if(drag.value.mode==='floor-room'){
+    const l=S.layouts.find(x=>x.id===drag.value.id); if(!l) return;
+    let nx=pt[0]-drag.value.dx, ny=pt[1]-drag.value.dy;
+    if(mods.altKey){ floorGuides.value = []; floorSnapNote.value = 'Free'; }   // alt drops the magnet, same as everywhere else
+    else { const s=snapFloorPlace(l,nx,ny); nx=s.x; ny=s.y; floorGuides.value = s.guides; floorSnapNote.value = s.note; }
     l.floorPlace.x=nx; l.floorPlace.y=ny;
     preview('floor'); repaint('floorSel'); return;
   }
-  if(drag.mode==='floor-rot'){
-    const l=S.layouts.find(x=>x.id===drag.id); if(!l) return;
+  if(drag.value.mode==='floor-rot'){
+    const l=S.layouts.find(x=>x.id===drag.value.id); if(!l) return;
     const b=bbox(floorPts(l));
     const a=Math.atan2(pt[1]-(b.y0+b.y1)/2, pt[0]-(b.x0+b.x1)/2);
-    let deg=drag.start+(a-drag.a0)*180/Math.PI;
+    let deg=drag.value.start+(a-drag.value.a0)*180/Math.PI;
     if(!mods.altKey) deg=Math.round(deg/15)*15;   // free turn is the exception, not the rule
     l.floorPlace.rot=norm360(deg);
     preview('floor'); repaint('floorSel'); return;
   }
-  if(drag.mode==='corner'){
-    const P=RP(), was=P[drag.i].slice();
+  if(drag.value.mode==='corner'){
+    const P=RP(), was=P[drag.value.i].slice();
     let np=pt;
-    if(mods.altKey){ setAlignGuides([]); setAlignNote('Free'); }   // alt drops the magnet, same as everywhere else
+    if(mods.altKey){ alignGuides.value = []; alignNote.value = 'Free'; }   // alt drops the magnet, same as everywhere else
     else {
       // shift reaches past the magnet's radius, for an alignment too far off to bite on its own
-      const s=snapCorner(drag.i, pt, mods.shiftKey?Infinity:alignRadius());
-      np=s.pt; setAlignGuides(s.guides); setAlignNote(s.note);
+      const s=snapCorner(drag.value.i, pt, mods.shiftKey?Infinity:alignRadius());
+      np=s.pt; alignGuides.value = s.guides; alignNote.value = s.note;
     }
-    P[drag.i]=np;
-    if(!polySimple(P)){ P[drag.i]=was; setAlignGuides([]); setAlignNote(''); }
+    P[drag.value.i]=np;
+    if(!polySimple(P)){ P[drag.value.i]=was; alignGuides.value = []; alignNote.value = ''; }
     else clampOpenings();
     preview('room'); repaint('roomSel','walls'); return;
   }
-  if(drag.mode==='wall'){
-    const P=RP(), n=P.length, i=drag.i, w=wallOf(i);
-    const dx=pt[0]-drag.last[0], dy=pt[1]-drag.last[1];
+  if(drag.value.mode==='wall'){
+    const P=RP(), n=P.length, i=drag.value.i, w=wallOf(i);
+    const dx=pt[0]-drag.value.last[0], dy=pt[1]-drag.value.last[1];
     const k=dx*w.nrm[0]+dy*w.nrm[1];          // perpendicular component only
     const a=P[i].slice(), b=P[(i+1)%n].slice();
     P[i]=[a[0]+w.nrm[0]*k, a[1]+w.nrm[1]*k];
     P[(i+1)%n]=[b[0]+w.nrm[0]*k, b[1]+w.nrm[1]*k];
     if(!polySimple(P)){ P[i]=a; P[(i+1)%n]=b; }
-    else { drag.last=pt; clampOpenings(); }
+    else { drag.value.last=pt; clampOpenings(); }
     preview('room'); repaint('roomSel','walls'); return;
   }
-  if(drag.mode==='open'){
-    const o=openOf(drag.id); if(!o) return;
+  if(drag.value.mode==='open'){
+    const o=openOf(drag.value.id); if(!o) return;
     const near=nearestOnWalls(pt); if(!near) return;
     o.wall=near.i;
     const len=wallOf(near.i).len;
@@ -307,50 +306,50 @@ function applyDragAt(px,py,mods){
     o.offset=Math.max(0,Math.min(near.t*len-o.width/2, len-o.width));
     preview('room'); repaint('roomSel','openings'); return;
   }
-  if(drag.mode==='pillar'){
-    const pl=pillarOf(drag.id); if(!pl) return;
-    let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
+  if(drag.value.mode==='pillar'){
+    const pl=pillarOf(drag.value.id); if(!pl) return;
+    let nx=pt[0]-drag.value.dx, ny=pt[1]-drag.value.dy;
     if(!mods.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     pl.x=nx; pl.y=ny;
     preview('room'); repaint('roomSel','walls'); return;
   }
-  if(drag.mode==='iwall'){
-    const w=iwallOf(drag.id); if(!w) return;
-    let nx=pt[0]-drag.dx, ny=pt[1]-drag.dy;
+  if(drag.value.mode==='iwall'){
+    const w=iwallOf(drag.value.id); if(!w) return;
+    let nx=pt[0]-drag.value.dx, ny=pt[1]-drag.value.dy;
     if(!mods.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     const ddx=nx-w.a[0], ddy=ny-w.a[1];
     w.a=[w.a[0]+ddx, w.a[1]+ddy]; w.b=[w.b[0]+ddx, w.b[1]+ddy];
     preview('room'); repaint('roomSel','walls'); return;
   }
-  if(drag.mode==='iwall-end'){
-    const w=iwallOf(drag.id); if(!w) return;
-    const other = drag.end==='a' ? w.b : w.a;
+  if(drag.value.mode==='iwall-end'){
+    const w=iwallOf(drag.value.id); if(!w) return;
+    const other = drag.value.end==='a' ? w.b : w.a;
     const raw = mods.shiftKey ? axisLockFrom(other,pt) : pt;
-    w[drag.end]=snapWallPoint(raw, drag.id, !mods.altKey);
+    w[drag.value.end]=snapWallPoint(raw, drag.value.id, !mods.altKey);
     preview('room'); repaint('roomSel','walls'); return;
   }
 
-  if(drag.mode==='marquee'){
-    drag.x1=px; drag.y1=py;
+  if(drag.value.mode==='marquee'){
+    drag.value.x1=px; drag.value.y1=py;
     scheduleDraw(); return;
   }
-  if(drag.mode==='rot'){
-    const inst=instOf(drag.id); if(!inst) return;
+  if(drag.value.mode==='rot'){
+    const inst=instOf(drag.value.id); if(!inst) return;
     const it=itemOf(inst.itemId); if(!it) return;
     const a=Math.atan2(wy(py)-inst.y, wx(px)-inst.x);
-    let deg=drag.start+(a-drag.a0)*180/Math.PI;
+    let deg=drag.value.start+(a-drag.value.a0)*180/Math.PI;
     if(!mods.shiftKey) deg=Math.round(deg/15)*15;
     const prev=inst.rot;
     inst.rot=norm360(deg);
-    if(!drag.loose && !validate(inst,worldPoly(inst,it)).ok) inst.rot=prev;
+    if(!drag.value.loose && !validate(inst,worldPoly(inst,it)).ok) inst.rot=prev;
     preview('furn'); repaint('sel'); return;
   }
   // drag.mode==='move': one or more furniture items, each clamped/validated
   // independently against walls/collisions (a group can end up slightly
   // uneven if one item hits something — accepted tradeoff over blocking the
   // whole group on a single collision)
-  const anchor=instOf(drag.anchorId); if(!anchor) return;
-  let anx=pt[0]-drag.dx, any=pt[1]-drag.dy;
+  const anchor=instOf(drag.value.anchorId); if(!anchor) return;
+  let anx=pt[0]-drag.value.dx, any=pt[1]-drag.value.dy;
   const anchorIt=itemOf(anchor.itemId);
   const g=snapMM();
   if(g>0&&!mods.altKey&&anchorIt){
@@ -358,23 +357,23 @@ function applyDragAt(px,py,mods){
     anx=Math.round((anx+b.x0)/g)*g-b.x0;
     any=Math.round((any+b.y0)/g)*g-b.y0;
   }
-  const anchorStart=drag.starts.find(s=>s.id===drag.anchorId);
+  const anchorStart=drag.value.starts.find(s=>s.id===drag.value.anchorId);
   const ddx=anx-anchorStart.x, ddy=any-anchorStart.y;
-  for(const st of drag.starts){
+  for(const st of drag.value.starts){
     const inst=instOf(st.id); const it=inst&&itemOf(inst.itemId);
     if(!inst||!it) continue;
     const nx=st.x+ddx, ny=st.y+ddy;
     const px0=inst.x, py0=inst.y;
     inst.x=nx; inst.y=ny;
     const v=validate(inst,worldPoly(inst,it));
-    if(v.ok) drag.loose=false;
-    else if(drag.loose){
+    if(v.ok) drag.value.loose=false;
+    else if(drag.value.loose){
       if(!centreInside(inst)){ inst.x=px0; inst.y=py0; }
     } else {
       // go as far toward the pointer as fits, per axis, so the piece meets the
       // wall flush rather than stopping wherever the last pointer event left it
       const p=slideToValid(inst,it,[px0,py0],[nx,ny]);
-      if(Math.hypot(p[0]-px0,p[1]-py0)<0.01){ inst.x=px0; inst.y=py0; if(drag.starts.length===1) flash(v.why); }
+      if(Math.hypot(p[0]-px0,p[1]-py0)<0.01){ inst.x=px0; inst.y=py0; if(drag.value.starts.length===1) flash(v.why); }
     }
   }
   preview('furn');
@@ -400,24 +399,24 @@ function dragScope(mode){
 
 /* Escape mid-drag: put whatever was being dragged back exactly where it started */
 function cancelDrag(){
-  const mode=drag.mode, wasFloor = mode==='floor-room'||mode==='floor-rot';
+  const mode=drag.value.mode, wasFloor = mode==='floor-room'||mode==='floor-rot';
   const edits = mode!=='pan' && mode!=='marquee';
-  if(!edits){ if(mode==='pan'){ view.ox=drag.ox; view.oy=drag.oy; } }
-  else if(drag.snap){
-    const s=JSON.parse(drag.snap);
+  if(!edits){ if(mode==='pan'){ view.ox=drag.value.ox; view.oy=drag.value.oy; } }
+  else if(drag.value.snap){
+    const s=JSON.parse(drag.value.snap);
     if(wasFloor) for(const [id,place] of s){ const l=S.layouts.find(x=>x.id===id); if(l) l.floorPlace=place; }
     else if(ROOM_DRAGS.includes(mode)){ L().room=s.room; L().openings=s.openings; }
     else L().placed=s.placed;
   }
-  setDrag(null); setFloorGuides([]); setFloorSnapNote(''); setAlignGuides([]); setAlignNote('');
+  drag.value = null; floorGuides.value = []; floorSnapNote.value = ''; alignGuides.value = []; alignNote.value = '';
   // back where the gesture started, which is what storage and history already hold
   if(edits) preview(dragScope(mode)); else draw();
   repaint('sel','roomSel','walls','openings','floorSel');
 }
 function endDrag(e){
-  if(drag&&drag.mode==='marquee'){
-    const x0=Math.min(drag.x0,drag.x1), x1=Math.max(drag.x0,drag.x1);
-    const y0=Math.min(drag.y0,drag.y1), y1=Math.max(drag.y0,drag.y1);
+  if(drag.value&&drag.value.mode==='marquee'){
+    const x0=Math.min(drag.value.x0,drag.value.x1), x1=Math.max(drag.value.x0,drag.value.x1);
+    const y0=Math.min(drag.value.y0,drag.value.y1), y1=Math.max(drag.value.y0,drag.value.y1);
     const wa=[wx(x0),wy(y0)], wb=[wx(x1),wy(y1)];
     const rx0=Math.min(wa[0],wb[0]), rx1=Math.max(wa[0],wb[0]);
     const ry0=Math.min(wa[1],wb[1]), ry1=Math.max(wa[1],wb[1]);
@@ -429,27 +428,27 @@ function endDrag(e){
         if(b.x0<=rx1 && b.x1>=rx0 && b.y0<=ry1 && b.y1>=ry0) hitIds.push(p.id);
       }
     }
-    if(drag.additive) for(const id of hitIds) selectAdd(id);
+    if(drag.value.additive) for(const id of hitIds) selectAdd(id);
     else selectSet(hitIds);
     if(hitIds.length) bringToFront(hitIds);
-    setDrag(null);
+    drag.value = null;
     repaint('sel'); draw();
     if(e&&e.pointerId!==undefined){ try{ cv.releasePointerCapture(e.pointerId); }catch(err){} }
     return;
   }
-  if(drag&&drag.mode==='pan'){
+  if(drag.value&&drag.value.mode==='pan'){
     cv.style.cursor = spaceDown ? 'grab' : '';
-  } else if(drag){
+  } else if(drag.value){
     // the whole gesture is one undo step, recorded here and nowhere in between
-    const scope=dragScope(drag.mode);
+    const scope=dragScope(drag.value.mode);
     transact(scope, ()=>{
-      setAlignGuides([]); setAlignNote('');
-      if(scope==='floor'){ setFloorGuides([]); setFloorSnapNote(''); }
+      alignGuides.value = []; alignNote.value = '';
+      if(scope==='floor'){ floorGuides.value = []; floorSnapNote.value = ''; }
     });
     if(scope==='floor') repaint('floorSel');
     else if(scope==='furn') repaint('sel');
   }
-  setDrag(null);
+  drag.value = null;
   if(e&&e.pointerId!==undefined){ try{ cv.releasePointerCapture(e.pointerId); }catch(err){} }
 }
 
@@ -457,8 +456,8 @@ const ZOOM_FACTOR = 1.02;
 const ZOOM_ACCEL_K = 0.03; // tuned by feel: higher = faster flicks jump further
 let wheelState = {last:0};
 function edgePanTick(){
-  const dragging = drag && drag.mode!=='pan';
-  const drawing = !!(drawState || wallDrawState || splitDrawState);
+  const dragging = drag.value && drag.value.mode!=='pan';
+  const drawing = !!(drawState.value || wallDrawState.value || splitDrawState.value);
   if((dragging||drawing) && lastPX!=null){
     const {vx,vy}=edgePanVel(lastPX,lastPY);
     if(vx||vy){

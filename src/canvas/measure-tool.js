@@ -19,12 +19,12 @@ import {transact} from '../core/tx.js';
 import {pointInPoly, ptSegDist} from '../core/geometry.js';
 import {cv, view, sx, sy, wx, wy} from './view.js';
 import {draw, scheduleDraw} from './draw.js';
-import {setDrag} from './interaction-state.js';
+import {drag} from './interaction-state.js';
 import {measuresOf, anchorKey, measureObjs, anchorGeom} from '../model/measures.js';
 import {measureOn, measureStart, measureSel, measureBoxes,
         setMeasureStart, setMeasureHover, setMeasureHoverId,
         setMeasureSel, setMeasureCursor} from './measure-state.js';
-import {setRoomSel, setSel} from '../core/selection.js';
+import {roomSel, sel} from '../core/selection.js';
 import {isCanvasMode} from '../core/state.js';
 import {drawState, splitDrawState, wallDrawState} from './interaction-state.js';
 import {setMeasureOn} from './measure-state.js';
@@ -113,7 +113,7 @@ function measurePointerDown(px,py){
     else if(anchorKey(t.a)!==anchorKey(measureStart)){
       transact('room', ()=>{ measuresOf().push({id:uid(), a:measureStart, b:t.a}); setMeasureStart(null); }, {history:false});
     }
-  } else setDrag({mode:'pan', px, py, ox:view.ox, oy:view.oy});
+  } else drag.value = {mode:'pan', px, py, ox:view.ox, oy:view.oy};
   renderMeasureBar(); draw();
 }
 function measureHoverAt(px,py){
@@ -130,11 +130,11 @@ function measureHoverAt(px,py){
 function setMeasure(on){
   if(on){
     if(!isCanvasMode(S.mode)) return;
-    if(drawState) cancelCustomDraw();
-    if(wallDrawState) cancelWallDraw();
-    if(splitDrawState) cancelSplitDraw();
+    if(drawState.value) cancelCustomDraw();
+    if(wallDrawState.value) cancelWallDraw();
+    if(splitDrawState.value) cancelSplitDraw();
     // a click now measures, so nothing stays selected for editing
-    setSel(null); setRoomSel(null); repaint('sel','roomSel','walls','openings');
+    sel.value = null; roomSel.value = null; repaint('sel','roomSel','walls','openings');
   }
   setMeasureOn(!!on);
   resetMeasureState();
