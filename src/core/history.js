@@ -47,6 +47,9 @@ function commit(map,snapFn){
   updateHistButtons();
 }
 const bumpRev = () => { const l=L(); l._rev=(l._rev||0)+1; };
+/* App code records history through transact() (core/tx.js), never these two
+   directly; they stay exported because the e2e harness (test/epilogue.js)
+   commits through them after editing S by hand. */
 const commitRoom = () => { commit(roomHist,snapRoom); bumpRev(); };
 const commitFurn = () => { commit(furnHist,snapFurn); bumpRev(); };
 function stepHist(map,snapFn,applyFn,dir){

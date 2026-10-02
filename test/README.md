@@ -81,6 +81,11 @@ harness; a file evaluates the modules it names and calls them.
   that catches a migration rewriting a user's project a little more on every
   load. `migrate()` runs on every load of every returning user's data; a silent
   change here corrupts real projects with no error anywhere.
+- **`tx.test.js`** — `transact()`'s rules: one undo step per call on the
+  right stack, `history:false`, nesting commits once at the outermost, a throw
+  commits nothing, and `preview()` (a gesture frame) neither records nor saves.
+  Every edit in the app goes through it, and the e2e suite drives only two
+  gestures; a regression here splits or swallows undo steps everywhere else.
 - **`io-roundtrip.test.js`** — `exportPayload` → `readImport` → `applyImport`:
   the envelope, a lossless replace-mode round trip asserted down to the
   geometry, all three id-collision rules (keep mine / overwrite mine / add as a

@@ -1,6 +1,6 @@
 import {bpLastImport, bpUndoImport} from './blueprint/commit.js';
 import {bpUploadDialog} from './blueprint/step1-upload.js';
-import {draw} from './canvas/draw.js';
+import {draw, scheduleDraw} from './canvas/draw.js';
 import {fit, resize} from './canvas/view.js';
 import {seedHistFor} from './core/history.js';
 import {migrate} from './core/migrate.js';
@@ -44,6 +44,12 @@ function wire(){
      model/walls.js's tryRoomEdit refuses a fold-over and says so through here.
      See .claude/plans/decoupling.md §4, step 3. */
   provide('ui.flash', flash);
+
+  /* Every committed change (core/tx.js) ends with one `changed`; the canvas
+     answers with one draw on the next frame, however many changes landed in
+     this one. The Library places hide the canvas, and setMode() draws on the
+     way back to it. */
+  on('changed', (scope, o) => { if(o && o.canvas && isCanvasMode(S.mode)) scheduleDraw(); });
 
   /* Who repaints when. Every mutation site that used to import a render
      function now names the panel instead (core/bus.js), and this is the only
