@@ -15,7 +15,7 @@ import {esc, plural} from '../ui/panels.js';
 import {sizeLabel} from '../canvas/draw.js';
 import {normItem} from '../core/migrate.js';
 import {S, clone, uid} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {libFlash} from '../ui/flash.js';
 import {openMenu} from '../ui/menu.js';
 import {$, askConfirm, moError, openModal} from '../ui/modal.js';
@@ -68,10 +68,10 @@ function listingMenu(id, anchor){
     {label:'Move to folder…', fn:()=>moveListingDialog(l)},
     {sep:true},
     {label:'Delete…', danger:true, fn:()=>askConfirm('Delete this listing?', '“'+l.name+'” will be removed. Your library isn’t affected.', 'Delete', ()=>{
-      S.marketListings=S.marketListings.filter(x=>x.id!==id);
+      transact('lib', ()=>{ S.marketListings=S.marketListings.filter(x=>x.id!==id); });
       adhocCache.delete(id);
       if(nav.marketSelListingId===id) nav.marketSelListingId=null;
-      save(); renderLibAll();
+      renderLibAll();
     })},
   ], l.name);
 }
@@ -86,8 +86,8 @@ function moveListingDialog(l){
   })(null,0);
   openModal('Move “'+l.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
-      l.parentId=$('moFolder').value||null;
-      save(); renderLibAll();
+      transact('lib', ()=>{ l.parentId=$('moFolder').value||null; });
+      renderLibAll();
     });
 }
 let pendingFile=null;
@@ -113,8 +113,8 @@ function addListingDialog(){
       if(mode==='link'){
         const url=($('lUrl').value||'').trim();
         if(!/^https?:\/\//i.test(url)){ moError('Enter a valid http(s) link'); return false; }
-        S.marketListings.push({id:uid(), name, parentId:nav.marketFolderId, kind:'link', url, addedAt:Date.now()});
-        save(); renderLibAll();
+        transact('lib', ()=>{ S.marketListings.push({id:uid(), name, parentId:nav.marketFolderId, kind:'link', url, addedAt:Date.now()}); });
+        renderLibAll();
         return;
       }
       let raw=null;
@@ -125,8 +125,8 @@ function addListingDialog(){
       }
       if(!raw || !Array.isArray(raw.inventory)){ moError('That file doesn’t look like a Room Planner export — it needs an "inventory" array'); return false; }
       const content={inventory: raw.inventory.filter(i=>i&&typeof i==='object'&&i.shape).map(i=>normItem(clone(i)))};
-      S.marketListings.push({id:uid(), name, parentId:nav.marketFolderId, kind:'file', content, addedAt:Date.now()});
-      save(); renderLibAll();
+      transact('lib', ()=>{ S.marketListings.push({id:uid(), name, parentId:nav.marketFolderId, kind:'file', content, addedAt:Date.now()}); });
+      renderLibAll();
     },
     ()=>{
       const tabs=[...document.querySelectorAll('.addmode-tabs button')];
@@ -166,8 +166,8 @@ function renderListingDetail(box, id){
   bindCrumbs(box,'market');
   $('btnDelListing').addEventListener('click', ()=>{
     askConfirm('Delete this listing?', '“'+l.name+'” will be removed.', 'Delete', ()=>{
-      S.marketListings=S.marketListings.filter(x=>x.id!==id);
-      nav.marketSelListingId=null; save(); renderLibAll();
+      transact('lib', ()=>{ S.marketListings=S.marketListings.filter(x=>x.id!==id); });
+      nav.marketSelListingId=null; renderLibAll();
     });
   });
   loadListing(l).then(res=>{

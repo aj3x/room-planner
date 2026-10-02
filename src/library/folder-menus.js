@@ -7,7 +7,7 @@
    follow in a later commit.
 */
 import {repaint} from '../core/bus.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {$, moError, openModal} from '../ui/modal.js';
 import {esc} from '../ui/panels.js';
 import {mountTagField, tagFieldHTML, tagFieldValue} from '../ui/tag-input.js';
@@ -45,9 +45,8 @@ function libFolderTagsDialog(id){
     ${tagFieldHTML('fTags','living room, seating, IKEA')}
     <p class="hint">Every item filed in this folder — or any subfolder underneath it — carries these tags automatically, alongside whatever tags you put on the item itself. They show up in Furniture mode's own tag filter too.</p>`,
     'Save', ()=>{
-      f.tags=tagFieldValue('fTags');
-      recomputeFolderSubtree(id);
-      save(); renderLibAll();
+      transact('lib', ()=>{ f.tags=tagFieldValue('fTags'); recomputeFolderSubtree(id); });
+      renderLibAll();
     },
     ()=>{ mountTagField('fTags', f.tags||[]); });
 }
@@ -73,9 +72,9 @@ function moveLibItemDialog(item){
   openModal('Move “'+item.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
-      moveItemToFolder(item, v);
+      transact('lib', ()=>moveItemToFolder(item, v));
       if(v) libTreeOpen.add(v);
-      save(); renderLibAll();
+      renderLibAll();
     });
 }
 
@@ -83,12 +82,12 @@ function moveLibItemDialog(item){
 function renameLibFolder(id){
   const f=itemFolderOf(id), row=libTreeBox.querySelector('[data-folder="'+id+'"]');
   if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderLibAll(); });
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('lib', ()=>{ f.name=v; }); renderLibAll(); });
 }
 function renameAdhocFolder(id){
   const f=marketFolderOf(id), row=libTreeBox.querySelector('[data-mfolder="'+id+'"]');
   if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderLibAll(); });
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('lib', ()=>{ f.name=v; }); renderLibAll(); });
 }
 
 function libFolderMenu(id, anchor){
@@ -97,7 +96,7 @@ function libFolderMenu(id, anchor){
     {label:'Open', fn:()=>goLibFolder('library',id)},
     {label:'Rename', fn:()=>renameLibFolder(id)},
     {label:'New subfolder', fn:()=>askNewLibFolder('New folder', (n,tags)=>{
-      S.itemFolders.push({id:uid(),name:n,parentId:id,tags}); libTreeOpen.add(id); save(); renderLibAll();
+      transact('lib', ()=>{ S.itemFolders.push({id:uid(),name:n,parentId:id,tags}); }); libTreeOpen.add(id); renderLibAll();
     })},
     {sep:true},
     {label:'Move to folder…', fn:()=>moveLibFolderDialog(id)},
@@ -112,7 +111,7 @@ function adhocFolderMenu(id, anchor){
     {label:'Open', fn:()=>goLibFolder('market',id)},
     {label:'Rename', fn:()=>renameAdhocFolder(id)},
     {label:'New subfolder', fn:()=>askText('New folder','Name','Folder', n=>{
-      S.marketFolders.push({id:uid(),name:n,parentId:id}); libTreeOpen.add('m:'+id); save(); renderLibAll();
+      transact('lib', ()=>{ S.marketFolders.push({id:uid(),name:n,parentId:id}); }); libTreeOpen.add('m:'+id); renderLibAll();
     })},
     {sep:true},
     {label:'Move to folder…', fn:()=>moveAdhocFolderDialog(id)},
@@ -133,23 +132,25 @@ function deleteLibFolder(id){
   const up=itemFolderOf(f.parentId) ? '“'+itemFolderOf(f.parentId).name+'”' : 'the top level';
   const {folders,items}=itemFolderContents(id);
   const drop=keep=>{
-    if(keep){
-      const movedSubs=childItemFolders(id).slice(), movedItems=itemsInFolder(id).slice();
-      for(const sub of movedSubs) sub.parentId=f.parentId;
-      for(const it of movedItems) it.folderId=f.parentId;
-      for(const it of movedItems) applyTags(it);
-      for(const sub of movedSubs) recomputeFolderSubtree(sub.id);
-    } else {
-      const killIds=new Set(items.map(x=>x.id));
-      for(const iid of killIds) purgeItem(iid);
-      const killF=new Set(folders.map(x=>x.id));
-      S.itemFolders=S.itemFolders.filter(x=>!killF.has(x.id));
-      for(const k of killF) libTreeOpen.delete(k);
-    }
-    S.itemFolders=S.itemFolders.filter(x=>x.id!==id);
-    libTreeOpen.delete(id);
-    if(nav.libFolderId===id || (keep===false && folders.some(x=>x.id===nav.libFolderId))) goLibFolder('library',null);
-    save(); repaint('inv','libAll');
+    transact('lib', ()=>{
+      if(keep){
+        const movedSubs=childItemFolders(id).slice(), movedItems=itemsInFolder(id).slice();
+        for(const sub of movedSubs) sub.parentId=f.parentId;
+        for(const it of movedItems) it.folderId=f.parentId;
+        for(const it of movedItems) applyTags(it);
+        for(const sub of movedSubs) recomputeFolderSubtree(sub.id);
+      } else {
+        const killIds=new Set(items.map(x=>x.id));
+        for(const iid of killIds) purgeItem(iid);
+        const killF=new Set(folders.map(x=>x.id));
+        S.itemFolders=S.itemFolders.filter(x=>!killF.has(x.id));
+        for(const k of killF) libTreeOpen.delete(k);
+      }
+      S.itemFolders=S.itemFolders.filter(x=>x.id!==id);
+      libTreeOpen.delete(id);
+      if(nav.libFolderId===id || (keep===false && folders.some(x=>x.id===nav.libFolderId))) goLibFolder('library',null);
+    });
+    repaint('inv','libAll');
   };
   if(!folders.length && !items.length){
     askConfirm('Delete this folder?', '“'+f.name+'” is empty.', 'Delete folder', ()=>drop(false));
@@ -168,19 +169,21 @@ function deleteAdhocFolder(id){
   const up=marketFolderOf(f.parentId) ? '“'+marketFolderOf(f.parentId).name+'”' : 'the top level';
   const {folders,listings}=adhocFolderContents(id);
   const drop=keep=>{
-    if(keep){
-      for(const sub of childMarketFolders(id)) sub.parentId=f.parentId;
-      for(const l of listingsInFolder(id)) l.parentId=f.parentId;
-    } else {
-      const killL=new Set(listings.map(x=>x.id)), killF=new Set(folders.map(x=>x.id));
-      S.marketListings=S.marketListings.filter(x=>!killL.has(x.id));
-      S.marketFolders=S.marketFolders.filter(x=>!killF.has(x.id));
-      for(const k of killF) libTreeOpen.delete('m:'+k);
-    }
-    S.marketFolders=S.marketFolders.filter(x=>x.id!==id);
-    libTreeOpen.delete('m:'+id);
-    if(nav.marketFolderId===id) goLibFolder('market',null);
-    save(); renderLibAll();
+    transact('lib', ()=>{
+      if(keep){
+        for(const sub of childMarketFolders(id)) sub.parentId=f.parentId;
+        for(const l of listingsInFolder(id)) l.parentId=f.parentId;
+      } else {
+        const killL=new Set(listings.map(x=>x.id)), killF=new Set(folders.map(x=>x.id));
+        S.marketListings=S.marketListings.filter(x=>!killL.has(x.id));
+        S.marketFolders=S.marketFolders.filter(x=>!killF.has(x.id));
+        for(const k of killF) libTreeOpen.delete('m:'+k);
+      }
+      S.marketFolders=S.marketFolders.filter(x=>x.id!==id);
+      libTreeOpen.delete('m:'+id);
+      if(nav.marketFolderId===id) goLibFolder('market',null);
+    });
+    renderLibAll();
   };
   if(!folders.length && !listings.length){
     askConfirm('Delete this folder?', '“'+f.name+'” is empty.', 'Delete folder', ()=>drop(false));
@@ -208,10 +211,9 @@ function moveLibFolderDialog(id){
   openModal('Move “'+obj.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
-      obj.parentId=v;
+      transact('lib', ()=>{ obj.parentId=v; recomputeFolderSubtree(id); });
       if(v) libTreeOpen.add(v);
-      recomputeFolderSubtree(id);
-      save(); renderLibAll();
+      renderLibAll();
     });
 }
 function moveAdhocFolderDialog(id){
@@ -228,9 +230,9 @@ function moveAdhocFolderDialog(id){
   openModal('Move “'+obj.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
-      obj.parentId=v;
+      transact('lib', ()=>{ obj.parentId=v; });
       if(v) libTreeOpen.add('m:'+v);
-      save(); renderLibAll();
+      renderLibAll();
     });
 }
 export {askNewLibFolder, libFolderTagsDialog, adhocFolderContents, moveLibItemDialog, renameLibFolder, renameAdhocFolder, itemFolderContents, deleteLibFolder, deleteAdhocFolder, moveLibFolderDialog, moveAdhocFolderDialog, libFolderMenu, adhocFolderMenu};

@@ -22,7 +22,7 @@ import { moveBefore, clearDropMarks } from '../ui/dnd.js';
 import { libFlash } from '../ui/flash.js';
 import { $ } from '../ui/modal.js';
 import { S } from '../core/state.js';
-import { save } from '../core/store.js';
+import { transact } from '../core/tx.js';
 import { itemFolderOf, itemFolderDescendant, recomputeFolderSubtree, moveItemToFolder } from '../library/item-folders.js';
 import { marketFolderOf, marketFolderDescendant } from '../library/adhoc-folders.js';
 import { nav, libTreeOpen } from '../library/nav.js';
@@ -111,8 +111,8 @@ function bindPaneLibrary(){
     if(gridDragItem){
       if(spot.mode!=='root' && !spot.isLib) return;
       const it=S.inventory.find(x=>x.id===gridDragItem); if(!it) return;
-      moveItemToFolder(it, spot.mode==='root'?null:spot.id);
-      setGridDragItem(null); save(); renderLibAll();
+      transact('lib', ()=>moveItemToFolder(it, spot.mode==='root'?null:spot.id));
+      setGridDragItem(null); renderLibAll();
       libFlash('Moved “'+it.name+'”');
       return;
     }
@@ -126,9 +126,11 @@ function bindPaneLibrary(){
         parent=t.parentId||null; targetId=spot.id; after=(spot.mode==='after');
       } else if(spot.mode!=='root') return;
       if(parent===d.id || itemFolderDescendant(d.id,parent)){ libFlash("A folder can't go inside itself",true); return; }
-      f.parentId=parent;
-      moveBefore(S.itemFolders, d.id, targetId, after);
-      recomputeFolderSubtree(d.id);
+      transact('lib', ()=>{
+        f.parentId=parent;
+        moveBefore(S.itemFolders, d.id, targetId, after);
+        recomputeFolderSubtree(d.id);
+      });
     } else {
       const f=marketFolderOf(d.id); if(!f) return;
       let parent=null, targetId=null, after=false;
@@ -138,10 +140,9 @@ function bindPaneLibrary(){
         parent=t.parentId||null; targetId=spot.id; after=(spot.mode==='after');
       } else if(spot.mode!=='root') return;
       if(parent===d.id || marketFolderDescendant(d.id,parent)){ libFlash("A folder can't go inside itself",true); return; }
-      f.parentId=parent;
-      moveBefore(S.marketFolders, d.id, targetId, after);
+      transact('lib', ()=>{ f.parentId=parent; moveBefore(S.marketFolders, d.id, targetId, after); });
     }
-    setDragLib(null); save(); renderLibAll();
+    setDragLib(null); renderLibAll();
   });
 }
 

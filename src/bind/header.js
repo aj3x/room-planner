@@ -19,7 +19,7 @@
 
 import { readImport, importDialog } from '../io/import.js';
 import { exportDialog } from '../io/export.js';
-import { save } from '../core/store.js';
+import { transact } from '../core/tx.js';
 import { S, isCanvasMode } from '../core/state.js';
 import { renderAll, setMode } from '../plan/mode.js';
 import { renderSnap } from '../plan/room-panel.js';
@@ -34,7 +34,7 @@ function bindHeader(){
     else if(n!==S.mode) setMode(n);
   });
 
-  $('unitSel').addEventListener('change', e=>{ S.unit=e.target.value; renderSnap(); renderAll(); save(); });
+  $('unitSel').addEventListener('change', e=>{ transact('prefs', ()=>{ S.unit=e.target.value; }); renderSnap(); renderAll(); });
 
   $('btnExport').addEventListener('click', exportDialog);
 

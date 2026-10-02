@@ -10,7 +10,7 @@
    move-only.
 */
 import {S, isCanvasMode, uid} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {$, askText, svgI} from '../ui/modal.js';
 import {addListingDialog} from './adhoc-listings.js';
 import {askNewLibFolder} from './folder-menus.js';
@@ -21,10 +21,12 @@ import {renderLibContent} from './router.js';
 import {renderLibTree} from './tree.js';
 
 function goLibFolder(kind,id){
-  if(kind==='library'){ nav.libFolderId=id; S.uiLib.libFolderId=id; }
-  else { nav.marketFolderId=id; S.uiLib.marketFolderId=id; nav.marketSubId=null; nav.subPath=null; nav.marketSelListingId=null; }
+  transact('prefs', ()=>{
+    if(kind==='library'){ nav.libFolderId=id; S.uiLib.libFolderId=id; }
+    else { nav.marketFolderId=id; S.uiLib.marketFolderId=id; nav.marketSubId=null; nav.subPath=null; nav.marketSelListingId=null; }
+  }, {canvas:false});
   nav.searching=false; $('searchBox').value='';
-  save(); renderLibAll();
+  renderLibAll();
 }
 
 /* ------------------------- rendering: shell ------------------------- */
@@ -45,9 +47,9 @@ function renderLibTools(){
       <button class="btn sm" id="btnNewLibFolder">${svgI('folder-plus')}New folder</button>`;
     $('btnNewLibFolder').addEventListener('click', ()=>{
       askNewLibFolder('New folder', (n,tags)=>{
-        S.itemFolders.push({id:uid(),name:n,parentId:nav.libFolderId,tags});
+        transact('lib', ()=>{ S.itemFolders.push({id:uid(),name:n,parentId:nav.libFolderId,tags}); });
         if(nav.libFolderId) libTreeOpen.add(nav.libFolderId);
-        save(); renderLibAll();
+        renderLibAll();
       });
     });
     $('btnNewLibItem').addEventListener('click', createLibItem);
@@ -58,9 +60,9 @@ function renderLibTools(){
     $('btnAddMarket').addEventListener('click', addMarketDialog);
     $('btnNewMFolder').addEventListener('click', ()=>{
       askText('New folder','Name','Folder', n=>{
-        S.marketFolders.push({id:uid(),name:n,parentId:nav.marketFolderId});
+        transact('lib', ()=>{ S.marketFolders.push({id:uid(),name:n,parentId:nav.marketFolderId}); });
         if(nav.marketFolderId) libTreeOpen.add('m:'+nav.marketFolderId);
-        save(); renderLibAll();
+        renderLibAll();
       });
     });
     $('btnAddListing').addEventListener('click', addListingDialog);

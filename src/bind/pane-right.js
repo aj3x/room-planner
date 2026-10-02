@@ -24,14 +24,13 @@ import { parseLen, fmtLen } from '../core/units.js';
 import { shapePoly, bbox } from '../core/geometry.js';
 import { rectPts, S, L, RP } from '../core/state.js';
 import { setRoomSel } from '../core/selection.js';
-import { save } from '../core/store.js';
-import { commitRoom } from '../core/history.js';
+import { transact } from '../core/tx.js';
 import { syncWallOff, clampOpenings } from '../model/walls.js';
 import { $, openModal, moError } from '../ui/modal.js';
 import { esc } from '../ui/panels.js';
 import { drawState, wallDrawState } from '../canvas/interaction-state.js';
 import { fit } from '../canvas/view.js';
-import { draw, normHex } from '../canvas/draw.js';
+import { normHex } from '../canvas/draw.js';
 import { startCustomDraw, cancelCustomDraw } from '../canvas/room-draw.js';
 import { cancelWallDraw } from '../canvas/wall-draw.js';
 import { renderInv } from '../plan/item-list.js';
@@ -39,21 +38,22 @@ import { bindLen, setFloorColor } from '../plan/room-controls.js';
 import { renderRoom, renderWalls, renderRoomSel, renderOpen } from '../plan/room-panel.js';
 
 function bindPaneRight(){
-  $('invScope').addEventListener('change', e=>{ S.invScope=e.target.value; renderInv(); save(); });
+  $('invScope').addEventListener('change', e=>{ transact('prefs', ()=>{ S.invScope=e.target.value; }, {canvas:false}); renderInv(); });
 
   bindLen('wallT', v=>{ L().room.wall=v; });
   bindLen('trimD', v=>{ L().room.trim=v; });
   $('floorCol').addEventListener('input', e=>{ setFloorColor(e.target.value); $('floorHex').value=e.target.value; $('floorHex').classList.remove('bad'); });
-  $('floorCol').addEventListener('change', ()=>commitRoom());
+  // the colour has been live (setFloorColor) all along; letting go of it is the undo step
+  $('floorCol').addEventListener('change', ()=>transact('room'));
   $('floorHex').addEventListener('input', e=>{
     const c=normHex(e.target.value);
     e.target.classList.toggle('bad', !c);
     if(c) setFloorColor(c);
   });
   /* typing an unfinished/bad code leaves the plan alone — snap the box back on the way out */
-  $('floorHex').addEventListener('change', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); commitRoom(); });
+  $('floorHex').addEventListener('change', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); transact('room'); });
   $('floorHex').addEventListener('blur', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); });
-  $('trimOn').addEventListener('change', e=>{ L().room.trimOn=e.target.checked; renderRoom(); draw(); save(); commitRoom(); });
+  $('trimOn').addEventListener('change', e=>{ transact('room', ()=>{ L().room.trimOn=e.target.checked; }); renderRoom(); });
 
   $('btnPreRect').addEventListener('click', ()=>{
     const b=bbox(RP());
@@ -64,10 +64,12 @@ function bindPaneRight(){
       'Use this shape', ()=>{
         const w=parseLen($('pW').value,S.unit), d=parseLen($('pD').value,S.unit);
         if(!isFinite(w)||!isFinite(d)||w<500||d<500){ moError('Give a width and depth of at least 500 mm'); return false; }
-        L().room.points=rectPts(w,d);
-        L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
-    clampOpenings(); setRoomSel(null);
-        renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
+        transact('room', ()=>{
+          L().room.points=rectPts(w,d);
+          L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
+          clampOpenings(); setRoomSel(null);
+        });
+        renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit();
       });
   });
   $('btnPreL').addEventListener('click', ()=>{
@@ -85,10 +87,12 @@ function bindPaneRight(){
         const cw=parseLen($('pCW').value,S.unit), cd=parseLen($('pCD').value,S.unit);
         if(![w,d,cw,cd].every(v=>isFinite(v)&&v>100)){ moError('Fill in all four measurements'); return false; }
         if(cw>=w-100||cd>=d-100){ moError('The notch has to be smaller than the room'); return false; }
-        L().room.points=shapePoly({type:'lshape',w,d,cw,cd,corner:$('pC').value}).map(([x,y])=>[x+w/2,y+d/2]);
-        L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
-    clampOpenings(); setRoomSel(null);
-        renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit(); save(); commitRoom();
+        transact('room', ()=>{
+          L().room.points=shapePoly({type:'lshape',w,d,cw,cd,corner:$('pC').value}).map(([x,y])=>[x+w/2,y+d/2]);
+          L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
+          clampOpenings(); setRoomSel(null);
+        });
+        renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit();
       });
   });
   $('btnDrawCustom').addEventListener('click', ()=>{
@@ -96,13 +100,13 @@ function bindPaneRight(){
     if(drawState) cancelCustomDraw(); else startCustomDraw();
   });
 
-  $('snapSel').addEventListener('change', e=>{ S.snap=e.target.value; save(); });
-  $('zoomSpeedSel').addEventListener('change', e=>{ S.zoomSpeed=parseFloat(e.target.value)||1; save(); });
-  $('showSwing').addEventListener('change', e=>{ S.showSwing=e.target.checked; draw(); save(); });
-  $('showWalk').addEventListener('change', e=>{ S.showWalk=e.target.checked; draw(); save(); });
-  $('showMeasure').addEventListener('change', e=>{ S.showMeasure=e.target.checked; draw(); save(); });
-  $('showDims').addEventListener('change', e=>{ S.showDims=e.target.checked; draw(); save(); });
-  $('showOpen').addEventListener('change', e=>{ S.showOpen=e.target.checked; draw(); save(); });
+  $('snapSel').addEventListener('change', e=>transact('prefs', ()=>{ S.snap=e.target.value; }, {canvas:false}));
+  $('zoomSpeedSel').addEventListener('change', e=>transact('prefs', ()=>{ S.zoomSpeed=parseFloat(e.target.value)||1; }, {canvas:false}));
+  $('showSwing').addEventListener('change', e=>transact('prefs', ()=>{ S.showSwing=e.target.checked; }));
+  $('showWalk').addEventListener('change', e=>transact('prefs', ()=>{ S.showWalk=e.target.checked; }));
+  $('showMeasure').addEventListener('change', e=>transact('prefs', ()=>{ S.showMeasure=e.target.checked; }));
+  $('showDims').addEventListener('change', e=>transact('prefs', ()=>{ S.showDims=e.target.checked; }));
+  $('showOpen').addEventListener('change', e=>transact('prefs', ()=>{ S.showOpen=e.target.checked; }));
 }
 
 export {bindPaneRight};

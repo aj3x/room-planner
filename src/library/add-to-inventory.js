@@ -7,7 +7,7 @@
 import {idParts} from '../core/ids.js';
 import {normItem} from '../core/migrate.js';
 import {S, clone} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {libFlash} from '../ui/flash.js';
 import {openModal} from '../ui/modal.js';
 import {esc} from '../ui/panels.js';
@@ -29,19 +29,21 @@ function addMarketItemToInventory(raw){
       <p class="hint">Taking theirs replaces your copy's shape, colour and other fields, but keeps the same id — anywhere you've placed it keeps its spot, now with the new geometry.</p>`,
       'Take theirs', ()=>{
         const folderId=existing.folderId, manualTags=existing.manualTags;
-        Object.assign(existing, incoming, {id:existing.id, folderId, manualTags});
-        applyTags(existing); save(); renderLibAll();
+        transact('lib', ()=>{ Object.assign(existing, incoming, {id:existing.id, folderId, manualTags}); applyTags(existing); });
+        renderLibAll();
         libFlash('Replaced your copy');
       });
     return;
   }
   const sameName=S.inventory.find(x=>x.name===incoming.name);
-  const parts=idParts(incoming.id); parts.pop();   // drop the leaf, keep the folder path
-  incoming.folderId=parts.length ? ensureItemFolderPath(parts) : null;
-  incoming.manualTags=(incoming.tags||[]).slice();
-  applyTags(incoming);
-  S.inventory.push(incoming);
-  save(); renderLibAll();
+  transact('lib', ()=>{
+    const parts=idParts(incoming.id); parts.pop();   // drop the leaf, keep the folder path
+    incoming.folderId=parts.length ? ensureItemFolderPath(parts) : null;
+    incoming.manualTags=(incoming.tags||[]).slice();
+    applyTags(incoming);
+    S.inventory.push(incoming);
+  });
+  renderLibAll();
   libFlash(sameName ? 'Added — you also have another "'+incoming.name+'" under a different id' : 'Added to your library');
 }
 export {itemsDeepEqual, addMarketItemToInventory};

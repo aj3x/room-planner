@@ -15,7 +15,7 @@
 import {idProblem} from '../core/ids.js';
 import {normItem} from '../core/migrate.js';
 import {S, clone, uid} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 
 /* ------------------------- marketplace subscriptions: fetch & cache (MARKET_SCHEMA.md) -------------------------
    A subscription is a live market.json URL. Its item index is fetched in full up front (it's just
@@ -43,8 +43,7 @@ async function ensureDefaultMarket(){
   if(S.marketSubs.some(s=>s.url===DEFAULT_MARKET_URL)) return;
   try{
     const sub=await subscribeMarket(DEFAULT_MARKET_URL);
-    sub.isDefault=true;
-    save();
+    transact('lib', ()=>{ sub.isDefault=true; });
   }catch(e){ /* offline, or unreachable right now — try again next launch */ }
 }
 async function subscribeMarket(url){
@@ -65,26 +64,26 @@ async function subscribeMarket(url){
     for(const it of sh.items) if(it&&it.id&&!idProblem(it.id)) items.push({id:it.id, name:it.name||it.id, tags:Array.isArray(it.tags)?it.tags:[]});
   }
   const sub={id:uid(), url, name:manifest.name||url, version:manifest.version, itemURL:manifest.itemURL||'items/{id}.json', addedAt:Date.now()};
-  S.marketSubs.push(sub);
-  marketIndexCache.set(sub.id, items);
-  save();
+  transact('lib', ()=>{ S.marketSubs.push(sub); marketIndexCache.set(sub.id, items); });
   return sub;
 }
 async function reloadMarketSub(sub){
   const fresh=await subscribeMarket(sub.url);        // validates + refetches fully under a new id
-  sub.name=fresh.name; sub.version=fresh.version; sub.itemURL=fresh.itemURL;
-  marketIndexCache.set(sub.id, marketIndexCache.get(fresh.id));
-  marketIndexCache.delete(fresh.id);
-  marketItemCache.delete(sub.id);
-  S.marketSubs=S.marketSubs.filter(s=>s.id!==fresh.id);
-  save();
+  transact('lib', ()=>{
+    sub.name=fresh.name; sub.version=fresh.version; sub.itemURL=fresh.itemURL;
+    marketIndexCache.set(sub.id, marketIndexCache.get(fresh.id));
+    marketIndexCache.delete(fresh.id);
+    marketItemCache.delete(sub.id);
+    S.marketSubs=S.marketSubs.filter(s=>s.id!==fresh.id);
+  });
 }
 function removeMarketSub(sub){
-  S.marketSubs=S.marketSubs.filter(s=>s.id!==sub.id);
-  marketIndexCache.delete(sub.id);
-  marketItemCache.delete(sub.id);
-  if(sub.isDefault||sub.url===DEFAULT_MARKET_URL) S.defaultMarketDismissed=true;
-  save();
+  transact('lib', ()=>{
+    S.marketSubs=S.marketSubs.filter(s=>s.id!==sub.id);
+    marketIndexCache.delete(sub.id);
+    marketItemCache.delete(sub.id);
+    if(sub.isDefault||sub.url===DEFAULT_MARKET_URL) S.defaultMarketDismissed=true;
+  });
 }
 async function fetchMarketItem(sub, id){
   if(!marketItemCache.has(sub.id)) marketItemCache.set(sub.id, new Map());

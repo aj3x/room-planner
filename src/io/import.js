@@ -17,7 +17,7 @@ import {uniqueId} from '../core/ids.js';
 import {migrate, normItem, normLayout, remapMeasures} from '../core/migrate.js';
 import {setRoomSel, setSel} from '../core/selection.js';
 import {S, clone, floorLayouts, isCanvasMode, setS, uid} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {ensureDefaultMarket} from '../library/market-subs.js';
 import {renderLibAll} from '../library/shell.js';
 import {renderAll} from '../plan/mode.js';
@@ -98,7 +98,12 @@ function importDialog(inc){
       sayHow();
     });
 }
+/* One project transaction, whichever way it goes: no undo stack covers it (a
+   replace starts every stack afresh below). */
 function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
+  transact('project', ()=>importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe));
+}
+function importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe){
   const layouts=inc.layouts.filter(l=>roomIds.includes(l.id)).map(clone);
   const items=inc.inventory.filter(i=>itemIds.includes(i.id)).map(clone);
   const keep=new Set();
@@ -128,7 +133,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     seedHistFor();
     $('unitSel').value=S.unit;
     $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure; $('zoomSpeedSel').value=S.zoomSpeed;
-    renderSnap(); applyPanes(); applySections(); renderAll(); fit(); save();
+    renderSnap(); applyPanes(); applySections(); renderAll(); fit();
     flash('Replaced your project with '+plural(S.layouts.length,'room')+' and '+plural(S.inventory.length,'item'));
     return;
   }
@@ -203,7 +208,7 @@ function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure; $('zoomSpeedSel').value=S.zoomSpeed;
     renderSnap();
   }
-  renderAll(); save();
+  renderAll();
   flash('Added '+plural(layouts.length,'room')+' and '+plural(addedItems,'item'));
 }
 export {readImport, importDialog, applyImport};

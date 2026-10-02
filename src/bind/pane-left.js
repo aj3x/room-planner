@@ -18,7 +18,7 @@
 
 import { PALETTE, uid, blankLayout, S, openOf, roomMode, folderOf } from '../core/state.js';
 import { roomSel, mergeSel, setRoomSel, treeOpen } from '../core/selection.js';
-import { save } from '../core/store.js';
+import { transact } from '../core/tx.js';
 import { $, askText } from '../ui/modal.js';
 import { closeMenu, openMenu, menuAtPoint } from '../ui/menu.js';
 import { singleClick, cancelSingleClick } from '../ui/inline-edit.js';
@@ -80,7 +80,7 @@ function bindPaneLeft(){
         return;
       }
       mergeSel.clear();
-      singleClick(()=>{ activateLayout(id); setMode('room'); renderAll(); fit(); save(); });
+      singleClick(()=>{ transact('project', ()=>{ activateLayout(id); setMode('room'); }); renderAll(); fit(); });
     }
   });
   treeBox.addEventListener('contextmenu', e=>{
@@ -155,19 +155,21 @@ function bindPaneLeft(){
       // folders and rooms are kept in separate lists, so only order against your own kind
       if(spot.isFolder === (d.kind==='folder')){ targetId=spot.id; after=(spot.mode==='after'); }
     }
-    if(d.kind==='folder'){
-      const f=folderOf(d.id); if(!f) return;
-      if(parent===d.id || folderDescendant(d.id,parent)){ flash("A folder can't go inside itself"); return; }
-      f.parentId=parent;
-      moveBefore(S.folders, d.id, targetId, after);
-    } else {
-      const l=S.layouts.find(x=>x.id===d.id); if(!l) return;
-      l.folderId=parent;
-      l.floorId=null;   // dragged back into the tree proper, so off the floor it comes
-      moveBefore(S.layouts, d.id, targetId, after);
-    }
+    const f = d.kind==='folder' ? folderOf(d.id) : null, l = d.kind==='folder' ? null : S.layouts.find(x=>x.id===d.id);
+    if(!f && !l) return;
+    if(f && (parent===d.id || folderDescendant(d.id,parent))){ flash("A folder can't go inside itself"); return; }
+    transact('project', ()=>{
+      if(f){
+        f.parentId=parent;
+        moveBefore(S.folders, d.id, targetId, after);
+      } else {
+        l.folderId=parent;
+        l.floorId=null;   // dragged back into the tree proper, so off the floor it comes
+        moveBefore(S.layouts, d.id, targetId, after);
+      }
+    });
     setDragTree(null);
-    renderTree(); renderInv(); save();
+    renderTree(); renderInv();
   });
 
   $('btnRoomsMore').addEventListener('click', e=>{
@@ -179,8 +181,8 @@ function bindPaneLeft(){
   $('btnImportBlueprint').addEventListener('click', ()=>bpUploadDialog());
   $('btnNewLayout').addEventListener('click', ()=>{
     askText('New room','Name','Room '+(S.layouts.length+1), n=>{
-      const l=blankLayout(n,null); S.layouts.push(l); activateLayout(l.id);
-      renderTree(); renderAll(); fit(); save();
+      transact('project', ()=>{ const l=blankLayout(n,null); S.layouts.push(l); activateLayout(l.id); });
+      renderTree(); renderAll(); fit();
     });
   });
 
@@ -240,16 +242,18 @@ function bindPaneLeft(){
 
   $('tagChips').addEventListener('click', e=>{
     const b=e.target.closest('button'); if(!b) return;
-    if(b.dataset.clear){ S.tagFilter=[]; S.untaggedOnly=false; }
-    else if(b.dataset.untagged){ S.untaggedOnly=!S.untaggedOnly; }
-    else {
-      const t=b.dataset.t;
-      S.tagFilter = S.tagFilter.includes(t) ? S.tagFilter.filter(x=>x!==t) : [...S.tagFilter,t];
-    }
-    renderTagChips(); renderInv(); save();
+    transact('prefs', ()=>{
+      if(b.dataset.clear){ S.tagFilter=[]; S.untaggedOnly=false; }
+      else if(b.dataset.untagged){ S.untaggedOnly=!S.untaggedOnly; }
+      else {
+        const t=b.dataset.t;
+        S.tagFilter = S.tagFilter.includes(t) ? S.tagFilter.filter(x=>x!==t) : [...S.tagFilter,t];
+      }
+    }, {canvas:false});
+    renderTagChips(); renderInv();
   });
-  $('onlyAvail').addEventListener('change', e=>{ S.onlyAvailable=e.target.checked; renderInv(); save(); });
-  $('invSearch').addEventListener('input', e=>{ S.invSearch=e.target.value; renderInv(); save(); });
+  $('onlyAvail').addEventListener('change', e=>{ transact('prefs', ()=>{ S.onlyAvailable=e.target.checked; }, {canvas:false}); renderInv(); });
+  $('invSearch').addEventListener('input', e=>{ transact('prefs', ()=>{ S.invSearch=e.target.value; }, {canvas:false}); renderInv(); });
 
   invBox.addEventListener('click', e=>{
     const li=e.target.closest('li[data-id]'); if(!li) return;
@@ -295,9 +299,9 @@ function bindPaneLeft(){
     clearDropMarks(invBox);
     if(!dragInv || !li || li.dataset.id===dragInv) return;
     e.preventDefault();
-    moveBefore(S.inventory, dragInv, li.dataset.id, after);
+    transact('lib', ()=>moveBefore(S.inventory, dragInv, li.dataset.id, after));
     setDragInv(null);
-    renderInv(); save();
+    renderInv();
   });
 
   $('btnAddItem').addEventListener('click',()=>itemDialog(null));
@@ -306,15 +310,17 @@ function bindPaneLeft(){
   /* ------------------------- samples / io ------------------------- */
   $('btnSamples').addEventListener('click', ()=>{
     const add=(name,shape,extra)=>S.inventory.push(Object.assign({id:uid(),name,color:PALETTE[S.inventory.length%PALETTE.length],shape,passThrough:false},extra||{}));
-    add('Queen bed',{type:'rect',w:1530,d:2030});
-    add('Sofa',{type:'rect',w:2130,d:910});
-    add('Round table',{type:'ellipse',w:1070,d:1070});
-    add('Desk',{type:'rect',w:1220,d:610});
-    add('Corner desk',{type:'lshape',w:1520,d:1520,cw:900,cd:900,corner:'se'});
-    add('Dresser',{type:'rect',w:1220,d:460},{open:{top:0,bottom:520,left:0,right:0}});
-    add('Extending table',{type:'rect',w:1520,d:900},{open:{top:0,bottom:0,left:0,right:460}});
-    add('Rug 5×8',{type:'rect',w:1520,d:2440},{passThrough:true});
-    renderInv(); save();
+    transact('lib', ()=>{
+      add('Queen bed',{type:'rect',w:1530,d:2030});
+      add('Sofa',{type:'rect',w:2130,d:910});
+      add('Round table',{type:'ellipse',w:1070,d:1070});
+      add('Desk',{type:'rect',w:1220,d:610});
+      add('Corner desk',{type:'lshape',w:1520,d:1520,cw:900,cd:900,corner:'se'});
+      add('Dresser',{type:'rect',w:1220,d:460},{open:{top:0,bottom:520,left:0,right:0}});
+      add('Extending table',{type:'rect',w:1520,d:900},{open:{top:0,bottom:0,left:0,right:460}});
+      add('Rug 5×8',{type:'rect',w:1520,d:2440},{passThrough:true});
+    });
+    renderInv();
   });
 }
 

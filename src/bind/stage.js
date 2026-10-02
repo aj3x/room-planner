@@ -23,7 +23,7 @@
 
 import { S, L, roomMode, floorMode } from '../core/state.js';
 import { mergeSel } from '../core/selection.js';
-import { save } from '../core/store.js';
+import { transact } from '../core/tx.js';
 import { undoRoom, redoRoom, undoFurn, redoFurn, undoFloor, redoFloor } from '../core/history.js';
 import { $, askConfirm, showShortcuts } from '../ui/modal.js';
 import { menuAtPoint } from '../ui/menu.js';
@@ -74,7 +74,8 @@ function bindStage(){
     else if(b.dataset.act==='clear'){
       const n=liveMeasures().length;
       askConfirm('Clear measurements', 'Remove '+(n===1?'the measurement':'all '+n+' measurements')+' from '+L().name+'?', 'Clear measurements', ()=>{
-        L().measures=[]; resetMeasureState(); renderMeasureBar(); draw(); save();
+        transact('room', ()=>{ L().measures=[]; resetMeasureState(); }, {history:false});   // no undo for measurements
+        renderMeasureBar();
       });
     }
   });
@@ -94,7 +95,7 @@ function bindStage(){
     /* double-clicking a room on the floor is the way back to editing it */
     if(floorMode()){
       const id=pickFloorRoom(e.offsetX,e.offsetY);
-      if(id){ setDrag(null); activateLayout(id); setMode('room'); renderAll(); fit(); save(); }
+      if(id){ setDrag(null); transact('project', ()=>{ activateLayout(id); setMode('room'); }); renderAll(); fit(); }
       return;
     }
     if(!roomMode()) return;

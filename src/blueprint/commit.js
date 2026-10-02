@@ -3,7 +3,7 @@ import {floorHist, furnHist, histEntry, roomHist, snapFurn, snapRoom} from '../c
 import {normLayout} from '../core/migrate.js';
 import {treeOpen} from '../core/selection.js';
 import {S, blankLayout, floorOf, uid} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {clampOpenings} from '../model/walls.js';
 import {activateLayout} from '../plan/layout-tree.js';
 import {renderAll, setMode} from '../plan/mode.js';
@@ -23,23 +23,26 @@ function bpCommit(){
   const target=st.targetFloorId ? floorOf(st.targetFloorId) : null;
   const extWall=bpEffExtWall();
   const floor=target || {id:uid(), name:bpFloorName(), parentId:null, extWall};
-  if(!target) S.floors.push(floor);
   const ids=[];
-  for(const l of d.layouts){
-    delete l._bpRegion; delete l._bpPx;
-    l.floorId=floor.id;
-    normLayout(l);
-    clampOpenings(l);
-    S.layouts.push(l); ids.push(l.id);
-  }
-  bpSeedHistory(d.layouts, floor.id);
-  bpLastImport={floorId:floor.id, layoutIds:ids, prevActive:S.active, createdFloor:!target};
+  /* Not on any undo stack (it creates a floor and N rooms); bpUndoImport is the way back. */
+  transact('project', ()=>{
+    if(!target) S.floors.push(floor);
+    for(const l of d.layouts){
+      delete l._bpRegion; delete l._bpPx;
+      l.floorId=floor.id;
+      normLayout(l);
+      clampOpenings(l);
+      S.layouts.push(l); ids.push(l.id);
+    }
+    bpSeedHistory(d.layouts, floor.id);
+    bpLastImport={floorId:floor.id, layoutIds:ids, prevActive:S.active, createdFloor:!target};
+    bpDispose();
+    treeOpen.add(floor.id);
+    activateLayout(ids[0]);
+    setMode('floor');
+  });
   const left=d.problems.length;
-  bpDispose();
-  treeOpen.add(floor.id);
-  activateLayout(ids[0]);
-  setMode('floor');
-  renderAll(); save();
+  renderAll();
   flash(`${plural(ids.length,'room')} added to ${floor.name}${left?` — ${plural(left,'room')} left out`:''}.`);
 }
 function bpFloorName(){
@@ -64,15 +67,17 @@ function bpUndoImport(){
     plural(n,'room')+(imp.createdFloor?(n===1?' and the floor it sits on':' and the floor they sit on'):'')+' will be removed.',
     'Undo import', ()=>{
       const kill=new Set(imp.layoutIds);
-      S.layouts=S.layouts.filter(l=>!kill.has(l.id));
-      if(imp.createdFloor) S.floors=S.floors.filter(f=>f.id!==imp.floorId);
-      for(const id of kill){ delete roomHist[id]; delete furnHist[id]; }
-      delete floorHist[imp.floorId];
-      treeOpen.delete(imp.floorId);
-      if(!S.layouts.length) S.layouts=[blankLayout()];
-      activateLayout(S.layouts.some(l=>l.id===imp.prevActive) ? imp.prevActive : S.layouts[0].id);
-      bpLastImport=null;
-      renderAll(); fit(); save();
+      transact('project', ()=>{
+        S.layouts=S.layouts.filter(l=>!kill.has(l.id));
+        if(imp.createdFloor) S.floors=S.floors.filter(f=>f.id!==imp.floorId);
+        for(const id of kill){ delete roomHist[id]; delete furnHist[id]; }
+        delete floorHist[imp.floorId];
+        treeOpen.delete(imp.floorId);
+        if(!S.layouts.length) S.layouts=[blankLayout()];
+        activateLayout(S.layouts.some(l=>l.id===imp.prevActive) ? imp.prevActive : S.layouts[0].id);
+        bpLastImport=null;
+      });
+      renderAll(); fit();
     });
 }
 

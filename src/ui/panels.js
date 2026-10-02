@@ -13,7 +13,7 @@
      renderAll, setMode, renderMode and the nav listeners belong to the same
                    banner but call draw() and every render*() -> canvas/, plan/ */
 import {S} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {$, svgI} from './modal.js';
 
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -32,8 +32,8 @@ function applySections(){
 }
 function toggleSection(h){
   const k=h.closest('section[data-sec]').dataset.sec;
-  S.secClosed = S.secClosed.includes(k) ? S.secClosed.filter(x=>x!==k) : S.secClosed.concat(k);
-  applySections(); save();
+  transact('prefs', ()=>{ S.secClosed = S.secClosed.includes(k) ? S.secClosed.filter(x=>x!==k) : S.secClosed.concat(k); }, {canvas:false});
+  applySections();
 }
 
 /* ------------------------- collapsing the side panels -------------------------

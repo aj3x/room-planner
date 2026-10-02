@@ -20,11 +20,10 @@ import {marketFolderPath} from './adhoc-folders.js';
 import {childItemFolders, itemFolderPath, itemsInFolder} from './item-folders.js';
 import {svgI} from '../ui/modal.js';
 import {esc} from '../ui/panels.js';
-import {draw} from '../canvas/draw.js';
 import {uniqueId} from '../core/ids.js';
 import {selectClear} from '../core/selection.js';
 import {S, clone} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {fileSlug} from '../io/pickers.js';
 import {clearDropMarks} from '../ui/dnd.js';
 import {libFlash} from '../ui/flash.js';
@@ -88,16 +87,16 @@ function duplicateLibItem(id){
   const c=clone(it);
   c.id=uniqueId(it.id+'-copy', new Set(S.inventory.map(x=>x.id)));
   c.name=it.name+' copy';
-  S.inventory.push(c);
-  save(); renderLibAll();
+  transact('lib', ()=>{ S.inventory.push(c); });
+  renderLibAll();
   libFlash('Duplicated');
 }
 function deleteLibItem(id){
   const it=S.inventory.find(x=>x.id===id); if(!it) return;
   const n=S.layouts.reduce((a,l)=>a+l.placed.filter(p=>p.itemId===id).length,0);
   const kill=()=>{
-    purgeItem(id); selectClear();
-    save(); repaint('inv','sel'); draw(); repaint('libAll');
+    transact('lib', ()=>{ purgeItem(id); selectClear(); });
+    repaint('inv','sel'); repaint('libAll');
   };
   if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+' across your rooms. Those will be removed too.', 'Delete', kill);
   else askConfirm('Delete this item?', '“'+it.name+'” will be removed for good.', 'Delete', kill);
@@ -172,8 +171,8 @@ function bindLibGrid(box, kind){
         e.preventDefault(); t.classList.remove('dragover');
         if(!gridDragItem) return;
         const it=S.inventory.find(x=>x.id===gridDragItem); if(!it) return;
-        moveItemToFolder(it, t.dataset.openfolder);
-        setGridDragItem(null); save(); renderLibAll();
+        transact('lib', ()=>moveItemToFolder(it, t.dataset.openfolder));
+        setGridDragItem(null); renderLibAll();
         libFlash('Moved “'+it.name+'”');
       });
     });
