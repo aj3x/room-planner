@@ -73,7 +73,6 @@ function onCanvasPointerDown(e){
   if(spaceDown){
     drag.value = {mode:'pan', px, py, ox:view.ox, oy:view.oy};
     cv.style.cursor='grabbing';
-    draw();
     return;
   }
 
@@ -151,7 +150,6 @@ function onCanvasPointerDown(e){
     if(floorSel.value){ floorSel.value = null; }
     mergeClear();
     drag.value = {mode:'pan', px, py, ox:view.ox, oy:view.oy};
-    draw();
     return;
   }
 
@@ -174,7 +172,6 @@ function onCanvasPointerDown(e){
     }
     roomSel.value = null;
     drag.value = {mode:'pan', px, py, ox:view.ox, oy:view.oy};
-    draw();
     return;
   }
 
@@ -222,7 +219,6 @@ function onCanvasPointerDown(e){
     drag.value = {mode:'move', ids, anchorId:hit.id, dx:wx(px)-hit.x, dy:wy(py)-hit.y, starts, loose:isBad(hit)};
   } else {
     drag.value = {mode:'marquee', x0:px, y0:py, x1:px, y1:py, additive:e.shiftKey};
-    draw();
   }
 }
 

@@ -129,7 +129,7 @@ function drawCustomOverlay(){
    dimension lines use it too.
 
    The measure tool's pick/hit-test/bar functions live in measure-tool.js. */
-import {measureOn, measureStart, measureHover, measureHoverId, measureSel, measureCursor, measureBoxes} from './measure-state.js';
+import {measureOn, measureStart, measureHover, measureHoverId, measureSel, measureCursor, measureBoxes, setMeasureBoxes} from './measure-state.js';
 import {measuresOf, measureObjs, objOfAnchor, anchorKey, anchorGeom,
         closestBetween} from '../model/measures.js';
 import {S} from '../core/state.js';
@@ -207,7 +207,7 @@ function drawDimension(r,color,C,dashed){
   return {p,q,x:cx-w/2,y:cy-h/2,w,h};
 }
 function drawMeasures(){
-  measureBoxes.value = [];
+  setMeasureBoxes([]);
   if(!S.showMeasure && !measureOn.value) return;
   const C=PAL(), objs=measureObjs();
   if(measureOn.value){
@@ -219,7 +219,7 @@ function drawMeasures(){
     if(!A||!B) continue;
     const on = measureOn.value && (m.id===measureSel.value || m.id===measureHoverId.value);
     if(on){ drawAnchorPart(m.a,objs,C); drawAnchorPart(m.b,objs,C); }
-    measureBoxes.value.push(Object.assign({id:m.id}, drawDimension(closestBetween(A,B), on?C.accent:C.ink, C, false)));
+    measureBoxes.push(Object.assign({id:m.id}, drawDimension(closestBetween(A,B), on?C.accent:C.ink, C, false)));
   }
   if(measureOn.value && measureStart.value){
     // the measurement being made: to the anchor under the pointer, or to the pointer itself

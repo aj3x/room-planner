@@ -1,21 +1,6 @@
 /* Splitting a room in two: cutting a polyline from one point on the room's
-   outline to another.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added.
-
-   FIRST instalment, and only the two dependency-free helpers: boundaryHit (is
-   this point on the room's outline?) and splitAngleSnap (the 45-degree magnet
-   while drawing the cut). Everything else in the region stayed, and the reason
-   is uniform -- startSplitRoom, cancelSplitDraw, splitRefs, splitResolvePoint,
-   drawSplitOverlay, trySplitLine, openSplitChoice, commitSplit and splitUndo
-   all call draw() and the render*() functions, or write the splitDrawState /
-   alignGuides / alignNote lets. draw() is the keystone of the whole canvas/
-   round; see the round's notes in .claude/plans/refactor-split.md.
-
-   The region's banner and its introductory comment stayed with the code they
-   describe, which is the part still in index.html. */
+   outline to another. The drawing state is a signal (splitDrawState), so the
+   canvas follows it; committing the split is a transact('project'). */
 
 import {expect} from '../core/registry.js';
 import {batch} from '../core/signals.js';
@@ -43,16 +28,8 @@ function splitAngleSnap(prev, raw, hard){
   return [prev[0]+Math.cos(snapAng)*dist, prev[1]+Math.sin(snapAng)*dist];
 }
 
-/* SECOND instalment: splitRefs, splitCornerRef, splitResolvePoint and
-   drawSplitOverlay. They could not come in the first because splitResolvePoint
-   calls alignPoint/alignRadius/isSquare (now canvas/snap.js), drawSplitOverlay
-   calls drawSquareTick (now canvas/draw.js), and both read splitDrawState (now
-   canvas/interaction-state.js) and write alignGuides/alignNote (now
-   core/selection.js). drawSplitOverlay is one of the four draw*() helpers
-   draw() cannot move without, which is why these four come next.
-
-   startSplitRoom, cancelSplitDraw, trySplitLine, openSplitChoice, commitSplit
-   and splitUndo still call draw() and the render*() functions and stay. */
+/* Resolving where the next point of the cut lands (the same magnet as a
+   corner drag) and drawing the cut in progress. */
 import {ctx, sx, sy} from './view.js';
 import {RP} from '../core/state.js';
 import {wallOf} from '../model/walls.js';

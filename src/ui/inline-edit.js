@@ -1,8 +1,4 @@
-/* Rename in place, and the single-click delay that lets a double-click land.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. */
+/* Rename in place, and the single-click delay that lets a double-click land. */
 
 /* ------------------------- rename in place -------------------------
    Double-clicking a name swaps it for a text box. Enter keeps it, Esc and

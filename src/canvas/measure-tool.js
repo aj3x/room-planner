@@ -51,8 +51,8 @@ function measurePick(px,py){
 }
 /* a drawn measurement under a screen point: its label, or with `lines` its line too */
 function pickMeasure(px,py,lines){
-  for(let i=measureBoxes.value.length-1;i>=0;i--){
-    const b=measureBoxes.value[i];
+  for(let i=measureBoxes.length-1;i>=0;i--){
+    const b=measureBoxes[i];
     if(px>=b.x-2 && px<=b.x+b.w+2 && py>=b.y-2 && py<=b.y+b.h+2) return b.id;
     if(lines && ptSegDist([px,py],b.p,b.q).d<6) return b.id;
   }
