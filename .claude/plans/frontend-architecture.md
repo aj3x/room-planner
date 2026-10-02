@@ -156,3 +156,4 @@ Phase log (filled in by the orchestrator):
 
 | Phase | Base SHA | Final SHA | Loops | Notes |
 |-------|----------|-----------|-------|-------|
+| 1 transact() | e8e6436 | 6bccc41 | 1 | PASS; nits fixed; added opts.canvas, rev bump limited to room/furn/lib/project; Selected-panel X/Y undo gap logged in BACKLOG.md |
