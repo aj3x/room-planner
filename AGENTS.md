@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## What this is
-Room Planner is a client-only web app with **zero runtime dependencies**. What ships is one self-contained HTML file you can open off disk — that deployment model is not negotiable — but it is *built* rather than hand-maintained:
+Room Planner is a client-only web app with **one small runtime dependency** (`@preact/signals-core`, bundled in). What ships is one self-contained HTML file you can open off disk — that deployment model is not negotiable — but it is *built* rather than hand-maintained:
 
 ```sh
 npm install && npx playwright install chromium   # once
@@ -16,7 +16,7 @@ npm run lint       # ESLint, correctness rules only
 Two consequences worth knowing before you touch anything:
 
 - **`index.html`'s `<script>` blocks are `type="module"`** (Vite entry points; each `src/html/` partial carries one too), so the source file does **not** run from `file://` — module scripts are fetched under CORS rules an opaque `file://` origin cannot satisfy. Open `dist/index.html` for that, which is what actually ships.
-- **All tooling is a devDependency.** `dependencies` in `package.json` is empty and must stay that way.
+- **All tooling is a devDependency.** A runtime `dependency` must be small, must bundle into the single `dist/index.html` (so the `file://` contract is untouched), and needs a stated reason. Today there is one: `@preact/signals-core` (~4 kB min), the reactive core the side panels and the canvas subscribe through — see *Committing a change* below.
 
 ## How the source is laid out
 
@@ -113,7 +113,7 @@ Still worth doing by hand for anything visual: `npm run dev` and exercise the ar
 ## Conventions
 - No semicolon-free style; ES2017-ish, `"use strict"`, no TypeScript. Keep new code consistent with the surrounding style.
 - New code goes in the `src/` module, partial or stylesheet where it belongs — **not** in `index.html`, which is a shell. The one thing that still belongs there is a listener registration, at the spot its markup implies. (The split that got here is written up in [`.claude/plans/refactor-split.md`](.claude/plans/refactor-split.md); the mechanical recipe in §4 is worth reading before any large move.)
-- **No runtime dependencies.** `dependencies` in `package.json` is empty and stays empty.
+- **Runtime dependencies are small, bundle into the single file, and have a stated reason.** The current list and its reasons are under *What this is*; anything more is a decision, not a convenience.
 - Contributor-facing setup and review expectations are in [`CONTRIBUTING.md`](CONTRIBUTING.md); it is the same ground as this file, written for a person arriving cold.
 - `function` declarations stay `function` declarations — never rewritten as `const f = () => {}`. ESM tolerates import cycles for hoisted function declarations but not for `const` bindings read during module evaluation, and this graph is dense and almost certainly cyclic.
 - Angles: 0° points right, 90° points up (screen-plan convention), see `wallAngle`/`setWallAngle`.

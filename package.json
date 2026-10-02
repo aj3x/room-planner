@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Room Planner — a client-only, single-file web app. No runtime dependencies.",
+  "description": "Room Planner — a client-only, single-file web app.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -28,5 +28,8 @@
     "vite": "^8.3.0",
     "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^5.0.1"
+  },
+  "dependencies": {
+    "@preact/signals-core": "^1.14.4"
   }
 }
