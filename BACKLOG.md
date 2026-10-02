@@ -153,6 +153,15 @@ layouts are both currently active).
 
 ## Known defects
 
+- **Typing an item's position in the Selected panel is not undoable.** The
+  `sX`/`sY` fields (`move` in **`src/plan/selection-panel.js`**) save but never
+  recorded a furniture undo step, unlike the rotate field next to them and
+  every other placement edit. It is kept that way by an explicit
+  `transact('furn', …, {history:false})` so the move to `transact()` changed
+  no behaviour; the fix is to drop that option. Ctrl+Z today skips over the
+  typed move to whatever came before it, and the next furniture commit folds
+  it into its own step.
+
 - **Arriving in Floor mode leaves both floor panels stale.** `setMode('floor')`
   (**`src/plan/mode.js`**) seeds `floorSel` with the active room, baselines the
   arrangement and fits the camera, so the plan opens with that room drawn
