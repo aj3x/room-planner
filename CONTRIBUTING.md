@@ -108,8 +108,10 @@ anything with a visible surface — read it *before* adding UI, not after.
   a cycle for hoisted function declarations but not for a `const` read during
   module evaluation.
 - ES2017-ish, `"use strict"`, no TypeScript, no framework. Side panels are
-  rebuilt by `render*()` functions that re-set `innerHTML`; follow that pattern
-  rather than introducing a renderer.
+  rebuilt by `render*()` functions that re-set `innerHTML`, each run as an
+  effect over the signals it shows (`mountPanel` in `src/ui/mount.js`); a
+  change commits through `transact()` and never calls a render function.
+  Follow that pattern rather than introducing a renderer.
 
 ## What review will look at
 

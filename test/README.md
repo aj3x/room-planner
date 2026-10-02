@@ -4,8 +4,9 @@
 
 > **Test code stays under 20% of the codebase, and ideally under 10%.**
 
-Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,435 lines
-against 12,948** today — 9.98% of the two together. Check it before adding a
+Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,696 lines
+against 13,627** today — 11.1% of the two together (12.4% of the app's own
+size). Check it before adding a
 file:
 
 ```sh
@@ -65,7 +66,7 @@ green — investigate.
 
 ## What the suite covers
 
-### Suite A — `test/unit`, Vitest + jsdom (109 tests)
+### Suite A — `test/unit`, Vitest + jsdom (124 tests)
 
 Pure logic, imported straight out of `src/`. No app boot, no bundler, no
 harness; a file evaluates the modules it names and calls them.
@@ -83,15 +84,21 @@ harness; a file evaluates the modules it names and calls them.
   change here corrupts real projects with no error anywhere.
 - **`tx.test.js`** — `transact()`'s rules: one undo step per call on the
   right stack, `history:false`, nesting commits once at the outermost, a throw
-  commits nothing, and `preview()` (a gesture frame) neither records nor saves.
-  Every edit in the app goes through it, and the e2e suite drives only two
+  commits nothing, `preview()` (a gesture frame) neither records nor saves, and
+  each commit moves the revision signals once (one batch), which is the only
+  thing every panel and the canvas repaint on. Every edit in the app goes
+  through it, and the e2e suite drives only two
   gestures; a regression here splits or swallows undo steps everywhere else.
 - **`io-roundtrip.test.js`** — `exportPayload` → `readImport` → `applyImport`:
   the envelope, a lossless replace-mode round trip asserted down to the
   geometry, all three id-collision rules (keep mine / overwrite mine / add as a
   copy), dropped placements and folder-id identity.
+- **`wiring.test.js`** — every `use()`/`has()`/`expect()` key in
+  `core/registry.js`'s callers has a `provide()` in `boot.js`. A misspelt key
+  is a call that silently does nothing — `use()` returns undefined by design —
+  and neither lint nor the e2e suite would notice. Reads the source; no app.
 
-### `test/build` — the deployment model (4 tests)
+### `test/build` — the deployment model (6 tests)
 
 Not about the app's behaviour. It runs the real `vite.config.js` over
 `test/fixtures/build/` and asserts the three properties the product rests on:
