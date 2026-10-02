@@ -6,7 +6,13 @@
 
 /* ------------------------- rename in place -------------------------
    Double-clicking a name swaps it for a text box. Enter keeps it, Esc and
-   an empty box both leave the name alone; either way the caller re-renders. */
+   an empty box both leave the name alone.
+
+   The box gives up focus before `done` runs, so the list's own effect (a
+   panel holds its render while someone types in it — ui/mount.js) is free to
+   repaint the row the moment the caller commits the new name. When there is
+   nothing to commit, the original name goes back where it was and `done`
+   gets null. */
 function inlineEdit(el, value, done){
   if(!el) return;
   const row=el.closest('[draggable]');
@@ -20,6 +26,8 @@ function inlineEdit(el, value, done){
     if(closed) return;
     closed=true;
     const v=inp.value.trim();
+    inp.blur();
+    if(!(ok&&v)){ if(inp.isConnected) inp.replaceWith(el); if(row) row.draggable=true; }
     done(ok&&v ? v : null);
   };
   inp.addEventListener('keydown', e=>{
