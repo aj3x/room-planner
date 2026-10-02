@@ -23,10 +23,10 @@
 
    Byte-identical to what stood in the shell; only the wrapper changed. */
 import {worldPoly} from '../core/geometry.js';
-import {commitFurn, redoFloor, redoFurn, redoRoom, undoFloor, undoFurn, undoRoom} from '../core/history.js';
+import {redoFloor, redoFurn, redoRoom, undoFloor, undoFurn, undoRoom} from '../core/history.js';
 import {floorSel, mergeSel, roomSel, selSet, selectClear, setFloorSel, setRoomSel} from '../core/selection.js';
 import {S, floorMode, instOf, isCanvasMode, itemOf, roomMode} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {bisectToValid, centreInside, isBad, validate} from '../model/validity.js';
 import {deleteCorner} from '../canvas/corners.js';
 import {draw} from '../canvas/draw.js';
@@ -122,23 +122,25 @@ function onDocumentKeyDown(e){
   if(d){
     e.preventDefault();
     let moved=false;
-    for(const id of selSet){
-      const inst=instOf(id); const it=inst&&itemOf(inst.itemId);
-      if(!inst||!it) continue;
-      moved=true;
-      const loose=isBad(inst), ox=inst.x, oy=inst.y;
-      inst.x+=d[0]; inst.y+=d[1];
-      if(!validate(inst,worldPoly(inst,it)).ok){
-        if(loose){ if(!centreInside(inst)){ inst.x=ox; inst.y=oy; } }
-        else {
-          // take as much of the step as fits
-          inst.x=ox; inst.y=oy;
-          bisectToValid(inst,it,[ox,oy],[ox+d[0],oy+d[1]]);
-          if(Math.hypot(inst.x-ox,inst.y-oy)<0.01){ inst.x=ox; inst.y=oy; if(selSet.size===1) flash('No room that way'); }
+    transact('furn', ()=>{
+      for(const id of selSet){
+        const inst=instOf(id); const it=inst&&itemOf(inst.itemId);
+        if(!inst||!it) continue;
+        moved=true;
+        const loose=isBad(inst), ox=inst.x, oy=inst.y;
+        inst.x+=d[0]; inst.y+=d[1];
+        if(!validate(inst,worldPoly(inst,it)).ok){
+          if(loose){ if(!centreInside(inst)){ inst.x=ox; inst.y=oy; } }
+          else {
+            // take as much of the step as fits
+            inst.x=ox; inst.y=oy;
+            bisectToValid(inst,it,[ox,oy],[ox+d[0],oy+d[1]]);
+            if(Math.hypot(inst.x-ox,inst.y-oy)<0.01){ inst.x=ox; inst.y=oy; if(selSet.size===1) flash('No room that way'); }
+          }
         }
       }
-    }
-    if(moved){ draw(); renderSel(); save(); commitFurn(); }
+    });
+    if(moved) renderSel();
   }
 }
 

@@ -5,14 +5,12 @@
    move-only: the blocks below are byte-identical to what stood there, and the
    `export` block at the end is the only line added.
 */
-import {draw} from '../canvas/draw.js';
 import {bringToFront} from '../canvas/snap.js';
 import {bbox, centroid, norm360, worldPoly} from '../core/geometry.js';
-import {commitFurn} from '../core/history.js';
 import {hasOpen, openSizeLabel} from '../core/open-state.js';
 import {sel, selSet, selectClear, selectOnly, selectSet} from '../core/selection.js';
 import {L, RP, S, furnMode, instOf, itemOf, roomMode, uid} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {fmtLen, parseLen} from '../core/units.js';
 import {centreInside, getConflicts, isBad, validate} from '../model/validity.js';
 import {flash} from '../ui/flash.js';
@@ -26,14 +24,16 @@ function rotate(deg){
   const inst=instOf(sel); if(!inst) return;
   const it=itemOf(inst.itemId); if(!it) return;
   const loose=isBad(inst), prev=inst.rot||0;
-  inst.rot=norm360(prev+deg);
-  if(!loose && !validate(inst,worldPoly(inst,it)).ok){ inst.rot=prev; flash('No room to turn it'); }
-  draw(); renderSel(); save(); commitFurn();
+  transact('furn', ()=>{
+    inst.rot=norm360(prev+deg);
+    if(!loose && !validate(inst,worldPoly(inst,it)).ok){ inst.rot=prev; flash('No room to turn it'); }
+  });
+  renderSel();
 }
 function removeSel(){
   if(!selSet.size) return;
-  L().placed=L().placed.filter(p=>!selSet.has(p.id));
-  selectClear(); renderSel(); renderInv(); draw(); save(); commitFurn();
+  transact('furn', ()=>{ L().placed=L().placed.filter(p=>!selSet.has(p.id)); selectClear(); });
+  renderSel(); renderInv();
 }
 function place(itemId){
   const it=itemOf(itemId); if(!it) return;
@@ -57,26 +57,31 @@ function place(itemId){
     inst.rot=0; inst.x=c[0]; inst.y=c[1];
     flash('Nowhere clear to put it — drag it where you want');
   }
-  L().placed.push(inst);
-  selectOnly(inst.id);
-  if(roomMode()) setMode('furniture');
-  renderInv(); renderSel(); draw(); save(); commitFurn();
+  transact('furn', ()=>{
+    L().placed.push(inst);
+    selectOnly(inst.id);
+    if(roomMode()) setMode('furniture');
+  });
+  renderInv(); renderSel();
 }
 
 function duplicateSel(){
   if(selSet.size<2) return;
   const srcIds=[...selSet];
   const newIds=[];
-  for(const id of srcIds){
-    const src=instOf(id); if(!src) continue;
-    const dupe={...src, id:uid()};
-    L().placed.push(dupe);
-    newIds.push(dupe.id);
-  }
+  transact('furn', ()=>{
+    for(const id of srcIds){
+      const src=instOf(id); if(!src) continue;
+      const dupe={...src, id:uid()};
+      L().placed.push(dupe);
+      newIds.push(dupe.id);
+    }
+    if(!newIds.length) return;
+    bringToFront(newIds);
+    selectSet(newIds);
+  });
   if(!newIds.length) return;
-  bringToFront(newIds);
-  selectSet(newIds);
-  renderInv(); renderSel(); draw(); save(); commitFurn();
+  renderInv(); renderSel();
 }
 function renderSel(){
   const box=$('selBox');
@@ -145,12 +150,15 @@ function renderSel(){
     const mm=parseLen(val,S.unit);
     if(!isFinite(mm)){ renderSel(); return; }
     const loose=isBad(inst), bb=bbox(worldPoly(inst,it)), ox=inst.x, oy=inst.y;
-    if(which==='x') inst.x+=(rb.x0+mm)-bb.x0; else inst.y+=(rb.y0+mm)-bb.y0;
-    if(!validate(inst,worldPoly(inst,it)).ok){
-      if(loose){ if(!centreInside(inst)){ inst.x=ox; inst.y=oy; } }
-      else { inst.x=ox; inst.y=oy; flash('No room there'); }
-    }
-    draw(); renderSel(); save();
+    // history:false: no undo step — a known defect, see BACKLOG.md
+    transact('furn', ()=>{
+      if(which==='x') inst.x+=(rb.x0+mm)-bb.x0; else inst.y+=(rb.y0+mm)-bb.y0;
+      if(!validate(inst,worldPoly(inst,it)).ok){
+        if(loose){ if(!centreInside(inst)){ inst.x=ox; inst.y=oy; } }
+        else { inst.x=ox; inst.y=oy; flash('No room there'); }
+      }
+    }, {history:false});
+    renderSel();
   };
   $('sX').addEventListener('change',e=>move('x',e.target.value));
   $('sY').addEventListener('change',e=>move('y',e.target.value));

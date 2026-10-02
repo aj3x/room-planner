@@ -10,16 +10,15 @@
    deleteBothDialog, and all three call renderAll back. They were blocked on
    the 49-name SCC and land together now that it has gone.
 */
-import {draw} from '../canvas/draw.js';
 import {mergeGeometry} from '../canvas/merge-rooms.js';
 import {fit} from '../canvas/view.js';
 import {floorIWall, floorInst, floorXf} from '../core/floor-space.js';
 import {bbox, norm360} from '../core/geometry.js';
-import {commitFloor, floorHist, furnHist, roomHist} from '../core/history.js';
+import {floorHist, furnHist, roomHist} from '../core/history.js';
 import {pruneMeasures} from '../core/migrate.js';
 import {floorSel, mergeSel, setFloorSel} from '../core/selection.js';
 import {L, S, blankFloorPlace, clone, floorLayouts, floorMode, floorOf} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {fmtLen, parseLen, trimNum} from '../core/units.js';
 import {clampOpenings, syncWallOff} from '../model/walls.js';
 import {flash} from '../ui/flash.js';
@@ -48,37 +47,40 @@ function mergeLayouts(aId, bId){
   if(!A.floorId || A.floorId!==B.floorId){ flash('Select two rooms on the same floor to merge them'); return; }
   const geo=mergeGeometry(A,B);
   if(geo.error){ flash(geo.error); return; }
+  /* Not an undo step: A gets fresh stacks and mergeUndo takes it back. */
   const run=()=>{
-    lastMerge={
-      floorId:A.floorId, aId:A.id, aBefore:clone(A), bId:B.id, bBefore:clone(B), bIndex:S.layouts.indexOf(B),
-      aRoomHist:roomHist[A.id], aFurnHist:furnHist[A.id], bRoomHist:roomHist[B.id], bFurnHist:furnHist[B.id],
-    };
-    /* everything each room owns gets carried into the same shared frame the merged
-       polygon is already expressed in \u2014 floor space \u2014 the same transform floorInst/
-       floorIWall already use to draw one room's things while standing on a floor */
-    const tA=floorXf(A), tB=floorXf(B);
-    const placed=A.placed.map(p=>floorInst(A,p,tA)).concat(B.placed.map(p=>floorInst(B,p,tB)));
-    const pillars=A.room.pillars.map(p=>floorInst(A,p,tA)).concat(B.room.pillars.map(p=>floorInst(B,p,tB)));
-    const iwalls=A.room.iwalls.map(w=>floorIWall(A,w,tA)).concat(B.room.iwalls.map(w=>floorIWall(B,w,tB)));
+    transact('project', ()=>{
+      lastMerge={
+        floorId:A.floorId, aId:A.id, aBefore:clone(A), bId:B.id, bBefore:clone(B), bIndex:S.layouts.indexOf(B),
+        aRoomHist:roomHist[A.id], aFurnHist:furnHist[A.id], bRoomHist:roomHist[B.id], bFurnHist:furnHist[B.id],
+      };
+      /* everything each room owns gets carried into the same shared frame the merged
+         polygon is already expressed in \u2014 floor space \u2014 the same transform floorInst/
+         floorIWall already use to draw one room's things while standing on a floor */
+      const tA=floorXf(A), tB=floorXf(B);
+      const placed=A.placed.map(p=>floorInst(A,p,tA)).concat(B.placed.map(p=>floorInst(B,p,tB)));
+      const pillars=A.room.pillars.map(p=>floorInst(A,p,tA)).concat(B.room.pillars.map(p=>floorInst(B,p,tB)));
+      const iwalls=A.room.iwalls.map(w=>floorIWall(A,w,tA)).concat(B.room.iwalls.map(w=>floorIWall(B,w,tB)));
 
-    A.room.points=geo.points; A.room.wallOff=geo.wallOff;
-    A.floorPlace=blankFloorPlace();
-    syncWallOff(A.room);
-    A.openings=geo.openings;
-    A.placed=placed;
-    A.room.pillars=pillars;
-    A.room.iwalls=iwalls;
-    clampOpenings(A);
-    A.measures=geo.measures;
-    pruneMeasures(A);
+      A.room.points=geo.points; A.room.wallOff=geo.wallOff;
+      A.floorPlace=blankFloorPlace();
+      syncWallOff(A.room);
+      A.openings=geo.openings;
+      A.placed=placed;
+      A.room.pillars=pillars;
+      A.room.iwalls=iwalls;
+      clampOpenings(A);
+      A.measures=geo.measures;
+      pruneMeasures(A);
 
-    if(S.active===B.id) S.active=A.id;
-    S.layouts=S.layouts.filter(x=>x.id!==B.id);
-    roomHist[A.id]={stack:[JSON.stringify({room:A.room, openings:A.openings})], idx:0};
-    furnHist[A.id]={stack:[JSON.stringify({placed:A.placed})], idx:0};
-    delete roomHist[B.id]; delete furnHist[B.id]; delete floorHist[A.floorId];
-    mergeSel.clear();
-    renderTree(); renderAll(); fit(); save();
+      if(S.active===B.id) S.active=A.id;
+      S.layouts=S.layouts.filter(x=>x.id!==B.id);
+      roomHist[A.id]={stack:[JSON.stringify({room:A.room, openings:A.openings})], idx:0};
+      furnHist[A.id]={stack:[JSON.stringify({placed:A.placed})], idx:0};
+      delete roomHist[B.id]; delete furnHist[B.id]; delete floorHist[A.floorId];
+      mergeSel.clear();
+    });
+    renderTree(); renderAll(); fit();
     flash('Merged into \u201c'+A.name+'\u201d');
   };
   if(geo.removedOpenings>0){
@@ -94,11 +96,13 @@ function deleteBothDialog(aId,bId){
   if(S.layouts.length<=2){ flash('You need at least one room'); return; }
   askConfirm('Delete these rooms?', '\u201c'+a.name+'\u201d and \u201c'+b.name+'\u201d will be removed. Your library stays.', 'Delete', ()=>{
     const kill=new Set([aId,bId]);
-    S.layouts=S.layouts.filter(x=>!kill.has(x.id));
-    for(const id of kill){ delete roomHist[id]; delete furnHist[id]; if(lastMerge && lastMerge.aId===id) lastMerge=null; }
-    if(kill.has(S.active)) activateLayout(S.layouts[0].id);
-    mergeSel.clear();
-    renderTree(); renderAll(); fit(); save();
+    transact('project', ()=>{
+      S.layouts=S.layouts.filter(x=>!kill.has(x.id));
+      for(const id of kill){ delete roomHist[id]; delete furnHist[id]; if(lastMerge && lastMerge.aId===id) lastMerge=null; }
+      if(kill.has(S.active)) activateLayout(S.layouts[0].id);
+      mergeSel.clear();
+    });
+    renderTree(); renderAll(); fit();
   });
 }
 
@@ -145,22 +149,23 @@ function renderFloorSel(){
       <button class="btn sm" id="flEdit">Edit this room</button>
       <button class="btn sm quiet" id="flOff">Take off floor</button>
     </div>`;
-  const move=(k,v)=>{ if(v==null||!isFinite(v)) return; l.floorPlace[k]=v-(k==='x'?own.x0:own.y0); commitFloor(); renderFloorSel(); draw(); save(); };
+  const move=(k,v)=>{ if(v==null||!isFinite(v)) return; transact('floor', ()=>{ l.floorPlace[k]=v-(k==='x'?own.x0:own.y0); }); renderFloorSel(); };
   $('flX').addEventListener('change',e=>move('x',parseLen(e.target.value,S.unit)));
   $('flY').addEventListener('change',e=>move('y',parseLen(e.target.value,S.unit)));
   $('flRot').addEventListener('change',e=>{
     const v=parseFloat(e.target.value);
-    if(isFinite(v)){ l.floorPlace.rot=norm360(v); commitFloor(); renderFloorSel(); draw(); save(); }
+    if(isFinite(v)){ transact('floor', ()=>{ l.floorPlace.rot=norm360(v); }); renderFloorSel(); }
   });
-  $('flDim').addEventListener('change',e=>{ l.dimLabel=e.target.value.trim(); draw(); save(); });
+  // a label, not a placement: nothing for the floor's undo to step through
+  $('flDim').addEventListener('change',e=>transact('floor', ()=>{ l.dimLabel=e.target.value.trim(); }, {history:false}));
   $('flRotL').addEventListener('click',()=>turnFloorRoom(l,-90));
   $('flRotR').addEventListener('click',()=>turnFloorRoom(l,90));
-  $('flEdit').addEventListener('click',()=>{ activateLayout(l.id); setMode('room'); renderAll(); fit(); save(); });
-  $('flOff').addEventListener('click',()=>{ l.floorId=null; setFloorSel(null); renderAll(); save(); });
+  $('flEdit').addEventListener('click',()=>{ transact('project', ()=>{ activateLayout(l.id); setMode('room'); }); renderAll(); fit(); });
+  $('flOff').addEventListener('click',()=>{ transact('project', ()=>{ l.floorId=null; setFloorSel(null); }); renderAll(); });
 }
 function turnFloorRoom(l,deg){
-  l.floorPlace.rot=norm360((l.floorPlace.rot||0)+deg);
-  commitFloor(); renderFloorSel(); draw(); save();
+  transact('floor', ()=>{ l.floorPlace.rot=norm360((l.floorPlace.rot||0)+deg); });
+  renderFloorSel();
 }
 function renderFloorProps(){
   const box=$('floorPropsBox'); if(!box) return;
@@ -175,11 +180,11 @@ function renderFloorProps(){
     <div class="field"><label for="flExt">Outer wall</label><input type="text" class="len" id="flExt" value="${fl.extWall?esc(fmtLen(fl.extWall,S.unit)):''}" placeholder="Same as each room"></div>
     <p class="hint">${plural(n,'room')} on this floor. Drag one against another and it clicks to a shared wall.</p>
     <div class="row actions"><button class="btn sm quiet" id="flFit">Fit floor</button></div>`;
-  $('flName').addEventListener('change',e=>{ const v=e.target.value.trim(); if(v){ fl.name=v; renderTree(); save(); } });
+  $('flName').addEventListener('change',e=>{ const v=e.target.value.trim(); if(v){ transact('project', ()=>{ fl.name=v; }); renderTree(); } });
   $('flExt').addEventListener('change',e=>{
     const raw=e.target.value.trim(), v=raw?parseLen(raw,S.unit):0;
-    fl.extWall = raw && isFinite(v) && v>0 ? v : 0;
-    renderFloorProps(); draw(); save();
+    transact('project', ()=>{ fl.extWall = raw && isFinite(v) && v>0 ? v : 0; });
+    renderFloorProps();
   });
   $('flFit').addEventListener('click',()=>fit());
 }
@@ -190,8 +195,8 @@ function renderFloorProps(){
 function newFloor(){
   askText('New floor','Name','Floor', n=>{
     const fl={id:uid(), name:n, parentId:null, extWall:0};
-    S.floors.push(fl); treeOpen.add(fl.id);
-    renderTree(); save();
+    transact('project', ()=>{ S.floors.push(fl); treeOpen.add(fl.id); });
+    renderTree();
   });
 }
 
@@ -206,12 +211,14 @@ function floorRoomsDialog(id){
     ${pickerHTML('flRooms','Rooms',rooms,'You have no rooms yet')}`,
     'Save', ()=>{
       const picked=new Set(pickValues('flRooms'));
-      for(const l of S.layouts){
-        if(picked.has(l.id)){ if(l.floorId!==id){ placeOnFloor(l,id); l.floorId=id; } }
-        else if(l.floorId===id) l.floorId=null;
-      }
-      treeOpen.add(id);
-      renderAll(); save();
+      transact('project', ()=>{
+          for(const l of S.layouts){
+            if(picked.has(l.id)){ if(l.floorId!==id){ placeOnFloor(l,id); l.floorId=id; } }
+            else if(l.floorId===id) l.floorId=null;
+          }
+          treeOpen.add(id);
+      });
+      renderAll();
     });
 }
 /* deleting a floor never deletes a room: the arrangement goes, the rooms stay */
@@ -219,21 +226,23 @@ function deleteFloor(id){
   const fl=floorOf(id); if(!fl) return;
   const rooms=floorLayouts(id), n=rooms.length;
   const drop=()=>{
-    for(const l of rooms) l.floorId=null;
-    S.floors=S.floors.filter(x=>x.id!==id);
-    treeOpen.delete(id);
-    renderAll(); save();
+    transact('project', ()=>{
+        for(const l of rooms) l.floorId=null;
+        S.floors=S.floors.filter(x=>x.id!==id);
+        treeOpen.delete(id);
+    });
+    renderAll();
   };
   if(!n){ askConfirm('Delete this floor?', '“'+fl.name+'” is empty.', 'Delete floor', drop); return; }
   askConfirm('Delete “'+fl.name+'”?',
     n+' room'+(n>1?'s':'')+' stand'+(n>1?'':'s')+' on it. Deleting the floor keeps every room — they go back to their folders.',
     'Delete floor', drop);
 }
-function putOnFloor(l, fid){ placeOnFloor(l,fid); l.floorId=fid; treeOpen.add(fid); renderAll(); save(); }
+function putOnFloor(l, fid){ transact('project', ()=>{ placeOnFloor(l,fid); l.floorId=fid; treeOpen.add(fid); }); renderAll(); }
 function newFloorWith(l){
   askText('New floor','Name','Floor', n=>{
     const fl={id:uid(), name:n, parentId:null, extWall:0};
-    S.floors.push(fl); putOnFloor(l, fl.id);
+    transact('project', ()=>{ S.floors.push(fl); putOnFloor(l, fl.id); });
   });
 }
 function putOnFloorDialog(id){
@@ -255,18 +264,20 @@ function mergeUndo(){
   if(!lastMerge) return;
   const m=lastMerge;
   askConfirm('Undo this merge?', 'The two rooms will be restored as they were.', 'Undo merge', ()=>{
-    const a=S.layouts.find(x=>x.id===m.aId);
-    if(a) Object.assign(a, clone(m.aBefore));
-    if(!S.layouts.some(x=>x.id===m.bId)) S.layouts.splice(Math.min(m.bIndex, S.layouts.length), 0, clone(m.bBefore));
-    if(m.aRoomHist) roomHist[m.aId]=m.aRoomHist; else delete roomHist[m.aId];
-    if(m.aFurnHist) furnHist[m.aId]=m.aFurnHist; else delete furnHist[m.aId];
-    if(m.bRoomHist) roomHist[m.bId]=m.bRoomHist; else delete roomHist[m.bId];
-    if(m.bFurnHist) furnHist[m.bId]=m.bFurnHist; else delete furnHist[m.bId];
-    delete floorHist[m.floorId];
-    setLastMerge(null);
-    mergeSel.clear();
-    activateLayout(m.aId);
-    renderTree(); renderAll(); fit(); save();
+    transact('project', ()=>{
+      const a=S.layouts.find(x=>x.id===m.aId);
+      if(a) Object.assign(a, clone(m.aBefore));
+      if(!S.layouts.some(x=>x.id===m.bId)) S.layouts.splice(Math.min(m.bIndex, S.layouts.length), 0, clone(m.bBefore));
+      if(m.aRoomHist) roomHist[m.aId]=m.aRoomHist; else delete roomHist[m.aId];
+      if(m.aFurnHist) furnHist[m.aId]=m.aFurnHist; else delete furnHist[m.aId];
+      if(m.bRoomHist) roomHist[m.bId]=m.bRoomHist; else delete roomHist[m.bId];
+      if(m.bFurnHist) furnHist[m.bId]=m.bFurnHist; else delete furnHist[m.bId];
+      delete floorHist[m.floorId];
+      setLastMerge(null);
+      mergeSel.clear();
+      activateLayout(m.aId);
+    });
+    renderTree(); renderAll(); fit();
   });
 }
 function openFloorMergeMenu(ids, clientX, clientY){

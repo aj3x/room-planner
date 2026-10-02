@@ -6,10 +6,8 @@
    the only line added. The listeners around them stay in index.html, per
    rule 6.
 */
-import {draw} from '../canvas/draw.js';
-import {commitRoom} from '../core/history.js';
 import {L, S} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {parseLen} from '../core/units.js';
 import {$} from '../ui/modal.js';
 import {renderRoom, renderWalls} from './room-panel.js';
@@ -17,10 +15,12 @@ import {renderRoom, renderWalls} from './room-panel.js';
 function bindLen(id,set){
   $(id).addEventListener('change', e=>{
     const mm=parseLen(e.target.value,S.unit);
-    if(isFinite(mm)&&mm>0) set(mm);
-    renderRoom(); renderWalls(); draw(); save(); commitRoom();
+    transact('room', ()=>{ if(isFinite(mm)&&mm>0) set(mm); });
+    renderRoom(); renderWalls();
   });
 }
 
-function setFloorColor(hex){ L().room.floor=hex; $('floorCol').value=hex; draw(); save(); }
+/* Called on every `input` of the colour picker, so it is no undo step of its
+   own; the next room commit carries it. */
+function setFloorColor(hex){ transact('room', ()=>{ L().room.floor=hex; }, {history:false}); $('floorCol').value=hex; }
 export {bindLen, setFloorColor};

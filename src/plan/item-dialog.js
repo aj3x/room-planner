@@ -17,11 +17,11 @@
    setter.
 */
 import {repaint} from '../core/bus.js';
-import {draw, normHex} from '../canvas/draw.js';
+import {normHex} from '../canvas/draw.js';
 import {idFolder, idLeaf, idProblem, retagItem} from '../core/ids.js';
 import {hasOpen, normOpen} from '../core/open-state.js';
 import {PALETTE, S, isCanvasMode, itemOf, uid} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {fmtLen, parseLen, unitWord} from '../core/units.js';
 import {applyTags, rehomeItemId} from '../library/item-folders.js';
 import {nav} from '../library/nav.js';
@@ -129,20 +129,22 @@ function itemDialog(id){
       const bad=idProblem(newId);
       if(bad){ $('iId').closest('details').open=true; moError(bad); return false; }
       if(S.inventory.some(x=>x.id===newId && x.id!==id)){ $('iId').closest('details').open=true; moError('Another item already uses that id'); return false; }
-      if(id){
-        const cur=itemOf(id);
-        Object.assign(cur,{name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,open});
-        applyTags(cur);
-        retagItem(id,newId);
-      }
-      else {
-        const nit={id:newId,name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,folderId:(isCanvasMode(S.mode)?null:nav.libFolderId)||null,open};
-        applyTags(nit);
-        S.inventory.push(nit);
-        // an untouched id is filed under the folder it was created in, same as moving it there
-        if(nit.folderId && newId===dlgId) rehomeItemId(nit, nit.folderId);
-      }
-      renderInv(); renderSel(); draw(); save(); repaint('libAll');
+      transact('lib', ()=>{
+        if(id){
+          const cur=itemOf(id);
+          Object.assign(cur,{name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,open});
+          applyTags(cur);
+          retagItem(id,newId);
+        }
+        else {
+          const nit={id:newId,name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,folderId:(isCanvasMode(S.mode)?null:nav.libFolderId)||null,open};
+          applyTags(nit);
+          S.inventory.push(nit);
+          // an untouched id is filed under the folder it was created in, same as moving it there
+          if(nit.folderId && newId===dlgId) rehomeItemId(nit, nit.folderId);
+        }
+      });
+      renderInv(); renderSel(); repaint('libAll');
     },
     ()=>{
       const sel2=$('iShape');

@@ -25,11 +25,10 @@ import {INV_SCOPES, availableCount} from '../core/floor-space.js';
 import {sizeLabel} from '../canvas/draw.js';
 import {emptyRow} from './room-panel.js';
 
-import {draw} from '../canvas/draw.js';
 import {uniqueId} from '../core/ids.js';
 import {selectClear} from '../core/selection.js';
 import {clone, itemOf} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {flash} from '../ui/flash.js';
 import {inlineEdit} from '../ui/inline-edit.js';
 import {openMenu} from '../ui/menu.js';
@@ -117,7 +116,7 @@ function placeItem(id){
 function renameItem(id){
   const it=itemOf(id), li=invBox.querySelector('li[data-id="'+id+'"]');
   if(!it||!li) return;
-  inlineEdit(li.querySelector('.nm'), it.name, v=>{ if(v){ it.name=v; save(); } renderInv(); renderSel(); draw(); });
+  inlineEdit(li.querySelector('.nm'), it.name, v=>{ if(v) transact('lib', ()=>{ it.name=v; }); renderInv(); renderSel(); });
 }
 function itemMenu(id, anchor){
   const it=itemOf(id); if(!it) return;
@@ -130,8 +129,8 @@ function itemMenu(id, anchor){
       // keep the copy in the same id folder as the original: ikea/kallax/4x2 → ikea/kallax/4x2-copy
       c.id=uniqueId(it.id+'-copy', new Set(S.inventory.map(x=>x.id)));
       c.name=it.name+' copy';
-      S.inventory.splice(S.inventory.indexOf(it)+1, 0, c);
-      renderInv(); save();
+      transact('lib', ()=>{ S.inventory.splice(S.inventory.indexOf(it)+1, 0, c); });
+      renderInv();
     }},
     {sep:true},
     {label:'Delete\u2026', danger:true, fn:()=>deleteItem(id)},
@@ -139,10 +138,15 @@ function itemMenu(id, anchor){
 }
 function deleteItem(id){
   const n=S.layouts.reduce((a,l)=>a+l.placed.filter(p=>p.itemId===id).length,0);
+  /* The placements go too, in every room, and none of that is a furniture undo
+     step: undo cannot bring back an item the library no longer has. */
   const kill=()=>{
-    S.inventory=S.inventory.filter(i=>i.id!==id);
-    for(const l of S.layouts) l.placed=l.placed.filter(p=>p.itemId!==id);
-    selectClear(); renderInv(); renderSel(); draw(); save();
+    transact('lib', ()=>{
+      S.inventory=S.inventory.filter(i=>i.id!==id);
+      for(const l of S.layouts) l.placed=l.placed.filter(p=>p.itemId!==id);
+      selectClear();
+    });
+    renderInv(); renderSel();
   };
   if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+'. Those will be removed too.', 'Delete', kill);
   else kill();

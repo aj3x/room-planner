@@ -29,7 +29,7 @@ import {fit, resize} from '../canvas/view.js';
 import {floorEntry, updateHistButtons} from '../core/history.js';
 import {selectClear, setAlignGuides, setAlignNote, setFloorGuides, setFloorSel, setFloorSnapNote, setRoomSel} from '../core/selection.js';
 import {L, S, isCanvasMode} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {$} from '../ui/modal.js';
 import {applyPanes} from '../ui/panels.js';
 import {renderOpen, renderRoomSel, renderWalls} from './room-panel.js';
@@ -50,8 +50,7 @@ function syncModeParam(){
 let pendingFit=false;
 function setPendingFit(v){ pendingFit = v; }
 function setMode(m){
-  S.mode=m;
-  if(isCanvasMode(m)) S.planMode=m;
+  transact('prefs', ()=>{ S.mode=m; if(isCanvasMode(m)) S.planMode=m; });
   if(m==='furniture') setRoomSel(null);
   else if(m==='room') selectClear();
   else if(m==='floor'){ selectClear(); setRoomSel(null); setFloorSel(L().floorId ? L().id : null); floorEntry(); }
@@ -67,7 +66,6 @@ function setMode(m){
     renderRoomSel(); renderWalls(); renderOpen(); renderSel(); updateHistButtons(); draw();
   }
   else repaint('libAll');
-  save();
   syncModeParam();
 }
 /* places (Plan / Library / Marketplace) live in the header; the Room/Furniture mode lives on the canvas it changes */
@@ -97,8 +95,8 @@ function renderAll(){
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */
 function togglePane(side){
   if(!wideLayout()) return;
-  if(side==='left') S.leftOpen=!S.leftOpen; else S.rightOpen=!S.rightOpen;
-  closeMenu(); applyPanes(); save(); resize();
+  transact('prefs', ()=>{ if(side==='left') S.leftOpen=!S.leftOpen; else S.rightOpen=!S.rightOpen; }, {canvas:false});   // resize() redraws
+  closeMenu(); applyPanes(); resize();
 }
 /* the mode also lives in ?mode=, so a refresh (or a shared link) lands back in the same mode */
 function paramMode(){

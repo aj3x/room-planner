@@ -26,10 +26,9 @@ import {deleteCorner, splitWall} from '../canvas/corners.js';
 import {draw} from '../canvas/draw.js';
 import {squareCorner} from '../canvas/snap.js';
 import {bbox, norm360, polyArea} from '../core/geometry.js';
-import {commitRoom} from '../core/history.js';
 import {setRoomSel} from '../core/selection.js';
 import {openOf, roomMode} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {fmtArea, parseLen} from '../core/units.js';
 import {openingDispOffset, setOpeningDispOffset} from '../model/openings.js';
 import {clampOpenings, isRectRoom, iwallAngle, iwallOf, nearestOnWalls, pillarOf, setIWallAngle, setIWallEndDist, setIWallLen, setRectSize, setWallAngle, setWallLen, syncWallOff, tryRoomEdit} from '../model/walls.js';
@@ -108,8 +107,8 @@ function renderRoom(){
       <div class="field"><label for="roomD">Depth</label><input type="text" class="len" id="roomD" value="${esc(fmtLen(b.h,S.unit))}"></div>`;
     const go=()=>{
       const w=parseLen($('roomW').value,S.unit), d=parseLen($('roomD').value,S.unit);
-      if(isFinite(w)&&isFinite(d)&&w>200&&d>200) setRectSize(w,d);
-      renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+      transact('room', ()=>{ if(isFinite(w)&&isFinite(d)&&w>200&&d>200) setRectSize(w,d); });
+      renderRoom(); renderWalls(); renderRoomSel();
     };
     $('roomW').addEventListener('change',go);
     $('roomD').addEventListener('change',go);
@@ -127,14 +126,18 @@ function renderRoom(){
 }
 
 function deletePillar(id){
-  L().room.pillars=L().room.pillars.filter(p=>p.id!==id);
-  if(roomSel&&roomSel.kind==='pillar'&&roomSel.id===id) setRoomSel(null);
-  renderRoomSel(); renderWalls(); draw(); save(); commitRoom();
+  transact('room', ()=>{
+    L().room.pillars=L().room.pillars.filter(p=>p.id!==id);
+    if(roomSel&&roomSel.kind==='pillar'&&roomSel.id===id) setRoomSel(null);
+  });
+  renderRoomSel(); renderWalls();
 }
 function deleteIWall(id){
-  L().room.iwalls=L().room.iwalls.filter(w=>w.id!==id);
-  if(roomSel&&roomSel.kind==='iwall'&&roomSel.id===id) setRoomSel(null);
-  renderRoomSel(); renderWalls(); draw(); save(); commitRoom();
+  transact('room', ()=>{
+    L().room.iwalls=L().room.iwalls.filter(w=>w.id!==id);
+    if(roomSel&&roomSel.kind==='iwall'&&roomSel.id===id) setRoomSel(null);
+  });
+  renderRoomSel(); renderWalls();
 }
 
 function renderRoomSel(){
@@ -168,13 +171,13 @@ function renderWallProps(){
   $('wOff').addEventListener('click',()=>toggleWallOff(i));
   $('wLen').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
-    if(isFinite(v)&&v>=100) setWallLen(i,v); else flash('Give the wall a length');
-    renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+    transact('room', ()=>{ if(isFinite(v)&&v>=100) setWallLen(i,v); else flash('Give the wall a length'); });
+    renderRoom(); renderWalls(); renderRoomSel();
   });
   $('wAng').addEventListener('change', e=>{
     const v=parseFloat(e.target.value);
-    if(isFinite(v)) setWallAngle(i,v);
-    renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+    transact('room', ()=>{ if(isFinite(v)) setWallAngle(i,v); });
+    renderRoom(); renderWalls(); renderRoomSel();
   });
   if(!off){
     $('wDoor').addEventListener('click',()=>openingDialog(null,'door',i));
@@ -193,8 +196,8 @@ function renderCornerProps(){
     <div class="row actions"><button class="btn sm" id="cSq">Square this corner</button><button class="btn sm danger" id="cDel" ${P.length<=3?'disabled title="A room needs at least three corners"':''}>Remove corner</button></div>`;
   const go=()=>{
     const x=parseLen($('cX').value,S.unit), y=parseLen($('cY').value,S.unit);
-    if(isFinite(x)&&isFinite(y)) tryRoomEdit(()=>{ P[i]=[b.x0+x, b.y0+y]; });
-    renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+    transact('room', ()=>{ if(isFinite(x)&&isFinite(y)) tryRoomEdit(()=>{ P[i]=[b.x0+x, b.y0+y]; }); });
+    renderRoom(); renderWalls(); renderRoomSel();
   };
   $('cX').addEventListener('change',go);
   $('cY').addEventListener('change',go);
@@ -202,21 +205,23 @@ function renderCornerProps(){
   $('cDel').addEventListener('click',()=>deleteCorner(i));
 }
 /* Taking a wall away takes its doors and windows with it — there is nothing left for
-   them to sit in. It all goes through commitRoom, so one undo brings the wall and
+   them to sit in. It is all one room transaction, so one undo brings the wall and
    everything that was in it back together. */
 function toggleWallOff(i){
   const l=L(), room=l.room;
   syncWallOff(room);
   if(wallIsOff(room,i)){
-    room.wallOff[i]=false;
-    renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
+    transact('room', ()=>{ room.wallOff[i]=false; });
+    renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
     return;
   }
   const inWall=l.openings.filter(o=>o.wall===i);
   const apply=()=>{
-    room.wallOff[i]=true;
-    if(inWall.length) l.openings=l.openings.filter(o=>o.wall!==i);
-    renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); draw(); save(); commitRoom();
+    transact('room', ()=>{
+      room.wallOff[i]=true;
+      if(inWall.length) l.openings=l.openings.filter(o=>o.wall!==i);
+    });
+    renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
   };
   if(!inWall.length){ apply(); return; }
   askConfirm('Open this side?',
@@ -238,13 +243,15 @@ function renderPillarProps(){
     <p class="hint">Drag it in the plan to move it.</p>
     <div class="row actions"><button class="btn sm danger" id="plDel">Remove pillar</button></div>`;
   const go=()=>{
-    pl.shape.type=$('plShape').value;
     const w=parseLen($('plW').value,S.unit), d=parseLen($('plD').value,S.unit);
-    if(isFinite(w)&&w>0) pl.shape.w=w;
-    if(isFinite(d)&&d>0) pl.shape.d=d;
     const rot=parseFloat($('plRot').value);
-    if(isFinite(rot)) pl.rot=norm360(rot);
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+    transact('room', ()=>{
+      pl.shape.type=$('plShape').value;
+      if(isFinite(w)&&w>0) pl.shape.w=w;
+      if(isFinite(d)&&d>0) pl.shape.d=d;
+      if(isFinite(rot)) pl.rot=norm360(rot);
+    });
+    renderWalls(); renderRoomSel();
   };
   $('plShape').addEventListener('change',go);
   $('plW').addEventListener('change',go);
@@ -267,36 +274,38 @@ function renderIWallProps(){
     <div class="row actions"><button class="btn sm danger" id="iwDel">Remove wall</button></div>`;
   $('iwLen').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
-    if(isFinite(v)&&v>=50) setIWallLen(w,v); else flash('Give the wall a length');
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+    transact('room', ()=>{ if(isFinite(v)&&v>=50) setIWallLen(w,v); else flash('Give the wall a length'); });
+    renderWalls(); renderRoomSel();
   });
   $('iwAng').addEventListener('change', e=>{
     const v=parseFloat(e.target.value);
-    if(isFinite(v)) setIWallAngle(w,v);
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+    transact('room', ()=>{ if(isFinite(v)) setIWallAngle(w,v); });
+    renderWalls(); renderRoomSel();
   });
   $('iwT').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
-    if(isFinite(v)&&v>=10) w.t=v; else flash('Give the wall a thickness');
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+    transact('room', ()=>{ if(isFinite(v)&&v>=10) w.t=v; else flash('Give the wall a thickness'); });
+    renderWalls(); renderRoomSel();
   });
   $('iwDA').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
-    if(isFinite(v)&&v>=0) setIWallEndDist(w,'a',v);
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+    transact('room', ()=>{ if(isFinite(v)&&v>=0) setIWallEndDist(w,'a',v); });
+    renderWalls(); renderRoomSel();
   });
   $('iwDB').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
-    if(isFinite(v)&&v>=0) setIWallEndDist(w,'b',v);
-    renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+    transact('room', ()=>{ if(isFinite(v)&&v>=0) setIWallEndDist(w,'b',v); });
+    renderWalls(); renderRoomSel();
   });
   $('iwDel').addEventListener('click',()=>deleteIWall(w.id));
 }
 
 function deleteOpening(id){
-  L().openings=L().openings.filter(o=>o.id!==id);
-  if(roomSel&&roomSel.id===id) setRoomSel(null);
-  renderOpen(); renderRoomSel(); draw(); save(); commitRoom();
+  transact('room', ()=>{
+    L().openings=L().openings.filter(o=>o.id!==id);
+    if(roomSel&&roomSel.id===id) setRoomSel(null);
+  });
+  renderOpen(); renderRoomSel();
 }
 function renderOpeningProps(){
   const o=openOf(roomSel.id);
@@ -332,15 +341,16 @@ function renderOpeningProps(){
     <p class="hint">Wall ${o.wall+1} is ${esc(fmtLen(len,S.unit))} long. Drag the circle in the plan to slide it along, or onto another wall.</p>
     <div class="row actions"><button class="btn sm danger" id="oDel">Delete</button></div>`;
   const go=()=>{
-    const wv=parseLen($('oW').value,S.unit);
-    o.wall=+$('oWall').value;
-    o.corner=$('oCorner').value==='ccw'?'ccw':'cw';
-    const l2=wallOf(o.wall).len;
-    if(isFinite(wv)&&wv>=100) o.width=Math.min(wv,l2);
-    const ov=parseLen($('oOff').value,S.unit);
-    if(isFinite(ov)) setOpeningDispOffset(o,l2,ov);
-    clampOpenings();
-    renderOpen(); renderRoomSel(); draw(); save(); commitRoom();
+    const wv=parseLen($('oW').value,S.unit), ov=parseLen($('oOff').value,S.unit);
+    transact('room', ()=>{
+      o.wall=+$('oWall').value;
+      o.corner=$('oCorner').value==='ccw'?'ccw':'cw';
+      const l2=wallOf(o.wall).len;
+      if(isFinite(wv)&&wv>=100) o.width=Math.min(wv,l2);
+      if(isFinite(ov)) setOpeningDispOffset(o,l2,ov);
+      clampOpenings();
+    });
+    renderOpen(); renderRoomSel();
   };
   $('oWall').addEventListener('change',go);
   $('oW').addEventListener('change',go);
@@ -348,18 +358,17 @@ function renderOpeningProps(){
   $('oOff').addEventListener('change',go);
   if(isDoor){
     $('oType').addEventListener('change', ()=>{
-      o.dtype=$('oType').value;
+      transact('room', ()=>{ o.dtype=$('oType').value; });
       const hb=$('oHingeBits'); if(hb) hb.hidden = o.dtype!=='hinge' && o.dtype!=='bifold';
       $('roomSelTitle').textContent=KIND(o);
-      renderOpen(); draw(); save(); commitRoom();
+      renderOpen();
     });
-    $('oHinge').addEventListener('change', ()=>{ o.hinge=$('oHinge').value; draw(); save(); commitRoom(); });
-    $('oSwing').addEventListener('change', ()=>{ o.swing=$('oSwing').value; draw(); save(); commitRoom(); });
+    $('oHinge').addEventListener('change', ()=>transact('room', ()=>{ o.hinge=$('oHinge').value; }));
+    $('oSwing').addEventListener('change', ()=>transact('room', ()=>{ o.swing=$('oSwing').value; }));
   } else {
     $('oSill').addEventListener('change', ()=>{
       const v=parseLen($('oSill').value,S.unit);
-      o.sill = isFinite(v) ? v : 900;
-      save(); commitRoom();
+      transact('room', ()=>{ o.sill = isFinite(v) ? v : 900; });
     });
   }
   $('oDel').addEventListener('click',()=>deleteOpening(o.id));
@@ -372,9 +381,11 @@ function addPillar(){
   if(!roomMode()) setMode('room');
   const b=bbox(RP()), c=centroid(RP())||[(b.x0+b.x1)/2,(b.y0+b.y1)/2];
   const pl={id:uid(), x:c[0], y:c[1], rot:0, shape:{type:'rect',w:300,d:300}};
-  L().room.pillars.push(pl);
-  setRoomSel({kind:'pillar', id:pl.id});
-  renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+  transact('room', ()=>{
+    L().room.pillars.push(pl);
+    setRoomSel({kind:'pillar', id:pl.id});
+  });
+  renderWalls(); renderRoomSel();
 }
 
 /* double-clicking a wall — in the plan or in the wall list — types its length in.
@@ -395,10 +406,13 @@ function wallDialog(i){
       const len=parseLen($('wdLen').value,S.unit);
       if(!isFinite(len)||len<100){ moError('Give the wall a length of at least 100 mm'); return false; }
       const deg=parseFloat($('wdAng').value);
-      let ok=true;
-      if(isFinite(deg) && Math.round(deg)!==Math.round(wallAngle(i))) ok=setWallAngle(i,deg);
-      if(ok) ok=setWallLen(i,len);
-      renderRoom(); renderWalls(); renderRoomSel(); draw(); save(); commitRoom();
+      const ok=transact('room', ()=>{
+        let ok=true;
+        if(isFinite(deg) && Math.round(deg)!==Math.round(wallAngle(i))) ok=setWallAngle(i,deg);
+        if(ok) ok=setWallLen(i,len);
+        return ok;
+      });
+      renderRoom(); renderWalls(); renderRoomSel();
       if(!ok) return false;   // tryRoomEdit rolled it back and flashed why — stay open
     });
 }

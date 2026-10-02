@@ -24,7 +24,7 @@ import {S, floorMode, floorLayouts, childFloors, childFolders, childLayouts,
 import {mergeSel, treeOpen} from '../core/selection.js';
 import {curFloorId} from '../core/history.js';
 import {inlineEdit} from '../ui/inline-edit.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {resetMeasureState} from '../canvas/measure-tool.js';
 import {seedHistFor} from '../core/history.js';
 import {setFloorSel, setRoomSel, setSel} from '../core/selection.js';
@@ -95,17 +95,17 @@ const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layo
 function renameFolder(id){
   const f=folderOf(id), row=treeRowEl(id);
   if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderTree(); });
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('project', ()=>{ f.name=v; }); renderTree(); });
 }
 function renameLayout(id){
   const l=S.layouts.find(x=>x.id===id), row=treeRowEl(id);
   if(!l||!row) return;
-  inlineEdit(row.querySelector('.nm'), l.name, v=>{ if(v){ l.name=v; save(); } renderTree(); });
+  inlineEdit(row.querySelector('.nm'), l.name, v=>{ if(v) transact('project', ()=>{ l.name=v; }); renderTree(); });
 }
 function renameFloor(id){
   const f=floorOf(id), row=treeRowEl(id);
   if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v){ f.name=v; save(); } renderTree(); });
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('project', ()=>{ f.name=v; }); renderTree(); });
 }
 
 
@@ -141,9 +141,11 @@ function folderDescendant(id,parentId){
 function enterFloor(id){
   const rooms=floorLayouts(id);
   if(!rooms.length){ flash('Add a room to this floor first'); return; }
-  if(curFloorId()!==id) activateLayout(rooms.find(l=>l.id===S.active)?.id || rooms[0].id);
-  setMode('floor');
-  renderAll(); save();
+  transact('project', ()=>{
+    if(curFloorId()!==id) activateLayout(rooms.find(l=>l.id===S.active)?.id || rooms[0].id);
+    setMode('floor');
+  });
+  renderAll();
 }
 
 function folderMenu(id, anchor){
@@ -151,11 +153,11 @@ function folderMenu(id, anchor){
   openMenu(anchor, [
     {label:'Rename', fn:()=>renameFolder(id)},
     {label:'Add a room here', fn:()=>askText('New room','Name','Room', n=>{
-      const l=blankLayout(n,id); S.layouts.push(l); treeOpen.add(id); activateLayout(l.id);
-      renderAll(); fit(); save();
+      transact('project', ()=>{ const l=blankLayout(n,id); S.layouts.push(l); treeOpen.add(id); activateLayout(l.id); });
+      renderAll(); fit();
     })},
     {label:'Add a subfolder', fn:()=>askText('New folder','Name','Folder', n=>{
-      S.folders.push({id:uid(),name:n,parentId:id,tags:[]}); treeOpen.add(id); renderTree(); save();
+      transact('project', ()=>{ S.folders.push({id:uid(),name:n,parentId:id,tags:[]}); treeOpen.add(id); }); renderTree();
     })},
     {sep:true},
     {label:'Move to folder\u2026', fn:()=>moveDialog('folder',id)},
@@ -167,13 +169,13 @@ function folderMenu(id, anchor){
 function layoutMenu(id, anchor){
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
   openMenu(anchor, [
-    {label:'Open', fn:()=>{ activateLayout(id); renderAll(); fit(); save(); }},
+    {label:'Open', fn:()=>{ transact('project', ()=>activateLayout(id)); renderAll(); fit(); }},
     {label:'Rename', fn:()=>renameLayout(id)},
     {label:'Duplicate', fn:()=>duplicateLayout(id)},
     {label:'Split room\u2026', fn:()=>startSplitRoom(id)},
     {label:'Move to folder\u2026', fn:()=>moveDialog('layout',id)},
     l.floorId
-      ? {label:'Take off \u201c'+(floorOf(l.floorId)||{name:'the floor'}).name+'\u201d', fn:()=>{ l.floorId=null; renderAll(); save(); }}
+      ? {label:'Take off \u201c'+(floorOf(l.floorId)||{name:'the floor'}).name+'\u201d', fn:()=>{ transact('project', ()=>{ l.floorId=null; }); renderAll(); }}
       : (S.floors.length
           ? {label:'Put on a floor\u2026', fn:()=>putOnFloorDialog(id)}
           : {label:'Put on a new floor\u2026', fn:()=>newFloorWith(l)}),
@@ -192,8 +194,8 @@ function folderTagsDialog(id){
     <p class="hint">Type to pick from tags you already use. Tab or comma adds one, backspace removes the last.</p>
     <p class="hint">When you switch into a room in this folder from a room in a different folder, the item list's tag filter is set to this automatically. Switching between rooms inside this same folder leaves your filter as you left it.</p>`,
     'Save', ()=>{
-      f.tags=tagFieldValue('fTags');
-      renderTree(); save();
+      transact('project', ()=>{ f.tags=tagFieldValue('fTags'); });
+      renderTree();
     },
     ()=>{ mountTagField('fTags', f.tags||[]); });
 }
@@ -211,20 +213,22 @@ function deleteFolder(id){
   const up = folderOf(f.parentId) ? '\u201c'+folderOf(f.parentId).name+'\u201d' : 'the top level';
   const {folders,layouts}=folderContents(id);
   const drop=keep=>{
-    if(keep){
-      for(const sub of childFolders(id)) sub.parentId=f.parentId;
-      for(const l of childLayouts(id)) l.folderId=f.parentId;
-    } else {
-      const killF=new Set(folders.map(x=>x.id)), killL=new Set(layouts.map(x=>x.id));
-      S.layouts=S.layouts.filter(l=>!killL.has(l.id));
-      S.folders=S.folders.filter(x=>!killF.has(x.id));
-      for(const k of killF) treeOpen.delete(k);
-    }
-    S.folders=S.folders.filter(x=>x.id!==id);
-    treeOpen.delete(id);
-    if(!S.layouts.length) S.layouts=[blankLayout()];
-    if(!S.layouts.some(l=>l.id===S.active)) activateLayout(S.layouts[0].id);
-    renderAll(); fit(); save();
+    transact('project', ()=>{
+      if(keep){
+        for(const sub of childFolders(id)) sub.parentId=f.parentId;
+        for(const l of childLayouts(id)) l.folderId=f.parentId;
+      } else {
+        const killF=new Set(folders.map(x=>x.id)), killL=new Set(layouts.map(x=>x.id));
+        S.layouts=S.layouts.filter(l=>!killL.has(l.id));
+        S.folders=S.folders.filter(x=>!killF.has(x.id));
+        for(const k of killF) treeOpen.delete(k);
+      }
+      S.folders=S.folders.filter(x=>x.id!==id);
+      treeOpen.delete(id);
+      if(!S.layouts.length) S.layouts=[blankLayout()];
+      if(!S.layouts.some(l=>l.id===S.active)) activateLayout(S.layouts[0].id);
+    });
+    renderAll(); fit();
   };
   if(!folders.length && !layouts.length){
     askConfirm('Delete this folder?', '\u201c'+f.name+'\u201d is empty.', 'Delete folder', ()=>drop(false));
@@ -252,18 +256,19 @@ function duplicateLayout(id){
   remapMeasures(c, map);
   /* a copy stays on the same floor, nudged clear so it isn't hidden under the original */
   if(c.floorId) c.floorPlace={x:(c.floorPlace.x||0)+500, y:(c.floorPlace.y||0)+500, rot:c.floorPlace.rot||0};
-  S.layouts.splice(S.layouts.indexOf(src)+1, 0, c);
-  activateLayout(c.id);
-  renderAll(); save();
+  transact('project', ()=>{ S.layouts.splice(S.layouts.indexOf(src)+1, 0, c); activateLayout(c.id); });
+  renderAll();
 }
 function deleteLayout(id){
   if(S.layouts.length===1){ flash('You need at least one room'); return; }
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
   askConfirm('Delete this room?', '\u201c'+l.name+'\u201d will be removed. Your library stays.', 'Delete', ()=>{
-    S.layouts=S.layouts.filter(x=>x.id!==id);
-    if(S.active===id) activateLayout(S.layouts[0].id);
-    if(lastMerge && lastMerge.aId===id) setLastMerge(null);
-    renderAll(); fit(); save();
+    transact('project', ()=>{
+      S.layouts=S.layouts.filter(x=>x.id!==id);
+      if(S.active===id) activateLayout(S.layouts[0].id);
+      if(lastMerge && lastMerge.aId===id) setLastMerge(null);
+    });
+    renderAll(); fit();
   });
 }
 
@@ -284,15 +289,17 @@ function moveDialog(kind,id){
     <label class="stack-label" for="moFolder">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
-      if(kind==='folder') obj.parentId=v; else { obj.folderId=v; obj.floorId=null; }
-      if(v) treeOpen.add(v);
-      renderTree(); renderInv(); save();
+      transact('project', ()=>{
+        if(kind==='folder') obj.parentId=v; else { obj.folderId=v; obj.floorId=null; }
+        if(v) treeOpen.add(v);
+      });
+      renderTree(); renderInv();
     });
 }
 /* The Rooms list holds more than one kind of thing, so + stays the one-click common case
    (a new room) and everything rarer sits behind the ⋯ with a word for a label. */
 const newFolder = () =>
-  askText('New folder','Name','Folder', n=>{ S.folders.push({id:uid(),name:n,parentId:null,tags:[]}); renderTree(); save(); });
+  askText('New folder','Name','Folder', n=>{ transact('project', ()=>{ S.folders.push({id:uid(),name:n,parentId:null,tags:[]}); }); renderTree(); });
 let dragTree=null;
 function setDragTree(v){ dragTree=v; }
 

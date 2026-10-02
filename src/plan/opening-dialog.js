@@ -3,11 +3,9 @@
    Extracted from index.html in Phase 3 as part of the 49-name SCC commit,
    move-only.
 */
-import {draw} from '../canvas/draw.js';
-import {commitRoom} from '../core/history.js';
 import {setRoomSel} from '../core/selection.js';
 import {L, RP, S, openOf, roomMode, uid} from '../core/state.js';
-import {save} from '../core/store.js';
+import {transact} from '../core/tx.js';
 import {fmtLen, parseLen} from '../core/units.js';
 import {openingDispOffset} from '../model/openings.js';
 import {wallIsOff, wallOf} from '../model/walls.js';
@@ -60,11 +58,13 @@ function openingDialog(id, kind, wallIdx){
         swing: k==='door' ? $('dSwing').value : 'in',
         sill:  k==='window' ? (parseLen($('dSill').value,S.unit)||900) : undefined
       };
-      if(id){ const i=L().openings.findIndex(x=>x.id===id); L().openings[i]=rec; }
-      else L().openings.push(rec);
-      setRoomSel({kind:'opening', id:rec.id});
-      if(!roomMode()) setMode('room');
-      renderOpen(); renderRoomSel(); draw(); save(); commitRoom();
+      transact('room', ()=>{
+        if(id){ const i=L().openings.findIndex(x=>x.id===id); L().openings[i]=rec; }
+        else L().openings.push(rec);
+        setRoomSel({kind:'opening', id:rec.id});
+        if(!roomMode()) setMode('room');
+      });
+      renderOpen(); renderRoomSel();
     },
     ()=>{
       if(k!=='door') return;
