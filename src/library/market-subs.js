@@ -46,7 +46,8 @@ async function ensureDefaultMarket(){
     transact('lib', ()=>{ sub.isDefault=true; });
   }catch(e){ /* offline, or unreachable right now — try again next launch */ }
 }
-async function subscribeMarket(url){
+/* Fetch and validate a marketplace's manifest and index. Commits nothing. */
+async function fetchMarket(url){
   let manifest;
   try{ manifest=await fetchJSON(url); }
   catch(e){ throw new Error('Couldn’t reach that marketplace ('+e.message+')'); }
@@ -63,19 +64,31 @@ async function subscribeMarket(url){
       throw new Error('One of that marketplace’s index shards is invalid');
     for(const it of sh.items) if(it&&it.id&&!idProblem(it.id)) items.push({id:it.id, name:it.name||it.id, tags:Array.isArray(it.tags)?it.tags:[]});
   }
+  return {manifest, items};
+}
+async function subscribeMarket(url){
+  const {manifest, items}=await fetchMarket(url);
   const sub={id:uid(), url, name:manifest.name||url, version:manifest.version, itemURL:manifest.itemURL||'items/{id}.json', addedAt:Date.now()};
   transact('lib', ()=>{ S.marketSubs.push(sub); marketIndexCache.set(sub.id, items); });
   return sub;
 }
-async function reloadMarketSub(sub){
-  const fresh=await subscribeMarket(sub.url);        // validates + refetches fully under a new id
-  transact('lib', ()=>{
-    sub.name=fresh.name; sub.version=fresh.version; sub.itemURL=fresh.itemURL;
-    marketIndexCache.set(sub.id, marketIndexCache.get(fresh.id));
-    marketIndexCache.delete(fresh.id);
-    marketItemCache.delete(sub.id);
-    S.marketSubs=S.marketSubs.filter(s=>s.id!==fresh.id);
-  });
+/* One refetch per subscription at a time. The Marketplace page asks for a
+   subscription it has no index for every time it paints, and it repaints on
+   every library commit (it is an effect), so without this a slow fetch would
+   be asked for again on each of them. */
+const reloading=new Map();
+function reloadMarketSub(sub){
+  if(!reloading.has(sub.id)) reloading.set(sub.id, (async()=>{
+    try{
+      const {manifest, items}=await fetchMarket(sub.url);
+      transact('lib', ()=>{
+        sub.name=manifest.name||sub.url; sub.version=manifest.version; sub.itemURL=manifest.itemURL||'items/{id}.json';
+        marketIndexCache.set(sub.id, items);
+        marketItemCache.delete(sub.id);
+      });
+    } finally { reloading.delete(sub.id); }
+  })());
+  return reloading.get(sub.id);
 }
 function removeMarketSub(sub){
   transact('lib', ()=>{
