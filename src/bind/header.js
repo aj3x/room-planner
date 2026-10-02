@@ -21,8 +21,7 @@ import { readImport, importDialog } from '../io/import.js';
 import { exportDialog } from '../io/export.js';
 import { transact } from '../core/tx.js';
 import { S, isCanvasMode } from '../core/state.js';
-import { renderAll, setMode } from '../plan/mode.js';
-import { renderSnap } from '../plan/room-panel.js';
+import { setMode } from '../plan/mode.js';
 import { flash } from '../ui/flash.js';
 import { $ } from '../ui/modal.js';
 
@@ -34,7 +33,7 @@ function bindHeader(){
     else if(n!==S.mode) setMode(n);
   });
 
-  $('unitSel').addEventListener('change', e=>{ transact('prefs', ()=>{ S.unit=e.target.value; }); renderSnap(); renderAll(); });
+  $('unitSel').addEventListener('change', e=>transact('prefs', ()=>{ S.unit=e.target.value; }));
 
   $('btnExport').addEventListener('click', exportDialog);
 

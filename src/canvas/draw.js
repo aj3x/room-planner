@@ -129,8 +129,7 @@ function drawCustomOverlay(){
    dimension lines use it too.
 
    The measure tool's pick/hit-test/bar functions live in measure-tool.js. */
-import {measureOn, measureStart, measureHover, measureHoverId, measureSel,
-        measureCursor, measureBoxes, setMeasureBoxes} from './measure-state.js';
+import {measureOn, measureStart, measureHover, measureHoverId, measureSel, measureCursor, measureBoxes} from './measure-state.js';
 import {measuresOf, measureObjs, objOfAnchor, anchorKey, anchorGeom,
         closestBetween} from '../model/measures.js';
 import {S} from '../core/state.js';
@@ -208,25 +207,25 @@ function drawDimension(r,color,C,dashed){
   return {p,q,x:cx-w/2,y:cy-h/2,w,h};
 }
 function drawMeasures(){
-  setMeasureBoxes([]);
-  if(!S.showMeasure && !measureOn) return;
+  measureBoxes.value = [];
+  if(!S.showMeasure && !measureOn.value) return;
   const C=PAL(), objs=measureObjs();
-  if(measureOn){
-    if(measureHover) drawAnchorChoices(measureHover,objs,C);
-    if(measureStart) drawAnchorPart(measureStart,objs,C);
+  if(measureOn.value){
+    if(measureHover.value) drawAnchorChoices(measureHover.value,objs,C);
+    if(measureStart.value) drawAnchorPart(measureStart.value,objs,C);
   }
   for(const m of measuresOf()){
     const A=anchorGeom(m.a,objs), B=anchorGeom(m.b,objs);
     if(!A||!B) continue;
-    const on = measureOn && (m.id===measureSel || m.id===measureHoverId);
+    const on = measureOn.value && (m.id===measureSel.value || m.id===measureHoverId.value);
     if(on){ drawAnchorPart(m.a,objs,C); drawAnchorPart(m.b,objs,C); }
-    measureBoxes.push(Object.assign({id:m.id}, drawDimension(closestBetween(A,B), on?C.accent:C.ink, C, false)));
+    measureBoxes.value.push(Object.assign({id:m.id}, drawDimension(closestBetween(A,B), on?C.accent:C.ink, C, false)));
   }
-  if(measureOn && measureStart){
+  if(measureOn.value && measureStart.value){
     // the measurement being made: to the anchor under the pointer, or to the pointer itself
-    const A=anchorGeom(measureStart,objs);
-    const B = measureHover && anchorKey(measureHover)!==anchorKey(measureStart) ? anchorGeom(measureHover,objs)
-      : measureCursor ? {pts:[measureCursor]} : null;
+    const A=anchorGeom(measureStart.value,objs);
+    const B = measureHover.value && anchorKey(measureHover.value)!==anchorKey(measureStart.value) ? anchorGeom(measureHover.value,objs)
+      : measureCursor.value ? {pts:[measureCursor.value]} : null;
     if(A&&B) drawDimension(closestBetween(A,B), C.accent, C, true);
   }
 }
@@ -254,7 +253,7 @@ function drawMeasures(){
    is only read inside a function body, so nothing is touched during module
    evaluation and no binding is in TDZ when it matters. */
 import {PARALLEL_TOL} from './merge-rooms.js';
-import {drag, wallDrawShift, wallDrawState} from './interaction-state.js';
+import {drag, splitDrawState, wallDrawShift, wallDrawState} from './interaction-state.js';
 import {H, W, axisLockFrom, snapPt, view, wx, wy} from './view.js';
 import {floorIWall, floorInst, floorPt, floorPtInv, floorPts, floorXf, ptsAt} from '../core/floor-space.js';
 import {bbox, centroid, pointInPoly, polyArea, polyHit, shapePoly, worldPoly} from '../core/geometry.js';
@@ -270,10 +269,13 @@ import {$} from '../ui/modal.js';
 import {esc, plural} from '../ui/panels.js';
 import {drawSplitOverlay} from './split-room.js';
 import {drawWalkOverlay} from './walk-overlay.js';
+import {effect, planRev} from '../core/signals.js';
+import {isCanvasMode} from '../core/state.js';
 
 /* ------------------------- drawing ------------------------- */
 
 function draw(){
+  if(drawPending){ cancelAnimationFrame(drawPending); drawPending=0; }
   if(floorMode()){ drawFloor(); return; }
   const r=L().room, P=RP(), C=PAL();
   ctx.clearRect(0,0,W,H);
@@ -668,11 +670,28 @@ function updateFloorReadout(fl, members){
   let area=0; for(const m of members) area+=Math.abs(polyArea(m.P));
   el.textContent = plural(members.length,'room')+' · '+fmtArea(area,S.unit);
 }
-let drawPending=false;
+/* One draw per frame, however many changes asked for it. A synchronous draw()
+   makes a pending one redundant, so draw() cancels it (see the top of draw). */
+let drawPending=0;
 function scheduleDraw(){
   if(drawPending) return;
-  drawPending=true;
-  requestAnimationFrame(()=>{ drawPending=false; draw(); });
+  drawPending=requestAnimationFrame(()=>{ drawPending=0; draw(); });
+}
+
+/* The canvas as an effect: whatever draw() shows that is a signal — the
+   committed project (planRev, bumped by transact/preview/undo), the
+   selection, the gesture and measure-tool state — schedules one draw for the
+   next frame when it changes. Mounted from boot(). The Library places hide
+   the canvas, and setMode() draws on the way back to it. */
+function mountCanvas(){
+  return effect(()=>{
+    planRev.value;
+    sel.value; selSet.value; roomSel.value; floorSel.value; mergeSel.value;
+    floorGuides.value; floorSnapNote.value; alignGuides.value; alignNote.value;
+    drag.value; drawState.value; drawCursor.value; wallDrawState.value; wallDrawShift.value; splitDrawState.value;
+    measureOn.value; measureStart.value; measureHover.value; measureHoverId.value; measureSel.value; measureCursor.value;
+    if(isCanvasMode(S.mode)) scheduleDraw();
+  });
 }
 function gridStep(){
   const imp = S.unit==='ftin'||S.unit==='in';
@@ -1042,5 +1061,5 @@ export {CANVAS, darkMQ, PAL, setForceLightCanvas,
         addPoly, pathPoly, clip, normHex, hexA, pickText,
         drawAlignGuides, drawSquareTick, drawCustomOverlay,
         drawDimension, drawMeasures,
-        draw, scheduleDraw, floorMembers, snapFloorPlace, floorEdgeDepths,
+        draw, scheduleDraw, mountCanvas, floorMembers, snapFloorPlace, floorEdgeDepths,
         pickFloorRoom, floorRotHandle, handlePos, sizeLabel};

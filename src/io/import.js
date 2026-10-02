@@ -5,8 +5,9 @@
    byte-identical to what stood there, and the `export` block at the end is
    the only line added.
 
-   It was blocked on renderAll and renderLibAll, the two things applyImport
-   calls once the new state is in place; both have moved.
+   One transact('project') covers either path, so every panel, the Library
+   and the canvas repaint from the new state as effects; this module names
+   none of them.
 
    The $('btnImport') registration stays in index.html, per rule 6.
 */
@@ -16,15 +17,12 @@ import {furnHist, roomHist, seedHistFor} from '../core/history.js';
 import {uniqueId} from '../core/ids.js';
 import {migrate, normItem, normLayout, remapMeasures} from '../core/migrate.js';
 import {roomSel, sel} from '../core/selection.js';
-import {S, clone, floorLayouts, isCanvasMode, setS, uid} from '../core/state.js';
+import {S, clone, floorLayouts, setS, uid} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {ensureDefaultMarket} from '../library/market-subs.js';
-import {renderLibAll} from '../library/shell.js';
-import {renderAll} from '../plan/mode.js';
-import {renderSnap} from '../plan/room-panel.js';
 import {flash} from '../ui/flash.js';
 import {$, moError, openModal} from '../ui/modal.js';
-import {applyPanes, applySections, plural} from '../ui/panels.js';
+import {plural} from '../ui/panels.js';
 import {PREF_KEYS} from './export.js';
 import {ancestorFolderIds, folderLine, pickValues, pickerHTML, pickerMount} from './pickers.js';
 /* ------------------------- import ------------------------- */
@@ -126,14 +124,12 @@ function importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     const done=migrate(st);
     if(!done){ flash("There was nothing in that file to import"); return; }
     setS(done);
-    ensureDefaultMarket().then(()=>{ if(!isCanvasMode(S.mode)) renderLibAll(); });
+    ensureDefaultMarket();
     sel.value = null; roomSel.value = null;
     for(const k of Object.keys(roomHist)) delete roomHist[k];
     for(const k of Object.keys(furnHist)) delete furnHist[k];
     seedHistFor();
-    $('unitSel').value=S.unit;
-    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure; $('zoomSpeedSel').value=S.zoomSpeed;
-    renderSnap(); applyPanes(); applySections(); renderAll(); fit();
+    fit();
     flash('Replaced your project with '+plural(S.layouts.length,'room')+' and '+plural(S.inventory.length,'item'));
     return;
   }
@@ -202,13 +198,7 @@ function importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     remapMeasures(l, {item:placedMap});
     S.layouts.push(l);
   }
-  if(wantPrefs && inc.prefs){
-    Object.assign(S, inc.prefs);
-    $('unitSel').value=S.unit;
-    $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen; $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure; $('zoomSpeedSel').value=S.zoomSpeed;
-    renderSnap();
-  }
-  renderAll();
+  if(wantPrefs && inc.prefs) Object.assign(S, inc.prefs);
   flash('Added '+plural(layouts.length,'room')+' and '+plural(addedItems,'item'));
 }
 export {readImport, importDialog, applyImport};

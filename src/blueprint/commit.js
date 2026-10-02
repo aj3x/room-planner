@@ -6,7 +6,7 @@ import {S, blankLayout, floorOf, uid} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {clampOpenings} from '../model/walls.js';
 import {activateLayout} from '../plan/layout-tree.js';
-import {renderAll, setMode} from '../plan/mode.js';
+import {setMode} from '../plan/mode.js';
 import {flash} from '../ui/flash.js';
 import {askConfirm, moError} from '../ui/modal.js';
 import {plural} from '../ui/panels.js';
@@ -42,7 +42,6 @@ function bpCommit(){
     setMode('floor');
   });
   const left=d.problems.length;
-  renderAll();
   flash(`${plural(ids.length,'room')} added to ${floor.name}${left?` — ${plural(left,'room')} left out`:''}.`);
 }
 function bpFloorName(){
@@ -77,7 +76,7 @@ function bpUndoImport(){
         activateLayout(S.layouts.some(l=>l.id===imp.prevActive) ? imp.prevActive : S.layouts[0].id);
         bpLastImport=null;
       });
-      renderAll(); fit();
+      fit();
     });
 }
 

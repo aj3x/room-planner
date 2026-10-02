@@ -1,19 +1,14 @@
-/* The Room pane's lists: the snap-size picker, the wall list and the
-   structures list (pillars and interior walls), plus the two row helpers the
-   other panels share.
+/* The Room mode panels: the snap-size picker and View switches, the room's
+   own properties, the wall list, the structures list (pillars and interior
+   walls), the doors/windows list and the Selection panel, plus the commands
+   their controls run.
 
-   Extracted from index.html in Phase 3, move-only: the block below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added.
-
-   renderRoom, immediately above these in the monolith, did not come. It is
-   part of the 48-name reference cycle between the Plan side panels and the
-   Library UI (see .claude/plans/refactor-split.md, the plan/ round), and so
-   are the listeners that follow renderObstacles here.
+   Each panel is an effect on what it shows (mountRoomPanels, at the end, via
+   ui/mount.js). The commands commit through transact() or write roomSel and
+   stop there; no command here calls a render function.
 
    Note for anyone reading renderSnap: it silently rewrites S.snap to the third
-   entry of the list when the current value is not in it. That is pre-existing
-   behaviour, characterized by the baseline, and moving it does not change it.
+   entry of the list when the current value is not in it.
 */
 import {esc} from '../ui/panels.js';
 import {moreBtn} from '../ui/menu.js';
@@ -23,14 +18,13 @@ import {roomSel} from '../core/selection.js';
 import {fmtLen, SNAPS} from '../core/units.js';
 import {wallOf, wallIsOff, wallAngle, iwallLen} from '../model/walls.js';
 import {deleteCorner, splitWall} from '../canvas/corners.js';
-import {draw} from '../canvas/draw.js';
 import {squareCorner} from '../canvas/snap.js';
 import {bbox, norm360, polyArea} from '../core/geometry.js';
 
 import {openOf, roomMode} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {fmtArea, parseLen} from '../core/units.js';
-import {openingDispOffset, setOpeningDispOffset} from '../model/openings.js';
+import {KIND, openingDispOffset, setOpeningDispOffset} from '../model/openings.js';
 import {clampOpenings, isRectRoom, iwallAngle, iwallOf, nearestOnWalls, pillarOf, setIWallAngle, setIWallEndDist, setIWallLen, setRectSize, setWallAngle, setWallLen, syncWallOff, tryRoomEdit} from '../model/walls.js';
 import {flash} from '../ui/flash.js';
 import {askConfirm} from '../ui/modal.js';
@@ -45,12 +39,21 @@ import {uid} from '../core/state.js';
 import {unitWord} from '../core/units.js';
 import {moError, openModal} from '../ui/modal.js';
 import {setMode} from './mode.js';
+import {pref, rev} from '../core/signals.js';
+import {mountPanel} from '../ui/mount.js';
 function renderSnap(){
   const list=(S.unit==='ftin'||S.unit==='in')?SNAPS.imperial:SNAPS.metric;
   const s=$('snapSel');
   s.innerHTML=list.map(([v,t])=>`<option value="${v}">${t}</option>`).join('');
   if(!list.some(([v])=>v===S.snap)) S.snap=list[2][0];
   s.value=S.snap;
+}
+/* The View section's switches and the header's unit, set from S: on load, on
+   import, and whenever a setting is committed. */
+function renderViewPrefs(){
+  $('unitSel').value=S.unit;
+  $('showSwing').checked=S.showSwing; $('showDims').checked=S.showDims; $('showOpen').checked=S.showOpen;
+  $('showWalk').checked=S.showWalk; $('showMeasure').checked=S.showMeasure; $('zoomSpeedSel').value=S.zoomSpeed;
 }
 function renderWalls(){
   const ul=$('wallList'), P=RP(), room=L().room;
@@ -83,7 +86,6 @@ function renderObstacles(){
   }).join('');
 }
 
-const KIND = o => o.kind==='window' ? 'Window' : (o.dtype==='slide'?'Sliding door':o.dtype==='open'?'Doorway':o.dtype==='bifold'?'Bi-fold door':'Hinged door');
 function renderOpen(){
   const ul=$('openList'), os=L().openings;
   if(!os.length){ ul.innerHTML=emptyRow('None yet'); return; }
@@ -108,7 +110,6 @@ function renderRoom(){
     const go=()=>{
       const w=parseLen($('roomW').value,S.unit), d=parseLen($('roomD').value,S.unit);
       transact('room', ()=>{ if(isFinite(w)&&isFinite(d)&&w>200&&d>200) setRectSize(w,d); });
-      renderRoom(); renderWalls(); renderRoomSel();
     };
     $('roomW').addEventListener('change',go);
     $('roomD').addEventListener('change',go);
@@ -130,14 +131,12 @@ function deletePillar(id){
     L().room.pillars=L().room.pillars.filter(p=>p.id!==id);
     if(roomSel.value&&roomSel.value.kind==='pillar'&&roomSel.value.id===id) roomSel.value = null;
   });
-  renderRoomSel(); renderWalls();
 }
 function deleteIWall(id){
   transact('room', ()=>{
     L().room.iwalls=L().room.iwalls.filter(w=>w.id!==id);
     if(roomSel.value&&roomSel.value.kind==='iwall'&&roomSel.value.id===id) roomSel.value = null;
   });
-  renderRoomSel(); renderWalls();
 }
 
 function renderRoomSel(){
@@ -172,12 +171,10 @@ function renderWallProps(){
   $('wLen').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
     transact('room', ()=>{ if(isFinite(v)&&v>=100) setWallLen(i,v); else flash('Give the wall a length'); });
-    renderRoom(); renderWalls(); renderRoomSel();
   });
   $('wAng').addEventListener('change', e=>{
     const v=parseFloat(e.target.value);
     transact('room', ()=>{ if(isFinite(v)) setWallAngle(i,v); });
-    renderRoom(); renderWalls(); renderRoomSel();
   });
   if(!off){
     $('wDoor').addEventListener('click',()=>openingDialog(null,'door',i));
@@ -197,7 +194,6 @@ function renderCornerProps(){
   const go=()=>{
     const x=parseLen($('cX').value,S.unit), y=parseLen($('cY').value,S.unit);
     transact('room', ()=>{ if(isFinite(x)&&isFinite(y)) tryRoomEdit(()=>{ P[i]=[b.x0+x, b.y0+y]; }); });
-    renderRoom(); renderWalls(); renderRoomSel();
   };
   $('cX').addEventListener('change',go);
   $('cY').addEventListener('change',go);
@@ -212,7 +208,6 @@ function toggleWallOff(i){
   syncWallOff(room);
   if(wallIsOff(room,i)){
     transact('room', ()=>{ room.wallOff[i]=false; });
-    renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
     return;
   }
   const inWall=l.openings.filter(o=>o.wall===i);
@@ -221,7 +216,6 @@ function toggleWallOff(i){
       room.wallOff[i]=true;
       if(inWall.length) l.openings=l.openings.filter(o=>o.wall!==i);
     });
-    renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
   };
   if(!inWall.length){ apply(); return; }
   askConfirm('Open this side?',
@@ -251,7 +245,6 @@ function renderPillarProps(){
       if(isFinite(d)&&d>0) pl.shape.d=d;
       if(isFinite(rot)) pl.rot=norm360(rot);
     });
-    renderWalls(); renderRoomSel();
   };
   $('plShape').addEventListener('change',go);
   $('plW').addEventListener('change',go);
@@ -275,27 +268,22 @@ function renderIWallProps(){
   $('iwLen').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
     transact('room', ()=>{ if(isFinite(v)&&v>=50) setIWallLen(w,v); else flash('Give the wall a length'); });
-    renderWalls(); renderRoomSel();
   });
   $('iwAng').addEventListener('change', e=>{
     const v=parseFloat(e.target.value);
     transact('room', ()=>{ if(isFinite(v)) setIWallAngle(w,v); });
-    renderWalls(); renderRoomSel();
   });
   $('iwT').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
     transact('room', ()=>{ if(isFinite(v)&&v>=10) w.t=v; else flash('Give the wall a thickness'); });
-    renderWalls(); renderRoomSel();
   });
   $('iwDA').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
     transact('room', ()=>{ if(isFinite(v)&&v>=0) setIWallEndDist(w,'a',v); });
-    renderWalls(); renderRoomSel();
   });
   $('iwDB').addEventListener('change', e=>{
     const v=parseLen(e.target.value,S.unit);
     transact('room', ()=>{ if(isFinite(v)&&v>=0) setIWallEndDist(w,'b',v); });
-    renderWalls(); renderRoomSel();
   });
   $('iwDel').addEventListener('click',()=>deleteIWall(w.id));
 }
@@ -305,7 +293,6 @@ function deleteOpening(id){
     L().openings=L().openings.filter(o=>o.id!==id);
     if(roomSel.value&&roomSel.value.id===id) roomSel.value = null;
   });
-  renderOpen(); renderRoomSel();
 }
 function renderOpeningProps(){
   const o=openOf(roomSel.value.id);
@@ -350,7 +337,6 @@ function renderOpeningProps(){
       if(isFinite(ov)) setOpeningDispOffset(o,l2,ov);
       clampOpenings();
     });
-    renderOpen(); renderRoomSel();
   };
   $('oWall').addEventListener('change',go);
   $('oW').addEventListener('change',go);
@@ -361,7 +347,6 @@ function renderOpeningProps(){
       transact('room', ()=>{ o.dtype=$('oType').value; });
       const hb=$('oHingeBits'); if(hb) hb.hidden = o.dtype!=='hinge' && o.dtype!=='bifold';
       $('roomSelTitle').textContent=KIND(o);
-      renderOpen();
     });
     $('oHinge').addEventListener('change', ()=>transact('room', ()=>{ o.hinge=$('oHinge').value; }));
     $('oSwing').addEventListener('change', ()=>transact('room', ()=>{ o.swing=$('oSwing').value; }));
@@ -385,7 +370,6 @@ function addPillar(){
     L().room.pillars.push(pl);
     roomSel.value = {kind:'pillar', id:pl.id};
   });
-  renderWalls(); renderRoomSel();
 }
 
 /* double-clicking a wall — in the plan or in the wall list — types its length in.
@@ -396,7 +380,6 @@ function wallDialog(i){
   if(!(i>=0&&i<P.length)) return;
   const w=wallOf(i);
   roomSel.value = {kind:'wall', i};
-  renderWalls(); renderRoomSel(); draw();
   openModal('Wall '+(i+1), `
     <div class="field"><label for="wdLen">Length</label><input type="text" class="len" id="wdLen" value="${esc(fmtLen(w.len,S.unit))}"></div>
     <div class="field"><label for="wdAng">Direction</label><input type="number" class="deg" id="wdAng" step="1" value="${Math.round(wallAngle(i))}"><span class="unit">°</span></div>
@@ -412,8 +395,17 @@ function wallDialog(i){
         if(ok) ok=setWallLen(i,len);
         return ok;
       });
-      renderRoom(); renderWalls(); renderRoomSel();
       if(!ok) return false;   // tryRoomEdit rolled it back and flashed why — stay open
     });
 }
-export {renderSnap, renderWalls, sizeLabelShape, emptyRow, renderObstacles, KIND, renderOpen, renderRoom, deletePillar, deleteIWall, renderRoomSel, renderWallProps, renderCornerProps, toggleWallOff, renderPillarProps, renderIWallProps, deleteOpening, renderOpeningProps, addPillar, wallDialog};
+/* The Room pane's views, each an effect on what it shows (ui/mount.js). */
+function mountRoomPanels(){
+  const geometry = () => { rev.room.value; rev.project.value; pref('unit'); };
+  mountPanel('snapSel', () => pref('unit'), renderSnap);
+  mountPanel(null, () => { rev.prefs.value; rev.project.value; }, renderViewPrefs);
+  mountPanel($('rectDims').closest('section'), geometry, renderRoom);
+  mountPanel('wallList', () => { geometry(); roomSel.value; }, renderWalls);
+  mountPanel('openList', () => { geometry(); roomSel.value; }, renderOpen);
+  mountPanel($('roomSelBox').closest('section'), () => { geometry(); pref('mode'); roomSel.value; }, renderRoomSel);
+}
+export {mountRoomPanels, renderSnap, renderWalls, sizeLabelShape, emptyRow, renderObstacles, renderOpen, renderRoom, deletePillar, deleteIWall, renderRoomSel, renderWallProps, renderCornerProps, toggleWallOff, renderPillarProps, renderIWallProps, deleteOpening, renderOpeningProps, addPillar, wallDialog};

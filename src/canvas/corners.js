@@ -10,7 +10,6 @@ import {roomSel} from '../core/selection.js';
 import {L, RP} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {clampOpenings, syncWallOff, wallIsOff, wallOf} from '../model/walls.js';
-import {repaint} from '../core/bus.js';
 import {flash} from '../ui/flash.js';
 
 /* ------------------------- adding and taking away a corner -------------------------
@@ -48,7 +47,6 @@ function splitWall(i){
     clampOpenings();
     roomSel.value = {kind:'corner', i:i+1};
   });
-  repaint('room','walls','roomSel','openings');
 }
 function deleteCorner(i){
   const P=RP();
@@ -78,6 +76,5 @@ function deleteCorner(i){
     clampOpenings();
     roomSel.value = null;
   });
-  repaint('room','walls','roomSel','openings');
 }
 export {splitWall, deleteCorner};

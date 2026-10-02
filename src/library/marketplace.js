@@ -30,7 +30,6 @@ import {addMarketItemToInventory} from './add-to-inventory.js';
 import {bindCrumbs} from './grid.js';
 import {fetchMarketItem, loadRegistry, reloadMarketSub, removeMarketSub, subscribeMarket} from './market-subs.js';
 import {renderLibContent} from './router.js';
-import {renderLibAll} from './shell.js';
 
 function marketSubTile(sub){
   const items=marketIndexCache.get(sub.id);
@@ -120,7 +119,7 @@ function addMarketDialog(){
       if(!/^https?:\/\//i.test(url)){ moError('Enter a valid http(s) link to a market.json'); return false; }
       if(S.marketSubs.some(s=>s.url===url)){ moError('You already subscribe to that marketplace'); return false; }
       $('moOk').disabled=true;
-      subscribeMarket(url).then(()=>{ closeModal(); renderLibAll(); })
+      subscribeMarket(url).then(()=>{ closeModal(); })
         .catch(e=>{ moError(e.message); $('moOk').disabled=false; });
       return false;   // keep the dialog open until the fetch settles; the .then() above closes it
     },
@@ -138,10 +137,10 @@ function addMarketDialog(){
 function subMenu(sub, anchor){
   openMenu(anchor, [
     {label:'Open', fn:()=>{ nav.marketSubId=sub.id; nav.subPath=null; renderLibContent(); }},
-    {label:'Reload', fn:()=>{ reloadMarketSub(sub).then(()=>{ libFlash('Reloaded'); renderLibAll(); }).catch(e=>libFlash(e.message,true)); }},
+    {label:'Reload', fn:()=>{ reloadMarketSub(sub).then(()=>{ libFlash('Reloaded'); }).catch(e=>libFlash(e.message,true)); }},
     {sep:true},
     {label:'Remove…', danger:true, fn:()=>askConfirm('Remove this marketplace?', '“'+sub.name+'” and its cached index will be forgotten. Your library isn’t affected.', 'Remove', ()=>{
-      removeMarketSub(sub); renderLibAll();
+      removeMarketSub(sub);
     })},
   ], sub.name);
 }
@@ -170,7 +169,7 @@ function renderMarketTop(box){
   });
   box.querySelectorAll('[data-loadsub]').forEach(el=>{
     const sub=S.marketSubs.find(s=>s.id===el.dataset.loadsub); if(!sub) return;
-    reloadMarketSub(sub).then(()=>renderLibContent()).catch(e=>{ el.textContent=e.message; });
+    reloadMarketSub(sub).catch(e=>{ el.textContent=e.message; });
   });
   box.querySelectorAll('[data-openmsub]').forEach(el=>{
     el.addEventListener('click', e=>{
@@ -190,7 +189,7 @@ function renderMarketSub(box, sub){
   if(!items){
     box.innerHTML=`<div class="crumbs"><button data-back>Marketplaces</button><span class="sep">/</span><button>${esc(sub.name)}</button></div><div class="grid"><div class="empty">Loading…</div></div>`;
     box.querySelector('[data-back]').addEventListener('click', backToTop);
-    reloadMarketSub(sub).then(()=>renderLibContent()).catch(e=>{ box.querySelector('.empty').textContent=e.message; });
+    reloadMarketSub(sub).catch(e=>{ box.querySelector('.empty').textContent=e.message; });
     return;
   }
   let html=`<div class="crumbs"><button data-back>Marketplaces</button><span class="sep">/</span>`;

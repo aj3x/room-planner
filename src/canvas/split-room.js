@@ -17,7 +17,8 @@
    The region's banner and its introductory comment stayed with the code they
    describe, which is the part still in index.html. */
 
-import {emit, repaint} from '../core/bus.js';
+import {expect} from '../core/registry.js';
+import {batch} from '../core/signals.js';
 import {nearestOnWalls} from '../model/walls.js';
 
 /* is `pt` (already snapped) essentially exactly on the room's own outline? Returns
@@ -69,7 +70,6 @@ import {clampOpenings, syncWallOff} from '../model/walls.js';
 import {flash} from '../ui/flash.js';
 import {$, askConfirm, closeModal, openModal} from '../ui/modal.js';
 import {plural} from '../ui/panels.js';
-import {draw} from './draw.js';
 
 import {mergeSplice} from './merge-rooms.js';
 import {fit} from './view.js';
@@ -174,7 +174,7 @@ function drawSplitOverlay(){
 
 
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */
-function cancelSplitDraw(){ splitDrawState.value = null; alignGuides.value = []; alignNote.value = ''; draw(); }
+function cancelSplitDraw(){ batch(()=>{ splitDrawState.value = null; alignGuides.value = []; alignNote.value = ''; }); }
 
 /* Once a start hit, any interior points, and an end hit are in hand: validate the
    drawn path is a genuine interior cut (touches the boundary only at its two
@@ -338,7 +338,7 @@ function commitSplit(ctx, openWall){
 
     mergeClear();
   });
-  repaint('tree','all'); fit();
+  fit();
   flash('Split into two rooms');
 }
 function splitUndo(){
@@ -353,9 +353,9 @@ function splitUndo(){
       if(m.aFurnHist) furnHist[m.aId]=m.aFurnHist; else delete furnHist[m.aId];
       delete roomHist[m.bId]; delete furnHist[m.bId];
       lastSplit=null;
-      if(S.active===m.bId) emit('layout:activate', m.aId);
+      if(S.active===m.bId) expect('plan.activateLayout')(m.aId);
     });
-    repaint('tree','all'); fit();
+    fit();
   });
 }
 
@@ -365,12 +365,11 @@ function startSplitRoom(id){
   if(!polySimple(l.room.points)){ flash("Straighten this room's outline before splitting it"); return; }
   if(drawState.value) cancelCustomDraw();
   if(wallDrawState.value) cancelWallDraw();
-  if(measureOn) setMeasure(false);
-  if(S.active!==id) emit('layout:activate', id);
-  emit('mode:set','room');
-  splitDrawState.value = {pts:[]}; drawCursor.value = null;
-  roomSel.value = null; repaint('roomSel','all'); fit();
+  if(measureOn.value) setMeasure(false);
+  if(S.active!==id) transact('project', ()=>expect('plan.activateLayout')(id));
+  expect('plan.setMode')('room');
+  batch(()=>{ splitDrawState.value = {pts:[]}; drawCursor.value = null; roomSel.value = null; });
+  fit();
   flash("Click a point on the room's wall to start the divider. Click inside the room to bend it, or click another wall to finish. Esc cancels.");
-  draw();
 }
 export {boundaryHit, splitAngleSnap, splitRefs, splitCornerRef, splitResolvePoint, drawSplitOverlay, cancelSplitDraw, trySplitLine, openSplitChoice, lastSplit, commitSplit, splitUndo, startSplitRoom};

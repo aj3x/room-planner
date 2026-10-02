@@ -1,22 +1,11 @@
 /* The item editor: the same modal Furniture mode's "Add a thing" and the
-   Library tab's edit both open. itemDialog() was one of the six edges that
-   made the Plan side panels and the Library UI one component: it called
-   renderLibAll() when the Library is the place that is showing, and the
-   Library's grid imported itemDialog() straight back.
-
-   Both edges are gone (.claude/plans/decoupling.md §4, step 5). The repaint
-   goes through the bus, and the Library asks for the editor by emitting
-   'item:edit' rather than importing it. plan/ and library/ are separate
-   components again.
-
-   Extracted from index.html in Phase 3 as part of the 49-name SCC commit,
-   move-only.
+   Library tab's edit both open. It commits through transact('lib'); the item
+   list, the Selection panel and the Library grid are effects on that scope
+   and repaint themselves, so this module names none of them.
 
    dlgColor is written only from inside itemDialog and its mounted listeners,
-   all of which came with it, so it moved as a plain `let` and needed no
-   setter.
+   so it is a plain module-private `let`.
 */
-import {repaint} from '../core/bus.js';
 import {normHex} from '../canvas/draw.js';
 import {idFolder, idLeaf, idProblem, retagItem} from '../core/ids.js';
 import {hasOpen, normOpen} from '../core/open-state.js';
@@ -28,8 +17,6 @@ import {nav} from '../library/nav.js';
 import {$, moError, openModal} from '../ui/modal.js';
 import {esc} from '../ui/panels.js';
 import {mountTagField, tagFieldHTML, tagFieldValue} from '../ui/tag-input.js';
-import {renderInv} from './item-list.js';
-import {renderSel} from './selection-panel.js';
 
 /* ------------------------- item dialog ------------------------- */
 let dlgColor=PALETTE[0];
@@ -144,7 +131,6 @@ function itemDialog(id){
           if(nit.folderId && newId===dlgId) rehomeItemId(nit, nit.folderId);
         }
       });
-      renderInv(); renderSel(); repaint('libAll');
     },
     ()=>{
       const sel2=$('iShape');

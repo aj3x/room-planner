@@ -1,22 +1,32 @@
 /* Late-bound entry points. A leaf: this module imports nothing, and nothing it
    holds is evaluated at import time.
 
-   The problem it solves: a feature's menu item needs to call into another
-   feature, and the direct import closes a cycle. `plan/floors.js` wanted
-   `bpUploadDialog` from `blueprint/step1-upload.js`; blueprint reaches back
-   into `plan/` to commit what it imported; and those two edges were enough to
-   pull all twenty blueprint modules into the 45-module tangle described in
-   `.claude/plans/decoupling.md`.
+   The problem it solves: a feature needs to call into another, and the direct
+   import closes an import cycle across directories. So the caller asks for a
+   name instead, and `boot.js` — which sits outside the graph, because nothing
+   imports it — does the wiring. The edge still exists at run time; it just no
+   longer exists at module-resolution time, which is the only place cycles are
+   decided.
 
-   So the caller asks for a name instead of importing it, and `boot.js` — which
-   sits outside the graph, because nothing imports it — does the wiring. The
-   edge still exists at run time; it just no longer exists at module-resolution
-   time, which is the only place cycles are decided.
+   What is left here, and why each one cannot be a plain import yet (the
+   feature-folder reorganisation, Phase 4 of
+   .claude/plans/frontend-architecture.md, is what removes them):
+     blueprint.uploadDialog/undoImport/lastImport
+                         plan/floors.js's floor menu -> blueprint/; blueprint
+                         commits back through plan/, so the import would pull
+                         all twenty blueprint modules into plan/'s cycle.
+     plan.setMode, plan.activateLayout
+                         a canvas tool (drawing a room, a wall, a split) ends by
+                         switching mode or room; plan/ imports canvas/, so
+                         canvas/ -> plan/ would fuse the two into one cycle.
+     ui.flash            model/walls.js reports a refused edit; model/ may not
+                         import ui/ (eslint.config.js).
+   Repainting is not on this list and must not come back to it: views
+   subscribe to signals (core/signals.js).
 
-   Use this sparingly. It is for the handful of cross-feature calls that would
-   otherwise close a cycle, not a general service locator: every `use()` is a
-   dependency the type checker and the import graph can no longer see. If a
-   plain import does not create a cycle, write the plain import.
+   Use this sparingly. Every `use()` is a dependency the import graph can no
+   longer see. If a plain import does not create a cycle, write the plain
+   import.
 
    `use()` returns undefined for a name nobody provided, rather than throwing.
    A unit test that imports `plan/floors.js` without running `boot()` gets a

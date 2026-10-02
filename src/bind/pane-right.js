@@ -33,12 +33,10 @@ import { fit } from '../canvas/view.js';
 import { normHex } from '../canvas/draw.js';
 import { startCustomDraw, cancelCustomDraw } from '../canvas/room-draw.js';
 import { cancelWallDraw } from '../canvas/wall-draw.js';
-import { renderInv } from '../plan/item-list.js';
 import { bindLen, setFloorColor } from '../plan/room-controls.js';
-import { renderRoom, renderWalls, renderRoomSel, renderOpen } from '../plan/room-panel.js';
 
 function bindPaneRight(){
-  $('invScope').addEventListener('change', e=>{ transact('prefs', ()=>{ S.invScope=e.target.value; }, {canvas:false}); renderInv(); });
+  $('invScope').addEventListener('change', e=>transact('prefs', ()=>{ S.invScope=e.target.value; }, {canvas:false}));
 
   bindLen('wallT', v=>{ L().room.wall=v; });
   bindLen('trimD', v=>{ L().room.trim=v; });
@@ -53,7 +51,7 @@ function bindPaneRight(){
   /* typing an unfinished/bad code leaves the plan alone — snap the box back on the way out */
   $('floorHex').addEventListener('change', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); transact('room'); });
   $('floorHex').addEventListener('blur', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); });
-  $('trimOn').addEventListener('change', e=>{ transact('room', ()=>{ L().room.trimOn=e.target.checked; }); renderRoom(); });
+  $('trimOn').addEventListener('change', e=>transact('room', ()=>{ L().room.trimOn=e.target.checked; }));
 
   $('btnPreRect').addEventListener('click', ()=>{
     const b=bbox(RP());
@@ -69,7 +67,7 @@ function bindPaneRight(){
           L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
           clampOpenings(); roomSel.value = null;
         });
-        renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit();
+        fit();
       });
   });
   $('btnPreL').addEventListener('click', ()=>{
@@ -92,7 +90,7 @@ function bindPaneRight(){
           L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
           clampOpenings(); roomSel.value = null;
         });
-        renderRoom(); renderWalls(); renderRoomSel(); renderOpen(); fit();
+        fit();
       });
   });
   $('btnDrawCustom').addEventListener('click', ()=>{

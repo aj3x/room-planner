@@ -2,8 +2,7 @@
    room already lies on.
 
    After the magnet come squareCorner, which commits its edit through
-   transact() and repaints the room panels, and pickAt/pickRoom, the
-   hit-testing that shares the region.
+   transact(), and pickAt/pickRoom, the hit-testing that shares the region.
 
    This is the least-covered code in the app by the Phase 3.5 audit's own
    account: every magnet assertion in the pointer suite is on a rectangle, so
@@ -20,7 +19,6 @@ import {iwallPoly, magneticWallPoint, nearestOnWalls} from '../model/walls.js';
 import {snapPt} from './view.js';
 import {transact} from '../core/tx.js';
 import {tryRoomEdit} from '../model/walls.js';
-import {repaint} from '../core/bus.js';
 import {flash} from '../ui/flash.js';
 
 /* ---- where a dragged wall end lands ----
@@ -138,10 +136,7 @@ function snapCorner(i, raw, reach){
 
 
 /* Hit-testing: what is under the pointer, and the draw/hit order within a
-   room. Moved in the plan/ round, once the panel renderers the rest of the
-   region calls had somewhere to go. squareCorner, the fourth member §3 files
-   here, did NOT come: it calls renderRoom() and renderRoomSel(), which are in
-   the plan/library reference cycle. */
+   room. */
 function pickAt(x,y){
   const ps=L().placed;
   // Match visual stacking: non-pass-through items (drawn on top) win clicks
@@ -204,8 +199,6 @@ function squareCorner(i){
   if(rad<1){ flash('Those two walls meet at the same point'); return; }
   let vx=b[0]-mx, vy=b[1]-my, len=Math.hypot(vx,vy);
   if(len<1){ vx=-(c[1]-a[1]); vy=c[0]-a[0]; len=rad*2; }   // dead centre: step off square to the span
-  const ok=transact('room', ()=>tryRoomEdit(()=>{ P[i]=[mx+vx/len*rad, my+vy/len*rad]; }));
-  if(!ok) return;
-  repaint('room','walls','roomSel','openings');
+  transact('room', ()=>tryRoomEdit(()=>{ P[i]=[mx+vx/len*rad, my+vy/len*rad]; }));
 }
 export {snapRadius, snapWallPoint, pickAt, bringToFront, pickRoom, alignRadius, snapToLines, lineProject, lineCross, guideSeg, alignPoint, isSquare, snapCorner, squareCorner};

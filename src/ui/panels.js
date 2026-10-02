@@ -1,20 +1,15 @@
 /* Side panels: escaping text for the render* functions, and collapsing a
-   section of a pane.
+   section of a pane or a whole pane.
 
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. It arrives in two pieces, because the two halves of the
-   "panels" banner sit either side of code that cannot move yet:
-
-     applyPanes    reads $() and svgI() -> ui/modal.js, so it arrived in the
-                   second part, once ui/modal.js existed
-     togglePane    calls resize()       -> canvas/view.js, a later phase, so it
-                   is still in the monolith
-     renderAll, setMode, renderMode and the nav listeners belong to the same
-                   banner but call draw() and every render*() -> canvas/, plan/ */
+   Which sections are shut is an effect on the settings (mountSections), so
+   toggleSection only commits the change. Collapsing a whole pane is driven
+   by the mode effect (plan/mode.js), because it changes the canvas's size
+   and setMode/togglePane resize the canvas after it. */
 import {S} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {$, svgI} from './modal.js';
+import {rev} from '../core/signals.js';
+import {mountPanel} from './mount.js';
 
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const plural = (n,w) => n+' '+w+(n===1?'':'s');
@@ -33,7 +28,10 @@ function applySections(){
 function toggleSection(h){
   const k=h.closest('section[data-sec]').dataset.sec;
   transact('prefs', ()=>{ S.secClosed = S.secClosed.includes(k) ? S.secClosed.filter(x=>x!==k) : S.secClosed.concat(k); }, {canvas:false});
-  applySections();
+}
+/* Which sections are shut, as an effect on the settings (ui/mount.js). */
+function mountSections(){
+  mountPanel(null, () => { rev.prefs.value; rev.project.value; }, applySections);
 }
 
 /* ------------------------- collapsing the side panels -------------------------
@@ -58,4 +56,4 @@ function applyPanes(){
   set('headRight', 'tglRight', rShut, false, 'the properties panel');
 }
 
-export {esc, plural, normSearch, applySections, toggleSection, wideLayout, applyPanes};
+export {esc, plural, normSearch, applySections, mountSections, toggleSection, wideLayout, applyPanes};

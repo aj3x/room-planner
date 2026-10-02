@@ -12,7 +12,6 @@ import {libFlash} from '../ui/flash.js';
 import {openModal} from '../ui/modal.js';
 import {esc} from '../ui/panels.js';
 import {applyTags, ensureItemFolderPath} from './item-folders.js';
-import {renderLibAll} from './shell.js';
 
 /* ------------------------- add to inventory: the 3 collision cases (MARKET_SCHEMA.md §4) ------------------------- */
 function itemsDeepEqual(a,b){
@@ -30,7 +29,6 @@ function addMarketItemToInventory(raw){
       'Take theirs', ()=>{
         const folderId=existing.folderId, manualTags=existing.manualTags;
         transact('lib', ()=>{ Object.assign(existing, incoming, {id:existing.id, folderId, manualTags}); applyTags(existing); });
-        renderLibAll();
         libFlash('Replaced your copy');
       });
     return;
@@ -43,7 +41,6 @@ function addMarketItemToInventory(raw){
     applyTags(incoming);
     S.inventory.push(incoming);
   });
-  renderLibAll();
   libFlash(sameName ? 'Added — you also have another "'+incoming.name+'" under a different id' : 'Added to your library');
 }
 export {itemsDeepEqual, addMarketItemToInventory};

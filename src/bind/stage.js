@@ -32,14 +32,14 @@ import {drag, drawState, wallDrawState, splitDrawState} from '../canvas/interact
 import { lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, onCanvasPointerDown, applyDragAt, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState } from '../canvas/interaction.js';
 import { applyDrawCursorAt } from '../canvas/room-draw.js';
 import { startSplitRoom } from '../canvas/split-room.js';
-import { draw, scheduleDraw, pickFloorRoom } from '../canvas/draw.js';
+import { scheduleDraw, pickFloorRoom } from '../canvas/draw.js';
 import { pickRoom } from '../canvas/snap.js';
-import { measureOn, measureSel, setMeasureHover, setMeasureHoverId, setMeasureCursor } from '../canvas/measure-state.js';
-import { liveMeasures, renderMeasureBar, setMeasure, resetMeasureState, removeMeasure, measureHoverAt } from '../canvas/measure-tool.js';
-import { renderAll, setMode } from '../plan/mode.js';
-import { renderTree, activateLayout } from '../plan/layout-tree.js';
+import {measureOn, measureSel, measureHover, measureHoverId, measureCursor} from '../canvas/measure-state.js';
+import { liveMeasures, setMeasure, resetMeasureState, removeMeasure, measureHoverAt } from '../canvas/measure-tool.js';
+import { setMode } from '../plan/mode.js';
+import { activateLayout } from '../plan/layout-tree.js';
 import { wallDialog } from '../plan/room-panel.js';
-import { renderFloorSel, openFloorMergeMenu } from '../plan/floors.js';
+import { openFloorMergeMenu } from '../plan/floors.js';
 
 function bindStage(){
   cv.addEventListener('mousemove', e=>{
@@ -62,27 +62,26 @@ function bindStage(){
      measurement follows what it joins as things move. It is a note on the plan, not part of
      the room or the furniture, so it has no undo history of its own. */
   cv.addEventListener('pointerleave', ()=>{
-    if(!measureOn || drag.value) return;
-    setMeasureHover(null); setMeasureHoverId(null); setMeasureCursor(null); scheduleDraw();
+    if(!measureOn.value || drag.value) return;
+    measureHover.value = null; measureHoverId.value = null; measureCursor.value = null; scheduleDraw();
   });
-  $('btnMeasure').addEventListener('click', ()=>setMeasure(!measureOn));
+  $('btnMeasure').addEventListener('click', ()=>setMeasure(!measureOn.value));
   $('btnShortcuts').addEventListener('click', showShortcuts);
   $('measureBar').addEventListener('click', e=>{
     const b=e.target.closest('button[data-act]'); if(!b) return;
     if(b.dataset.act==='done') setMeasure(false);
-    else if(b.dataset.act==='remove' && measureSel) removeMeasure(measureSel);
+    else if(b.dataset.act==='remove' && measureSel.value) removeMeasure(measureSel.value);
     else if(b.dataset.act==='clear'){
       const n=liveMeasures().length;
       askConfirm('Clear measurements', 'Remove '+(n===1?'the measurement':'all '+n+' measurements')+' from '+L().name+'?', 'Clear measurements', ()=>{
         transact('room', ()=>{ L().measures=[]; resetMeasureState(); }, {history:false});   // no undo for measurements
-        renderMeasureBar();
       });
     }
   });
 
   cv.addEventListener('pointerdown', onCanvasPointerDown);
   cv.addEventListener('pointermove', e=>{
-    if(measureOn && !drag.value){ measureHoverAt(e.offsetX,e.offsetY); return; }
+    if(measureOn.value && !drag.value){ measureHoverAt(e.offsetX,e.offsetY); return; }
     if(!drag.value) return;
     setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
     applyDragAt(lastPX,lastPY,lastMods);
@@ -95,7 +94,7 @@ function bindStage(){
     /* double-clicking a room on the floor is the way back to editing it */
     if(floorMode()){
       const id=pickFloorRoom(e.offsetX,e.offsetY);
-      if(id){ drag.value = null; transact('project', ()=>{ activateLayout(id); setMode('room'); }); renderAll(); fit(); }
+      if(id){ drag.value = null; transact('project', ()=>{ activateLayout(id); setMode('room'); }); fit(); }
       return;
     }
     if(!roomMode()) return;
@@ -111,7 +110,7 @@ function bindStage(){
   /* right-clicking a room marked for merge/delete opens that menu; right-clicking any
      other room collapses the marked set down to just the one under the pointer first */
   cv.addEventListener('contextmenu', e=>{
-    if(roomMode() && !drawState.value && !wallDrawState.value && !splitDrawState.value && !measureOn){
+    if(roomMode() && !drawState.value && !wallDrawState.value && !splitDrawState.value && !measureOn.value){
       e.preventDefault();
       menuAtPoint(e.clientX, e.clientY, [{label:'Split room…', fn:()=>startSplitRoom(S.active)}]);
       return;
@@ -120,7 +119,7 @@ function bindStage(){
     const hit=pickFloorRoom(e.offsetX,e.offsetY);
     if(!hit) return;
     e.preventDefault();
-    if(!mergeSel.value.has(hit)){ mergeOnly(hit); renderFloorSel(); renderTree(); draw(); }
+    if(!mergeSel.value.has(hit)) mergeOnly(hit);
     if(mergeSel.value.size!==2) return;
     openFloorMergeMenu([...mergeSel.value], e.clientX, e.clientY);
   });

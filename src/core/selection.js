@@ -11,7 +11,7 @@
    change the set behind every reader's back with nobody told. Use the helpers
    below, which build a new Set. */
 
-import {signal} from './signals.js';
+import {batch, signal} from './signals.js';
 
 const selSet = signal(new Set());   // placed furniture ids (multi-select), source of truth
 const sel = signal(null);           // last-added/primary placed furniture id; null when selSet is empty
@@ -24,15 +24,17 @@ const alignGuides = signal([]);     // lines a dragged corner is currently latch
 const alignNote = signal('');       // what that alignment is, shown in the readout
 const treeOpen = signal(new Set()); // expanded folder and floor ids in the layout tree
 
-function selectOnly(id){ selSet.value = new Set(id?[id]:[]); sel.value = id||null; }
-function selectAdd(id){ selSet.value = new Set([...selSet.value, id]); sel.value = id; }
+/* sel and selSet always move together, so each helper writes both in one
+   batch and a subscriber sees them agree. */
+function selectOnly(id){ batch(()=>{ selSet.value = new Set(id?[id]:[]); sel.value = id||null; }); }
+function selectAdd(id){ batch(()=>{ selSet.value = new Set([...selSet.value, id]); sel.value = id; }); }
 function selectToggle(id){
   if(!selSet.value.has(id)) return selectAdd(id);
   const s = new Set(selSet.value); s.delete(id);
-  selSet.value = s; sel.value = [...s].pop()||null;
+  batch(()=>{ selSet.value = s; sel.value = [...s].pop()||null; });
 }
-function selectSet(ids){ selSet.value = new Set(ids); sel.value = ids.length ? ids[ids.length-1] : null; }
-function selectClear(){ selSet.value = new Set(); sel.value = null; }
+function selectSet(ids){ batch(()=>{ selSet.value = new Set(ids); sel.value = ids.length ? ids[ids.length-1] : null; }); }
+function selectClear(){ if(selSet.value.size || sel.value!==null) batch(()=>{ selSet.value = new Set(); sel.value = null; }); }
 
 /* Shift+click marking for merge/delete: toggles `id`, keeping at most the two
    most recent. */

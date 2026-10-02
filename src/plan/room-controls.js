@@ -10,13 +10,11 @@ import {L, S} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {parseLen} from '../core/units.js';
 import {$} from '../ui/modal.js';
-import {renderRoom, renderWalls} from './room-panel.js';
 /* ------------------------- room controls ------------------------- */
 function bindLen(id,set){
   $(id).addEventListener('change', e=>{
     const mm=parseLen(e.target.value,S.unit);
     transact('room', ()=>{ if(isFinite(mm)&&mm>0) set(mm); });
-    renderRoom(); renderWalls();
   });
 }
 

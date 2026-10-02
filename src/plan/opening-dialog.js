@@ -7,12 +7,11 @@ import {roomSel} from '../core/selection.js';
 import {L, RP, S, openOf, roomMode, uid} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {fmtLen, parseLen} from '../core/units.js';
-import {openingDispOffset} from '../model/openings.js';
+import {KIND, openingDispOffset} from '../model/openings.js';
 import {wallIsOff, wallOf} from '../model/walls.js';
 import {$, moError, openModal} from '../ui/modal.js';
 import {esc} from '../ui/panels.js';
 import {setMode} from './mode.js';
-import {KIND, renderOpen, renderRoomSel} from './room-panel.js';
 
 /* ------------------------- opening dialog ------------------------- */
 function openingDialog(id, kind, wallIdx){
@@ -64,7 +63,6 @@ function openingDialog(id, kind, wallIdx){
         roomSel.value = {kind:'opening', id:rec.id};
         if(!roomMode()) setMode('room');
       });
-      renderOpen(); renderRoomSel();
     },
     ()=>{
       if(k!=='door') return;

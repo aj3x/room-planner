@@ -1,9 +1,7 @@
 /* The Properties pane's Selected section, and the three things its buttons do
    to what is selected: turn it, take it away, duplicate it, put one down.
-
-   Extracted from index.html in Phase 3 as part of the 49-name SCC commit,
-   move-only: the blocks below are byte-identical to what stood there, and the
-   `export` block at the end is the only line added.
+   The section is an effect on the furniture and the selection
+   (mountSelPanel, at the end); the commands only commit.
 */
 import {bringToFront} from '../canvas/snap.js';
 import {bbox, centroid, norm360, worldPoly} from '../core/geometry.js';
@@ -17,8 +15,9 @@ import {flash} from '../ui/flash.js';
 import {$, svgI} from '../ui/modal.js';
 import {esc} from '../ui/panels.js';
 import {itemDialog} from './item-dialog.js';
-import {renderInv} from './item-list.js';
 import {setMode} from './mode.js';
+import {pref, rev} from '../core/signals.js';
+import {mountPanel} from '../ui/mount.js';
 
 function rotate(deg){
   const inst=instOf(sel.value); if(!inst) return;
@@ -28,12 +27,10 @@ function rotate(deg){
     inst.rot=norm360(prev+deg);
     if(!loose && !validate(inst,worldPoly(inst,it)).ok){ inst.rot=prev; flash('No room to turn it'); }
   });
-  renderSel();
 }
 function removeSel(){
   if(!selSet.value.size) return;
   transact('furn', ()=>{ L().placed=L().placed.filter(p=>!selSet.value.has(p.id)); selectClear(); });
-  renderSel(); renderInv();
 }
 function place(itemId){
   const it=itemOf(itemId); if(!it) return;
@@ -62,7 +59,6 @@ function place(itemId){
     selectOnly(inst.id);
     if(roomMode()) setMode('furniture');
   });
-  renderInv(); renderSel();
 }
 
 function duplicateSel(){
@@ -80,8 +76,6 @@ function duplicateSel(){
     bringToFront(newIds);
     selectSet(newIds);
   });
-  if(!newIds.length) return;
-  renderInv(); renderSel();
 }
 function renderSel(){
   const box=$('selBox');
@@ -158,7 +152,6 @@ function renderSel(){
         else { inst.x=ox; inst.y=oy; flash('No room there'); }
       }
     }, {history:false});
-    renderSel();
   };
   $('sX').addEventListener('change',e=>move('x',e.target.value));
   $('sY').addEventListener('change',e=>move('y',e.target.value));
@@ -168,4 +161,12 @@ function renderSel(){
   $('sDel').addEventListener('click',removeSel);
   $('sDup').addEventListener('click',()=>place(inst.itemId));
 }
-export {rotate, removeSel, place, duplicateSel, renderSel};
+/* The Selection panel, as an effect on the furniture, the items and the
+   selection it shows (ui/mount.js). */
+function mountSelPanel(){
+  mountPanel($('selBox').closest('section'), () => {
+    rev.furn.value; rev.lib.value; rev.room.value; rev.project.value;
+    pref('unit'); pref('mode'); sel.value; selSet.value;
+  }, renderSel);
+}
+export {mountSelPanel, rotate, removeSel, place, duplicateSel, renderSel};

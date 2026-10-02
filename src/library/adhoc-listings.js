@@ -24,7 +24,6 @@ import {adhocCache, loadListing} from './adhoc-folders.js';
 import {bindCrumbs, bindLibGrid, crumbsHTML} from './grid.js';
 import {drawPreview, selectListing} from './marketplace.js';
 import {nav} from './nav.js';
-import {renderLibAll} from './shell.js';
 
 function listingTile(l){
   const sub = l.kind==='link' ? 'Link' : (l.content&&Array.isArray(l.content.inventory) ? plural(l.content.inventory.length,'item') : 'File');
@@ -68,10 +67,11 @@ function listingMenu(id, anchor){
     {label:'Move to folder…', fn:()=>moveListingDialog(l)},
     {sep:true},
     {label:'Delete…', danger:true, fn:()=>askConfirm('Delete this listing?', '“'+l.name+'” will be removed. Your library isn’t affected.', 'Delete', ()=>{
-      transact('lib', ()=>{ S.marketListings=S.marketListings.filter(x=>x.id!==id); });
-      adhocCache.delete(id);
-      if(nav.marketSelListingId===id) nav.marketSelListingId=null;
-      renderLibAll();
+      transact('lib', ()=>{
+        S.marketListings=S.marketListings.filter(x=>x.id!==id);
+        adhocCache.delete(id);
+        if(nav.marketSelListingId===id) nav.marketSelListingId=null;
+      });
     })},
   ], l.name);
 }
@@ -87,7 +87,6 @@ function moveListingDialog(l){
   openModal('Move “'+l.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       transact('lib', ()=>{ l.parentId=$('moFolder').value||null; });
-      renderLibAll();
     });
 }
 let pendingFile=null;
@@ -114,7 +113,6 @@ function addListingDialog(){
         const url=($('lUrl').value||'').trim();
         if(!/^https?:\/\//i.test(url)){ moError('Enter a valid http(s) link'); return false; }
         transact('lib', ()=>{ S.marketListings.push({id:uid(), name, parentId:nav.marketFolderId, kind:'link', url, addedAt:Date.now()}); });
-        renderLibAll();
         return;
       }
       let raw=null;
@@ -126,7 +124,6 @@ function addListingDialog(){
       if(!raw || !Array.isArray(raw.inventory)){ moError('That file doesn’t look like a Room Planner export — it needs an "inventory" array'); return false; }
       const content={inventory: raw.inventory.filter(i=>i&&typeof i==='object'&&i.shape).map(i=>normItem(clone(i)))};
       transact('lib', ()=>{ S.marketListings.push({id:uid(), name, parentId:nav.marketFolderId, kind:'file', content, addedAt:Date.now()}); });
-      renderLibAll();
     },
     ()=>{
       const tabs=[...document.querySelectorAll('.addmode-tabs button')];
@@ -166,8 +163,7 @@ function renderListingDetail(box, id){
   bindCrumbs(box,'market');
   $('btnDelListing').addEventListener('click', ()=>{
     askConfirm('Delete this listing?', '“'+l.name+'” will be removed.', 'Delete', ()=>{
-      transact('lib', ()=>{ S.marketListings=S.marketListings.filter(x=>x.id!==id); });
-      nav.marketSelListingId=null; renderLibAll();
+      transact('lib', ()=>{ S.marketListings=S.marketListings.filter(x=>x.id!==id); nav.marketSelListingId=null; });
     });
   });
   loadListing(l).then(res=>{

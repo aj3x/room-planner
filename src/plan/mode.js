@@ -1,43 +1,29 @@
-/* The mode switch. setMode() was one of the six edges that made the Plan side
-   panels and the Library UI a single strongly-connected component: it called
-   renderLibAll() for the two library places and draw()/render*() for the three
-   canvas ones.
+/* The mode switch, and the two views that follow the mode: the header and
+   canvas mode buttons (renderMode, plus which half of the page is showing),
+   and the undo/redo buttons.
 
-   The library half now goes through the bus (.claude/plans/decoupling.md §4,
-   step 5), so this file no longer imports library/. The canvas half stays a
-   direct call: plan/ sits above canvas/ and is allowed to drive it — what was
-   not allowed, and is now gone, is canvas/ reaching back up here.
+   setMode() commits the mode through transact('prefs') and resets the
+   selection that does not survive it; every panel, the canvas and the
+   Library are effects on those signals and repaint themselves. It applies
+   the page layout itself, before resize(): resize() measures the canvas, and
+   the canvas has no size while the Library is showing.
 
-   Extracted from index.html in Phase 3 as part of the 49-name SCC commit,
-   move-only.
-
-   Not in ui/panels.js, where the plan/ round's notes file the rest of this
-   banner: setMode calls resize() and fit(), so ui/panels.js -> canvas/view.js
-   would drag view.js's top-level `const cv=$('cv')` into the
+   Not in ui/panels.js: setMode calls resize() and fit(), so ui/panels.js ->
+   canvas/view.js would drag view.js's top-level `const cv=$('cv')` into the
    modal.js <-> panels.js cycle -- the boot failure that reverted togglePane.
    Nothing in ui/ imports plan/, so here it costs nothing.
-
-   paramMode, renderAll and the #navSeg/#modeSeg listeners stayed in
-   index.html: the listeners under rule 6, renderAll because it is in a
-   second, smaller SCC of its own with renderFloorSel and the floor dialogs.
 */
-import {repaint} from '../core/bus.js';
-import {draw} from '../canvas/draw.js';
-import {measureOn, setMeasureOn} from '../canvas/measure-state.js';
-import {renderMeasureBar, resetMeasureState} from '../canvas/measure-tool.js';
+import {measureOn} from '../canvas/measure-state.js';
+import {resetMeasureState} from '../canvas/measure-tool.js';
 import {fit, resize} from '../canvas/view.js';
-import {floorEntry, updateHistButtons} from '../core/history.js';
+import {floorEntry, histAvail, histRev} from '../core/history.js';
 import {selectClear, alignGuides, alignNote, floorGuides, floorSel, floorSnapNote, roomSel} from '../core/selection.js';
+import {batch, pref, rev} from '../core/signals.js';
 import {L, S, isCanvasMode} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {$} from '../ui/modal.js';
+import {mountPanel} from '../ui/mount.js';
 import {applyPanes} from '../ui/panels.js';
-import {renderOpen, renderRoomSel, renderWalls} from './room-panel.js';
-import {renderSel} from './selection-panel.js';
-import {renderFloorSel} from './floors.js';
-import {renderInv} from './item-list.js';
-import {renderTree} from './layout-tree.js';
-import {renderRoom, renderSnap} from './room-panel.js';
 import {closeMenu} from '../ui/menu.js';
 import {wideLayout} from '../ui/panels.js';
 
@@ -50,22 +36,22 @@ function syncModeParam(){
 let pendingFit=false;
 function setPendingFit(v){ pendingFit = v; }
 function setMode(m){
-  transact('prefs', ()=>{ S.mode=m; if(isCanvasMode(m)) S.planMode=m; });
-  if(m==='furniture') roomSel.value = null;
-  else if(m==='room') selectClear();
-  else if(m==='floor'){ selectClear(); roomSel.value = null; floorSel.value = L().floorId ? L().id : null; floorEntry(); }
-  if(m!=='floor'){ floorGuides.value = []; floorSnapNote.value = ''; }
-  alignGuides.value = []; alignNote.value = '';
-  /* measurements belong to one room, so Floor mode leaves the tool behind too */
-  if((!isCanvasMode(m) || m==='floor') && measureOn){ setMeasureOn(false); resetMeasureState(); renderMeasureBar(); }
-  renderMode(); applyLayoutMode();
+  batch(()=>{
+    transact('prefs', ()=>{ S.mode=m; if(isCanvasMode(m)) S.planMode=m; });
+    if(m==='furniture') roomSel.value = null;
+    else if(m==='room') selectClear();
+    else if(m==='floor'){ selectClear(); roomSel.value = null; floorSel.value = L().floorId ? L().id : null; floorEntry(); }
+    if(m!=='floor'){ floorGuides.value = []; floorSnapNote.value = ''; }
+    alignGuides.value = []; alignNote.value = '';
+    /* measurements belong to one room, so Floor mode leaves the tool behind too */
+    if((!isCanvasMode(m) || m==='floor') && measureOn.value){ measureOn.value = false; resetMeasureState(); }
+  });
+  applyLayoutMode();
   if(isCanvasMode(m)){
     resize();
     if(pendingFit){ pendingFit=false; fit(); }
     else if(m==='floor') fit();   // arriving at a floor, frame the whole arrangement
-    renderRoomSel(); renderWalls(); renderOpen(); renderSel(); updateHistButtons(); draw();
   }
-  else repaint('libAll');
   syncModeParam();
 }
 /* places (Plan / Library / Marketplace) live in the header; the Room/Furniture mode lives on the canvas it changes */
@@ -86,17 +72,21 @@ function applyLayoutMode(){
   if(!lib) applyPanes();
 }
 
-/* ---- Phase 3: the rest of this file's region, move-only. ---- */
-function renderAll(){
-  renderTree(); renderRoom(); renderWalls(); renderRoomSel(); renderOpen();
-  renderInv(); renderSel(); renderFloorSel(); renderSnap(); renderMode(); renderMeasureBar(); updateHistButtons(); draw();
+function renderHistButtons(){
+  const {canUndo, canRedo}=histAvail();
+  $('btnUndo').disabled=!canUndo; $('btnRedo').disabled=!canRedo;
 }
 
-/* ---- Phase 3: the rest of this file's region, move-only. ---- */
+/* The mode's own views, as effects (ui/mount.js). */
+function mountMode(){
+  mountPanel(null, () => { pref('mode'); pref('leftOpen'); pref('rightOpen'); }, () => { renderMode(); applyLayoutMode(); });
+  mountPanel(null, () => { histRev.value; pref('mode'); rev.project.value; rev.floor.value; }, renderHistButtons);
+}
+
 function togglePane(side){
   if(!wideLayout()) return;
   transact('prefs', ()=>{ if(side==='left') S.leftOpen=!S.leftOpen; else S.rightOpen=!S.rightOpen; }, {canvas:false});   // resize() redraws
-  closeMenu(); applyPanes(); resize();
+  closeMenu(); resize();   // the mode effect has applied the panes by now: this is never inside a batch
 }
 /* the mode also lives in ?mode=, so a refresh (or a shared link) lands back in the same mode */
 function paramMode(){
@@ -104,4 +94,4 @@ function paramMode(){
   return ['room','furniture','floor','inventory','marketplace'].includes(m) ? m : null;
 }
 
-export {setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode, renderAll, togglePane, paramMode};
+export {mountMode, setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode, togglePane, paramMode};

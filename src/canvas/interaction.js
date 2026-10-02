@@ -11,7 +11,6 @@
    applyDragAt/cancelDrag/endDrag and the four setters, which landed as a
    declared code change in the commit before this one.
 */
-import {repaint} from '../core/bus.js';
 import {floorPts} from '../core/floor-space.js';
 import {bbox, norm360, polySimple, worldPoly} from '../core/geometry.js';
 import {snapFloor, snapFurn, snapRoom} from '../core/history.js';
@@ -66,15 +65,7 @@ const DEADZONE_PX=4;
    listener ahead of every other one in the file. The rule is about the
    registration, not the body, so index.html now reads
    `cv.addEventListener('pointerdown', onCanvasPointerDown)` and the 165 lines
-   of mode dispatch live here, where a unit test can reach them.
-
-   The one thing that is not byte-identical: the calls to renderFloorSel,
-   renderTree, renderRoomSel, renderWalls, renderOpen and renderSel are now
-   repaint() on core/bus.js. Importing them from plan/ would re-fuse canvas/
-   and plan/ into the cycle Step 5 just took apart (npm run cycles enforces
-   it). repaint runs its subscribers synchronously in the order named, so
-   `repaint('roomSel','walls','openings')` is exactly the three calls it
-   replaced, on the same tick. */
+   of mode dispatch live here, where a unit test can reach them. */
 function onCanvasPointerDown(e){
   try{ cv.setPointerCapture(e.pointerId); }catch(err){}
   const px=e.offsetX, py=e.offsetY;
@@ -126,7 +117,7 @@ function onCanvasPointerDown(e){
     return;
   }
 
-  if(measureOn){ measurePointerDown(px,py); return; }
+  if(measureOn.value){ measurePointerDown(px,py); return; }
 
   /* Floor mode positions whole rooms; their walls and items are edited in Room/Furniture */
   if(floorMode()){
@@ -148,7 +139,6 @@ function onCanvasPointerDown(e){
     if(hit){
       if(e.shiftKey){
         mergeToggle(hit);
-        repaint('floorSel','tree'); draw();
         return;   // shift+click only marks rooms for merge/delete — it never moves one
       }
       mergeSel.value = new Set([hit]);   // seeds the pair: a plain click here, then shift+click a second room
@@ -156,12 +146,10 @@ function onCanvasPointerDown(e){
       floorEntry();   // baseline the arrangement BEFORE it moves, or there is nothing to undo to
       floorSel.value = hit;
       drag.value = {mode:'floor-room', id:hit, dx:wx(px)-l.floorPlace.x, dy:wy(py)-l.floorPlace.y};
-      repaint('floorSel'); draw();
       return;
     }
     if(floorSel.value){ floorSel.value = null; }
-    if(mergeSel.value.size){ mergeClear(); repaint('tree'); }
-    repaint('floorSel');
+    mergeClear();
     drag.value = {mode:'pan', px, py, ox:view.ox, oy:view.oy};
     draw();
     return;
@@ -182,10 +170,9 @@ function onCanvasPointerDown(e){
         else { const w=iwallOf(hit.id); drag.value = {mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1], ox:px, oy:py, armed:false}; }
       }
       else drag.value = {mode:'wall', i:hit.i, last:[wx(px),wy(py)], ox:px, oy:py, armed:false};
-      repaint('roomSel','walls','openings'); draw();
       return;
     }
-    roomSel.value = null; repaint('roomSel','walls','openings');
+    roomSel.value = null;
     drag.value = {mode:'pan', px, py, ox:view.ox, oy:view.oy};
     draw();
     return;
@@ -223,7 +210,7 @@ function onCanvasPointerDown(e){
     const anchorNew=idMap.get(hit.id);
     const starts=newIds.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
     drag.value = {mode:'move', ids:newIds, anchorId:anchorNew, dx:wx(px)-instOf(anchorNew).x, dy:wy(py)-instOf(anchorNew).y, starts, loose:isBad(instOf(anchorNew)), snap};
-    preview('furn'); repaint('sel');   // the copies are committed with the drag, by endDrag
+    preview('furn');   // the copies are committed with the drag, by endDrag
     return;
   }
   if(hit){
@@ -233,7 +220,6 @@ function onCanvasPointerDown(e){
     const ids=[...selSet.value];
     const starts=ids.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
     drag.value = {mode:'move', ids, anchorId:hit.id, dx:wx(px)-hit.x, dy:wy(py)-hit.y, starts, loose:isBad(hit)};
-    repaint('sel'); draw();
   } else {
     drag.value = {mode:'marquee', x0:px, y0:py, x1:px, y1:py, additive:e.shiftKey};
     draw();
@@ -261,7 +247,7 @@ function applyDragAt(px,py,mods){
     if(mods.altKey){ floorGuides.value = []; floorSnapNote.value = 'Free'; }   // alt drops the magnet, same as everywhere else
     else { const s=snapFloorPlace(l,nx,ny); nx=s.x; ny=s.y; floorGuides.value = s.guides; floorSnapNote.value = s.note; }
     l.floorPlace.x=nx; l.floorPlace.y=ny;
-    preview('floor'); repaint('floorSel'); return;
+    preview('floor'); return;
   }
   if(drag.value.mode==='floor-rot'){
     const l=S.layouts.find(x=>x.id===drag.value.id); if(!l) return;
@@ -270,7 +256,7 @@ function applyDragAt(px,py,mods){
     let deg=drag.value.start+(a-drag.value.a0)*180/Math.PI;
     if(!mods.altKey) deg=Math.round(deg/15)*15;   // free turn is the exception, not the rule
     l.floorPlace.rot=norm360(deg);
-    preview('floor'); repaint('floorSel'); return;
+    preview('floor'); return;
   }
   if(drag.value.mode==='corner'){
     const P=RP(), was=P[drag.value.i].slice();
@@ -284,7 +270,7 @@ function applyDragAt(px,py,mods){
     P[drag.value.i]=np;
     if(!polySimple(P)){ P[drag.value.i]=was; alignGuides.value = []; alignNote.value = ''; }
     else clampOpenings();
-    preview('room'); repaint('roomSel','walls'); return;
+    preview('room'); return;
   }
   if(drag.value.mode==='wall'){
     const P=RP(), n=P.length, i=drag.value.i, w=wallOf(i);
@@ -295,7 +281,7 @@ function applyDragAt(px,py,mods){
     P[(i+1)%n]=[b[0]+w.nrm[0]*k, b[1]+w.nrm[1]*k];
     if(!polySimple(P)){ P[i]=a; P[(i+1)%n]=b; }
     else { drag.value.last=pt; clampOpenings(); }
-    preview('room'); repaint('roomSel','walls'); return;
+    preview('room'); return;
   }
   if(drag.value.mode==='open'){
     const o=openOf(drag.value.id); if(!o) return;
@@ -304,14 +290,14 @@ function applyDragAt(px,py,mods){
     const len=wallOf(near.i).len;
     o.width=Math.min(o.width,len);
     o.offset=Math.max(0,Math.min(near.t*len-o.width/2, len-o.width));
-    preview('room'); repaint('roomSel','openings'); return;
+    preview('room'); return;
   }
   if(drag.value.mode==='pillar'){
     const pl=pillarOf(drag.value.id); if(!pl) return;
     let nx=pt[0]-drag.value.dx, ny=pt[1]-drag.value.dy;
     if(!mods.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     pl.x=nx; pl.y=ny;
-    preview('room'); repaint('roomSel','walls'); return;
+    preview('room'); return;
   }
   if(drag.value.mode==='iwall'){
     const w=iwallOf(drag.value.id); if(!w) return;
@@ -319,14 +305,14 @@ function applyDragAt(px,py,mods){
     if(!mods.altKey){ const s=snapPt([nx,ny]); nx=s[0]; ny=s[1]; }
     const ddx=nx-w.a[0], ddy=ny-w.a[1];
     w.a=[w.a[0]+ddx, w.a[1]+ddy]; w.b=[w.b[0]+ddx, w.b[1]+ddy];
-    preview('room'); repaint('roomSel','walls'); return;
+    preview('room'); return;
   }
   if(drag.value.mode==='iwall-end'){
     const w=iwallOf(drag.value.id); if(!w) return;
     const other = drag.value.end==='a' ? w.b : w.a;
     const raw = mods.shiftKey ? axisLockFrom(other,pt) : pt;
     w[drag.value.end]=snapWallPoint(raw, drag.value.id, !mods.altKey);
-    preview('room'); repaint('roomSel','walls'); return;
+    preview('room'); return;
   }
 
   if(drag.value.mode==='marquee'){
@@ -342,7 +328,7 @@ function applyDragAt(px,py,mods){
     const prev=inst.rot;
     inst.rot=norm360(deg);
     if(!drag.value.loose && !validate(inst,worldPoly(inst,it)).ok) inst.rot=prev;
-    preview('furn'); repaint('sel'); return;
+    preview('furn'); return;
   }
   // drag.mode==='move': one or more furniture items, each clamped/validated
   // independently against walls/collisions (a group can end up slightly
@@ -411,7 +397,6 @@ function cancelDrag(){
   drag.value = null; floorGuides.value = []; floorSnapNote.value = ''; alignGuides.value = []; alignNote.value = '';
   // back where the gesture started, which is what storage and history already hold
   if(edits) preview(dragScope(mode)); else draw();
-  repaint('sel','roomSel','walls','openings','floorSel');
 }
 function endDrag(e){
   if(drag.value&&drag.value.mode==='marquee'){
@@ -432,7 +417,6 @@ function endDrag(e){
     else selectSet(hitIds);
     if(hitIds.length) bringToFront(hitIds);
     drag.value = null;
-    repaint('sel'); draw();
     if(e&&e.pointerId!==undefined){ try{ cv.releasePointerCapture(e.pointerId); }catch(err){} }
     return;
   }
@@ -445,8 +429,6 @@ function endDrag(e){
       alignGuides.value = []; alignNote.value = '';
       if(scope==='floor'){ floorGuides.value = []; floorSnapNote.value = ''; }
     });
-    if(scope==='floor') repaint('floorSel');
-    else if(scope==='furn') repaint('sel');
   }
   drag.value = null;
   if(e&&e.pointerId!==undefined){ try{ cv.releasePointerCapture(e.pointerId); }catch(err){} }

@@ -12,10 +12,11 @@ import {alignGuides, alignNote, roomSel} from '../core/selection.js';
 import {L} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {clampOpenings, syncWallOff} from '../model/walls.js';
-import {emit, repaint} from '../core/bus.js';
+import {expect} from '../core/registry.js';
+import {batch} from '../core/signals.js';
 import {flash} from '../ui/flash.js';
 import {$} from '../ui/modal.js';
-import {draw, scheduleDraw} from './draw.js';
+import {scheduleDraw} from './draw.js';
 import {drawState, drawCursor, wallDrawShift} from './interaction-state.js';
 import {alignPoint, alignRadius, isSquare} from './snap.js';
 import {fit, snapPt, wx, wy} from './view.js';
@@ -26,7 +27,8 @@ import {setMeasure} from './measure-tool.js';
 import {cancelSplitDraw} from './split-room.js';
 import {cancelWallDraw} from './wall-draw.js';
 function cancelCustomDraw(){
-  drawState.value = null; alignGuides.value = []; alignNote.value = ''; $('drawHint').hidden=true; draw();
+  batch(()=>{ drawState.value = null; alignGuides.value = []; alignNote.value = ''; });
+  $('drawHint').hidden=true;
 }
 function finishCustomDraw(){
   if(!drawState.value||drawState.value.pts.length<3){ flash('Add at least 3 corners first'); return; }
@@ -36,7 +38,7 @@ function finishCustomDraw(){
     clampOpenings(); roomSel.value = null;
     drawState.value = null; alignGuides.value = []; alignNote.value = ''; $('drawHint').hidden=true;
   });
-  repaint('room','walls','roomSel','openings'); fit();
+  fit();
 }
 /* Where the next corner would land, and why — the same magnet the corner drag uses, so
    an outline comes out straight and square while it is being drawn rather than having to
@@ -74,11 +76,9 @@ function applyDrawCursorAt(px,py,shift){
 function startCustomDraw(){
   if(wallDrawState.value) cancelWallDraw();
   if(splitDrawState.value) cancelSplitDraw();
-  if(measureOn) setMeasure(false);
-  if(!roomMode()) emit('mode:set','room');
-  drawState.value = {pts:[]}; drawCursor.value = null;
-  roomSel.value = null; repaint('roomSel');
+  if(measureOn.value) setMeasure(false);
+  if(!roomMode()) expect('plan.setMode')('room');
+  batch(()=>{ drawState.value = {pts:[]}; drawCursor.value = null; roomSel.value = null; });
   $('drawHint').hidden=false;
-  draw();
 }
 export {cancelCustomDraw, finishCustomDraw, drawSnapPoint, applyDrawCursorAt, startCustomDraw};

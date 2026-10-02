@@ -1,16 +1,9 @@
-/* The layout tree: the folder/floor/room tree in the left pane, and the HTML
-   its rows are built from.
+/* The layout tree: the folder/floor/room tree in the left pane, the HTML its
+   rows are built from, and what the rows' menus do to the project.
 
-   Extracted from index.html in Phase 3, move-only: the block below is
-   byte-identical to what stood there (bar the one `import {moreBtn}` line,
-   which was already an import and is re-stated in the header), and the
-   `export` block at the end is the only line added.
-
-   This is the tree's *rendering* half only. Everything that acts on a row —
-   enterFloor, folderMenu, layoutMenu, the rename dialogs' callers and the
-   drag-and-drop listeners — calls renderAll(), setMode() or the room-panel
-   render*() functions, and those are inside the plan/library reference cycle
-   documented in .claude/plans/refactor-split.md. They stayed in index.html.
+   renderTree runs as an effect (mountTree, below): the menu actions commit
+   through transact() and the tree, the panels and the canvas follow on their
+   own.
 
    treeBox is a top-level DOM read, the same call ui/modal.js makes for `mo`
    and canvas/view.js for `cv`: a lookup, not a mutation, and the bundle runs
@@ -39,9 +32,10 @@ import {openMenu} from '../ui/menu.js';
 import {askConfirm, askText, openModal} from '../ui/modal.js';
 import {mountTagField, tagFieldHTML, tagFieldValue} from '../ui/tag-input.js';
 import {lastMerge, mergeUndo, newFloorWith, putOnFloorDialog, setLastMerge} from './floors.js';
-import {renderInv} from './item-list.js';
-import {renderAll, setMode} from './mode.js';
+import {setMode} from './mode.js';
 import {dropHalf} from '../ui/dnd.js';
+import {pref, rev} from '../core/signals.js';
+import {mountPanel} from '../ui/mount.js';
 /* ------------------------- layout tree (folders + rooms) ------------------------- */
 function folderLabel(f){
   const tags=(f.tags&&f.tags.length) ? `<span class="tagchip" title="Tag filter: ${esc(f.tags.join(', '))}">${esc(f.tags[0])}${f.tags.length>1?' +'+(f.tags.length-1):''}</span>` : '';
@@ -95,17 +89,17 @@ const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layo
 function renameFolder(id){
   const f=folderOf(id), row=treeRowEl(id);
   if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('project', ()=>{ f.name=v; }); renderTree(); });
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('project', ()=>{ f.name=v; }); });
 }
 function renameLayout(id){
   const l=S.layouts.find(x=>x.id===id), row=treeRowEl(id);
   if(!l||!row) return;
-  inlineEdit(row.querySelector('.nm'), l.name, v=>{ if(v) transact('project', ()=>{ l.name=v; }); renderTree(); });
+  inlineEdit(row.querySelector('.nm'), l.name, v=>{ if(v) transact('project', ()=>{ l.name=v; }); });
 }
 function renameFloor(id){
   const f=floorOf(id), row=treeRowEl(id);
   if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('project', ()=>{ f.name=v; }); renderTree(); });
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('project', ()=>{ f.name=v; }); });
 }
 
 
@@ -145,7 +139,6 @@ function enterFloor(id){
     if(curFloorId()!==id) activateLayout(rooms.find(l=>l.id===S.active)?.id || rooms[0].id);
     setMode('floor');
   });
-  renderAll();
 }
 
 function folderMenu(id, anchor){
@@ -154,10 +147,10 @@ function folderMenu(id, anchor){
     {label:'Rename', fn:()=>renameFolder(id)},
     {label:'Add a room here', fn:()=>askText('New room','Name','Room', n=>{
       transact('project', ()=>{ const l=blankLayout(n,id); S.layouts.push(l); treeExpand(id); activateLayout(l.id); });
-      renderAll(); fit();
+      fit();
     })},
     {label:'Add a subfolder', fn:()=>askText('New folder','Name','Folder', n=>{
-      transact('project', ()=>{ S.folders.push({id:uid(),name:n,parentId:id,tags:[]}); treeExpand(id); }); renderTree();
+      transact('project', ()=>{ S.folders.push({id:uid(),name:n,parentId:id,tags:[]}); treeExpand(id); });
     })},
     {sep:true},
     {label:'Move to folder\u2026', fn:()=>moveDialog('folder',id)},
@@ -169,13 +162,13 @@ function folderMenu(id, anchor){
 function layoutMenu(id, anchor){
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
   openMenu(anchor, [
-    {label:'Open', fn:()=>{ transact('project', ()=>activateLayout(id)); renderAll(); fit(); }},
+    {label:'Open', fn:()=>{ transact('project', ()=>activateLayout(id)); fit(); }},
     {label:'Rename', fn:()=>renameLayout(id)},
     {label:'Duplicate', fn:()=>duplicateLayout(id)},
     {label:'Split room\u2026', fn:()=>startSplitRoom(id)},
     {label:'Move to folder\u2026', fn:()=>moveDialog('layout',id)},
     l.floorId
-      ? {label:'Take off \u201c'+(floorOf(l.floorId)||{name:'the floor'}).name+'\u201d', fn:()=>{ transact('project', ()=>{ l.floorId=null; }); renderAll(); }}
+      ? {label:'Take off \u201c'+(floorOf(l.floorId)||{name:'the floor'}).name+'\u201d', fn:()=>{ transact('project', ()=>{ l.floorId=null; }); }}
       : (S.floors.length
           ? {label:'Put on a floor\u2026', fn:()=>putOnFloorDialog(id)}
           : {label:'Put on a new floor\u2026', fn:()=>newFloorWith(l)}),
@@ -195,7 +188,6 @@ function folderTagsDialog(id){
     <p class="hint">When you switch into a room in this folder from a room in a different folder, the item list's tag filter is set to this automatically. Switching between rooms inside this same folder leaves your filter as you left it.</p>`,
     'Save', ()=>{
       transact('project', ()=>{ f.tags=tagFieldValue('fTags'); });
-      renderTree();
     },
     ()=>{ mountTagField('fTags', f.tags||[]); });
 }
@@ -228,7 +220,7 @@ function deleteFolder(id){
       if(!S.layouts.length) S.layouts=[blankLayout()];
       if(!S.layouts.some(l=>l.id===S.active)) activateLayout(S.layouts[0].id);
     });
-    renderAll(); fit();
+    fit();
   };
   if(!folders.length && !layouts.length){
     askConfirm('Delete this folder?', '\u201c'+f.name+'\u201d is empty.', 'Delete folder', ()=>drop(false));
@@ -257,7 +249,6 @@ function duplicateLayout(id){
   /* a copy stays on the same floor, nudged clear so it isn't hidden under the original */
   if(c.floorId) c.floorPlace={x:(c.floorPlace.x||0)+500, y:(c.floorPlace.y||0)+500, rot:c.floorPlace.rot||0};
   transact('project', ()=>{ S.layouts.splice(S.layouts.indexOf(src)+1, 0, c); activateLayout(c.id); });
-  renderAll();
 }
 function deleteLayout(id){
   if(S.layouts.length===1){ flash('You need at least one room'); return; }
@@ -268,7 +259,7 @@ function deleteLayout(id){
       if(S.active===id) activateLayout(S.layouts[0].id);
       if(lastMerge && lastMerge.aId===id) setLastMerge(null);
     });
-    renderAll(); fit();
+    fit();
   });
 }
 
@@ -293,13 +284,12 @@ function moveDialog(kind,id){
         if(kind==='folder') obj.parentId=v; else { obj.folderId=v; obj.floorId=null; }
         if(v) treeExpand(v);
       });
-      renderTree(); renderInv();
     });
 }
 /* The Rooms list holds more than one kind of thing, so + stays the one-click common case
    (a new room) and everything rarer sits behind the ⋯ with a word for a label. */
 const newFolder = () =>
-  askText('New folder','Name','Folder', n=>{ transact('project', ()=>{ S.folders.push({id:uid(),name:n,parentId:null,tags:[]}); }); renderTree(); });
+  askText('New folder','Name','Folder', n=>{ transact('project', ()=>{ S.folders.push({id:uid(),name:n,parentId:null,tags:[]}); }); });
 let dragTree=null;
 function setDragTree(v){ dragTree=v; }
 
@@ -317,4 +307,9 @@ function treeDropSpot(e){
   return {mode:t<0.5?'before':'after',id,isFolder,row};
 }
 
-export {folderLabel, layoutRowHTML, floorRowHTML, renderTreeLevel, renderTree, treeBox, treeRowEl, renameFolder, renameLayout, renameFloor, activateLayout, folderPath, folderDescendant, enterFloor, folderMenu, layoutMenu, folderTagsDialog, folderContents, deleteFolder, duplicateLayout, deleteLayout, moveDialog, newFolder, dragTree, setDragTree, treeDropSpot};
+/* The tree, as an effect on the project's rooms, folders and floors and on
+   what is marked and expanded in it (ui/mount.js). */
+function mountTree(){
+  mountPanel('layoutTree', () => { rev.project.value; pref('mode'); mergeSel.value; treeOpen.value; }, renderTree);
+}
+export {mountTree, folderLabel, layoutRowHTML, floorRowHTML, renderTreeLevel, renderTree, treeBox, treeRowEl, renameFolder, renameLayout, renameFloor, activateLayout, folderPath, folderDescendant, enterFloor, folderMenu, layoutMenu, folderTagsDialog, folderContents, deleteFolder, duplicateLayout, deleteLayout, moveDialog, newFolder, dragTree, setDragTree, treeDropSpot};

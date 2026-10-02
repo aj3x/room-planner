@@ -1,18 +1,8 @@
 /* The Furniture pane's inventory list: the tag-filter chips, the list itself,
-   and the two filter helpers behind them.
+   the two filter helpers behind them, and what a row's menu does.
 
-   Extracted from index.html in Phase 3, move-only: the four chunks below are
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added.
-
-   allTags and itemMatchesFilter were declared near the top of the monolith,
-   two hundred lines above the rest, but renderTagChips and renderInv are their
-   only readers, so they came here and are module-private now.
-
-   What acts on a row did not come: placeItem, renameItem, itemMenu, deleteItem
-   and the drag-to-reorder listeners all reach itemDialog or renderSel, and
-   both are in the reference cycle between the Plan side panels and the Library
-   UI (see .claude/plans/refactor-split.md, the plan/ round).
+   The list is an effect (mountItemList, at the end): the commands commit
+   through transact() and the list, the Selection panel and the canvas follow.
 
    invBox is a top-level DOM read, the same call ui/modal.js makes for `mo`.
 */
@@ -34,7 +24,9 @@ import {inlineEdit} from '../ui/inline-edit.js';
 import {openMenu} from '../ui/menu.js';
 import {askConfirm} from '../ui/modal.js';
 import {itemDialog} from './item-dialog.js';
-import {place, renderSel} from './selection-panel.js';
+import {place} from './selection-panel.js';
+import {computed, rev} from '../core/signals.js';
+import {mountPanel} from '../ui/mount.js';
 function allTags(){
   const s=new Set();
   for(const it of S.inventory) for(const t of (it.tags||[])) s.add(t);
@@ -116,7 +108,7 @@ function placeItem(id){
 function renameItem(id){
   const it=itemOf(id), li=invBox.querySelector('li[data-id="'+id+'"]');
   if(!it||!li) return;
-  inlineEdit(li.querySelector('.nm'), it.name, v=>{ if(v) transact('lib', ()=>{ it.name=v; }); renderInv(); renderSel(); });
+  inlineEdit(li.querySelector('.nm'), it.name, v=>{ if(v) transact('lib', ()=>{ it.name=v; }); });
 }
 function itemMenu(id, anchor){
   const it=itemOf(id); if(!it) return;
@@ -130,7 +122,6 @@ function itemMenu(id, anchor){
       c.id=uniqueId(it.id+'-copy', new Set(S.inventory.map(x=>x.id)));
       c.name=it.name+' copy';
       transact('lib', ()=>{ S.inventory.splice(S.inventory.indexOf(it)+1, 0, c); });
-      renderInv();
     }},
     {sep:true},
     {label:'Delete\u2026', danger:true, fn:()=>deleteItem(id)},
@@ -146,7 +137,6 @@ function deleteItem(id){
       for(const l of S.layouts) l.placed=l.placed.filter(p=>p.itemId!==id);
       selectClear();
     });
-    renderInv(); renderSel();
   };
   if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+'. Those will be removed too.', 'Delete', kill);
   else kill();
@@ -154,4 +144,11 @@ function deleteItem(id){
 let dragInv=null;
 function setDragInv(v){ dragInv=v; }
 
-export {allTags, itemMatchesFilter, renderTagChips, renderInv, invBox, placeItem, renameItem, itemMenu, deleteItem, dragInv, setDragInv};
+/* The list repaints on library edits and filter changes, and on furniture
+   edits only when the set of things placed in this room changed: dragging a
+   chair about moves no count, and is no reason to rebuild every row. */
+const placedKey = computed(() => { rev.furn.value; rev.project.value; return L().placed.map(p=>p.itemId).join(); });
+function mountItemList(){
+  mountPanel('invList', () => { rev.lib.value; rev.prefs.value; rev.project.value; placedKey.value; }, renderInv);
+}
+export {mountItemList, allTags, itemMatchesFilter, renderTagChips, renderInv, invBox, placeItem, renameItem, itemMenu, deleteItem, dragInv, setDragInv};

@@ -14,18 +14,21 @@
         (model/validity.js getConflicts, model/walkpaths.js) — for the scopes
         that can change what those caches read (REV_SCOPES below);
      4. save() (debounced, in core/store.js);
-     5. emit('changed', scope, {canvas}) once per scope. boot.js subscribes
-        the canvas to it, which schedules one draw for the frame unless every
-        call for that scope passed opts.canvas === false — a setting the plan
-        does not show (a list filter, a collapsed section). core/ never imports the
-        canvas, so a test that never boots gets the commit with no drawing.
+     5. bump the revision signal of every scope touched (core/signals.js),
+        once, and planRev — the canvas's — unless every call for the commit
+        passed opts.canvas === false, because the plan does not show it (a
+        list filter, a collapsed section). Whatever shows that scope is an
+        effect reading its signal and repaints itself; this module names no
+        view, and a test that never mounts one gets the commit with no
+        drawing.
 
    fn may be omitted when the edit has already happened live — the colour
    picker previews on every `input` and commits with a bare transact('room')
    on `change`.
 
-   Panel repaints are still the caller's (`repaint(...)` after the transact);
-   they are not this module's business.
+   The whole call runs inside one signals batch, so an effect never sees a
+   half-made edit: selection writes inside fn() and the revision bumps are
+   delivered together when the outermost transact returns.
 
    Nesting. A transact inside another one's fn() records its scope and returns;
    the outermost call commits every scope touched, once. So a helper that
@@ -34,17 +37,16 @@
    and the error propagates.
 
    Gestures. A pointermove frame is not an undo step and is not worth a write
-   to storage: it goes through preview(scope, fn), which bumps the revision and
-   emits `changed` (so the canvas redraws) but neither records history nor
+   to storage: it goes through preview(scope, fn), which bumps the revisions
+   (so the canvas and the panels follow) but neither records history nor
    saves. The pointerup that ends the gesture calls transact() once, which is
    what makes one gesture one undo step. */
 
-import {emit} from './bus.js';
 import {bumpRev, commit, commitFloor, furnHist, roomHist, snapFurn, snapRoom} from './history.js';
 import {L} from './state.js';
+import {SCOPES, batch, bump} from './signals.js';
 import {save} from './store.js';
 
-const SCOPES = ['room','furn','floor','lib','prefs','project'];
 const RECORD = {
   room:  () => commit(roomHist, snapRoom),
   furn:  () => commit(furnHist, snapFurn),
@@ -70,6 +72,9 @@ function check(scope){
 
 function transact(scope, fn, opts){
   check(scope);
+  return batch(() => run(scope, fn, opts));
+}
+function run(scope, fn, opts){
   const p = pending.get(scope) || {hist:false, canvas:false};
   p.hist = p.hist || !(opts && opts.history===false);
   p.canvas = p.canvas || !(opts && opts.canvas===false);
@@ -91,17 +96,19 @@ function finish(done){
   for(const [scope, p] of done) if(p.hist && RECORD[scope]) RECORD[scope]();
   if(L() && [...done.keys()].some(s=>REV_SCOPES.has(s))) bumpRev();
   save();
-  for(const [scope, p] of done) emit('changed', scope, {canvas:p.canvas});
+  bump([...done.keys()], [...done.values()].some(p => p.canvas));
 }
 
 /* One frame of a gesture: live state changes, the canvas follows, nothing is
    recorded or saved. The gesture's pointerup is what commits. */
 function preview(scope, fn){
   check(scope);
-  const out = fn ? fn() : undefined;
-  if(L() && REV_SCOPES.has(scope)) bumpRev();
-  emit('changed', scope, {preview:true, canvas:true});
-  return out;
+  return batch(() => {
+    const out = fn ? fn() : undefined;
+    if(L() && REV_SCOPES.has(scope)) bumpRev();
+    bump([scope], true);
+    return out;
+  });
 }
 
 export {SCOPES, transact, preview};

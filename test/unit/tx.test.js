@@ -7,21 +7,34 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { S, setS, L } from '../../src/core/state.js';
 import { migrate } from '../../src/core/migrate.js';
 import { roomHist, furnHist, seedHistFor } from '../../src/core/history.js';
-import { on, resetBus } from '../../src/core/bus.js';
+import { SCOPES, rev, planRev, effect } from '../../src/core/signals.js';
 import { KEY } from '../../src/core/store.js';
 import { transact, preview } from '../../src/core/tx.js';
 
 const steps = (map) => map[L().id].stack.length;
-let changed;
+/* Each run of this effect is one notification views would see: the scopes
+   whose revision moved, with '+plan' when the canvas was asked to redraw. */
+let changed, stop;
+function watch(){
+  let last = null;
+  return effect(() => {
+    const now = SCOPES.map(sc => rev[sc].value).concat(planRev.value);
+    if(last){
+      const moved = SCOPES.filter((sc, i) => now[i] !== last[i]);
+      changed.push(moved.join(',') + (now[SCOPES.length] !== last[SCOPES.length] ? '+plan' : ''));
+    }
+    last = now;
+  });
+}
 
 beforeEach(() => {
   setS(migrate({ layouts: [{ name: 'R', room: { w: 4000, d: 3000 } }], inventory: [] }));
   for (const k of Object.keys(roomHist)) delete roomHist[k];
   for (const k of Object.keys(furnHist)) delete furnHist[k];
   seedHistFor();
-  resetBus();
+  stop?.();
   changed = [];
-  on('changed', (scope, o) => changed.push(o && o.preview ? 'preview:' + scope : scope));
+  stop = watch();
   vi.useFakeTimers();
   localStorage.clear();
 });
@@ -31,11 +44,11 @@ const saved = async () => { await vi.runAllTimersAsync(); return localStorage.ge
 
 describe('transact()', () => {
   it('records one step on its own stack, saves, bumps the revision, notifies once', async () => {
-    const rev = L()._rev || 0;
+    const r0 = L()._rev || 0;
     transact('room', () => { L().room.wall = 99; });
     expect([steps(roomHist), steps(furnHist)]).toEqual([2, 1]);
-    expect(L()._rev).toBe(rev + 1);
-    expect(changed).toEqual(['room']);
+    expect(L()._rev).toBe(r0 + 1);
+    expect(changed).toEqual(['room+plan']);
     expect(JSON.parse(await saved()).layouts[0].room.wall).toBe(99);
   });
 
@@ -53,7 +66,7 @@ describe('transact()', () => {
       expect(steps(roomHist)).toBe(1);   // nothing recorded mid-action
     });
     expect(steps(roomHist)).toBe(2);
-    expect(changed).toEqual(['room', 'prefs']);
+    expect(changed).toEqual(['room,prefs+plan']);   // one batch: views run once
   });
 
   it('a throwing fn commits nothing and leaves the next transact working', () => {
@@ -70,17 +83,15 @@ describe('transact()', () => {
     expect(await saved()).toBeNull();
     transact('room');
     expect(steps(roomHist)).toBe(2);
-    expect(changed).toEqual([...Array(5).fill('preview:room'), 'room']);
+    expect(changed).toEqual(Array(6).fill('room+plan'));
   });
 
   it('prefs leave the derived caches alone; canvas:false asks for no redraw', () => {
-    const rev = L()._rev || 0;
-    const seen = [];
-    on('changed', (scope, o) => seen.push(o.canvas));
+    const r0 = L()._rev || 0;
     transact('prefs', () => { S.invSearch = 'sofa'; }, { canvas: false });
     transact('prefs', () => { S.showDims = true; });
-    expect(L()._rev || 0).toBe(rev);
-    expect(seen).toEqual([false, true]);
+    expect(L()._rev || 0).toBe(r0);
+    expect(changed).toEqual(['prefs', 'prefs+plan']);
   });
 
   it('refuses a scope it does not know', () => {

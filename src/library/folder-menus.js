@@ -6,7 +6,6 @@
    hoc twins are NOT here: they are downstream of the SCC, not in it, and
    follow in a later commit.
 */
-import {repaint} from '../core/bus.js';
 import {transact} from '../core/tx.js';
 import {$, moError, openModal} from '../ui/modal.js';
 import {esc} from '../ui/panels.js';
@@ -14,7 +13,6 @@ import {mountTagField, tagFieldHTML, tagFieldValue} from '../ui/tag-input.js';
 import {childMarketFolders, listingsInFolder} from './adhoc-folders.js';
 import {childItemFolders, itemFolderOf, moveItemToFolder, recomputeFolderSubtree} from './item-folders.js';
 import {libTreeOpen} from './nav.js';
-import {renderLibAll} from './shell.js';
 import {S, uid} from '../core/state.js';
 import {inlineEdit} from '../ui/inline-edit.js';
 import {openMenu} from '../ui/menu.js';
@@ -46,7 +44,6 @@ function libFolderTagsDialog(id){
     <p class="hint">Every item filed in this folder — or any subfolder underneath it — carries these tags automatically, alongside whatever tags you put on the item itself. They show up in Furniture mode's own tag filter too.</p>`,
     'Save', ()=>{
       transact('lib', ()=>{ f.tags=tagFieldValue('fTags'); recomputeFolderSubtree(id); });
-      renderLibAll();
     },
     ()=>{ mountTagField('fTags', f.tags||[]); });
 }
@@ -72,9 +69,7 @@ function moveLibItemDialog(item){
   openModal('Move “'+item.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
-      transact('lib', ()=>moveItemToFolder(item, v));
-      if(v) libTreeOpen.add(v);
-      renderLibAll();
+      transact('lib', ()=>{ moveItemToFolder(item, v); if(v) libTreeOpen.add(v); });
     });
 }
 
@@ -82,12 +77,12 @@ function moveLibItemDialog(item){
 function renameLibFolder(id){
   const f=itemFolderOf(id), row=libTreeBox.querySelector('[data-folder="'+id+'"]');
   if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('lib', ()=>{ f.name=v; }); renderLibAll(); });
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('lib', ()=>{ f.name=v; }); });
 }
 function renameAdhocFolder(id){
   const f=marketFolderOf(id), row=libTreeBox.querySelector('[data-mfolder="'+id+'"]');
   if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('lib', ()=>{ f.name=v; }); renderLibAll(); });
+  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('lib', ()=>{ f.name=v; }); });
 }
 
 function libFolderMenu(id, anchor){
@@ -96,7 +91,7 @@ function libFolderMenu(id, anchor){
     {label:'Open', fn:()=>goLibFolder('library',id)},
     {label:'Rename', fn:()=>renameLibFolder(id)},
     {label:'New subfolder', fn:()=>askNewLibFolder('New folder', (n,tags)=>{
-      transact('lib', ()=>{ S.itemFolders.push({id:uid(),name:n,parentId:id,tags}); }); libTreeOpen.add(id); renderLibAll();
+      transact('lib', ()=>{ S.itemFolders.push({id:uid(),name:n,parentId:id,tags}); libTreeOpen.add(id); });
     })},
     {sep:true},
     {label:'Move to folder…', fn:()=>moveLibFolderDialog(id)},
@@ -111,7 +106,7 @@ function adhocFolderMenu(id, anchor){
     {label:'Open', fn:()=>goLibFolder('market',id)},
     {label:'Rename', fn:()=>renameAdhocFolder(id)},
     {label:'New subfolder', fn:()=>askText('New folder','Name','Folder', n=>{
-      transact('lib', ()=>{ S.marketFolders.push({id:uid(),name:n,parentId:id}); }); libTreeOpen.add('m:'+id); renderLibAll();
+      transact('lib', ()=>{ S.marketFolders.push({id:uid(),name:n,parentId:id}); libTreeOpen.add('m:'+id); });
     })},
     {sep:true},
     {label:'Move to folder…', fn:()=>moveAdhocFolderDialog(id)},
@@ -150,7 +145,6 @@ function deleteLibFolder(id){
       libTreeOpen.delete(id);
       if(nav.libFolderId===id || (keep===false && folders.some(x=>x.id===nav.libFolderId))) goLibFolder('library',null);
     });
-    repaint('inv','libAll');
   };
   if(!folders.length && !items.length){
     askConfirm('Delete this folder?', '“'+f.name+'” is empty.', 'Delete folder', ()=>drop(false));
@@ -183,7 +177,6 @@ function deleteAdhocFolder(id){
       libTreeOpen.delete('m:'+id);
       if(nav.marketFolderId===id) goLibFolder('market',null);
     });
-    renderLibAll();
   };
   if(!folders.length && !listings.length){
     askConfirm('Delete this folder?', '“'+f.name+'” is empty.', 'Delete folder', ()=>drop(false));
@@ -211,9 +204,7 @@ function moveLibFolderDialog(id){
   openModal('Move “'+obj.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
-      transact('lib', ()=>{ obj.parentId=v; recomputeFolderSubtree(id); });
-      if(v) libTreeOpen.add(v);
-      renderLibAll();
+      transact('lib', ()=>{ obj.parentId=v; recomputeFolderSubtree(id); if(v) libTreeOpen.add(v); });
     });
 }
 function moveAdhocFolderDialog(id){
@@ -230,9 +221,7 @@ function moveAdhocFolderDialog(id){
   openModal('Move “'+obj.name+'”', `<label class="stack-label">Folder</label>
     <select id="moFolder">${opts}</select>`, 'Move', ()=>{
       const v=$('moFolder').value||null;
-      transact('lib', ()=>{ obj.parentId=v; });
-      if(v) libTreeOpen.add('m:'+v);
-      renderLibAll();
+      transact('lib', ()=>{ obj.parentId=v; if(v) libTreeOpen.add('m:'+v); });
     });
 }
 export {askNewLibFolder, libFolderTagsDialog, adhocFolderContents, moveLibItemDialog, renameLibFolder, renameAdhocFolder, itemFolderContents, deleteLibFolder, deleteAdhocFolder, moveLibFolderDialog, moveAdhocFolderDialog, libFolderMenu, adhocFolderMenu};

@@ -26,14 +26,14 @@ import { moveBefore, clearDropMarks, dropHalf } from '../ui/dnd.js';
 import { flash } from '../ui/flash.js';
 import {wallDrawState} from '../canvas/interaction-state.js';
 import { fit } from '../canvas/view.js';
-import { draw } from '../canvas/draw.js';
 import { startWallDraw, cancelWallDraw } from '../canvas/wall-draw.js';
 import { startSplitRoom } from '../canvas/split-room.js';
-import { renderAll, setMode } from '../plan/mode.js';
-import { folderDescendant, enterFloor, folderMenu, layoutMenu, newFolder, activateLayout, renderTree, treeBox, renameFolder, renameLayout, renameFloor, dragTree, setDragTree, treeDropSpot } from '../plan/layout-tree.js';
-import { newFloor, putOnFloor, openFloorMergeMenu, floorMenu, renderFloorSel } from '../plan/floors.js';
-import { deletePillar, deleteIWall, renderRoomSel, deleteOpening, renderWalls, renderObstacles, addPillar, wallDialog, KIND, renderOpen } from '../plan/room-panel.js';
-import { renderTagChips, renderInv, invBox, placeItem, renameItem, itemMenu, dragInv, setDragInv } from '../plan/item-list.js';
+import { setMode } from '../plan/mode.js';
+import { folderDescendant, enterFloor, folderMenu, layoutMenu, newFolder, activateLayout, treeBox, renameFolder, renameLayout, renameFloor, dragTree, setDragTree, treeDropSpot } from '../plan/layout-tree.js';
+import { newFloor, putOnFloor, openFloorMergeMenu, floorMenu } from '../plan/floors.js';
+import { deletePillar, deleteIWall, deleteOpening, addPillar, wallDialog } from '../plan/room-panel.js';
+import { KIND } from '../model/openings.js';
+import { invBox, placeItem, renameItem, itemMenu, dragInv, setDragInv } from '../plan/item-list.js';
 import { itemDialog } from '../plan/item-dialog.js';
 import { openingDialog } from '../plan/opening-dialog.js';
 import { bpUploadDialog } from '../blueprint/step1-upload.js';
@@ -56,7 +56,6 @@ function bindPaneLeft(){
       cancelSingleClick();
       const id = flRow ? flRow.dataset.floor : fRow.dataset.folder;
       treeToggle(id);
-      renderTree();
       return;
     }
     // held back briefly so a second click can turn into a rename instead
@@ -67,7 +66,7 @@ function bindPaneLeft(){
     }
     if(fRow){
       const id=fRow.dataset.folder;
-      singleClick(()=>{ treeToggle(id); renderTree(); });
+      singleClick(()=>treeToggle(id));
       return;
     }
     if(lRow){
@@ -75,18 +74,17 @@ function bindPaneLeft(){
       if(e.shiftKey){
         cancelSingleClick();
         mergeToggle(id);
-        renderTree(); renderFloorSel(); draw();
         return;
       }
       mergeClear();
-      singleClick(()=>{ transact('project', ()=>{ activateLayout(id); setMode('room'); }); renderAll(); fit(); });
+      singleClick(()=>{ transact('project', ()=>{ activateLayout(id); setMode('room'); }); fit(); });
     }
   });
   treeBox.addEventListener('contextmenu', e=>{
     const lRow=e.target.closest('.layout-row'); if(!lRow) return;
     e.preventDefault();
     const id=lRow.dataset.layout;
-    if(!mergeSel.value.has(id)){ mergeOnly(id); renderTree(); }
+    if(!mergeSel.value.has(id)) mergeOnly(id);
     if(mergeSel.value.size!==2){
       menuAtPoint(e.clientX, e.clientY, [{label:'Split room…', fn:()=>startSplitRoom(id)}]);
       return;
@@ -95,7 +93,7 @@ function bindPaneLeft(){
     const l0=S.layouts.find(x=>x.id===ids[0]), l1=S.layouts.find(x=>x.id===ids[1]);
     if(!l0||!l1||!l0.floorId||l0.floorId!==l1.floorId){
       flash('Select two rooms on the same floor to merge them');
-      mergeClear(); renderTree();
+      mergeClear();
       return;
     }
     openFloorMergeMenu(ids, e.clientX, e.clientY);
@@ -142,7 +140,7 @@ function bindPaneLeft(){
     if(spot.mode==='onto-floor'){
       const l=S.layouts.find(x=>x.id===d.id);
       setDragTree(null);
-      if(l && l.floorId!==spot.id) putOnFloor(l, spot.id); else renderTree();
+      if(l && l.floorId!==spot.id) putOnFloor(l, spot.id);
       return;
     }
     let parent=null, targetId=null, after=false;
@@ -168,7 +166,6 @@ function bindPaneLeft(){
       }
     });
     setDragTree(null);
-    renderTree(); renderInv();
   });
 
   $('btnRoomsMore').addEventListener('click', e=>{
@@ -181,7 +178,7 @@ function bindPaneLeft(){
   $('btnNewLayout').addEventListener('click', ()=>{
     askText('New room','Name','Room '+(S.layouts.length+1), n=>{
       transact('project', ()=>{ const l=blankLayout(n,null); S.layouts.push(l); activateLayout(l.id); });
-      renderTree(); renderAll(); fit();
+      fit();
     });
   });
 
@@ -190,7 +187,7 @@ function bindPaneLeft(){
     const kind=li.dataset.kind, id=li.dataset.id, btn=e.target.closest('button');
     if(btn&&btn.dataset.act==='more'){
       openMenu(btn, [
-        {label:'Select', fn:()=>{ if(!roomMode()) setMode('room'); roomSel.value = {kind,id}; renderRoomSel(); renderObstacles(); draw(); }},
+        {label:'Select', fn:()=>{ if(!roomMode()) setMode('room'); roomSel.value = {kind,id}; }},
         {sep:true},
         {label:'Delete', danger:true, fn:()=>kind==='pillar'?deletePillar(id):deleteIWall(id)},
       ], li.querySelector('.nm').textContent);
@@ -198,7 +195,6 @@ function bindPaneLeft(){
     }
     if(!roomMode()) setMode('room');
     roomSel.value = {kind, id};
-    renderRoomSel(); renderObstacles(); draw();
   });
   $('btnAddStruct').addEventListener('click', e=>{
     openMenu(e.currentTarget, [
@@ -217,7 +213,6 @@ function bindPaneLeft(){
     const li=e.target.closest('li[data-i]'); if(!li) return;
     if(!roomMode()) setMode('room');
     roomSel.value = {kind:'wall', i:+li.dataset.i};
-    renderWalls(); renderRoomSel(); draw();
   });
   $('wallList').addEventListener('dblclick', e=>{
     const li=e.target.closest('li[data-i]'); if(li) wallDialog(+li.dataset.i);
@@ -236,7 +231,6 @@ function bindPaneLeft(){
     }
     if(!roomMode()) setMode('room');
     roomSel.value = {kind:'opening', id};
-    renderRoomSel(); renderOpen(); draw();
   });
 
   $('tagChips').addEventListener('click', e=>{
@@ -249,10 +243,9 @@ function bindPaneLeft(){
         S.tagFilter = S.tagFilter.includes(t) ? S.tagFilter.filter(x=>x!==t) : [...S.tagFilter,t];
       }
     }, {canvas:false});
-    renderTagChips(); renderInv();
   });
-  $('onlyAvail').addEventListener('change', e=>{ transact('prefs', ()=>{ S.onlyAvailable=e.target.checked; }, {canvas:false}); renderInv(); });
-  $('invSearch').addEventListener('input', e=>{ transact('prefs', ()=>{ S.invSearch=e.target.value; }, {canvas:false}); renderInv(); });
+  $('onlyAvail').addEventListener('change', e=>{ transact('prefs', ()=>{ S.onlyAvailable=e.target.checked; }, {canvas:false}); });
+  $('invSearch').addEventListener('input', e=>{ transact('prefs', ()=>{ S.invSearch=e.target.value; }, {canvas:false}); });
 
   invBox.addEventListener('click', e=>{
     const li=e.target.closest('li[data-id]'); if(!li) return;
@@ -300,7 +293,6 @@ function bindPaneLeft(){
     e.preventDefault();
     transact('lib', ()=>moveBefore(S.inventory, dragInv, li.dataset.id, after));
     setDragInv(null);
-    renderInv();
   });
 
   $('btnAddItem').addEventListener('click',()=>itemDialog(null));
@@ -319,7 +311,6 @@ function bindPaneLeft(){
       add('Extending table',{type:'rect',w:1520,d:900},{open:{top:0,bottom:0,left:0,right:460}});
       add('Rug 5×8',{type:'rect',w:1520,d:2440},{passThrough:true});
     });
-    renderInv();
   });
 }
 

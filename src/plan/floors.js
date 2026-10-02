@@ -1,14 +1,10 @@
 /* Floor mode's Properties pane: the picked room's place on the floor, the
-   floor itself, and merging or deleting two picked rooms.
+   floor itself, and merging or deleting two picked rooms; and the floor
+   commands the layout tree's menus reach.
 
-   Extracted from index.html in Phase 3, move-only: the blocks below are
-   byte-identical to what stood there, and the `export` block at the end is
-   the only line added.
-
-   These five are a strongly-connected component of their own -- renderAll
-   calls renderFloorSel, which reaches mergeLayouts, turnFloorRoom and
-   deleteBothDialog, and all three call renderAll back. They were blocked on
-   the 49-name SCC and land together now that it has gone.
+   The two Properties sections are effects (mountFloorPanels, at the end);
+   every command here commits through transact() and leaves the repainting
+   to them, the tree and the canvas.
 */
 import {mergeGeometry} from '../canvas/merge-rooms.js';
 import {fit} from '../canvas/view.js';
@@ -24,8 +20,8 @@ import {clampOpenings, syncWallOff} from '../model/walls.js';
 import {flash} from '../ui/flash.js';
 import {$, askConfirm, svgI} from '../ui/modal.js';
 import {esc, plural} from '../ui/panels.js';
-import {activateLayout, renderTree} from './layout-tree.js';
-import {renderAll, setMode} from './mode.js';
+import {activateLayout} from './layout-tree.js';
+import {setMode} from './mode.js';
 import {placeOnFloor} from '../core/floor-space.js';
 import {uid} from '../core/state.js';
 import {folderLine, pickValues, pickerHTML} from '../io/pickers.js';
@@ -34,6 +30,8 @@ import {askText, openModal} from '../ui/modal.js';
 import {has, use} from '../core/registry.js';
 import {openMenu} from '../ui/menu.js';
 import {renameFloor} from './layout-tree.js';
+import {pref, rev} from '../core/signals.js';
+import {mountPanel} from '../ui/mount.js';
 /* one slot, not a stack \u2014 mirrors bpLastImport's own "undo the last thing" precedent */
 let lastMerge=null;
 function setLastMerge(v){ lastMerge = v; }
@@ -79,7 +77,7 @@ function mergeLayouts(aId, bId){
       delete roomHist[B.id]; delete furnHist[B.id]; delete floorHist[A.floorId];
       mergeClear();
     });
-    renderTree(); renderAll(); fit();
+    fit();
     flash('Merged into \u201c'+A.name+'\u201d');
   };
   if(geo.removedOpenings>0){
@@ -101,7 +99,7 @@ function deleteBothDialog(aId,bId){
       if(kill.has(S.active)) activateLayout(S.layouts[0].id);
       mergeClear();
     });
-    renderTree(); renderAll(); fit();
+    fit();
   });
 }
 
@@ -112,7 +110,6 @@ function renderFloorSel(){
   if(floorMode() && mergeSel.value.size===2){
     const [a,b]=[...mergeSel.value].map(id=>S.layouts.find(x=>x.id===id));
     box.closest('section').classList.toggle('is-empty', false);
-    renderFloorProps();
     if(a && b){
       const sameFloor=!!(a.floorId && a.floorId===b.floorId);
       t.textContent=a.name+' + '+b.name;
@@ -129,7 +126,6 @@ function renderFloorSel(){
   }
   const l = floorSel.value && S.layouts.find(x=>x.id===floorSel.value);
   box.closest('section').classList.toggle('is-empty', !(floorMode()&&l));
-  renderFloorProps();
   if(!floorMode() || !l){
     t.textContent='Selection';
     box.innerHTML='<p class="hint">Click a room in the plan to move or turn it here.</p>';
@@ -148,23 +144,22 @@ function renderFloorSel(){
       <button class="btn sm" id="flEdit">Edit this room</button>
       <button class="btn sm quiet" id="flOff">Take off floor</button>
     </div>`;
-  const move=(k,v)=>{ if(v==null||!isFinite(v)) return; transact('floor', ()=>{ l.floorPlace[k]=v-(k==='x'?own.x0:own.y0); }); renderFloorSel(); };
+  const move=(k,v)=>{ if(v==null||!isFinite(v)) return; transact('floor', ()=>{ l.floorPlace[k]=v-(k==='x'?own.x0:own.y0); }); };
   $('flX').addEventListener('change',e=>move('x',parseLen(e.target.value,S.unit)));
   $('flY').addEventListener('change',e=>move('y',parseLen(e.target.value,S.unit)));
   $('flRot').addEventListener('change',e=>{
     const v=parseFloat(e.target.value);
-    if(isFinite(v)){ transact('floor', ()=>{ l.floorPlace.rot=norm360(v); }); renderFloorSel(); }
+    if(isFinite(v)) transact('floor', ()=>{ l.floorPlace.rot=norm360(v); });
   });
   // a label, not a placement: nothing for the floor's undo to step through
   $('flDim').addEventListener('change',e=>transact('floor', ()=>{ l.dimLabel=e.target.value.trim(); }, {history:false}));
   $('flRotL').addEventListener('click',()=>turnFloorRoom(l,-90));
   $('flRotR').addEventListener('click',()=>turnFloorRoom(l,90));
-  $('flEdit').addEventListener('click',()=>{ transact('project', ()=>{ activateLayout(l.id); setMode('room'); }); renderAll(); fit(); });
-  $('flOff').addEventListener('click',()=>{ transact('project', ()=>{ l.floorId=null; floorSel.value = null; }); renderAll(); });
+  $('flEdit').addEventListener('click',()=>{ transact('project', ()=>{ activateLayout(l.id); setMode('room'); }); fit(); });
+  $('flOff').addEventListener('click',()=>transact('project', ()=>{ l.floorId=null; floorSel.value = null; }));
 }
 function turnFloorRoom(l,deg){
   transact('floor', ()=>{ l.floorPlace.rot=norm360((l.floorPlace.rot||0)+deg); });
-  renderFloorSel();
 }
 function renderFloorProps(){
   const box=$('floorPropsBox'); if(!box) return;
@@ -179,11 +174,10 @@ function renderFloorProps(){
     <div class="field"><label for="flExt">Outer wall</label><input type="text" class="len" id="flExt" value="${fl.extWall?esc(fmtLen(fl.extWall,S.unit)):''}" placeholder="Same as each room"></div>
     <p class="hint">${plural(n,'room')} on this floor. Drag one against another and it clicks to a shared wall.</p>
     <div class="row actions"><button class="btn sm quiet" id="flFit">Fit floor</button></div>`;
-  $('flName').addEventListener('change',e=>{ const v=e.target.value.trim(); if(v){ transact('project', ()=>{ fl.name=v; }); renderTree(); } });
+  $('flName').addEventListener('change',e=>{ const v=e.target.value.trim(); if(v) transact('project', ()=>{ fl.name=v; }); });
   $('flExt').addEventListener('change',e=>{
     const raw=e.target.value.trim(), v=raw?parseLen(raw,S.unit):0;
     transact('project', ()=>{ fl.extWall = raw && isFinite(v) && v>0 ? v : 0; });
-    renderFloorProps();
   });
   $('flFit').addEventListener('click',()=>fit());
 }
@@ -195,7 +189,6 @@ function newFloor(){
   askText('New floor','Name','Floor', n=>{
     const fl={id:uid(), name:n, parentId:null, extWall:0};
     transact('project', ()=>{ S.floors.push(fl); treeExpand(fl.id); });
-    renderTree();
   });
 }
 
@@ -217,7 +210,6 @@ function floorRoomsDialog(id){
           }
           treeExpand(id);
       });
-      renderAll();
     });
 }
 /* deleting a floor never deletes a room: the arrangement goes, the rooms stay */
@@ -230,14 +222,13 @@ function deleteFloor(id){
         S.floors=S.floors.filter(x=>x.id!==id);
         treeCollapse(id);
     });
-    renderAll();
   };
   if(!n){ askConfirm('Delete this floor?', '“'+fl.name+'” is empty.', 'Delete floor', drop); return; }
   askConfirm('Delete “'+fl.name+'”?',
     n+' room'+(n>1?'s':'')+' stand'+(n>1?'':'s')+' on it. Deleting the floor keeps every room — they go back to their folders.',
     'Delete floor', drop);
 }
-function putOnFloor(l, fid){ transact('project', ()=>{ placeOnFloor(l,fid); l.floorId=fid; treeExpand(fid); }); renderAll(); }
+function putOnFloor(l, fid){ transact('project', ()=>{ placeOnFloor(l,fid); l.floorId=fid; treeExpand(fid); }); }
 function newFloorWith(l){
   askText('New floor','Name','Floor', n=>{
     const fl={id:uid(), name:n, parentId:null, extWall:0};
@@ -276,7 +267,7 @@ function mergeUndo(){
       mergeClear();
       activateLayout(m.aId);
     });
-    renderTree(); renderAll(); fit();
+    fit();
   });
 }
 function openFloorMergeMenu(ids, clientX, clientY){
@@ -314,4 +305,12 @@ function floorMenu(id, anchor){
   ], fl.name);
 }
 
-export {lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, renderFloorProps, turnFloorRoom, newFloor, floorRoomsDialog, deleteFloor, putOnFloor, newFloorWith, putOnFloorDialog, mergeUndo, openFloorMergeMenu, floorMenu};
+/* Floor mode's two Properties sections, each an effect on what it shows
+   (ui/mount.js). */
+function mountFloorPanels(){
+  mountPanel($('floorSelBox').closest('section'), () => {
+    rev.floor.value; rev.room.value; rev.project.value; pref('unit'); pref('mode'); floorSel.value; mergeSel.value;
+  }, renderFloorSel);
+  mountPanel($('floorPropsBox').closest('section'), () => { rev.project.value; pref('unit'); }, renderFloorProps);
+}
+export {mountFloorPanels, lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, renderFloorProps, turnFloorRoom, newFloor, floorRoomsDialog, deleteFloor, putOnFloor, newFloorWith, putOnFloorDialog, mergeUndo, openFloorMergeMenu, floorMenu};

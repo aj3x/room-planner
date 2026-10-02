@@ -26,7 +26,7 @@ import { transact } from '../core/tx.js';
 import { itemFolderOf, itemFolderDescendant, recomputeFolderSubtree, moveItemToFolder } from '../library/item-folders.js';
 import { marketFolderOf, marketFolderDescendant } from '../library/adhoc-folders.js';
 import { nav, libTreeOpen } from '../library/nav.js';
-import { goLibFolder, renderLibAll } from '../library/shell.js';
+import { goLibFolder } from '../library/shell.js';
 import { renderLibTree, markActiveTreeRow, libTreeBox, dragLib, setDragLib, libDropSpot } from '../library/tree.js';
 import { renameLibFolder, renameAdhocFolder, libFolderMenu, adhocFolderMenu } from '../library/folder-menus.js';
 import { gridDragItem, setGridDragItem } from '../library/grid.js';
@@ -111,8 +111,8 @@ function bindPaneLibrary(){
     if(gridDragItem){
       if(spot.mode!=='root' && !spot.isLib) return;
       const it=S.inventory.find(x=>x.id===gridDragItem); if(!it) return;
+      setGridDragItem(null);
       transact('lib', ()=>moveItemToFolder(it, spot.mode==='root'?null:spot.id));
-      setGridDragItem(null); renderLibAll();
       libFlash('Moved “'+it.name+'”');
       return;
     }
@@ -142,7 +142,7 @@ function bindPaneLibrary(){
       if(parent===d.id || marketFolderDescendant(d.id,parent)){ libFlash("A folder can't go inside itself",true); return; }
       transact('lib', ()=>{ f.parentId=parent; moveBefore(S.marketFolders, d.id, targetId, after); });
     }
-    setDragLib(null); renderLibAll();
+    setDragLib(null);
   });
 }
 
