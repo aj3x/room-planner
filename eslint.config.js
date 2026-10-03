@@ -8,28 +8,21 @@
    destroys `git blame`, which is the single thing this refactor is most careful
    to preserve. A rule here that fires on how code looks is a bug in this file.
 
-   What it is for is `no-undef`. Today it proves the monolith references nothing
-   it does not define. During Phase 3 it becomes the extraction safety net: the
-   characteristic failure of moving 10,000 lines into 60 modules is a function
-   that quietly stops being in scope, and `no-undef` names it, in the file, at
-   the line, before a test ever runs.
+   What it is for is `no-undef`: a function moved between modules that quietly
+   stops being in scope is named, in the file, at the line, before a test
+   runs. `index.html` and the partials are linted as module scripts with
+   browser globals; `src/**` as ESM.
 
-   Configured for both worlds on purpose. `index.html` is linted as a script
-   (one `<script>`, browser globals, everything in one scope); `src/**` is
-   linted as ESM, so the rules are already right when Phase 3 starts putting
-   files there.
-
-   Since the decoupling pass it does one more thing: it enforces the layering
-   that pass established, via `no-restricted-imports` on `src/core/**` and
-   `src/model/**`. See DOMAIN_LAYER below, and
-   `.claude/plans/decoupling.md` §4 step 3 for why. That rule is the actual
-   deliverable of the step — the edits it took to satisfy it are worth much
-   less than the guarantee that they stay satisfied.
+   The other thing it does is hold src/'s boundaries: what kernel/, ui-kit/,
+   each feature and app/ may import (BOUNDARIES, below). That rule is worth
+   more than the edits it took to satisfy it, because it keeps them satisfied.
    =========================================================================== */
 
 import js from '@eslint/js';
 import globals from 'globals';
 import html from 'eslint-plugin-html';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 /* Rules from `js.configs.recommended` that are switched off below, each with a
    reason. Nothing is disabled because it was inconvenient. */
@@ -62,41 +55,88 @@ const RELAXED = {
   'preserve-caught-error': 'off',
 };
 
-/* ---- the layering rule ------------------------------------------------
-   `src/core/` and `src/model/` are the domain layer: the document's shape, the
-   geometry, the walls, the clearance grid, undo. Together they are the half of
-   the app that would still make sense with no screen attached.
+/* ---- the boundaries ----------------------------------------------------
+   src/ has four kinds of place, and each may import only from some of them:
 
-   Nothing in them may import from a layer above. Before the decoupling pass
-   eight edges broke that — core/history.js pulled in six render functions so
-   undo could repaint, model/walkpaths.js drew to the canvas from inside the
-   domain layer — and those edges were load-bearing in a 45-module import
-   cycle. Removing them was step 2 and step 3 of the plan; this rule is what
-   stops them growing back, which is the part that actually matters.
+     kernel/            -> kernel/                      (and npm packages)
+     ui-kit/            -> kernel/, ui-kit/
+     features/<name>/   -> kernel/, ui-kit/, its own files,
+                           and another feature's index.js only
+     app/               -> kernel/, ui-kit/, app/, a feature's index.js only
 
-   Imports WITHIN {core, model} stay free. They cannot form a cycle with the UI
-   as long as no edge points upward, which is exactly what this rule says.
+   kernel/ is the document and its rules: it would still make sense with no
+   screen attached, and it may not touch `document` either. ui-kit/ is the
+   generic UI every feature builds with. A feature's index.js is its public
+   API; reaching past it into another feature's files is what makes two
+   features impossible to change separately. A feature never imports its own
+   index.js: that index imports the feature's files, so it would be a cycle.
 
-   When a domain module genuinely needs something to happen on screen, it asks
-   core/registry.js for a name and boot.js provides it — see tryRoomEdit's
-   `ui.flash`, or core/history.js's `repaint.*`. If you are about to add a path
-   to this allow-list instead, that is the signal that the thing you are moving
-   belongs on the other side of the line. */
-const UPWARD = ['app', 'features', 'ui-kit'];
-const DOMAIN_LAYER = {
-  files: ['src/kernel/**/*.js'],
-  rules: {
-    'no-restricted-imports': ['error', {
-      patterns: [{
-        group: UPWARD.flatMap(d => [`**/${d}/*`, `**/${d}/**/*`]),
-        message:
-          'src/core/ and src/model/ are the domain layer and may not import from ' +
-          UPWARD.join('/') + '. Invert the call: ask core/registry.js for a name ' +
-          'and let boot.js provide it. See .claude/plans/decoupling.md §4.',
-      }],
-    }],
+   When kernel/ needs something to happen on screen, it writes a signal and
+   the app subscribes (tryRoomEdit's report() -> notice -> flash, in
+   app/boot.js). When a feature needs a feature that needs it back, one of
+   them is in the wrong place, or the call wants to be a signal; see how the
+   tools are stopped by kind (features/canvas/interaction.js). Feature
+   dependencies form a DAG, which `npm run cycles` checks module by module.
+
+   A small rule rather than `no-restricted-imports`, because what is allowed
+   depends on where the importing file is and where the import resolves to,
+   not on the spelling of the path. */
+const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'src');
+function place(abs){
+  const rel = path.relative(SRC, abs);
+  if(rel.startsWith('..') || path.isAbsolute(rel)) return {area:'outside'};
+  const [top, name, ...rest] = rel.split(path.sep);
+  if(top === 'features') return {area:'features', feature:name, file:rest.join('/')};
+  return {area:top};
+}
+function verdict(from, to){
+  if(to.area === 'outside') return 'imports from outside src/';
+  const any = ['kernel', 'ui-kit', 'app', 'features'];
+  if(!any.includes(to.area)) return `src/${to.area}/ is not a place; code lives in app/, kernel/, ui-kit/ or features/<name>/`;
+  const index = to.area === 'features' && to.file === 'index.js';
+  switch(from.area){
+    case 'kernel':
+      return to.area === 'kernel' ? null : 'kernel/ imports only kernel/';
+    case 'ui-kit':
+      return ['kernel', 'ui-kit'].includes(to.area) ? null : 'ui-kit/ imports only kernel/ and ui-kit/';
+    case 'features':
+      if(to.area === 'kernel' || to.area === 'ui-kit') return null;
+      if(to.area === 'app') return 'a feature may not import app/';
+      if(to.feature === from.feature)
+        return index ? `import the module itself, not features/${from.feature}/index.js: the index imports this file` : null;
+      return index ? null : `import features/${to.feature}/ through its index.js, not ${to.file}`;
+    case 'app':
+      return to.area !== 'features' || index ? null : `import features/${to.feature}/ through its index.js, not ${to.file}`;
+    default:
+      return `src/${from.area}/ is not a place; code lives in app/, kernel/, ui-kit/ or features/<name>/`;
+  }
+}
+const boundaries = {
+  meta: {type: 'problem', schema: []},
+  create(context){
+    const file = context.physicalFilename || context.filename;
+    const from = place(file);
+    const check = node => {
+      const spec = node.source && node.source.value;
+      if(typeof spec !== 'string' || !spec.startsWith('.')) return;   // a package
+      const msg = verdict(from, place(path.resolve(path.dirname(file), spec)));
+      if(msg) context.report({node: node.source, message: `${msg} (${spec})`});
+    };
+    return {ImportDeclaration: check, ExportNamedDeclaration: check, ExportAllDeclaration: check, ImportExpression: check};
   },
 };
+const BOUNDARIES = [
+  {
+    files: ['src/**/*.js'],
+    plugins: {rp: {rules: {boundaries}}},
+    rules: {'rp/boundaries': 'error'},
+  },
+  {
+    files: ['src/kernel/**/*.js'],
+    rules: {'no-restricted-globals': ['error',
+      {name: 'document', message: 'kernel/ has no DOM; write a signal and let a view (a feature or app/) render it.'}]},
+  },
+];
 
 export default [
   {
@@ -155,6 +195,6 @@ export default [
     rules: { ...js.configs.recommended.rules, ...RELAXED },
   },
 
-  /* Last, so it layers on top of the general src/ block above. */
-  DOMAIN_LAYER,
+  /* Last, so they layer on top of the general src/ block above. */
+  ...BOUNDARIES,
 ];
