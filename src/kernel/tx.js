@@ -1,3 +1,4 @@
+// @ts-check
 /* transact(): the one place a change to the document is committed.
 
    An edit names the part of the document it touches and hands over the change
@@ -47,6 +48,10 @@ import {L} from './state.js';
 import {SCOPES, batch, bump} from './signals.js';
 import {save} from './store.js';
 
+/** @typedef {import('./types.js').Scope} Scope */
+/** @typedef {import('./types.js').TransactOpts} TransactOpts */
+
+/** @type {Partial<Record<Scope, () => void>>} */
 const RECORD = {
   room:  () => commit(roomHist, snapRoom),
   furn:  () => commit(furnHist, snapFurn),
@@ -61,19 +66,27 @@ const RECORD = {
    put a layout's geometry back under the same id (split/merge undo, import).
    floor only moves rooms relative to each other, and prefs are view settings,
    so neither can stale those caches. */
+/** @type {Set<Scope>} */
 const REV_SCOPES = new Set(['room','furn','lib','project']);
 
 let depth = 0;
+/** @type {Map<Scope, {hist: boolean, canvas: boolean}>} */
 let pending = new Map();   // scope -> {hist, canvas}: whether any call for it wanted each
 
+/** @param {Scope} scope */
 function check(scope){
   if(!SCOPES.includes(scope)) throw new Error('transact: unknown scope '+scope);
 }
 
+/** Commit an edit to the document: run fn, then record undo, save and notify, once.
+    @overload @param {Scope} scope @param {null} [fn] @param {TransactOpts} [opts] @returns {void} */
+/** @template T @overload @param {Scope} scope @param {() => T} fn @param {TransactOpts} [opts] @returns {T} */
+/** @template T @param {Scope} scope @param {(() => T)|null} [fn] @param {TransactOpts} [opts] @returns {T|undefined} */
 function transact(scope, fn, opts){
   check(scope);
   return batch(() => run(scope, fn, opts));
 }
+/** @template T @param {Scope} scope @param {(() => T)|null} [fn] @param {TransactOpts} [opts] @returns {T|undefined} */
 function run(scope, fn, opts){
   const p = pending.get(scope) || {hist:false, canvas:false};
   p.hist = p.hist || !(opts && opts.history===false);
@@ -92,6 +105,7 @@ function run(scope, fn, opts){
   return out;
 }
 
+/** @param {Map<Scope, {hist: boolean, canvas: boolean}>} done */
 function finish(done){
   for(const [scope, p] of done) if(p.hist && RECORD[scope]) RECORD[scope]();
   if(L() && [...done.keys()].some(s=>REV_SCOPES.has(s))) bumpRev();
@@ -101,6 +115,10 @@ function finish(done){
 
 /* One frame of a gesture: live state changes, the canvas follows, nothing is
    recorded or saved. The gesture's pointerup is what commits. */
+/** One gesture frame: no undo step, no save.
+    @overload @param {Scope} scope @param {null} [fn] @returns {void} */
+/** @template T @overload @param {Scope} scope @param {() => T} fn @returns {T} */
+/** @template T @param {Scope} scope @param {(() => T)|null} [fn] @returns {T|undefined} */
 function preview(scope, fn){
   check(scope);
   return batch(() => {

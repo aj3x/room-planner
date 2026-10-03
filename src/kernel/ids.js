@@ -1,3 +1,4 @@
+// @ts-check
 /* Ids. A thing's id is user-editable, so it is held to a URL/S3-safe character
    set; a slash groups ids into folders the way an S3 key does.
 
@@ -18,9 +19,13 @@ import {furnHist} from './history.js';
    "ikea/kallax/2x4" sit in the same folder — which is what a future marketplace browses by.
    Slashes can't lead, trail, or double up, so every part of the path is a real name. */
 const ID_SAFE = /^[A-Za-z0-9\-_.]+$/;
+/** @param {unknown} s */
 const idParts  = s => String(s).split('/');
+/** @param {unknown} s */
 const idFolder = s => idParts(s).slice(0,-1).join('/');
+/** @param {unknown} s */
 const idLeaf   = s => idParts(s).slice(-1)[0];
+/** @param {unknown} raw @returns {string|null} what is wrong with it, or null */
 function idProblem(raw){
   const v=String(raw==null?'':raw).trim();
   if(!v) return 'Give it an id';
@@ -33,6 +38,7 @@ function idProblem(raw){
   return null;
 }
 /* keep an id unique against ids already spoken for, by adding -2, -3 … */
+/** @param {string} base @param {Set<string>} taken */
 function uniqueId(base, taken){
   if(!taken.has(base)) return base;
   let n=2;
@@ -42,6 +48,7 @@ function uniqueId(base, taken){
 
 /* renaming a thing's id rewrites every reference to it: what is placed in each room now,
    and what sits in the furniture history, so an undo can't resurrect the old id */
+/** @param {string} oldId @param {string} newId */
 function retagItem(oldId,newId){
   const it=itemOf(oldId);
   if(!it||oldId===newId) return;

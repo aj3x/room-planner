@@ -1,3 +1,4 @@
+// @ts-check
 /* Merging two rooms into one: the polygon weld, and the helpers that cut the
    two outlines so they can be welded. PARALLEL_TOL, the "do these two edges
    face each other" tolerance edgeFacing shares with the floor magnet, is
@@ -9,6 +10,10 @@ import {syncWallOff} from './walls.js';
 import {floorPt, floorXf} from './floor-space.js';
 import {PARALLEL_TOL} from './floor-place.js';
 
+/** @typedef {import('./types.js').Pt} Pt */
+/** A detached copy of one room's outline and what is numbered by its walls.
+    @typedef {{points: Pt[], wallOff: boolean[], openings: import('./types.js').Opening[], measures: import('./types.js').Measure[]}} MergeWork */
+
 /* ---- merging two rooms into one ----
    Two rooms on the same floor can share only part of a wall — one room's wall may run
    past where the other one starts. Merging welds the polygons together along whatever
@@ -17,6 +22,7 @@ import {PARALLEL_TOL} from './floor-place.js';
    shared axis? Returns null when they don't; otherwise this edge's own direction/normal/
    length, and where the other edge's endpoints land projected onto this edge's axis —
    the same test floorSnapCandidates/floorEdgeDepths each already run inline. */
+/** @param {Pt} a1 @param {Pt} b1 @param {Pt} a2 @param {Pt} b2 */
 function edgeFacing(a1,b1,a2,b2){
   const dx=b1[0]-a1[0], dy=b1[1]-a1[1], len1=Math.hypot(dx,dy);
   if(len1<1) return null;
@@ -34,6 +40,7 @@ function edgeFacing(a1,b1,a2,b2){
    renumbering openings/measures in lockstep exactly like splitWall does — but against a
    detached working copy, not the live room, so a merge that turns out invalid never
    touches real state. A no-op when `t` already lands on an existing corner. */
+/** @param {MergeWork} work @param {number} i @param {number} t */
 function mergeSplice(work, i, t){
   const P=work.points, n=P.length, a=P[i], b=P[(i+1)%n];
   const len=Math.hypot(b[0]-a[0], b[1]-a[1]);
@@ -51,6 +58,7 @@ function mergeSplice(work, i, t){
 /* cut a room's edge `i` at both ends of the overlap interval [lo,hi] (its own units,
    measured from that edge's start), leaving the shared portion as its own edge and
    returning that edge's index once both cuts have landed. */
+/** @param {MergeWork} work @param {number} i @param {number} lo @param {number} hi @param {number} len @returns {number} */
 function mergeInsertCuts(work, i, lo, hi, len){
   let idx=i;
   if(lo>1){ mergeSplice(work, i, lo); idx=i+1; }
@@ -61,12 +69,14 @@ function mergeInsertCuts(work, i, lo, hi, len){
    wall, in floor space (where both already sit). Returns {points, wallOff, openings,
    measures, removedOpenings} ready to drop onto the surviving room, or {error} when the
    two rooms don't share exactly one clean wall. */
+/** @param {import('./types.js').Layout} A @param {import('./types.js').Layout} B
+    @returns {{error: string} | (MergeWork & {removedOpenings: number, error?: undefined})} */
 function mergeGeometry(A, B){
   const tA=floorXf(A), tB=floorXf(B);
   const PA=A.room.points.map(p=>floorPt(tA,p));
   const PB=B.room.points.map(p=>floorPt(tB,p));
   const lim=Math.max(A.room.wall||0, B.room.wall||0)*1.35+1;
-  const hits=[];
+  const hits=/** @type {{i: number, j: number}[]} */([]);
   for(let i=0;i<PA.length;i++){
     const a1=PA[i], b1=PA[(i+1)%PA.length];
     for(let j=0;j<PB.length;j++){
@@ -92,7 +102,7 @@ function mergeGeometry(A, B){
 
   const idxA=mergeInsertCuts(workA, i0, lo, hi, len1);
   const len2=Math.hypot(b2[0]-a2[0], b2[1]-a2[1]);
-  const rAt = s => (s-sa)*len2/(sb-sa);
+  const rAt = (/** @type {number} */s) => (s-sa)*len2/(sb-sa);
   let rLo=rAt(lo), rHi=rAt(hi);
   if(rLo>rHi){ const t=rLo; rLo=rHi; rHi=t; }
   const idxB=mergeInsertCuts(workB, j0, rLo, rHi, len2);
@@ -115,10 +125,10 @@ function mergeGeometry(A, B){
     return {error:"These rooms can't be combined into one simple shape"};
   }
 
-  const remapA = w => w===idxA ? null : (((w-(idxA+1))%nA)+nA)%nA;
-  const remapB = w => w===idxB ? null : nA + ((((w-(idxB+1))%nB)+nB)%nB);
+  const remapA = (/** @type {number} */w) => w===idxA ? null : (((w-(idxA+1))%nA)+nA)%nA;
+  const remapB = (/** @type {number} */w) => w===idxB ? null : nA + ((((w-(idxB+1))%nB)+nB)%nB);
 
-  const openings=[]; let removedOpenings=0;
+  const openings=/** @type {import('./types.js').Opening[]} */([]); let removedOpenings=0;
   for(const o of workA.openings){ const w=remapA(o.wall); if(w===null){ removedOpenings++; continue; } o.wall=w; openings.push(o); }
   for(const o of workB.openings){ const w=remapB(o.wall); if(w===null){ removedOpenings++; continue; } o.wall=w; openings.push(o); }
 

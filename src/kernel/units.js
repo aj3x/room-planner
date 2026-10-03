@@ -1,3 +1,4 @@
+// @ts-check
 /* Units. Everything in the app is stored in millimetres; these are the boundary
    the user's numbers cross on the way in and out.
 
@@ -9,9 +10,12 @@
 import {S} from './state.js';
 
 /* ------------------------- units ------------------------- */
+/** @type {Record<string, number>} */
 const MM = {mm:1, cm:10, m:1000, in:25.4, ft:304.8};
+/** @type {Record<string, string>} */
 const BARE = {ftin:'in', in:'in', cm:'cm', mm:'mm', m:'m'};
 const UNIT_RE = /(-?\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?)\s*(millimet(?:er|re)s?|mm|centimet(?:er|re)s?|cm|met(?:er|re)s?|m|inch(?:es)?|in|feet|foot|ft|"|”|'|’)?/g;
+/** @param {string} [tok] @returns {string|null} */
 function unitKey(tok){
   if(!tok) return null;
   tok = tok.toLowerCase();
@@ -22,6 +26,7 @@ function unitKey(tok){
   if(tok==='ft'||tok==='feet'||tok==='foot'||tok==="'"||tok==='’') return 'ft';
   return null;
 }
+/** @param {unknown} str @param {string} dispUnit @returns {number} mm, or NaN */
 function parseLen(str, dispUnit){
   if(str===null||str===undefined) return NaN;
   let s = String(str).trim().toLowerCase().replace(/[−–—]/g,'-');
@@ -39,8 +44,10 @@ function parseLen(str, dispUnit){
   }
   return found ? total : NaN;
 }
+/** @param {number} n @param {number} dp */
 const trimNum = (n,dp) => String(parseFloat(n.toFixed(dp)));
 const unitWord = () => ({ftin:'inches',in:'inches',cm:'centimetres',mm:'millimetres',m:'metres'})[S.unit];
+/** @param {number} mm @param {string} [u] @returns {string} */
 function fmtLen(mm,u){
   if(!isFinite(mm)) return '—';
   switch(u){
@@ -60,6 +67,7 @@ function fmtLen(mm,u){
     }
   }
 }
+/** @param {number} mm2 @param {string} u */
 const fmtArea = (mm2,u) => (u==='ftin'||u==='in') ? trimNum(mm2/92903.04,1)+' sq ft' : trimNum(mm2/1e6,2)+' m²';
 const SNAPS = {
   imperial:[['0','No snap'],['12.7','½ inch'],['25.4','1 inch'],['76.2','3 inches'],['152.4','6 inches'],['304.8','1 foot']],

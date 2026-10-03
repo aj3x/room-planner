@@ -1,3 +1,4 @@
+// @ts-check
 /* Undo / redo: the three history stacks and everything that writes to them.
 
    Recording needs nothing but S and the layout accessors. Replaying puts a
@@ -22,12 +23,15 @@ import {save} from './store.js';
    furniture on the canvas) get their own history, kept per layout. Each
    layout's history is seeded with a pristine baseline (before any edits)
    the moment it becomes active, so undo can always get back to "untouched". */
-const roomHist={}, furnHist={};
+/** @typedef {import('./types.js').HistMap} HistMap */
+const roomHist=/** @type {HistMap} */({}), furnHist=/** @type {HistMap} */({});
 const histRev = signal(0);
 const snapRoom = () => JSON.stringify({room:L().room, openings:L().openings});
 const snapFurn = () => JSON.stringify({placed:L().placed});
+/** @param {HistMap} map @param {() => string} snapFn */
 function histEntry(map,snapFn){ const id=L().id; if(!map[id]) map[id]={stack:[snapFn()], idx:0}; return map[id]; }
 function seedHistFor(){ histEntry(roomHist,snapRoom); histEntry(furnHist,snapFurn); floorEntry(); }
+/** @param {HistMap} map @param {() => string} snapFn */
 function commit(map,snapFn){
   const h=histEntry(map,snapFn);
   const s=snapFn();
@@ -43,6 +47,7 @@ const bumpRev = () => { const l=L(); l._rev=(l._rev||0)+1; };
    commits through them after editing S by hand. */
 const commitRoom = () => { commit(roomHist,snapRoom); bumpRev(); bump(['room'], true); };
 const commitFurn = () => { commit(furnHist,snapFurn); bumpRev(); bump(['furn'], true); };
+/** @param {HistMap} map @param {() => string} snapFn @param {(snap: any) => void} applyFn @param {number} dir */
 function stepHist(map,snapFn,applyFn,dir){
   const h=histEntry(map,snapFn);
   const ni=h.idx+dir;
@@ -55,6 +60,7 @@ function stepHist(map,snapFn,applyFn,dir){
    room changes the floor. It is deliberately NOT folded into snapRoom, whose
    {room,openings} snapshot belongs to Room mode — sharing one stack would make a
    wall edit and a floor move undo each other. */
+/** @type {HistMap} */
 const floorHist={};
 const curFloorId = () => (L() && L().floorId) || null;
 const snapFloor = () => JSON.stringify(floorLayouts(curFloorId()).map(l=>[l.id, l.floorPlace]));
@@ -85,10 +91,12 @@ function histAvail(){
 function histMoved(){ histRev.value++; }
 
 
+/** @param {{room: import('./types.js').Room, openings: import('./types.js').Opening[]}} s */
 function applyRoomSnap(s){
   batch(()=>{ L().room=s.room; L().openings=s.openings; roomSel.value = null; bumpRev(); bump(['room'], true); });
   save();
 }
+/** @param {{placed: import('./types.js').Placed[]}} s */
 function applyFurnSnap(s){
   batch(()=>{ L().placed=s.placed; selectClear(); bumpRev(); bump(['furn'], true); });
   save();
@@ -97,10 +105,12 @@ const undoRoom=()=>stepHist(roomHist,snapRoom,applyRoomSnap,-1);
 const redoRoom=()=>stepHist(roomHist,snapRoom,applyRoomSnap,1);
 const undoFurn=()=>stepHist(furnHist,snapFurn,applyFurnSnap,-1);
 const redoFurn=()=>stepHist(furnHist,snapFurn,applyFurnSnap,1);
+/** @param {[string, import('./types.js').FloorPlace][]} s */
 function applyFloorSnap(s){
   for(const [id,place] of s){ const l=S.layouts.find(x=>x.id===id); if(l) l.floorPlace=place; }
   bump(['floor'], true); save();
 }
+/** @param {number} dir */
 function stepFloor(dir){
   const h=floorEntry(); if(!h) return;
   const ni=h.idx+dir;

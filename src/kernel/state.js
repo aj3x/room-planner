@@ -1,3 +1,4 @@
+// @ts-check
 /* State. The single mutable object the whole app reads, plus the blank shapes it
    starts from. A leaf: this module imports nothing.
 
@@ -12,17 +13,27 @@
 
 /* ------------------------- state ------------------------- */
 const PALETTE=['#6e8b7a','#a8735a','#5c7a99','#b8975a','#8a6e96','#4f6b63','#a55b57','#7e8c99','#6b7f4e','#9c6b8e','#57707d','#8c8577'];
+/** @typedef {import('./types.js').State} State */
+/** @typedef {import('./types.js').Layout} Layout */
+/** @typedef {import('./types.js').Pt} Pt */
+
+/** @returns {string} */
 const uid = () => Math.random().toString(36).slice(2,10);
+/** @type {<T>(v: T) => T} */
 const clone = v => JSON.parse(JSON.stringify(v));
+/** @type {(w: number, d: number) => Pt[]} */
 const rectPts = (w,d) => [[0,0],[w,0],[w,d],[0,d]];
 
+/** @returns {import('./types.js').FloorPlace} */
 function blankFloorPlace(){ return {x:0, y:0, rot:0}; }
+/** @param {string} [name] @param {string|null} [folderId] @returns {Layout} */
 function blankLayout(name,folderId){
   return {id:uid(), name:name||'My room', folderId:folderId||null,
     floorId:null, floorPlace:blankFloorPlace(),
     room:{points:rectPts(4270,3660), wall:114, floor:'#f5f3ee', trimOn:false, trim:19, pillars:[], iwalls:[]},
     openings:[], placed:[], measures:[]};
 }
+/** @type {State} */
 let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true, showWalk:false, showMeasure:true, mode:'furniture',
          planMode:'furniture', // the Room/Furniture mode to go back to when returning to the Plan screen
          inventory:[], layouts:[blankLayout()], active:null,
@@ -49,28 +60,40 @@ S.active = S.layouts[0].id;
    read-only — so every write goes through this setter instead. The binding is
    still live: importers see the new object, which is what migrate() relies on
    when reconcileTags reads S.itemFolders. */
+/** @param {State} v */
 function setS(v){ S = v; }
 
 /* The accessors that read S. Moved here after S itself: they are pure lookups
    over the state object, they need nothing else, and core/floor-space.js could
    not move without them. Byte-identical to index.html; §3 did not name a file
    for this block. */
+/** @type {() => Layout} */
 const L = () => S.layouts.find(l=>l.id===S.active) || S.layouts[0];
 const RP = () => L().room.points;
+/** @param {string} id */
 const itemOf = id => S.inventory.find(i=>i.id===id);
+/** @param {string} id */
 const instOf = id => L().placed.find(p=>p.id===id);
+/** @param {string} id */
 const openOf = id => L().openings.find(o=>o.id===id);
 const roomMode = () => S.mode==='room';
 const furnMode = () => S.mode==='furniture';
 const floorMode = () => S.mode==='floor';
+/** @param {string|null|undefined} id */
 const folderOf = id => id ? S.folders.find(f=>f.id===id) : null;
+/** @param {string|null|undefined} pid */
 const childFolders = pid => S.folders.filter(f=>(f.parentId||null)===(pid||null));
+/** @param {string|null|undefined} pid */
 const childLayouts = pid => S.layouts.filter(l=>(l.folderId||null)===(pid||null));
+/** @param {string|null|undefined} id */
 const floorOf = id => id ? S.floors.find(f=>f.id===id) : null;
+/** @param {string|null|undefined} pid */
 const childFloors = pid => S.floors.filter(f=>(f.parentId||null)===(pid||null));
 /* rooms standing on a floor, in S.layouts order — that order is also their z-order */
+/** @param {string|null|undefined} fid */
 const floorLayouts = fid => fid ? S.layouts.filter(l=>l.floorId===fid) : [];
 
+/** @param {unknown} m @returns {m is import('./types.js').CanvasMode} */
 const isCanvasMode = m => m==='room'||m==='furniture'||m==='floor';
 export {PALETTE, uid, clone, rectPts, blankFloorPlace, blankLayout, S, setS,
         L, RP, itemOf, instOf, openOf, roomMode, furnMode, floorMode,

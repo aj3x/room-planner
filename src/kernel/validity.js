@@ -1,3 +1,4 @@
+// @ts-check
 /* Validity: whether a placement is legal, and what it runs into if it is not.
 
    Extracted from index.html in Phase 3, move-only: the code below is
@@ -12,7 +13,12 @@ import {openPoly} from './open-state.js';
 import {L, RP, itemOf} from './state.js';
 import {obstaclePolys} from './walls.js';
 
+/** @typedef {import('./types.js').Pt} Pt */
+/** @typedef {import('./types.js').Item} Item */
+/** @typedef {import('./types.js').Placed} Placed */
+
 /* ------------------------- validity ------------------------- */
+/** @param {Pt[]} poly */
 function insideRoom(poly){
   const R=RP(), t=L().room.trimOn ? L().room.trim : 0;
   for(const v of poly) if(!pointInPoly(v,R)) return false;
@@ -26,6 +32,7 @@ function insideRoom(poly){
   }
   return true;
 }
+/** @param {Placed} inst @param {Pt[]} poly @returns {string|null} the name of what it bumps into */
 function collides(inst,poly){
   const me=itemOf(inst.itemId);
   if(me&&me.passThrough) return null;
@@ -44,23 +51,27 @@ function collides(inst,poly){
   }
   return null;
 }
+/** @param {Placed} inst @param {Pt[]} poly @returns {{ok: boolean, why?: string}} */
 function validate(inst,poly){
   if(!insideRoom(poly)) return {ok:false, why:'Outside the room'};
   const c=collides(inst,poly);
   if(c) return {ok:false, why:'Bumps into '+c};
   return {ok:true};
 }
+/** @returns {Set<string>} ids of the placements that are not legal */
 function conflictSet(){
-  const ps=L().placed, polys=[], bbs=[], out=new Set();
+  /* polys[i] and bbs[i] are null where the item is gone; typed without it
+     because every read below is behind the `!polys[i]` guard */
+  const ps=L().placed, polys=/** @type {Pt[][]} */([]), bbs=/** @type {import('./types.js').BBox[]} */([]), out=/** @type {Set<string>} */(new Set());
   const obs=obstaclePolys();
   for(const p of ps){
     const it=itemOf(p.itemId), w=it?worldPoly(p,it):null;
-    polys.push(w); bbs.push(w?bbox(w):null);
+    polys.push(/** @type {Pt[]} */(w)); bbs.push(/** @type {import('./types.js').BBox} */(w?bbox(w):null));
   }
   for(let i=0;i<ps.length;i++){
     if(!polys[i]) continue;
     if(!insideRoom(polys[i])) out.add(ps[i].id);
-    const it=itemOf(ps[i].itemId);
+    const it=/** @type {Item} */(itemOf(ps[i].itemId));   // polys[i] is set only when the item exists
     if(it.passThrough) continue;
     for(const o of obs){
       if(!bbHit(bbs[i],bbox(o.poly))) continue;
@@ -77,6 +88,7 @@ function conflictSet(){
 }
 /* An open footprint may sit over the trim — a drawer clears a baseboard — so
    this is a plainer test than insideRoom(): only the wall line itself counts. */
+/** @param {Pt[]} poly */
 function openThroughWall(poly){
   const R=RP();
   for(const v of poly) if(!pointInPoly(v,R)) return true;
@@ -93,9 +105,12 @@ function openThroughWall(poly){
    up alongside is allowed to sit up to 2*EPS into that line, so only a real
    overlap into the open area — not side-by-side contact — counts. */
 const OPEN_SLOP = 2*EPS+1;
+/** @returns {Map<string, string>} placed id -> why it cannot open */
 function openConflicts(){
-  const ps=L().placed, out=new Map();
-  const solids=ps.map(p=>{ const it=itemOf(p.itemId); return (it&&!it.passThrough)?worldPoly(p,it):null; });
+  const ps=L().placed, out=/** @type {Map<string, string>} */(new Map());
+  /* null for a missing or pass-through item; typed without it because every
+     read is behind the `!solids[j]` guard */
+  const solids=ps.map(p=>{ const it=itemOf(p.itemId); return /** @type {Pt[]} */((it&&!it.passThrough)?worldPoly(p,it):null); });
   const obs=obstaclePolys();
   for(let i=0;i<ps.length;i++){
     const it=itemOf(ps[i].itemId);
@@ -107,7 +122,7 @@ function openConflicts(){
       if(j===i||!solids[j]) continue;
       if(!bbHit(ob,bbox(solids[j]))) continue;
       if(polyHit(test,solids[j])){
-        out.set(ps[i].id,'Opened out, it runs into '+itemOf(ps[j].itemId).name);
+        out.set(ps[i].id,'Opened out, it runs into '+/** @type {Item} */(itemOf(ps[j].itemId)).name);   // solids[j] is set only when it exists
         break;
       }
     }
@@ -123,6 +138,7 @@ function openConflicts(){
    draw(). Cache them together against a cheap key — a per-layout revision bumped
    by every commit/live-drag mutation, plus array lengths as a backstop — so a
    redraw triggered by nothing but panning/zooming/hover reuses the last result. */
+/** @type {{key: string, bad: Set<string>, openBad: Map<string, string>}|null} */
 let conflictsCache=null;
 function getConflicts(){
   const l=L();
@@ -131,8 +147,10 @@ function getConflicts(){
   conflictsCache={key, bad:conflictSet(), openBad:openConflicts()};
   return conflictsCache;
 }
+/** @param {Placed} inst */
 const isBad = inst => { const it=itemOf(inst.itemId); return it ? !validate(inst,worldPoly(inst,it)).ok : false; };
 /* while a piece is overlapping we let it move freely, but never off the floor */
+/** @param {Placed} inst */
 function centreInside(inst){
   const it=itemOf(inst.itemId);
   if(!it) return true;
@@ -141,8 +159,9 @@ function centreInside(inst){
 }
 /* slide inst from a known-valid point toward a desired (possibly invalid) point,
    stopping at the furthest reachable valid position along that line */
+/** @param {Placed} inst @param {Item} it @param {Pt} from @param {Pt} to @returns {number} how far along it got, 0..1 */
 function bisectToValid(inst,it,from,to){
-  const at=t=>[from[0]+(to[0]-from[0])*t, from[1]+(to[1]-from[1])*t];
+  const at=(/** @type {number} */t)=>[from[0]+(to[0]-from[0])*t, from[1]+(to[1]-from[1])*t];
   const len=Math.hypot(to[0]-from[0], to[1]-from[1]);
   let lo=0, hi=1;
   inst.x=to[0]; inst.y=to[1];
@@ -160,10 +179,11 @@ function bisectToValid(inst,it,from,to){
    there if it fits, otherwise the furthest it can go along each axis (so a
    piece pushed past a wall ends up flush with it, and slides along it). Tries
    x-then-y, y-then-x and the straight line, and keeps whichever lands nearest. */
+/** @param {Placed} inst @param {Item} it @param {Pt} from @param {Pt} to @returns {Pt} */
 function slideToValid(inst,it,from,to){
   inst.x=to[0]; inst.y=to[1];
   if(validate(inst,worldPoly(inst,it)).ok) return [to[0],to[1]];
-  const axisFirst=ax=>{
+  const axisFirst=(/** @type {0|1} */ax)=>{
     bisectToValid(inst,it,from, ax===0 ? [to[0],from[1]] : [from[0],to[1]]);
     const p=[inst.x,inst.y];
     bisectToValid(inst,it,p, ax===0 ? [p[0],to[1]] : [to[0],p[1]]);
@@ -171,7 +191,7 @@ function slideToValid(inst,it,from,to){
   };
   const cands=[axisFirst(0), axisFirst(1)];
   bisectToValid(inst,it,from,to); cands.push([inst.x,inst.y]);
-  const d=p=>Math.hypot(to[0]-p[0], to[1]-p[1]);
+  const d=(/** @type {Pt} */p)=>Math.hypot(to[0]-p[0], to[1]-p[1]);
   const best=cands.reduce((a,b)=>d(b)<d(a)?b:a);
   inst.x=best[0]; inst.y=best[1];
   return best;

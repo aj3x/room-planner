@@ -1,3 +1,4 @@
+// @ts-check
 /* Shape fixers. migrate() upgrades an older saved state on load; normLayout
    and normItem are split out of it so the importer can clean up one room or
    one thing lifted out of a file; pruneMeasures and remapMeasures keep a
@@ -14,6 +15,7 @@ import {syncWallOff} from './walls.js';
 /* older saves used a width/depth rectangle, N/E/S/W doors, tagless/countless items, and no folders.
    normLayout/normItem are split out so the importer can clean up one room or one thing
    lifted out of a file without pushing a whole state object through migrate(). */
+/** @param {any} l a room as an old save or a file had it @returns {import('./types.js').Layout} */
 function normLayout(l){
   l.id = l.id || uid();
   l.name = l.name || 'My room';
@@ -44,15 +46,16 @@ function normLayout(l){
     w.t = Math.max(10, w.t||l.room.wall);
   }
   if(!Array.isArray(l.openings)){
+    /** @type {Record<string, number>} */
     const map={N:0,E:1,S:2,W:3};
-    l.openings = (l.doors||[]).map(d=>({
+    l.openings = (l.doors||[]).map((/** @type {any} */d)=>({
       id:d.id||uid(), kind:'door', wall:map[d.wall]??0, offset:d.offset||0, width:d.width||813,
       dtype:d.type||'hinge', hinge:d.hinge||'start', swing:d.swing||'in'
     }));
     delete l.doors;
   }
   for(const o of l.openings) o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
-  l.placed = Array.isArray(l.placed) ? l.placed.filter(p=>p&&p.itemId) : [];
+  l.placed = Array.isArray(l.placed) ? l.placed.filter((/** @type {any} */p)=>p&&p.itemId) : [];
   for(const p of l.placed) if(!p.id) p.id=uid();
   if(!Array.isArray(l.measures)) l.measures=[];
   pruneMeasures(l);
@@ -70,16 +73,20 @@ function normLayout(l){
 /* a measurement's ends point at things by id (a room wall by its index); drop any whose
    end is malformed or no longer exists. While editing, a missing end is only skipped when
    drawing, so undoing the removal of an item brings its measurements back with it. */
+/** @param {import('./types.js').Layout} l */
 function pruneMeasures(l){
+  /** @type {Record<string, {id: string}[]>} */
   const ids={item:l.placed, open:l.openings, pillar:l.room.pillars, iwall:l.room.iwalls};
+  /** @type {Record<string, Set<string>>} */
   const has={}; for(const k in ids) has[k]=new Set(ids[k].map(x=>x.id));
-  const ok = a => !!a && typeof a==='object' &&
+  const ok = (/** @type {any} */a) => !!a && typeof a==='object' &&
     (a.part==='whole' || (a.part==='swing' && a.k==='open') || ((a.part==='side'||a.part==='corner') && Number.isInteger(a.n) && a.n>=0)) &&
     (a.k==='wall' ? Number.isInteger(a.id) && a.id>=0 && a.id<l.room.points.length : !!has[a.k] && has[a.k].has(a.id));
   l.measures = l.measures.filter(m=>m && ok(m.a) && ok(m.b));
   for(const m of l.measures) m.id = m.id||uid();
 }
 /* things in a copied or imported room get new ids; `map` is {kind: {oldId: newId}} */
+/** @param {import('./types.js').Layout} l @param {Record<string, Record<string, string>>} map */
 function remapMeasures(l, map){
   for(const m of l.measures) for(const a of [m.a,m.b]){
     const n = map[a.k] && map[a.k][a.id];
@@ -87,6 +94,7 @@ function remapMeasures(l, map){
   }
   pruneMeasures(l);
 }
+/** @param {any} it an item as an old save or a file had it @returns {import('./types.js').Item} */
 function normItem(it){
   it.id = it.id || uid();
   it.name = it.name || 'Untitled';
@@ -96,6 +104,7 @@ function normItem(it){
   it.open = normOpen(it.open);
   return it;
 }
+/** @param {any} st a saved state of any age @returns {import('./types.js').State|null} null when there is nothing usable */
 function migrate(st){
   if(!st||!Array.isArray(st.layouts)||!st.layouts.length) return null;
   for(const l of st.layouts) normLayout(l);
@@ -116,8 +125,8 @@ function migrate(st){
   if(!Array.isArray(st.secClosed)) st.secClosed=[];
   if(!['room','furniture','floor','inventory','marketplace'].includes(st.mode)) st.mode='furniture';
   if(!isCanvasMode(st.planMode)) st.planMode = isCanvasMode(st.mode) ? st.mode : 'furniture';
-  if(!st.layouts.some(l=>l.id===st.active)) st.active=st.layouts[0].id;
-  const fl=st.layouts.find(l=>l.id===st.active);
+  if(!st.layouts.some((/** @type {{id: string}} */l)=>l.id===st.active)) st.active=st.layouts[0].id;
+  const fl=st.layouts.find((/** @type {{id: string}} */l)=>l.id===st.active);
   st.lastFolderId = fl ? (fl.folderId||null) : null;
   if(!Array.isArray(st.itemFolders)) st.itemFolders=[];
   if(!Array.isArray(st.marketFolders)) st.marketFolders=[];
@@ -134,7 +143,7 @@ function migrate(st){
     f.extWall = isFinite(f.extWall) && f.extWall>0 ? f.extWall : 0;   // 0 = each room's own wall
   }
   /* a room can only stand on a floor that still exists */
-  { const live=new Set(st.floors.map(f=>f.id));
+  { const live=new Set(st.floors.map((/** @type {{id: string}} */f)=>f.id));
     for(const l of st.layouts) if(l.floorId && !live.has(l.floorId)) l.floorId=null; }
   for(const f of st.itemFolders){ f.parentId=f.parentId||null; if(!Array.isArray(f.tags)) f.tags=[]; }
   for(const f of st.marketFolders) f.parentId=f.parentId||null;

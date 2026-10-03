@@ -1,3 +1,4 @@
+// @ts-check
 /* Walls: the room's own outline, plus the pillars and freestanding interior
    walls that stand inside it. Pure: nothing here reads the view or the DOM.
 
@@ -9,12 +10,19 @@ import {norm360, pointInPoly, ptSegDist, worldPoly, bbox, polySimple} from './ge
 import {L, RP} from './state.js';
 import {report} from './signals.js';
 
+/** @typedef {import('./types.js').Pt} Pt */
+/** @typedef {import('./types.js').Room} Room */
+/** @typedef {import('./types.js').IWall} IWall */
+/** A room wall's geometry: its ends, unit direction, unit inward normal, length and midpoint.
+    @typedef {{a: Pt, b: Pt, dir: Pt, nrm: Pt, len: number, mid: Pt}} WallGeom */
+
 /* ------------------------- walls ------------------------- */
 /* ---- walls you can take away ----
    room.wallOff runs parallel to room.points: entry i is the edge from points[i] to
    points[i+1]. Turning one off removes the wall, not the corner — the polygon still
    bounds the room's floor, so area, furniture and validity are untouched. It is how
    one room opens onto the next without a partition between them. */
+/** @param {Room} room @returns {boolean[]} */
 function syncWallOff(room){
   const n=room.points.length;
   if(!Array.isArray(room.wallOff)) room.wallOff=[];
@@ -22,13 +30,17 @@ function syncWallOff(room){
   for(let i=0;i<n;i++) room.wallOff[i]=!!room.wallOff[i];
   return room.wallOff;
 }
+/** @param {Room} room @param {number} i */
 const wallIsOff = (room,i) => !!(room.wallOff && room.wallOff[i]);
 /* the polygon as runs of consecutive walled edges, so each run mitres its own corners;
    null means every edge is walled and it should be stroked as one closed loop */
+/** @param {Pt[]} P @param {boolean[]|undefined} off @returns {Pt[][]|null} */
 function wallRuns(P, off){
   const n=P.length;
   if(!off || !off.some(Boolean)) return null;
+  /** @type {Pt[][]} */
   const runs=[];
+  /** @type {Pt[]|null} */
   let cur=null;
   for(let i=0;i<n;i++){
     if(off[i]){ cur=null; continue; }
@@ -37,12 +49,13 @@ function wallRuns(P, off){
   }
   // a run spanning the wrap-around joins the last edge to the first, so that corner mitres
   if(runs.length>1 && !off[0] && !off[n-1]){
-    const first=runs.shift();
+    const first=/** @type {Pt[]} */(runs.shift());   // length>1
     runs[runs.length-1].push(...first.slice(1));
   }
   return runs;
 }
 /* `poly` lets a floor ask about a room other than the active one; it defaults to that one */
+/** @param {number} i @param {Pt[]} [poly] @returns {WallGeom} */
 function wallOf(i, poly){
   const P=poly||RP(), n=P.length, a=P[i], b=P[(i+1)%n];
   const dx=b[0]-a[0], dy=b[1]-a[1], len=Math.hypot(dx,dy)||1e-9;
@@ -53,9 +66,11 @@ function wallOf(i, poly){
   return {a,b,dir,nrm,len,mid};
 }
 /* 0° points right, 90° points up — the way people read a plan */
+/** @param {number} i */
 const wallAngle = i => { const w=wallOf(i); return norm360(-Math.atan2(w.dir[1],w.dir[0])*180/Math.PI); };
 /* defaults to the active room, but takes any layout so a freshly built one can be
    clamped before it is ever activated */
+/** @param {import('./types.js').Layout} [l] */
 function clampOpenings(l){
   l = l || L();
   const P = l.room.points, n = P.length;
@@ -66,8 +81,11 @@ function clampOpenings(l){
     o.offset = Math.max(0, Math.min(o.offset, len-o.width));
   }
 }
+/** @param {Pt} pt @returns {{i: number, d: number, t: number, len: number}|null} */
 function nearestOnWalls(pt){
-  const P=RP(); let best=null;
+  const P=RP();
+  /** @type {{i: number, d: number, t: number, len: number}|null} */
+  let best=null;
   for(let i=0;i<P.length;i++){
     const w=wallOf(i), r=ptSegDist(pt,w.a,w.b);
     if(!best || r.d<best.d) best={i, d:r.d, t:r.t, len:w.len};
@@ -83,13 +101,17 @@ function nearestOnWalls(pt){
    though each segment is its own independent record — same as the room's own
    corners and walls are independent points with no separate "this wall is
    connected to that one" flag. */
+/** @param {string} id */
 const pillarOf = id => L().room.pillars.find(p=>p.id===id);
+/** @param {string} id */
 const iwallOf = id => L().room.iwalls.find(w=>w.id===id);
+/** @param {IWall} w @returns {{dir: Pt, nrm: Pt, len: number, mid: Pt}} */
 function iwallGeom(w){
   const dx=w.b[0]-w.a[0], dy=w.b[1]-w.a[1], len=Math.hypot(dx,dy)||1e-9;
   const dir=[dx/len,dy/len];
   return {dir, nrm:[-dir[1],dir[0]], len, mid:[(w.a[0]+w.b[0])/2,(w.a[1]+w.b[1])/2]};
 }
+/** @param {IWall} w @returns {Pt[]} */
 function iwallPoly(w){
   const g=iwallGeom(w), h=w.t/2, n=g.nrm;
   return [
@@ -99,12 +121,17 @@ function iwallPoly(w){
     [w.a[0]-n[0]*h, w.a[1]-n[1]*h]
   ];
 }
+/** @param {IWall} w */
 const iwallLen = w => iwallGeom(w).len;
+/** @param {IWall} w */
 const iwallAngle = w => norm360(-Math.atan2(w.b[1]-w.a[1], w.b[0]-w.a[0])*180/Math.PI);
+/** @param {IWall} w @param {number} len */
 function setIWallLen(w,len){ const g=iwallGeom(w); w.b=[w.a[0]+g.dir[0]*len, w.a[1]+g.dir[1]*len]; }
+/** @param {IWall} w @param {number} deg */
 function setIWallAngle(w,deg){ const len=iwallLen(w), r=-deg*Math.PI/180; w.b=[w.a[0]+Math.cos(r)*len, w.a[1]+Math.sin(r)*len]; }
 /* move one end of a freestanding wall so it sits exactly `dist` from the room wall it's
    currently closest to, sliding along the same foot-to-end direction it's already on */
+/** @param {IWall} w @param {'a'|'b'} end @param {number} dist */
 function setIWallEndDist(w,end,dist){
   const near=nearestOnWalls(w[end]);
   if(!near) return false;
@@ -118,7 +145,9 @@ function setIWallEndDist(w,end,dist){
 /* every obstacle that stands in the floor besides the room's own outline —
    used to keep furniture off pillars and interior walls the same way it is
    kept off everything else it might bump into */
+/** @returns {{poly: Pt[], name: string}[]} */
 function obstaclePolys(){
+  /** @type {{poly: Pt[], name: string}[]} */
   const out=[];
   for(const pl of L().room.pillars) out.push({poly:worldPoly(pl,pl), name:'a pillar'});
   for(const w of L().room.iwalls) out.push({poly:iwallPoly(w), name:'a wall'});
@@ -134,15 +163,18 @@ function isRectRoom(){
   return true;
 }
 
+/** @param {number} i @param {number} deg @returns {boolean} false if the edit was refused */
 function setWallAngle(i,deg){
   const P=RP(), n=P.length, w=wallOf(i), r=-deg*Math.PI/180;
   return tryRoomEdit(()=>{ P[(i+1)%n]=[w.a[0]+Math.cos(r)*w.len, w.a[1]+Math.sin(r)*w.len]; });
 }
+/** @param {number} i @param {number} len @returns {boolean} false if the edit was refused */
 function setWallLen(i,len){
   const P=RP(), n=P.length, w=wallOf(i);
   return tryRoomEdit(()=>{ P[(i+1)%n]=[w.a[0]+w.dir[0]*len, w.a[1]+w.dir[1]*len]; });
 }
 /* every room edit is applied, checked, and rolled back if it breaks the polygon */
+/** @param {() => void} fn @returns {boolean} false if it was rolled back */
 function tryRoomEdit(fn){
   const before = JSON.stringify(RP());
   fn();
@@ -161,12 +193,14 @@ function tryRoomEdit(fn){
    sharing a point). Returns null when nothing is within `R`, and the caller
    falls back to the ordinary grid snap — see snapWallPoint in features/canvas/snap.js,
    which is the only caller and supplies R from the current zoom. */
+/** @param {Pt} raw @param {string|null} excludeId @param {number} R @returns {Pt|null} */
 function magneticWallPoint(raw, excludeId, R){
+  /** @type {{pt: Pt, d: number}|null} */
   let best=null;
-  const consider=c=>{ const d=Math.hypot(c[0]-raw[0],c[1]-raw[1]); if(d<=R&&(!best||d<best.d)) best={pt:c,d}; };
+  const consider=(/** @type {Pt} */c)=>{ const d=Math.hypot(c[0]-raw[0],c[1]-raw[1]); if(d<=R&&(!best||d<best.d)) best={pt:c,d}; };
   for(const v of RP()) consider(v);
   for(const w of L().room.iwalls){ if(w.id===excludeId) continue; consider(w.a); consider(w.b); }
-  if(best) return best.pt.slice();
+  if(best) return /** @type {{pt: Pt}} */(best).pt.slice();   // set inside consider(), which flow analysis does not follow
   const nb=nearestOnWalls(raw);
   if(nb && nb.d<=R){ const w=wallOf(nb.i); return [w.a[0]+w.dir[0]*nb.t*w.len, w.a[1]+w.dir[1]*nb.t*w.len]; }
   for(const w of L().room.iwalls){
@@ -176,6 +210,7 @@ function magneticWallPoint(raw, excludeId, R){
   }
   return null;
 }
+/** @param {number} w @param {number} d @returns {boolean} false if the edit was refused */
 function setRectSize(w,d){
   const b=bbox(RP());
   return tryRoomEdit(()=>{ L().room.points = RP().map(([x,y])=>[
