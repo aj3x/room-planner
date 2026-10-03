@@ -145,11 +145,12 @@ function renderRoomSel(){
     box.innerHTML='<p class="hint">Click a wall, corner, door or pillar in the plan to change it here.</p>';
     return;
   }
-  if(roomSel.value.kind==='wall') return renderWallProps();
-  if(roomSel.value.kind==='corner') return renderCornerProps();
-  if(roomSel.value.kind==='pillar') return renderPillarProps();
-  if(roomSel.value.kind==='iwall') return renderIWallProps();
-  return renderOpeningProps();
+  /* a part's props renderer returns false when the part has gone from under
+     the selection; then there is nothing selected */
+  const k=roomSel.value.kind;
+  const shown = k==='wall' ? renderWallProps() : k==='corner' ? renderCornerProps() : k==='pillar' ? renderPillarProps()
+              : k==='iwall' ? renderIWallProps() : renderOpeningProps();
+  if(shown===false){ roomSel.value = null; return renderRoomSel(); }
 }
 
 function renderWallProps(){
@@ -182,7 +183,7 @@ function renderWallProps(){
 }
 function renderCornerProps(){
   const i=roomSel.value.i, P=RP(), p=P[i], b=bbox(P);
-  if(!p){ roomSel.value = null; return renderRoomSel(); }   // the corner went away under the selection
+  if(!p) return false;   // the corner went away under the selection
   $('roomSelTitle').textContent='Corner '+(i+1);
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="cX">From left</label><input type="text" class="len" id="cX" value="${esc(fmtLen(p[0]-b.x0,S.unit))}"></div>
@@ -223,7 +224,7 @@ function toggleWallOff(i){
 
 function renderPillarProps(){
   const pl=pillarOf(roomSel.value.id);
-  if(!pl){ roomSel.value = null; return renderRoomSel(); }
+  if(!pl) return false;
   $('roomSelTitle').textContent='Pillar';
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="plShape">Shape</label><select id="plShape">
@@ -252,7 +253,7 @@ function renderPillarProps(){
 }
 function renderIWallProps(){
   const w=iwallOf(roomSel.value.id);
-  if(!w){ roomSel.value = null; return renderRoomSel(); }
+  if(!w) return false;
   const na=nearestOnWalls(w.a), nb=nearestOnWalls(w.b);
   $('roomSelTitle').textContent='Interior wall';
   $('roomSelBox').innerHTML=`
@@ -294,7 +295,7 @@ function deleteOpening(id){
 }
 function renderOpeningProps(){
   const o=openOf(roomSel.value.id);
-  if(!o){ roomSel.value = null; return renderRoomSel(); }
+  if(!o) return false;
   const len=wallOf(o.wall).len;
   o.corner = o.corner==='ccw' ? 'ccw' : 'cw';
   const isDoor=o.kind==='door';
