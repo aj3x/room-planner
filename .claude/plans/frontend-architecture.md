@@ -157,3 +157,4 @@ Phase log (filled in by the orchestrator):
 | Phase | Base SHA | Final SHA | Loops | Notes |
 |-------|----------|-----------|-------|-------|
 | 1 transact() | e8e6436 | 6bccc41 | 1 | PASS; nits fixed; added opts.canvas, rev bump limited to room/furn/lib/project; Selected-panel X/Y undo gap logged in BACKLOG.md |
+| 2 signals | eef7fc8 | adbf951 | 2 | PASS; refused edits snap back, held panel released on change/click, restored field selected; registry kept for blueprint.*, plan.setMode/activateLayout, ui.flash (Phase 4 removes); room drag ~2x pointermove cost at 300 walls |
