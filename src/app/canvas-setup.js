@@ -1,3 +1,4 @@
+// @ts-check
 /* The canvas's parts list: every layer and every tool, registered once from
    boot() — never at import time. A new layer or tool is a module in the
    feature it belongs to, exported from that feature's index.js, and one line

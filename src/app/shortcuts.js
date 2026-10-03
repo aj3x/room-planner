@@ -1,3 +1,4 @@
+// @ts-check
 /* The keyboard. One handler on `document`, and the order of its guards is the
    whole design: a modifier-free letter must not fire while the user is typing
    in a text box, Escape means "back out of whatever is innermost", and a
@@ -38,8 +39,9 @@ import {turnFloorRoom} from '../features/floors/index.js';
 import {deleteOpening} from '../features/openings/index.js';
 import {removeSel, rotate} from '../features/furniture/index.js';
 
+/** @param {KeyboardEvent} e */
 function onDocumentKeyDown(e){
-  const tag=(e.target.tagName||'').toLowerCase();
+  const tag=(/** @type {Element} */(e.target).tagName||'').toLowerCase();
   if(isGesturing() && e.key==='Escape'){ e.preventDefault(); cancelGesture(); return; }
   if(tag==='input'||tag==='textarea'||tag==='select') return;
   if(e.code==='Space' && !e.repeat && isCanvasMode(S.mode)){
@@ -90,7 +92,7 @@ function onDocumentKeyDown(e){
   if(e.key==='Delete'||e.key==='Backspace'){ e.preventDefault(); removeSel(); return; }
   if(e.key==='r'||e.key==='R'){ if(selSet.value.size===1){ e.preventDefault(); rotate(e.shiftKey?-90:90); } return; }
   const step=(snapMM()||10)*(e.shiftKey?5:1);
-  const d={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]}[e.key];
+  const d=/** @type {Record<string, number[]>} */({ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]})[e.key];
   if(d){
     e.preventDefault();
     transact('furn', ()=>{
@@ -118,6 +120,7 @@ function onDocumentKeyDown(e){
    binding, and reading them apart is how one of them gets forgotten. Note it
    does NOT clear the cursor mid-pan -- a pan started with Space keeps its
    grabbing cursor until the pointer comes up, whatever the key does. */
+/** @param {KeyboardEvent} e */
 function onDocumentKeyUp(e){
   if(e.code==='Space'){
     setSpaceDown(false);
