@@ -5,7 +5,7 @@
    an empty box both leave the name alone.
 
    The box gives up focus before `done` runs, so the list's own effect (a
-   panel holds its render while someone types in it — ui/mount.js) is free to
+   panel holds its render while someone types in it — ui-kit/mount.js) is free to
    repaint the row the moment the caller commits the new name. When there is
    nothing to commit, the original name goes back where it was and `done`
    gets null. */

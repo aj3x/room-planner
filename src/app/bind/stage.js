@@ -2,8 +2,8 @@
    toolbars that sit on it — the Room|Furniture mode switch, the measure and
    shortcuts buttons, the measure bar, and undo/redo/zoom/fit.
 
-   One of the per-pane bind modules; src/bind/header.js carries the full
-   rationale for the pattern. The short version: each src/html/ partial ends
+   One of the per-pane bind modules; src/app/bind/header.js carries the full
+   rationale for the pattern. The short version: each HTML partial ends
    with a module script that imports its bind function and calls it, so a pane's
    markup and the list of things listening to it sit in the same file, and it is
    a function rather than registrations at import time because nothing in src/

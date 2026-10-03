@@ -1,21 +1,11 @@
 /* Walk paths: can you actually get around this room? The clearance grid, the
    routes through it, and the solver that threads a line from door to door.
 
-   Extracted from index.html in Phase 3, move-only. The region arrived whole,
-   drawing included; the decoupling pass (.claude/plans/decoupling.md §2.1,
-   step 3) took the drawing back out. walkShade, walkPinchLabel, drawWalkPath
-   and drawWalkOverlay now live in canvas/layers/walk-paths.js, and with
-   them went the imports of canvas/view.js and canvas/draw.js -- the upward
-   edge that made the domain layer depend on the renderer and helped hold the
-   45-module cycle together.
-
-   What is left is pure computation: core/ plus its two model/ siblings, no
-   layer above. Four names are exported, all of them for the overlay: WALK (the three
-   clearance bands), walkGrid (the cached grid), walkPaths (the annotated
-   routes) and walkBand (which band a clearance falls in). Everything else --
-   the solver, the route builder, the raycast graph -- still has no caller
-   outside this file, which is finding D of the units pilot again: export only
-   what is really referenced. */
+   Pure computation over the kernel; walk-paths-layer.js draws it. Four names
+   are exported, all of them for the layer: WALK (the three clearance bands),
+   walkGrid (the cached grid), walkPaths (the annotated routes) and walkBand
+   (which band a clearance falls in). Everything else -- the solver, the route
+   builder, the raycast graph -- has no caller outside this file. */
 
 import {L, RP, itemOf} from '../../kernel/state.js';
 import {bbox, worldPoly, pointInPoly, segHit, ptSegDist, segDist} from '../../kernel/geometry.js';

@@ -1,6 +1,6 @@
 /* The walk-path overlay: the shading passes and the route lines that put
-   model/walkpaths.js's clearance numbers on the canvas. The computation is
-   model/walkpaths.js; only the paint is here. Furniture mode, with the view
+   features/walkpaths/walkpaths.js's clearance numbers on the canvas. The computation is
+   features/walkpaths/walkpaths.js; only the paint is here. Furniture mode, with the view
    setting on. */
 
 import {ctx, sx, sy, view, PAL, addPoly} from '../canvas/index.js';

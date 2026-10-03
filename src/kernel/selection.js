@@ -1,9 +1,9 @@
 /* The selection: what is picked, what is marked, and what the guide readout
-   says. Each is a signal (core/signals.js), so whatever shows it — the canvas,
+   says. Each is a signal (kernel/signals.js), so whatever shows it — the canvas,
    the Selection panels, the layout tree — subscribes by reading `.value`, and
    whoever changes it writes `.value` and names no view.
 
-   They live here rather than in core/state.js because they are not part of the
+   They live here rather than in kernel/state.js because they are not part of the
    saved project — S is what `save()` serialises, and none of this is.
 
    The Set-valued ones (selSet, mergeSel, treeOpen) are replaced, never mutated

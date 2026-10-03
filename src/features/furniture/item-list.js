@@ -4,7 +4,7 @@
    The list is an effect (mountItemList, at the end): the commands commit
    through transact() and the list, the Selection panel and the canvas follow.
 
-   invBox is a top-level DOM read, the same call ui/modal.js makes for `mo`.
+   invBox is a top-level DOM read, the same call ui-kit/modal.js makes for `mo`.
 */
 import {emptyRow, esc} from '../../ui-kit/panels.js';
 import {moreBtn} from '../../ui-kit/menu.js';

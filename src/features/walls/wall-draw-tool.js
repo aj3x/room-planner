@@ -1,7 +1,7 @@
 /* Drawing a freestanding wall: a click for its start, a click for its end,
    each landing on the wall magnet (Alt drops it; Shift locks the end to the
    start's axis). Escape abandons it. While it is live it owns the canvas and
-   the keyboard. The commands it ends in are canvas/wall-draw.js. */
+   the keyboard. The commands it ends in are features/walls/wall-draw.js. */
 
 import {flash} from '../../ui-kit/flash.js';
 import {draw, scheduleDraw, drawCursor, wallDrawShift, wallDrawState, PAL, snapWallPoint, axisLockFrom, ctx, sx, sy, wx, wy} from '../canvas/index.js';

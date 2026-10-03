@@ -2,8 +2,8 @@
    magnet pulls it, how deep each room's wall band runs, and which room is
    under a point. Pure geometry over the saved layouts — no camera, no canvas.
    The canvas half (the magnet's reach in screen pixels, the grid snap, the
-   pointer) is passed in by the floor tool, canvas/tools/floor.js; the floor
-   layers (canvas/layers/floor-*.js) paint what floorEdgeDepths/depthRuns
+   pointer) is passed in by the floor tool, features/floors/floor-tool.js; the floor
+   layers (features/floors/floor-*-layer.js) paint what floorEdgeDepths/depthRuns
    return. */
 
 import {floorPt, floorPts, floorXf, ptsAt} from './floor-space.js';

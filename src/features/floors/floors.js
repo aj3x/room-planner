@@ -277,7 +277,7 @@ function openFloorMergeMenu(ids, clientX, clientY){
   ], a.name+' + '+b.name);
 }
 /* Floor mode's two Properties sections, each an effect on what it shows
-   (ui/mount.js). */
+   (ui-kit/mount.js). */
 function mountFloorPanels(){
   mountPanel($('floorSelBox').closest('section'), () => {
     rev.floor.value; rev.room.value; rev.project.value; pref('unit'); pref('mode'); floorSel.value; mergeSel.value;

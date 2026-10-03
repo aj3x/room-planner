@@ -3,7 +3,7 @@
    the solid/open choice). Points land on the same magnet as a corner drag,
    with a soft 45° snap (Shift forces it). Escape abandons it. While it is
    live it owns the canvas and the keyboard. The geometry and the commit are
-   canvas/split-room.js. */
+   features/room/split-room.js. */
 
 import {pointInPoly} from '../../kernel/geometry.js';
 import {alignGuides, alignNote} from '../../kernel/selection.js';

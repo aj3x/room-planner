@@ -2,7 +2,7 @@
    walls that stand inside it. Pure: nothing here reads the view or the DOM.
 
    tryRoomEdit reports a rejected edit to the person through report()
-   (core/signals.js) rather than a toast it would have to import. The message
+   (kernel/signals.js) rather than a toast it would have to import. The message
    belongs next to the rule that produced it; the toast does not. */
 
 import {norm360, pointInPoly, ptSegDist, worldPoly, bbox, polySimple} from './geometry.js';
@@ -159,7 +159,7 @@ function tryRoomEdit(fn){
 /* where a wall's end wants to land: magnetic onto a room corner, a room wall's
    face, or another interior wall's end or run (so two walls "connect" by simply
    sharing a point). Returns null when nothing is within `R`, and the caller
-   falls back to the ordinary grid snap — see snapWallPoint in canvas/snap.js,
+   falls back to the ordinary grid snap — see snapWallPoint in features/canvas/snap.js,
    which is the only caller and supplies R from the current zoom. */
 function magneticWallPoint(raw, excludeId, R){
   let best=null;

@@ -3,9 +3,9 @@
 
    A view (a side panel, the canvas, the undo buttons) runs inside an `effect`
    and reads the signals it depends on; when one of them changes, it runs
-   again. A mutation writes state and stops there: transact() (core/tx.js)
+   again. A mutation writes state and stops there: transact() (kernel/tx.js)
    bumps the revision of the scope it touched, the selection setters write
-   their signals (core/selection.js), and the effects that read those decide
+   their signals (kernel/selection.js), and the effects that read those decide
    for themselves whether they are stale.
 
    The document itself, S, is not made of signals. It is serialised whole by
@@ -53,7 +53,7 @@ function pref(key){
 
 /* A message for the person from code that does not own a toast: the domain
    layer refusing an edit (tryRoomEdit). report() writes it; the app shows it
-   (boot.js mounts the effect that flashes it). A fresh object each time, so
+   (app/boot.js mounts the effect that flashes it). A fresh object each time, so
    the same message twice is still two notices. */
 const notice = signal(null);
 function report(msg){ notice.value = {msg}; }

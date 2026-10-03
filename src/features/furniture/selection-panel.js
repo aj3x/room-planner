@@ -162,7 +162,7 @@ function renderSel(){
   $('sDup').addEventListener('click',()=>place(inst.itemId));
 }
 /* The Selection panel, as an effect on the furniture, the items and the
-   selection it shows (ui/mount.js). */
+   selection it shows (ui-kit/mount.js). */
 function mountSelPanel(){
   mountPanel($('selBox').closest('section'), () => {
     rev.furn.value; rev.lib.value; rev.room.value; rev.project.value;

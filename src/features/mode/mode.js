@@ -9,10 +9,8 @@
    the page layout itself, before resize(): resize() measures the canvas, and
    the canvas has no size while the Library is showing.
 
-   Not in ui/panels.js: setMode calls resize() and fit(), so ui/panels.js ->
-   canvas/view.js would drag view.js's top-level `const cv=$('cv')` into the
-   modal.js <-> panels.js cycle -- the boot failure that reverted togglePane.
-   Nothing in ui/ imports plan/, so here it costs nothing.
+   It is a feature rather than ui-kit/ because it drives the canvas (resize,
+   fit, stopping tools) and ui-kit/ imports no feature.
 */
 import {fit, resize, resetTools, stopToolsFor} from '../canvas/index.js';
 import {floorEntry, histAvail, histRev, seedHistFor} from '../../kernel/history.js';
@@ -86,7 +84,7 @@ function renderHistButtons(){
   $('btnUndo').disabled=!canUndo; $('btnRedo').disabled=!canRedo;
 }
 
-/* The mode's own views, as effects (ui/mount.js). */
+/* The mode's own views, as effects (ui-kit/mount.js). */
 function mountMode(){
   mountPanel(null, () => { pref('mode'); pref('leftOpen'); pref('rightOpen'); }, () => { renderMode(); applyLayoutMode(); });
   mountPanel(null, () => { histRev.value; pref('mode'); rev.project.value; rev.floor.value; }, renderHistButtons);

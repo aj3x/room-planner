@@ -1,6 +1,6 @@
 /* Moving the camera: sizing the canvas to its box, framing the room (or the
    whole floor), and zooming about a point. Each repaints, which is why these
-   are here and not in canvas/view.js: view.js is a leaf every layer imports,
+   are here and not in features/canvas/view.js: view.js is a leaf every layer imports,
    and these import the compositor. */
 
 import {L, RP, floorMode, floorOf, floorLayouts} from '../../kernel/state.js';

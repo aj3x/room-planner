@@ -4,10 +4,10 @@
 
    It lived in src/library/item-folders.js until the decoupling pass
    (.claude/plans/decoupling.md §4, step 2). It had to move because
-   core/migrate.js calls reconcileTags on every load, and that import made the
+   kernel/migrate.js calls reconcileTags on every load, and that import made the
    core layer depend on the Library UI. Nothing here touches the DOM; what
    does — rehoming ids, moving items between folders, purging — stayed behind
-   in library/item-folders.js, which imports this file.
+   in features/library/item-folders.js, which imports this file.
 */
 import {S} from './state.js';
 

@@ -1,9 +1,9 @@
-/* Side panels: text helpers for the render* functions (esc is ui/dom.js's,
+/* Side panels: text helpers for the render* functions (esc is ui-kit/dom.js's,
    re-exported here), and collapsing a section of a pane or a whole pane.
 
    Which sections are shut is an effect on the settings (mountSections), so
    toggleSection only commits the change. Collapsing a whole pane is driven
-   by the mode effect (plan/mode.js), because it changes the canvas's size
+   by the mode effect (features/mode/mode.js), because it changes the canvas's size
    and setMode/togglePane resize the canvas after it. */
 import {S} from '../kernel/state.js';
 import {transact} from '../kernel/tx.js';
@@ -29,7 +29,7 @@ function toggleSection(h){
   const k=h.closest('section[data-sec]').dataset.sec;
   transact('prefs', ()=>{ S.secClosed = S.secClosed.includes(k) ? S.secClosed.filter(x=>x!==k) : S.secClosed.concat(k); }, {canvas:false});
 }
-/* Which sections are shut, as an effect on the settings (ui/mount.js). */
+/* Which sections are shut, as an effect on the settings (ui-kit/mount.js). */
 function mountSections(){
   mountPanel(null, () => { rev.prefs.value; rev.project.value; }, applySections);
 }

@@ -1,7 +1,7 @@
 /* The header's wiring: the section nav, the unit select, and the two
    import/export buttons with the hidden file input they drive.
 
-   One of the per-pane bind modules. Each src/html/ partial ends with a module
+   One of the per-pane bind modules. Each HTML partial ends with a module
    script that imports its bind function and calls it, so a pane's markup and
    the list of things listening to it sit in the same file. index.html keeps
    only what is genuinely app-global.
@@ -11,7 +11,7 @@
    effect, which nothing in src/ is allowed to have, and it would also bind at
    import-hoist time rather than at the point in the document its markup
    occupies. Exporting a function and letting the partial call it keeps both
-   properties — the same trade boot.js already makes.
+   properties — the same trade app/boot.js already makes.
 
    Ordering: registration order only decides anything between listeners on the
    SAME element in the SAME phase, and every such group lives in one partial.

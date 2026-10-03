@@ -1,7 +1,7 @@
 /* The drawing tools' state: which of them is live (an outline, a
    freestanding wall, a split line) and where the pointer would put the next
-   point. Each is a signal (core/signals.js). They are here, not in the tools
-   (canvas/tools/), because the panels read them too — a button shows whether
+   point. Each is a signal (kernel/signals.js). They are here, not in the tools,
+   because the panels read them too — a button shows whether
    its tool is on — and the commands that start and stop each tool cancel the
    others. A drag's own state lives in the tool that runs it.
 

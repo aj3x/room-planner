@@ -56,7 +56,7 @@ function renderRoomSel(){
               : k==='iwall' ? renderIWallProps() : renderOpeningProps();
   if(shown===false){ roomSel.value = null; return renderRoomSel(); }
 }
-/* The room's properties and the Selection panel, as effects (ui/mount.js). */
+/* The room's properties and the Selection panel, as effects (ui-kit/mount.js). */
 function mountRoomPanels(){
   const geometry = () => { rev.room.value; rev.project.value; pref('unit'); };
   mountPanel($('rectDims').closest('section'), geometry, renderRoom);

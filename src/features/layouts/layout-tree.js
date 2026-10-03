@@ -5,8 +5,8 @@
    through transact() and the tree, the panels and the canvas follow on their
    own.
 
-   treeBox is a top-level DOM read, the same call ui/modal.js makes for `mo`
-   and canvas/view.js for `cv`: a lookup, not a mutation, and the bundle runs
+   treeBox is a top-level DOM read, the same call ui-kit/modal.js makes for `mo`
+   and features/canvas/view.js for `cv`: a lookup, not a mutation, and the bundle runs
    after the document is parsed in all three targets.
 */
 import {esc} from '../../ui-kit/panels.js';
@@ -308,7 +308,7 @@ function treeDropSpot(e){
 }
 
 /* The tree, as an effect on the project's rooms, folders and floors and on
-   what is marked and expanded in it (ui/mount.js). */
+   what is marked and expanded in it (ui-kit/mount.js). */
 function mountTree(){
   mountPanel('layoutTree', () => { rev.project.value; pref('mode'); mergeSel.value; treeOpen.value; }, renderTree);
 }

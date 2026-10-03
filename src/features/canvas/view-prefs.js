@@ -1,5 +1,5 @@
 /* The View section's settings and the snap-size picker, each an effect on
-   the settings it shows (ui/mount.js).
+   the settings it shows (ui-kit/mount.js).
 
    Note for anyone reading renderSnap: it silently rewrites S.snap to the third
    entry of the list when the current value is not in it. */

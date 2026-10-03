@@ -1,9 +1,9 @@
 /* The Measure tool's canvas half: which anchor is under the pointer, which
    measurement is, the readout bar, and turning the tool on and off. Its
-   pointer and key handling is canvas/tools/measure.js.
+   pointer and key handling is features/measure/measure-tool.js.
 
-   The arithmetic half is model/measures.js and the tool's state is the
-   canvas/measure-state.js signals; this is what sits between them. The bar
+   The arithmetic half is features/measure/measures.js and the tool's state is the
+   features/measure/measure-state.js signals; this is what sits between them. The bar
    (renderMeasureBar) is an effect on those signals and on the room's
    measurements (mountMeasureBar), so nothing here repaints it by hand.
 */
@@ -97,7 +97,7 @@ function setMeasure(on){
   batch(()=>{ measureOn.value = !!on; resetMeasureState(); });
 }
 /* The bar over the canvas, as an effect on the tool's state and the room's
-   measurements (ui/mount.js). */
+   measurements (ui-kit/mount.js). */
 function mountMeasureBar(){
   mountPanel(null, () => { rev.room.value; rev.project.value; measureOn.value; measureStart.value; measureSel.value; }, renderMeasureBar);
 }

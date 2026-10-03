@@ -1,28 +1,8 @@
 /* Shape fixers. migrate() upgrades an older saved state on load; normLayout
    and normItem are split out of it so the importer can clean up one room or
    one thing lifted out of a file; pruneMeasures and remapMeasures keep a
-   measurement's ends pointing at things that exist.
-
-   Extracted from index.html in Phase 3, move-only: the body below is
-   byte-identical to what stood there, and the `export` block at the end is
-   the only line added.
-
-   §3 files all five under core/store.js and they cannot go there: ui/panels.js
-   imports core/store.js, so anything core/store.js reaches is welded to the
-   modal.js <-> panels.js cycle, and that cycle contains canvas/view.js, whose
-   top-level `const cv=$('cv'), ctx=cv.getContext('2d')` would then run before
-   ui/modal.js had initialised `$`. That is the exact boot failure that
-   reverted togglePane in the plan/ round. Verified with the cycle checker,
-   not by eye.
-
-   The decoupling pass (.claude/plans/decoupling.md §4, step 2) removed the
-   two imports that used to reach out of the core layer from here: normHex
-   moved to core/color.js, and reconcileTags to core/item-folders.js. What is
-   left — core/, plus syncWallOff from model/ — is all inside the domain
-   layer, which the lint rule in eslint.config.js now enforces.
-
-   Nothing in ui/ or canvas/ imports this file, so it adds no cycle at all.
-*/
+   measurement's ends pointing at things that exist. Pure kernel: it reads
+   nothing but the state shape and its own siblings. */
 import {normHex} from './color.js';
 import {INV_SCOPES} from './floor-space.js';
 import {norm360} from './geometry.js';

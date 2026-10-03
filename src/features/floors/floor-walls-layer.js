@@ -1,5 +1,5 @@
 /* Passes B and C of the floor scene: every wall band at its depth (shared,
-   exterior or taken away — model/floor-place.js), then the doorways punched
+   exterior or taken away — kernel/floor-place.js), then the doorways punched
    through them. Bands first, all of them, or the next room's band paints a
    doorway shut again. */
 

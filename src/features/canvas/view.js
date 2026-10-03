@@ -2,14 +2,14 @@
    millimetres onto screen pixels. A leaf of canvas/: it imports no other
    canvas module, so every layer and tool can import it without joining a
    cycle. What moves the camera and repaints (resize, fit, zoomAt) is
-   canvas/camera.js.
+   features/canvas/camera.js.
 
    `view` is never reassigned, only mutated, so an importer sees every change
    through the live binding. W and H are reassigned by resize(), so they are
    written through setW/setH.
 
    On the top-level DOM work in the first line, and why it is here rather than
-   in boot.js, see the note above it. */
+   in app/boot.js, see the note above it. */
 
 import {$} from '../../ui-kit/modal.js';
 import {S} from '../../kernel/state.js';
@@ -18,7 +18,7 @@ import {S} from '../../kernel/state.js';
 /* Top-level DOM, and the one place in src/ that takes a rendering context at
    import time. It is here rather than in boot.js because every canvas module
    needs ctx, and leaving it in index.html would pin all of canvas/ there with
-   it. $('cv') is the same kind of lookup as ui/modal.js's `const mo =
+   it. $('cv') is the same kind of lookup as ui-kit/modal.js's `const mo =
    $('modal')`; getContext('2d') goes one step further, but it is a lazy
    accessor rather than a mutation -- it allocates the element's 2D context,
    memoises it, and returns the same object on every later call. It registers
@@ -35,7 +35,7 @@ let view={scale:.1,ox:0,oy:0};
 
 let W=0, H=0;
 /* W/H are the canvas's CSS-pixel size, and resize() is the only thing that
-   writes them — through these, the same pattern setS uses in core/state.js. */
+   writes them — through these, the same pattern setS uses in kernel/state.js. */
 function setW(v){ W = v; }
 function setH(v){ H = v; }
 

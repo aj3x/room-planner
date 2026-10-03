@@ -6,7 +6,7 @@
    only line added. `retagItem` is here too, as §3 files it; `rehomeItemId`,
    which §3 also lists, is not — it needs folderIdPrefix and itemFolderPath
    from the Inventory tab's folder tree, so it went to
-   src/library/item-folders.js with them. */
+   src/features/library/item-folders.js with them. */
 
 import {S, itemOf} from './state.js';
 import {furnHist} from './history.js';

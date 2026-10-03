@@ -5,7 +5,7 @@
    settings (mountLibrary): a library edit commits through transact('lib')
    and the page follows. Browsing within the content — a subscription, a
    listing, a marketplace sub-folder — changes `nav` and calls navChanged()
-   (library/nav.js); the content is an effect on that too.
+   (features/library/nav.js); the content is an effect on that too.
 */
 import {S, isCanvasMode, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
@@ -61,7 +61,7 @@ function renderLibTools(){
     $('btnAddListing').addEventListener('click', addListingDialog);
   }
 }
-/* The Library page, as an effect (ui/mount.js). It runs on every library,
+/* The Library page, as an effect (ui-kit/mount.js). It runs on every library,
    project or settings commit, and does nothing while a Plan mode is showing;
    setMode() into a Library place is a prefs commit, so it paints on arrival.
    It holds while a folder is being renamed in the tree. */

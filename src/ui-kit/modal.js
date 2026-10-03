@@ -7,7 +7,7 @@
    after the document is parsed, so it resolves. The listeners on #moCancel,
    #moOk and #modal are bindModal()'s.
 
-   `$` and `svgI` live in ui/dom.js and are re-exported here, which is where
+   `$` and `svgI` live in ui-kit/dom.js and are re-exported here, which is where
    most of the app imports them from. */
 
 import {$, esc, svgI} from './dom.js';

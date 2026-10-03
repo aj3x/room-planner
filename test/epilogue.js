@@ -48,7 +48,7 @@ export const EPILOGUE = `
  * canvas/interaction.js — it was the shell's last reader. */
 ;import {view} from './src/features/canvas/view.js';
 /* commitFurn's last shell reader was the arrow-key nudge, which moved into
- * plan/shortcuts.js. */
+ * app/shortcuts.js. */
 ;import {commitFurn} from './src/kernel/history.js';
 /* The four undo/redo entry points were last read by the stage's toolbar and
  * went with it; the room tool's drag lives in its own module. All five are
@@ -57,7 +57,7 @@ export const EPILOGUE = `
 ;import {undoRoom, redoRoom, undoFurn, redoFurn} from './src/kernel/history.js';
 ;import {exportPayload} from './src/features/io/export.js';
 /* readImport's last shell reader was the #fileIn change handler, which moved
- * into bind/header.js when the header's wiring went to its partial. It was in
+ * into app/bind/header.js when the header's wiring went to its partial. It was in
  * GLOBALS, where a missing name fails silently inside a try/catch — the
  * round-trip spec went red and lint said nothing, which is rule 2 exactly. */
 ;import {applyImport, readImport} from './src/features/io/import.js';

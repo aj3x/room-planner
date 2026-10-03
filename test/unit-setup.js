@@ -1,7 +1,7 @@
 /* Suite A's environment: enough of a document for src/ to evaluate in.
  *
  * The unit tests import real modules out of src/, and several reach the DOM at
- * module-evaluation time -- canvas/view.js does `$('cv').getContext('2d')` on
+ * module-evaluation time -- features/canvas/view.js does `$('cv').getContext('2d')` on
  * its first line -- so the shell has to exist, and jsdom has to answer
  * getContext, before the first import runs. index.html is never modified; the
  * shell is read off disk. */
@@ -31,7 +31,7 @@ const src = expandIncludes(fs.readFileSync(path.join(REPO_ROOT, 'index.html'), '
    top of <body>, so cutting to the last </script> deleted every pane between
    them. The DOM still looked plausible — it just had no #cv, and the failure
    surfaced as `Cannot read properties of null (reading 'getContext')` from
-   canvas/view.js, three imports deep and nowhere near the cause. */
+   features/canvas/view.js, three imports deep and nowhere near the cause. */
 const SCRIPTS = /<script\b[^>]*>[\s\S]*?<\/script>/gi;
 document.documentElement.innerHTML = src.replace(SCRIPTS, '');
 

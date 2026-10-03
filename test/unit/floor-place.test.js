@@ -1,4 +1,4 @@
-/* model/floor-place.js decides how thick every wall on a floor is drawn and
+/* kernel/floor-place.js decides how thick every wall on a floor is drawn and
    where the floor magnet puts a dragged room. It is pure geometry over the
    saved layouts, and nothing else checks it: the e2e suite never opens Floor
    mode, and a wrong depth or snap only shows up as a plan that looks a

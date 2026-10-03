@@ -1,13 +1,5 @@
 /* Storage. Store wraps window.storage when the host provides one and falls back
-   to localStorage; save() debounces.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added.
-
-   migrate/normLayout/normItem, which §3 also files here, did NOT come along:
-   migrate calls reconcileTags(), which lives in the Inventory tab's folder tree
-   (library/item-folders.js) and has not moved. They follow once it has. */
+   to localStorage; save() debounces. Loading old data is migrate.js's job. */
 
 import {S} from './state.js';
 

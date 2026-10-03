@@ -1,6 +1,6 @@
 /* Floor mode: picking rooms up and arranging them. A press on the picked
    room's rotate handle turns it (in 15° steps; Alt turns freely), a press
-   on a room drags it under the floor magnet (model/floor-place.js; Alt
+   on a room drags it under the floor magnet (kernel/floor-place.js; Alt
    drops the magnet), Shift+click marks rooms for merge/delete instead, and
    a press on nothing pans. Every frame is a preview('floor'); the pointerup
    commits once, so one drag is one undo step. */

@@ -1,6 +1,6 @@
 /* Drawing a freestanding interior wall, the commands: starting, finishing
    and abandoning it. The pointer and key handling, and the wall on screen,
-   are the wall-draw tool's (canvas/tools/wall-draw.js). */
+   are the wall-draw tool's (features/walls/wall-draw-tool.js). */
 import {batch} from '../../kernel/signals.js';
 import {roomSel} from '../../kernel/selection.js';
 import {L, uid} from '../../kernel/state.js';

@@ -29,7 +29,7 @@ function splitAngleSnap(prev, raw, hard){
 
 /* Resolving where the next point of the cut lands (the same magnet as a
    corner drag). The cut in progress is drawn by the split tool's overlay,
-   canvas/tools/split.js. */
+   features/room/split-tool.js. */
 import {RP} from '../../kernel/state.js';
 import {wallOf} from '../../kernel/walls.js';
 import {splitDrawState, drawCursor, alignPoint, alignRadius, isSquare, fit, stopOtherTools} from '../canvas/index.js';

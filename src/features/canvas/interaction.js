@@ -1,12 +1,12 @@
 /* The canvas's pointer dispatcher. What a press, a drag or a key on the
-   canvas does is decided by tools (canvas/tools/), not here.
+   canvas does is decided by tools (`*-tool.js`, in their features), not here.
 
    A tool is
      {id, active(), onDown(e, px, py), onMove?(px, py, mods), onUp?(e),
       onCancel?(), onHover?(px, py), onCursor?(px, py, mods), onLeave?(),
       onKey?(e), autoPan?, cursor?, overlay?}
    - active() says whether the tool is the one in charge right now. Tools
-     are asked in registration order (canvas/setup.js) and the first that
+     are asked in registration order (app/canvas-setup.js) and the first that
      says yes is the active tool: the three drawing tools and the Measure
      tool while they are on, then whichever of Floor / Room / Furniture the
      canvas is in. Space hands the press to the pan tool before any of them.
@@ -18,11 +18,11 @@
    - onHover: pointer moves with nothing held. onCursor: mouse moves while a
      drawing tool is live (it shows where the next point lands), also called
      by the edge auto-pan. onLeave: the pointer left the canvas.
-   - onKey(e) returns true to claim a key; plan/shortcuts.js asks the active
+   - onKey(e) returns true to claim a key; app/shortcuts.js asks the active
      tool first. The mode tools' keys (Delete, arrows, [ ]) stay in
-     shortcuts.js because they run plan/ commands.
+     app/shortcuts.js because they run other features' commands.
    - autoPan: a held drag near the edge scrolls the canvas.
-   - overlay: a layer (canvas/draw.js) drawing the tool's gesture.
+   - overlay: a layer (features/canvas/draw.js) drawing the tool's gesture.
    - stop(): turn the tool off, for one that is switched on and off (the
      drawing tools, Measure). Its start command calls stopOtherTools(id)
      first, so only one such tool is ever on.
@@ -37,7 +37,7 @@
 
    Tools are registered by setupCanvas() from boot(), never at import time;
    adding one is a module and a line there. The listeners are registered in
-   src/bind/stage.js. */
+   src/app/bind/stage.js. */
 
 import {S} from '../../kernel/state.js';
 import {addLayer, scheduleDraw} from './draw.js';

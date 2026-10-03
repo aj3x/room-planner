@@ -1,7 +1,7 @@
 /* The canvas's parts list: every layer and every tool, registered once from
-   boot() — never at import time. A new layer is a module under
-   canvas/layers/ and one line here, a new tool a module under canvas/tools/
-   and one line here; nothing else changes. Order among layers matters only
+   boot() — never at import time. A new layer or tool is a module in the
+   feature it belongs to, exported from that feature's index.js, and one line
+   here; nothing else changes. Order among layers matters only
    between equal z; order among tools is their priority. */
 
 import {addLayer, stageLayer, alignGuidesLayer, readoutLayer, registerTool} from '../features/canvas/index.js';

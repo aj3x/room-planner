@@ -1,7 +1,7 @@
 /* Merging two rooms into one: the polygon weld, and the helpers that cut the
    two outlines so they can be welded. PARALLEL_TOL, the "do these two edges
    face each other" tolerance edgeFacing shares with the floor magnet, is
-   model/floor-place.js's. */
+   kernel/floor-place.js's. */
 
 import {clone} from './state.js';
 import {polySimple, signedArea} from './geometry.js';

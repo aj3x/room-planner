@@ -26,7 +26,7 @@ import {flash} from '../../ui-kit/flash.js';
    (.claude/plans/decoupling.md §4, step 3). Both are view-dependent — one
    reads the camera scale, the other falls back to the grid snap — so they
    could not stay in the domain layer once it stopped importing canvas/.
-   The wall-shaped half of the decision is still model/walls.js's
+   The wall-shaped half of the decision is still kernel/walls.js's
    magneticWallPoint; this is the camera's half. */
 
 /* world-space radius a drag should snap within, so pillars/wall ends catch

@@ -11,10 +11,10 @@
      2. record the matching undo stack — room, furn or floor — unless
         opts.history === false; lib, prefs and project have no stack;
      3. bump the active layout's revision, which keys the derived caches
-        (model/validity.js getConflicts, model/walkpaths.js) — for the scopes
+        (kernel/validity.js getConflicts, features/walkpaths/walkpaths.js) — for the scopes
         that can change what those caches read (REV_SCOPES below);
-     4. save() (debounced, in core/store.js);
-     5. bump the revision signal of every scope touched (core/signals.js),
+     4. save() (debounced, in kernel/store.js);
+     5. bump the revision signal of every scope touched (kernel/signals.js),
         once, and planRev — the canvas's — unless every call for the commit
         passed opts.canvas === false, because the plan does not show it (a
         list filter, a collapsed section). Whatever shows that scope is an
@@ -53,8 +53,8 @@ const RECORD = {
   floor: () => commitFloor(),
 };
 
-/* What reads the layout revision: getConflicts (model/validity.js) and
-   walkGrid (model/walkpaths.js), both keyed on the active layout's own
+/* What reads the layout revision: getConflicts (kernel/validity.js) and
+   walkGrid (features/walkpaths/walkpaths.js), both keyed on the active layout's own
    geometry and on the footprints of the items placed in it. room and furn
    edit that directly; lib can reshape an item already placed (the item
    dialog, "Take theirs") without changing any count in the key; project can

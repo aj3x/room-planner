@@ -4,15 +4,8 @@
    byte-identical to what stood there, and the `export` block at the end is
    the only line added.
 
-   savePlanImage was declared 2,700 lines above the rest, at the end of the
-   view-settings listeners, and §3 gives it no file. It is here because
-   exportDialog is its only caller and because it cannot go the other way:
-   canvas/draw.js -> io/pickers.js -> ui/panels.js would weld the canvas
-   import cycle onto the modal.js <-> panels.js one, dragging canvas/view.js's
-   top-level `const cv=$('cv')` into a cycle with the module that defines `$`.
-   Nothing imports this file but index.html, so here it adds no cycle at all.
-
-   The `$('btnExport')` registration stays in index.html, per rule 6.
+   savePlanImage is here, not in the canvas feature, because exportDialog is
+   its only caller; it reaches the canvas through features/canvas/index.js.
 */
 import {draw, setForceLightCanvas, cv} from '../canvas/index.js';
 import {L, S, clone, isCanvasMode} from '../../kernel/state.js';

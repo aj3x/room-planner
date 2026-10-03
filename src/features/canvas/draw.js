@@ -1,7 +1,7 @@
 /* The canvas compositor. The plan is painted by layers, each one concern
    (the walls, the items, the measurements, the floor's wall bands, …) in its
-   own module under canvas/layers/, plus the overlay of each tool (a tool's
-   gesture drawn over the plan, canvas/tools/). draw() paints every layer in
+   own module (`*-layer.js`, in the feature that owns the concern), plus the
+   overlay of each tool (a tool's gesture drawn over the plan). draw() paints every layer in
    z order onto a cleared canvas, immediate mode, every frame.
 
    A layer is
@@ -21,7 +21,7 @@
    - hitTest() is for whatever only the layer knows, e.g. where it last drew
      a label; tools call it directly.
 
-   Layers are registered by setupCanvas() (canvas/setup.js) from boot(),
+   Layers are registered by setupCanvas() (app/canvas-setup.js) from boot(),
    never at import time. Adding one is a new module and a line there. */
 
 import {ctx, view} from './view.js';

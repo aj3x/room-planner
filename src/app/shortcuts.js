@@ -2,7 +2,7 @@
    whole design: a modifier-free letter must not fire while the user is typing
    in a text box, Escape means "back out of whatever is innermost", and a
    canvas tool that is live (drawing a room, a wall, a split line; measuring)
-   gets the key — onKey, canvas/interaction.js — before the general bindings
+   gets the key — onKey, features/canvas/interaction.js — before the general bindings
    get a look at it. Read it top to bottom; each
    early `return` is a claim on the key.
 
@@ -15,11 +15,11 @@
    `document.addEventListener('keydown', onDocumentKeyDown)` and the dispatch
    lives here.
 
-   Why plan/ and not canvas/: these are the app's shortcuts, not the canvas's.
-   Undo/redo, the Escape that clears every selection, Delete on a wall or an
-   opening and the arrow-key nudge act on plan/'s commands. They change state
-   and the selection; the panels and the canvas are effects and follow.
-   Nothing imports this module except index.html, so it joins no cycle.
+   Why app/ and not the canvas feature: these are the app's shortcuts, not the
+   canvas's. Undo/redo, the Escape that clears every selection, Delete on a
+   wall or an opening and the arrow-key nudge run several features' commands.
+   They change state and the selection; the panels and the canvas are effects
+   and follow.
 
 */
 import {worldPoly} from '../kernel/geometry.js';
@@ -114,7 +114,7 @@ function onDocumentKeyDown(e){
 }
 
 /* Space's other half. It lives here rather than beside setSpaceDown in
-   canvas/tools/pan.js for the same reason the keydown does: the pair is one
+   features/canvas/pan-tool.js for the same reason the keydown does: the pair is one
    binding, and reading them apart is how one of them gets forgotten. Note it
    does NOT clear the cursor mid-pan -- a pan started with Space keeps its
    grabbing cursor until the pointer comes up, whatever the key does. */

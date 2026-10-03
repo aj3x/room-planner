@@ -1,7 +1,7 @@
 /* mountPanel(): run a panel's render as an effect, without rebuilding a field
    while the user is typing in it.
 
-   `deps()` reads the signals the panel shows (core/signals.js `rev.*`,
+   `deps()` reads the signals the panel shows (kernel/signals.js `rev.*`,
    `pref(...)`, the selection); `render()` may read more, and those are
    tracked too. Either changing re-runs the render. Nothing that changes the
    project names the panel: it subscribes.

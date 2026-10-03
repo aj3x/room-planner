@@ -1,14 +1,7 @@
 /* Measurements: what can be measured, the geometry each anchor resolves to, and
-   the shortest distance between two of them.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added.
-
-   The canvas half of the Measure tool stayed in index.html: the measure* state
-   lets, measurePick (screen-space hit testing, wx/wy/sx/sy) and the drawing.
-   pruneMeasures/remapMeasures stayed too — they sit inside the migrate region,
-   which is blocked on library/item-folders.js. */
+   the shortest distance between two of them. Pure: the tool, its state and its
+   layer are this feature's other modules; pruneMeasures/remapMeasures, which
+   run on load and import, are kernel/migrate.js's. */
 
 import {pointInPoly, ptSegDist, worldPoly} from '../../kernel/geometry.js';
 import {L, itemOf} from '../../kernel/state.js';

@@ -1,7 +1,7 @@
 /* Drawing a custom room, the commands: starting, where the next corner
    lands (drawSnapPoint), finishing and abandoning the outline. The pointer
    and key handling, and the outline on screen, are the room-draw tool's
-   (canvas/tools/room-draw.js). */
+   (features/room/room-draw-tool.js). */
 import {alignGuides, alignNote, roomSel} from '../../kernel/selection.js';
 import {L} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';

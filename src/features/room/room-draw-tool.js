@@ -2,7 +2,7 @@
    alignment magnet a corner drag uses (Shift locks to 45°); a click back on
    the first corner, or Enter, closes it; Escape abandons it. While it is
    live it owns the canvas and the keyboard. The commands it ends in are
-   canvas/room-draw.js. */
+   features/room/room-draw.js. */
 
 import {alignGuides, alignNote} from '../../kernel/selection.js';
 import {draw, scheduleDraw, drawCursor, drawState, wallDrawShift, PAL, ctx, sx, sy, wx, wy} from '../canvas/index.js';

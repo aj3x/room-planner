@@ -2,12 +2,12 @@
 
    Recording needs nothing but S and the layout accessors. Replaying puts a
    snapshot back and says which scope it restored, by bumping that scope's
-   revision signal (core/signals.js) — the same notification a transact()
+   revision signal (kernel/signals.js) — the same notification a transact()
    gives. Whatever shows the room, the furniture or the floor arrangement is
    an effect on that signal and repaints itself; this module names no view.
 
    `histRev` moves whenever a stack or its position changes, so the undo/redo
-   buttons (plan/mode.js) can subscribe to whether there is anywhere to go. A
+   buttons (features/mode/mode.js) can subscribe to whether there is anywhere to go. A
    unit test that imports this module without mounting any view gets working
    undo with nothing repainted, which is exactly what a headless undo should
    do. */
@@ -38,7 +38,7 @@ function commit(map,snapFn){
   histMoved();
 }
 const bumpRev = () => { const l=L(); l._rev=(l._rev||0)+1; };
-/* App code records history through transact() (core/tx.js), never these two
+/* App code records history through transact() (kernel/tx.js), never these two
    directly; they stay exported because the e2e harness (test/epilogue.js)
    commits through them after editing S by hand. */
 const commitRoom = () => { commit(roomHist,snapRoom); bumpRev(); bump(['room'], true); };
