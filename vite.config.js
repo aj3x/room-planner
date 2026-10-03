@@ -33,10 +33,10 @@ import { EPILOGUE } from './test/epilogue.js';
 const ROOT = dirname(fileURLToPath(import.meta.url));
 
 /* --------------------------------------------------------------------------
-   `<!-- @include src/html/foo.html -->` in index.html, substituted for that
+   `<!-- @include src/app/html/foo.html -->` in index.html, substituted for that
    file's contents.
 
-   This is what lets the static markup live in src/html/ without becoming
+   This is what lets the static markup live in partials under src/ without becoming
    anything else. It is a textual splice, deliberately: the panes stay static
    markup that the browser parses before any script runs, which is what every
    render*() function assumes when it looks up #paneRoom or #libContent at
@@ -175,9 +175,9 @@ export default defineConfig(({ mode }) => ({
   },
   css: {
     /* Sass is installed and Vite resolves .scss natively — no options needed.
-       Phase 3 / A4 splits the CSS into src/styles/*.scss behind a single
-       `<link rel="stylesheet" href="./src/styles/main.scss">`; the modern API
-       is pinned here so that split does not also become a Sass upgrade. */
+       The CSS is SCSS partials behind a single
+       `<link rel="stylesheet" href="./src/app/styles/main.scss">`; the modern
+       API is pinned so a Sass upgrade is a decision, not a side effect. */
     preprocessorOptions: { scss: { api: 'modern-compiler' } },
   },
   server: { host: '127.0.0.1', port: 5173, strictPort: true },

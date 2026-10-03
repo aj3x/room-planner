@@ -62,7 +62,7 @@ describe('the Vite build', () => {
 });
 
 describe('several script blocks', () => {
-  /* The app puts a <script type="module"> inside each src/html/ partial, so
+  /* The app puts a <script type="module"> inside each HTML partial, so
      that a pane's wiring sits with its markup. That only works because Vite
      merges every module block in the document into one entry — and because it
      keeps them in document order, which is what AGENTS.md rule 3 depends on:

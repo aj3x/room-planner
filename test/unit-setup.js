@@ -12,8 +12,8 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '..');
 
-/* A5 moved the static markup into src/html/, behind
-   `<!-- @include src/html/foo.html -->` directives that a Vite plugin
+/* The static markup lives in HTML partials under src/, behind
+   `<!-- @include src/app/html/foo.html -->` directives that a Vite plugin
    (rp:html-includes) substitutes in transformIndexHtml. Suite B is served by
    Vite and never sees a directive; this file reads index.html off disk, so it
    carries the same substitution. KEEP THE TWO IN STEP -- without it the shell
@@ -26,7 +26,7 @@ const src = expandIncludes(fs.readFileSync(path.join(REPO_ROOT, 'index.html'), '
 
 /* Strip EVERY script block, not the span from the first <script to the last
    </script>. That shortcut was exact while index.html held a single script,
-   and became silently destructive the moment each src/html/ partial started
+   and became silently destructive the moment each HTML partial started
    carrying its own: the first <script> is now the header partial's, near the
    top of <body>, so cutting to the last </script> deleted every pane between
    them. The DOM still looked plausible — it just had no #cv, and the failure

@@ -206,7 +206,7 @@ imports at the top of `EPILOGUE` do. Never add an export to `index.html` to feed
 a test.
 
 Do it *before* running the suite, not after. Moving every pane's wiring into
-`src/bind/` took ten names out of `index.html`'s scope in one pass — `readImport`,
+its own bind module took ten names out of `index.html`'s scope in one pass — `readImport`,
 `startCustomDraw`, `draw`, `fit`, `save`, `setMode` among them, six of those in
 `GLOBALS` and therefore silent. `index.html` now holds twelve registrations and
 seven imports, so the shell's scope is small and most moves of any size will
