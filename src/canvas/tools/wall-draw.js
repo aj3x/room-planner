@@ -56,7 +56,7 @@ const wallDrawOverlay = {
 const wallDrawTool = {
   id:'wall-draw',
   active: () => !!wallDrawState.value,
-  onDown: wallDrawDown, onCursor: wallDrawCursor, onKey: wallDrawKey,
+  onDown: wallDrawDown, onCursor: wallDrawCursor, onKey: wallDrawKey, stop: cancelWallDraw,
   overlay: wallDrawOverlay,
 };
 

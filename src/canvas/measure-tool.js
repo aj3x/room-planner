@@ -17,11 +17,8 @@ import {measureOn, measureStart, measureSel, measureHover, measureHoverId, measu
 import {measuresLayer} from './layers/measures.js';
 import {roomSel, sel} from '../core/selection.js';
 import {isCanvasMode} from '../core/state.js';
-import {drawState, splitDrawState, wallDrawState} from './interaction-state.js';
 
-import {cancelCustomDraw} from './room-draw.js';
-import {cancelSplitDraw} from './split-room.js';
-import {cancelWallDraw} from './wall-draw.js';
+import {stopOtherTools} from './interaction.js';
 import {batch, rev} from '../core/signals.js';
 import {mountPanel} from '../ui/mount.js';
 
@@ -94,9 +91,7 @@ function removeMeasure(id){
 function setMeasure(on){
   if(on){
     if(!isCanvasMode(S.mode)) return;
-    if(drawState.value) cancelCustomDraw();
-    if(wallDrawState.value) cancelWallDraw();
-    if(splitDrawState.value) cancelSplitDraw();
+    stopOtherTools('measure');
     // a click now measures, so nothing stays selected for editing
     sel.value = null; roomSel.value = null;
   }

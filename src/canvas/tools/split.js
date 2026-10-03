@@ -92,7 +92,7 @@ const splitOverlay = {
 const splitTool = {
   id:'split',
   active: () => !!splitDrawState.value,
-  onDown: splitDown, onCursor: splitCursor, onKey: splitKey,
+  onDown: splitDown, onCursor: splitCursor, onKey: splitKey, stop: cancelSplitDraw,
   overlay: splitOverlay,
 };
 

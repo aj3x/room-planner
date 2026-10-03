@@ -56,6 +56,7 @@ const measureTool = {
   id:'measure',
   active: () => measureOn.value,
   onDown: measureDown, onHover: measureHoverAt, onLeave: measureLeave, onKey: measureKey,
+  stop(){ setMeasure(false); },
 };
 
 export {measureTool};

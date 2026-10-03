@@ -64,7 +64,7 @@ const roomDrawOverlay = {
 const roomDrawTool = {
   id:'room-draw',
   active: () => !!drawState.value,
-  onDown: roomDrawDown, onCursor: roomDrawCursor, onKey: roomDrawKey,
+  onDown: roomDrawDown, onCursor: roomDrawCursor, onKey: roomDrawKey, stop: cancelCustomDraw,
   overlay: roomDrawOverlay,
 };
 

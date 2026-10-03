@@ -15,11 +15,7 @@ import {alignPoint, alignRadius, isSquare} from './snap.js';
 import {snapPt} from './view.js';
 import {fit} from './camera.js';
 import {roomMode} from '../core/state.js';
-import {splitDrawState, wallDrawState} from './interaction-state.js';
-import {measureOn} from './measure-state.js';
-import {setMeasure} from './measure-tool.js';
-import {cancelSplitDraw} from './split-room.js';
-import {cancelWallDraw} from './wall-draw.js';
+import {stopOtherTools} from './interaction.js';
 function cancelCustomDraw(){
   batch(()=>{ drawState.value = null; alignGuides.value = []; alignNote.value = ''; });
   $('drawHint').hidden=true;
@@ -61,9 +57,7 @@ function drawSnapPoint(raw,shift){
 
 /* ------------------------- custom room drawing (walls may cross) ------------------------- */
 function startCustomDraw(){
-  if(wallDrawState.value) cancelWallDraw();
-  if(splitDrawState.value) cancelSplitDraw();
-  if(measureOn.value) setMeasure(false);
+  stopOtherTools('room-draw');
   if(!roomMode()) expect('plan.setMode')('room');
   batch(()=>{ drawState.value = {pts:[]}; drawCursor.value = null; roomSel.value = null; });
   $('drawHint').hidden=false;

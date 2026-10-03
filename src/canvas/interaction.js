@@ -23,6 +23,9 @@
      shortcuts.js because they run plan/ commands.
    - autoPan: a held drag near the edge scrolls the canvas.
    - overlay: a layer (canvas/draw.js) drawing the tool's gesture.
+   - stop(): turn the tool off, for one that is switched on and off (the
+     drawing tools, Measure). Its start command calls stopOtherTools(id)
+     first, so only one such tool is ever on.
 
    Tools are registered by setupCanvas() from boot(), never at import time;
    adding one is a module and a line there. The listeners are registered in
@@ -42,6 +45,12 @@ function registerTool(t){
 function activeTool(){
   for(const t of tools) if(t.active()) return t;
   return null;
+}
+/* Turning one tool on turns every other live one off: each start command
+   calls this with its own tool's id, and every other tool that is on and
+   can be stopped is. So a new tool needs no edit to the existing ones. */
+function stopOtherTools(id){
+  for(const t of tools) if(t.id!==id && t.stop && t.active()) t.stop();
 }
 
 let captured=null;   // the tool holding the pointer, between its press and release
@@ -139,6 +148,6 @@ function onCanvasWheel(e){
   zoomAt(Math.pow(ZOOM_FACTOR, (norm<0?1:-1)*magnitude), e.offsetX, e.offsetY);
 }
 
-export {registerTool, activeTool, isGesturing, gestureTool, cancelGesture, onCanvasKey,
+export {registerTool, activeTool, stopOtherTools, isGesturing, gestureTool, cancelGesture, onCanvasKey,
         onCanvasPointerDown, onCanvasPointerMove, onCanvasMouseMove, onCanvasPointerUp,
         onCanvasPointerLeave, onCanvasWheel, edgePanVel, edgePanTick};
