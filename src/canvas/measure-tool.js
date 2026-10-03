@@ -15,7 +15,8 @@ import {cv, view, sx, sy, wx, wy} from './view.js';
 import {draw, scheduleDraw} from './draw.js';
 import {drag} from './interaction-state.js';
 import {measuresOf, anchorKey, measureObjs, anchorGeom} from '../model/measures.js';
-import {measureOn, measureStart, measureSel, measureBoxes, measureHover, measureHoverId, measureCursor} from './measure-state.js';
+import {measureOn, measureStart, measureSel, measureHover, measureHoverId, measureCursor} from './measure-state.js';
+import {measuresLayer} from './layers/measures.js';
 import {roomSel, sel} from '../core/selection.js';
 import {isCanvasMode} from '../core/state.js';
 import {drawState, splitDrawState, wallDrawState} from './interaction-state.js';
@@ -50,14 +51,7 @@ function measurePick(px,py){
   return null;
 }
 /* a drawn measurement under a screen point: its label, or with `lines` its line too */
-function pickMeasure(px,py,lines){
-  for(let i=measureBoxes.length-1;i>=0;i--){
-    const b=measureBoxes[i];
-    if(px>=b.x-2 && px<=b.x+b.w+2 && py>=b.y-2 && py<=b.y+b.h+2) return b.id;
-    if(lines && ptSegDist([px,py],b.p,b.q).d<6) return b.id;
-  }
-  return null;
-}
+function pickMeasure(px,py,lines){ return measuresLayer.hitTest(px,py,lines); }
 /* what a click would act on. A label wins over the anchors beneath it, but once the first
    end is down every click is for the second end. */
 function measureTargetAt(px,py){

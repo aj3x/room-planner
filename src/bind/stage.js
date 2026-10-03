@@ -33,7 +33,8 @@ import {drag, drawState, wallDrawState, splitDrawState} from '../canvas/interact
 import { lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, onCanvasPointerDown, applyDragAt, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState } from '../canvas/interaction.js';
 import { applyDrawCursorAt } from '../canvas/room-draw.js';
 import { startSplitRoom } from '../canvas/split-room.js';
-import { scheduleDraw, pickFloorRoom } from '../canvas/draw.js';
+import { scheduleDraw } from '../canvas/draw.js';
+import { pickFloorRoom } from '../canvas/tools/floor.js';
 import { pickRoom } from '../canvas/snap.js';
 import {measureOn, measureSel, measureHover, measureHoverId, measureCursor} from '../canvas/measure-state.js';
 import { liveMeasures, setMeasure, resetMeasureState, removeMeasure, measureHoverAt } from '../canvas/measure-tool.js';

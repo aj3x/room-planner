@@ -1,10 +1,7 @@
-/* Measure-tool state: whether the tool is on, which anchors are in hand, and
-   where each measurement was last drawn. Each is a signal (core/signals.js):
-   the measure bar and the canvas subscribe by reading `.value`.
-
-   measureBoxes is the odd one, and not a signal: it is not input to the
-   drawing but output from it, rebuilt by each draw() so a click can hit-test
-   a label. Nothing subscribes to it. */
+/* Measure-tool state: whether the tool is on and which anchors are in hand.
+   Each is a signal (core/signals.js): the measure bar and the canvas
+   subscribe by reading `.value`. Where each measurement was last drawn is
+   the measures layer's own (canvas/layers/measures.js, hitTest). */
 
 import {signal} from '../core/signals.js';
 
@@ -14,8 +11,6 @@ const measureOn = signal(false),     // the Measure tool is active: clicks pick 
       measureHoverId = signal(null), // the measurement under the pointer
       measureSel = signal(null),     // the selected measurement's id
       measureCursor = signal(null);  // world point under the pointer, for the preview line
-let measureBoxes = [];               // where each measurement was last drawn, in screen px, for hit-testing
-function setMeasureBoxes(v){ measureBoxes = v; }
 
 export {measureOn, measureStart, measureHover, measureHoverId, measureSel,
-        measureCursor, measureBoxes, setMeasureBoxes};
+        measureCursor};

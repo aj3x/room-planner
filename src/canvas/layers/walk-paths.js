@@ -1,29 +1,14 @@
 /* The walk-path overlay: the shading passes and the route lines that put
-   model/walkpaths.js's clearance numbers on the canvas.
+   model/walkpaths.js's clearance numbers on the canvas. The computation is
+   model/walkpaths.js; only the paint is here. Furniture mode, with the view
+   setting on. */
 
-   Split out of model/walkpaths.js in the decoupling pass (.claude/plans/
-   decoupling.md §2.1, step 3), move-only: the four functions below are
-   byte-identical to the ones that stood at the end of that file. They were the
-   reason model/ -- the domain layer -- imported canvas/view.js and
-   canvas/draw.js, an upward edge that helped hold the 45-module cycle
-   together. The computation stayed behind; only the paint moved.
-
-   What crosses the seam now goes one way: this file imports walkPaths,
-   walkGrid, walkBand and WALK from model/walkpaths.js, and nothing in model/
-   knows this file exists.
-
-   drawWalkOverlay is the third of the four draw*() helpers draw() cannot move
-   without; draw.js imports it from here rather than from model/. That closes a
-   cycle with draw.js (PAL and addPoly come back the other way) exactly as the
-   old arrangement did -- rule 4's case: every name across the edge is read
-   inside a function body, never at module evaluation. */
-
-import {ctx, sx, sy, view} from './view.js';
-import {PAL, addPoly} from './paint.js';
-import {S, RP, furnMode} from '../core/state.js';
-import {bbox} from '../core/geometry.js';
-import {fmtLen} from '../core/units.js';
-import {WALK, walkGrid, walkPaths, walkBand} from '../model/walkpaths.js';
+import {ctx, sx, sy, view} from '../view.js';
+import {PAL, addPoly} from '../paint.js';
+import {S, RP, furnMode} from '../../core/state.js';
+import {bbox} from '../../core/geometry.js';
+import {fmtLen} from '../../core/units.js';
+import {WALK, walkGrid, walkPaths, walkBand} from '../../model/walkpaths.js';
 
 /* shade every cell matching `test` with one clipped diagonal hatch pass (or,
    with `cross`, a second pass the other way — an X reads as "not just
@@ -100,4 +85,6 @@ function drawWalkOverlay(){
   for(const path of walkPaths()) drawWalkPath(path,C);
 }
 
-export {drawWalkOverlay};
+const walkPathsLayer = {id:'walk-paths', z:30, scene:'room', draw(){ drawWalkOverlay(); }};
+
+export {walkPathsLayer};

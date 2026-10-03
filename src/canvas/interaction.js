@@ -21,7 +21,8 @@ import {centreInside, slideToValid, validate} from '../model/validity.js';
 import {clampOpenings, iwallOf, nearestOnWalls, pillarOf, wallOf} from '../model/walls.js';
 import {snapWallPoint} from './snap.js';
 import {flash} from '../ui/flash.js';
-import {draw, floorSnapRadius, scheduleDraw} from './draw.js';
+import {draw, scheduleDraw} from './draw.js';
+import {floorSnapRadius, pickFloorRoom} from './tools/floor.js';
 import {snapFloorPlace} from '../model/floor-place.js';
 import {drag} from './interaction-state.js';
 import {alignRadius, bringToFront, snapCorner} from './snap.js';
@@ -32,9 +33,10 @@ import {applyDrawCursorAt} from './room-draw.js';
 import {pointInPoly} from '../core/geometry.js';
 import {floorEntry} from '../core/history.js';
 import {floorSel, mergeSel, sel, selSet, selectClear, selectOnly, selectToggle} from '../core/selection.js';
-import {floorMode, floorOf, roomMode, uid} from '../core/state.js';
+import {floorMode, roomMode, uid} from '../core/state.js';
 import {isBad} from '../model/validity.js';
-import {floorMembers, floorRotHandle, handlePos, pickFloorRoom} from './draw.js';
+import {floorSelectionLayer} from './layers/floor-selection.js';
+import {itemToolsLayer} from './layers/item-tools.js';
 import {measureOn} from './measure-state.js';
 import {measurePointerDown} from './measure-tool.js';
 import {drawSnapPoint, finishCustomDraw} from './room-draw.js';
@@ -122,18 +124,12 @@ function onCanvasPointerDown(e){
   /* Floor mode positions whole rooms; their walls and items are edited in Room/Furniture */
   if(floorMode()){
     if(e.button===2) return;   // a right-click's own pointerdown; contextmenu handles the click itself
-    const fl=floorOf(L().floorId);
-    if(fl && floorSel.value){
-      const m=floorMembers(fl).find(x=>x.l.id===floorSel.value);
-      if(m){
-        const h=floorRotHandle(m.P);
-        if(Math.hypot(px-h.x,py-h.y)<14){
-          const b=bbox(m.P);
-          drag.value = {mode:'floor-rot', id:floorSel.value, start:m.l.floorPlace.rot||0,
-                a0:Math.atan2(wy(py)-(b.y0+b.y1)/2, wx(px)-(b.x0+b.x1)/2)};
-          return;
-        }
-      }
+    const m=floorSelectionLayer.hitTest(px,py);
+    if(m){
+      const b=bbox(m.P);
+      drag.value = {mode:'floor-rot', id:floorSel.value, start:m.l.floorPlace.rot||0,
+            a0:Math.atan2(wy(py)-(b.y0+b.y1)/2, wx(px)-(b.x0+b.x1)/2)};
+      return;
     }
     const hit=pickFloorRoom(px,py);
     if(hit){
@@ -176,14 +172,11 @@ function onCanvasPointerDown(e){
     return;
   }
 
-  if(!e.altKey && selSet.value.size===1 && sel.value){
-    const inst=instOf(sel.value), it=inst&&itemOf(inst.itemId);
-    if(inst&&it){
-      const h=handlePos(inst,it);
-      if(Math.hypot(px-h.x,py-h.y)<14){
-        drag.value = {mode:'rot', id:sel.value, start:inst.rot||0, a0:Math.atan2(wy(py)-inst.y, wx(px)-inst.x), loose:isBad(inst)};
-        return;
-      }
+  if(!e.altKey){
+    const inst=itemToolsLayer.hitTest(px,py);
+    if(inst){
+      drag.value = {mode:'rot', id:sel.value, start:inst.rot||0, a0:Math.atan2(wy(py)-inst.y, wx(px)-inst.x), loose:isBad(inst)};
+      return;
     }
   }
   const hit=pickAt(wx(px),wy(py));

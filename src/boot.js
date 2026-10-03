@@ -1,6 +1,7 @@
 import {bpLastImport, bpUndoImport} from './blueprint/commit.js';
 import {bpUploadDialog} from './blueprint/step1-upload.js';
 import {mountCanvas} from './canvas/draw.js';
+import {setupCanvas} from './canvas/setup.js';
 import {mountMeasureBar} from './canvas/measure-tool.js';
 import {fit, resize} from './canvas/camera.js';
 import {seedHistFor} from './core/history.js';
@@ -67,6 +68,7 @@ function mount(){
 
 async function boot(){
   wire();
+  setupCanvas();
   try{
     const raw=await Store.get(KEY);
     if(raw){

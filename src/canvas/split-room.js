@@ -29,14 +29,12 @@ function splitAngleSnap(prev, raw, hard){
 }
 
 /* Resolving where the next point of the cut lands (the same magnet as a
-   corner drag) and drawing the cut in progress. */
-import {ctx, sx, sy} from './view.js';
+   corner drag). The cut in progress is drawn by the split tool's overlay,
+   canvas/tools/split.js. */
 import {RP} from '../core/state.js';
 import {wallOf} from '../model/walls.js';
-import {snapWallPoint} from './snap.js';
-import {splitDrawState, drawCursor, wallDrawShift} from './interaction-state.js';
+import {splitDrawState, drawCursor} from './interaction-state.js';
 import {alignGuides, alignNote, roomSel, mergeClear} from '../core/selection.js';
-import {PAL, drawSquareTick} from './paint.js';
 import {alignPoint, alignRadius, isSquare} from './snap.js';
 import {pointInPoly, polySimple, segHit, worldPoly} from '../core/geometry.js';
 import {floorHist, furnHist, roomHist} from '../core/history.js';
@@ -116,37 +114,6 @@ function splitResolvePoint(raw0, hard){
     if(angled!==raw0) return {pt:angled, guides:[], note:'Straight'};
   }
   return {pt:raw0, guides:[], note:''};
-}
-function drawSplitOverlay(){
-  if(!splitDrawState.value) return;
-  const worldPts=splitDrawState.value.pts.map(p=>p.pt||p);
-  let b=null;
-  if(drawCursor.value){
-    const resolved=splitResolvePoint(drawCursor.value, wallDrawShift.value);
-    alignGuides.value = resolved.guides; alignNote.value = resolved.note;
-    const snapped=snapWallPoint(resolved.pt, null, true);
-    const hit=boundaryHit(snapped);
-    b=hit?hit.pt:snapped;
-    if(resolved.note==='Right angle'){
-      const cr=splitCornerRef(splitDrawState.value.pts, b);
-      if(cr) drawSquareTick(cr[0], cr[1], cr[2]);
-    }
-  }
-  ctx.save();
-  if(worldPts.length){
-    ctx.setLineDash([5,4]); ctx.lineWidth=2; ctx.strokeStyle=PAL().accent;
-    ctx.beginPath();
-    ctx.moveTo(sx(worldPts[0][0]), sy(worldPts[0][1]));
-    for(let i=1;i<worldPts.length;i++) ctx.lineTo(sx(worldPts[i][0]), sy(worldPts[i][1]));
-    if(b) ctx.lineTo(sx(b[0]), sy(b[1]));
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  for(const p of worldPts){
-    ctx.beginPath(); ctx.arc(sx(p[0]),sy(p[1]),5,0,Math.PI*2);
-    ctx.fillStyle=PAL().accent; ctx.fill();
-  }
-  ctx.restore();
 }
 
 
@@ -349,4 +316,4 @@ function startSplitRoom(id){
   fit();
   flash("Click a point on the room's wall to start the divider. Click inside the room to bend it, or click another wall to finish. Esc cancels.");
 }
-export {boundaryHit, splitAngleSnap, splitRefs, splitCornerRef, splitResolvePoint, drawSplitOverlay, cancelSplitDraw, trySplitLine, openSplitChoice, lastSplit, commitSplit, splitUndo, startSplitRoom};
+export {boundaryHit, splitAngleSnap, splitRefs, splitCornerRef, splitResolvePoint, cancelSplitDraw, trySplitLine, openSplitChoice, lastSplit, commitSplit, splitUndo, startSplitRoom};
