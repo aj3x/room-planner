@@ -1,5 +1,5 @@
-# Pull-request gate: lint (with the boundary and cycle checks), unit tests,
-# build, browser suite.
+# Pull-request gate: lint (with the boundary and cycle checks), type check,
+# unit tests, build, browser suite.
 #
 # The browser suite (`npm run test:e2e`) builds both artifacts itself and then
 # runs Playwright over two Chromium projects — `chromium-light` (the Vite dev
@@ -42,7 +42,7 @@ jobs:
           echo "No tracked files under dist/ or dist-test/."
 
   build-and-test:
-    name: lint, unit, build, e2e
+    name: lint, typecheck, unit, build, e2e
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +57,10 @@ jobs:
       # ESLint (correctness rules and src/'s import boundaries), then
       # `npm run cycles`, which fails on any import cycle.
       - run: npm run lint
+
+      # tsc over the JSDoc types: every module at the default level, and
+      # kernel/, ui-kit/ and each feature's public API strict. See tsconfig.json.
+      - run: npm run typecheck
 
       - run: npm run test:unit
 

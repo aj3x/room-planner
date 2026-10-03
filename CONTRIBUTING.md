@@ -38,9 +38,10 @@ origin cannot satisfy. Use `npm run dev`, or build and open `dist/index.html`.
 ## Before you open a PR
 
 ```sh
-npm run lint     # ESLint (correctness + import boundaries), then the cycle check
-npm test         # unit tests, then the browser suite (~45s)
-npm run build    # must still produce one file
+npm run lint       # ESLint (correctness + import boundaries), then the cycle check
+npm run typecheck  # tsc over the JSDoc types (see tsconfig.json)
+npm test           # unit tests, then the browser suite (~45s)
+npm run build      # must still produce one file
 ```
 
 CI runs exactly these on every pull request. There are no flaky tests: a red
@@ -115,7 +116,11 @@ anything with a visible surface — read it *before* adding UI, not after.
 - **`function` declarations stay `function` declarations** — never rewritten as
   `const f = () => {}`. It keeps the house style, and it is what made the
   cycles this codebase used to have survivable.
-- ES2017-ish, `"use strict"`, no TypeScript, no framework. Side panels are
+- ES2017-ish, `"use strict"`, no framework. JS with JSDoc types checked by
+  `tsc` — no `.ts` source files; shared types live in `src/kernel/types.d.ts`
+  and `src/features/canvas/types.d.ts`. `kernel/`, `ui-kit/` and every
+  feature's public API are strict (first line `// @ts-check`), and
+  `npm run typecheck` fails if one stops being. Side panels are
   rebuilt by `render*()` functions that re-set `innerHTML`, each run as an
   effect over the signals it shows (`mountPanel` in `src/ui-kit/mount.js`); a
   change commits through `transact()` and never calls a render function.

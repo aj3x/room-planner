@@ -9,6 +9,7 @@ npm run dev        # Vite dev server on http://127.0.0.1:5173, HMR on save
 npm run build      # -> dist/index.html, one file, everything inlined
 npm test           # 124 Vitest + 26 Playwright, ~45s
 npm run lint       # ESLint (correctness + import boundaries), then npm run cycles
+npm run typecheck  # tsc over the JSDoc types: kernel/, ui-kit/ and every feature API strict
 ```
 
 `dist/` is **never committed** — a generated 322 kB file touched by every PR conflicts on every merge, which is the exact problem the module split exists to solve. It is gitignored, and CI fails if it is ever tracked. Both workflows live in [`.github/workflows/`](.github/workflows): `ci.yml` runs lint, unit, build and the browser suite on every pull request; `pages.yml` builds and publishes `dist/` to GitHub Pages on every push to `main`. Review routing is in [`.github/CODEOWNERS`](.github/CODEOWNERS).
@@ -95,6 +96,7 @@ To preview: `npm run dev`, or `npm run build && open dist/index.html` to check t
 - `npm run test:unit` (~2s) — Vitest + jsdom: units, `migrate()` goldens and import/export round-trips, imported straight out of `src/`, plus the build-pipeline tests.
 - `npm run test:e2e` (~40s) — builds, then Playwright + Chromium against **both** the dev server and `dist/index.html`, sharing one set of goldens so the build cannot move a coordinate unnoticed. Covers the smoke path, the blueprint geometry golden, two pointer gestures and the `file://` deployment contract.
 - **What it does NOT cover** is written down in `test/README.md` — the side panels, the canvas's pixels, most pointer interaction and the marketplace. A break in any of those turns nothing red, so exercise them by hand.
+- `npm run typecheck` — `tsc` over the JSDoc types, no emit (`scripts/typecheck.mjs`, both configs explained in `tsconfig.json`). Every module is checked at the default level; a module whose first line is `// @ts-check` is held to `strict`, and `kernel/`, `ui-kit/`, every feature's `index.js` and every module an `index.js` re-exports from must be. The script lists the modules that are not yet strict — the ratchet; making one strict is adding the pragma and fixing what it reports. Shared types are declarations: `src/kernel/types.d.ts` (the saved document, `transact()`'s scopes) and `src/features/canvas/types.d.ts` (`Layer`, `Tool`); a layer or tool says which it is with `/** @satisfies {import('../canvas/types.js').Layer} */`. A change to the saved shape updates `kernel/types.d.ts` alongside its `migrate()` step. CI runs it; it is not part of `npm test` or `npm run lint`.
 - `npm run lint` — ESLint: correctness rules plus `rp/boundaries` (see *How the source is laid out*), then `npm run cycles`, which fails on any import cycle. No Prettier and no formatting rules, deliberately: the dense style here is a decision, and reformatting 10k lines would destroy `git blame`. `no-undef` is the rule that earns its keep.
 
 Still worth doing by hand for anything visual: `npm run dev` and exercise the area you changed (draw/resize a room, place furniture, undo/redo, switch units).
@@ -128,7 +130,7 @@ Still worth doing by hand for anything visual: `npm run dev` and exercise the ar
 - **Open state**: an inventory item may carry `item.open = {top,bottom,left,right}` (mm out past its own footprint, in the item's unrotated frame). `openPoly(inst,item)` is that footprint in world space and `openConflicts()` reports, per placed id, what it runs into. This is deliberately kept **out** of `validate()` — an open footprint never makes a placement illegal, it only warns — so don't fold it into the validity path.
 
 ## Conventions
-- No semicolon-free style; ES2017-ish, `"use strict"`, no TypeScript. Keep new code consistent with the surrounding style.
+- No semicolon-free style; ES2017-ish, `"use strict"`. JS with JSDoc types, checked by `tsc` (`npm run typecheck`); no `.ts` source files — the only TypeScript is declaration files (`*.d.ts`) for shared types. Annotate what a strict module exports; prefer a precise type to a cast, and a cast to `any`; every cast or `any` that asserts something tsc cannot see says why in a comment. Keep new code consistent with the surrounding style.
 - New code goes in the `src/` module, partial or stylesheet where it belongs — **not** in `index.html`, which is a shell. The one thing that still belongs there is a listener registration, at the spot its markup implies. (The split that got here is written up in [`.claude/plans/refactor-split.md`](.claude/plans/refactor-split.md); the mechanical recipe in §4 is worth reading before any large move.)
 - **Runtime dependencies are small, bundle into the single file, and have a stated reason.** The current list and its reasons are under *What this is*; anything more is a decision, not a convenience.
 - Contributor-facing setup and review expectations are in [`CONTRIBUTING.md`](CONTRIBUTING.md); it is the same ground as this file, written for a person arriving cold.
