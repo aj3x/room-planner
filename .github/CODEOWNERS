@@ -3,39 +3,76 @@
 #
 # @aj3x is the only maintainer today, so every line names the same person and
 # nothing here gates anything yet. It is written anyway because the code is now
-# 100+ files: when a second contributor arrives, the question "who should look
-# at this?" has to have an answer that does not depend on recognising a path.
+# 150 modules in fourteen features: when a second contributor arrives, the
+# question "who should look at this?" has to have an answer that does not
+# depend on recognising a path.
 # The specific entries are not ceremony — each one is a place where a change
 # that looks harmless, lints clean and leaves the suite green can still do real
 # damage.
 
 *                           @aj3x
 
+# One line per place, so each feature can have its own owner. Today they are
+# all the same person; when that changes, change the line, not the layout.
+# What may import what is in eslint.config.js (BOUNDARIES), not here.
+/src/app/                   @aj3x
+/src/kernel/                @aj3x
+/src/ui-kit/                @aj3x
+/src/features/canvas/       @aj3x
+/src/features/mode/         @aj3x
+/src/features/walls/        @aj3x
+/src/features/openings/     @aj3x
+/src/features/room/         @aj3x
+/src/features/furniture/    @aj3x
+/src/features/floors/       @aj3x
+/src/features/measure/      @aj3x
+/src/features/walkpaths/    @aj3x
+/src/features/layouts/      @aj3x
+/src/features/library/      @aj3x
+/src/features/marketplace/  @aj3x
+/src/features/blueprint/    @aj3x
+
+# Below this line, the entries that are not about who owns a feature but about
+# what a harmless-looking change can break. They come last so they win.
+
+# A feature's index.js is its public API: anything added here can be imported
+# by every other feature, and anything removed can break one.
+/src/features/*/index.js    @aj3x
+
 # Saved-state shape and its migrations. migrate() runs on every load of every
 # returning user's data; a wrong step here rewrites real projects with no error
 # anywhere, and the damage is already on disk by the time anyone notices.
 # S is also reassigned wholesale (setS), so its module is the one place the
 # whole state object is defined.
-/src/core/state.js          @aj3x
-/src/core/migrate.js        @aj3x
+/src/kernel/state.js        @aj3x
+/src/kernel/migrate.js      @aj3x
+
+# Every edit commits through transact(); a change here changes undo, saving and
+# what repaints, everywhere at once.
+/src/kernel/tx.js           @aj3x
 
 # The 24 design tokens. They must stay CSS custom properties: dark mode works
 # by re-declaring them under @media (prefers-color-scheme:dark), so converting
 # one to a Sass $variable silently deletes dark mode with every test green.
-/src/styles/_tokens.scss    @aj3x
+/src/app/styles/_tokens.scss @aj3x
 
 # Import/export is the only path a user's data leaves and re-enters the app by,
 # and the collision rules decide whether a merge keeps or overwrites their work.
-/src/io/                    @aj3x
+/src/features/io/           @aj3x
+
+# The boundary rule and the cycle check. Loosening either lets features grow
+# back into one another without a test going red.
+/eslint.config.js           @aj3x
+/scripts/import-cycles.mjs  @aj3x
 
 # CI, Pages deployment and this file. A bad change here can publish the wrong
 # thing to the live site, or quietly stop running the gate.
 /.github/                   @aj3x
 
-# The suite is capped at 20% of the codebase (ideally under 10%, it is at
-# 9.98%). Additions need an argument about what they catch, and deletions need
-# to be distinguished from removing scaffolding that has finished its job —
-# both are review questions, not mechanical ones. See test/README.md.
+# The suite is capped at 20% of the codebase (ideally under 10%; it is at 12%
+# of the app). Additions need an argument about what they catch, and deletions
+# need to be distinguished from removing scaffolding that has finished its job
+# — both are review questions, not mechanical ones. See test/README.md.
 /test/                      @aj3x
 
 # The build is what makes the one-file deployment model work: the include

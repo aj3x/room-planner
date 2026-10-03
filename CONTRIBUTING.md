@@ -38,7 +38,7 @@ origin cannot satisfy. Use `npm run dev`, or build and open `dist/index.html`.
 ## Before you open a PR
 
 ```sh
-npm run lint     # ESLint, correctness rules only
+npm run lint     # ESLint (correctness + import boundaries), then the cycle check
 npm test         # unit tests, then the browser suite (~45s)
 npm run build    # must still produce one file
 ```
@@ -49,23 +49,29 @@ run means something is wrong, so investigate it rather than re-running it.
 ## Where code goes
 
 ```
-src/core/       units, geometry, ids, state, selection, storage, migrations, undo/redo
-src/model/      walls, openings, validity, walk paths, measurements, floor arranging
-src/ui/         modal, menus, panels, inline edit, drag and drop, toasts
-src/canvas/     the camera, the compositor and its layers/, the gesture tools/, snapping
-src/plan/       the side panels — layout tree, floors, room panel, item list, dialogs
-src/library/    the Library and Marketplace UI
-src/blueprint/  the four-stage blueprint import wizard
-src/io/         export, import, file pickers
-src/styles/     SCSS partials; main.scss is the @use manifest
-src/html/       the static markup, included into index.html at build time
+src/kernel/            the document and its rules: state, transact(), signals,
+                       undo, storage, migrations, units, geometry, the shared
+                       model (walls, openings, validity, …). No DOM.
+src/ui-kit/            generic UI: modal, menus, panels, inline edit, drag and
+                       drop, toasts, tag input, mountPanel
+src/features/<name>/   one feature each: canvas, mode, walls, openings, room,
+                       furniture, floors, measure, walkpaths, layouts, library,
+                       marketplace, io, blueprint. Its index.js is its public API.
+src/app/               composition: boot(), the canvas's list of layers and
+                       tools, global shortcuts, the pane partials, main.scss
 ```
+
+A feature imports `kernel/`, `ui-kit/`, its own files, and other features
+**only through their `index.js`**; `kernel/` imports only itself; `ui-kit/`
+imports `kernel/`. `npm run lint` enforces that, and fails on any import
+cycle. AGENTS.md's *Adding things* says where a new feature, layer, tool or
+panel goes.
 
 New code goes in the module, partial or stylesheet where it belongs — **not in
 `index.html`**, which is a shell. The one thing that still belongs there is a
-listener registration, at the spot its markup implies, because a module that
-called `addEventListener` at import time would reorder that listener ahead of
-every other one in the file.
+listener registration on `document` or `window`, at the spot its markup
+implies, because a module that called `addEventListener` at import time would
+reorder that listener ahead of every other one in the file.
 
 [`AGENTS.md`](AGENTS.md) is the architecture guide and is worth reading before
 a non-trivial change; it is written for coding agents but it is the same
@@ -85,7 +91,7 @@ anything with a visible surface — read it *before* adding UI, not after.
 - **Design tokens stay CSS custom properties.** Dark mode works by re-declaring
   all 24 of them under `@media (prefers-color-scheme:dark)`. A Sass `$variable`
   is resolved at compile time and cannot cascade, so converting one deletes
-  dark mode with every test still green. See `src/styles/_tokens.scss`.
+  dark mode with every test still green. See `src/app/styles/_tokens.scss`.
 - **Moves preserve blame.** Moving code between modules is done as a move and
   nothing else — byte-identical lines, no renames, no reordering, no
   reformatting, no "while I'm here" fixes. `git blame` and `git log --follow`
@@ -94,7 +100,7 @@ anything with a visible surface — read it *before* adding UI, not after.
   [`BACKLOG.md`](BACKLOG.md) and move on. A behaviour change belongs in its own
   commit, stated in its message.
 - **The test suite has a budget: under 20% of the codebase, ideally under
-  10%.** It is at 9.98%. A new test needs an argument about what it catches
+  10%.** It is at 12% of the app. A new test needs an argument about what it catches
   that nothing else does — "it covers a function" is not one; "a silent break
   here corrupts a user's saved project" is. Read
   [`test/README.md`](test/README.md) before touching `test/`; it also lists
@@ -103,22 +109,25 @@ anything with a visible surface — read it *before* adding UI, not after.
 - **No Prettier and no formatting rules.** The dense style here is a decision.
   Reformatting would destroy `git blame` across the whole repo for no
   functional gain. Match the surrounding code.
+- **No import cycles.** `npm run cycles` (part of `npm run lint`) fails on
+  one. Break it by moving the shared piece into a leaf, or by turning the back
+  edge into a signal the other side subscribes to — not by a late-bound lookup.
 - **`function` declarations stay `function` declarations** — never rewritten as
-  `const f = () => {}`. The module graph is cyclic by design, and ESM tolerates
-  a cycle for hoisted function declarations but not for a `const` read during
-  module evaluation.
+  `const f = () => {}`. It keeps the house style, and it is what made the
+  cycles this codebase used to have survivable.
 - ES2017-ish, `"use strict"`, no TypeScript, no framework. Side panels are
   rebuilt by `render*()` functions that re-set `innerHTML`, each run as an
-  effect over the signals it shows (`mountPanel` in `src/ui/mount.js`); a
+  effect over the signals it shows (`mountPanel` in `src/ui-kit/mount.js`); a
   change commits through `transact()` and never calls a render function.
   Follow that pattern rather than introducing a renderer.
 
 ## What review will look at
 
 Beyond "does it work": whether a change to saved-state shape came with a
-migration step (`src/core/migrate.js` — it runs on every load of every
-returning user's data), whether an undoable change calls `commitRoom()` /
-`commitFurn()`, whether new UI uses tokens rather than literals, and whether
+migration step (`src/kernel/migrate.js` — it runs on every load of every
+returning user's data), whether an edit commits through `transact()` rather
+than saving or repainting by hand, whether an import respects the feature
+boundaries (lint says if not), whether new UI uses tokens rather than literals, and whether
 new copy follows DESIGN.md's wording rules ("item", "Library", never "thing").
 
 ---

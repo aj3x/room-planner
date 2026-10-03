@@ -4,8 +4,8 @@
 
 > **Test code stays under 20% of the codebase, and ideally under 10%.**
 
-Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,758 lines
-against 14,302** today — 10.9% of the two together (12.3% of the app's own
+Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,702 lines
+against 14,177** today — 10.7% of the two together (12.0% of the app's own
 size). Check it before adding a
 file:
 
@@ -66,7 +66,7 @@ green — investigate.
 
 ## What the suite covers
 
-### Suite A — `test/unit`, Vitest + jsdom (130 tests)
+### Suite A — `test/unit`, Vitest + jsdom (118 tests)
 
 Pure logic, imported straight out of `src/`. No app boot, no bundler, no
 harness; a file evaluates the modules it names and calls them.
@@ -93,15 +93,11 @@ harness; a file evaluates the modules it names and calls them.
   the envelope, a lossless replace-mode round trip asserted down to the
   geometry, all three id-collision rules (keep mine / overwrite mine / add as a
   copy), dropped placements and folder-id identity.
-- **`floor-place.test.js`** — `model/floor-place.js` on two rooms side by
+- **`floor-place.test.js`** — `kernel/floor-place.js` on two rooms side by
   side: how deep each wall band is drawn (shared, exterior, taken away),
   `depthRuns`' joins, the floor magnet closing to one wall-thickness of gap,
   and `floorRoomAt`. Every wall on a floor is drawn from these numbers and the
   e2e suite never opens Floor mode; a wrong depth only looks a little off.
-- **`wiring.test.js`** — every `use()`/`has()`/`expect()` key in
-  `core/registry.js`'s callers has a `provide()` in `boot.js`. A misspelt key
-  is a call that silently does nothing — `use()` returns undefined by design —
-  and neither lint nor the e2e suite would notice. Reads the source; no app.
 
 ### `test/build` — the deployment model (6 tests)
 
@@ -213,24 +209,24 @@ Do it *before* running the suite, not after. Moving every pane's wiring into
 `src/bind/` took ten names out of `index.html`'s scope in one pass — `readImport`,
 `startCustomDraw`, `draw`, `fit`, `save`, `setMode` among them, six of those in
 `GLOBALS` and therefore silent. `index.html` now holds twelve registrations and
-thirteen imports, so the shell's scope is small and most moves of any size will
+seven imports, so the shell's scope is small and most moves of any size will
 touch this file.
 
 ### 3. `expandIncludes` must stay in step with the Vite plugin
 
-The static markup lives in `src/html/`, behind `<!-- @include src/html/foo.html -->`
+The static markup lives in HTML partials under `src/`, behind `<!-- @include src/…/foo.html -->`
 directives that a Vite plugin (`rp:html-includes`) substitutes in
 `transformIndexHtml`. Suite B is served by Vite and never sees a directive.
 **[`unit-setup.js`](unit-setup.js) is not** — it reads `index.html` off disk to
 build the jsdom shell — so it carries the same substitution. If it stops
-expanding, or expands differently, the shell has no `#cv`, `canvas/view.js`
+expanding, or expands differently, the shell has no `#cv`, `features/canvas/view.js`
 throws on `getContext('2d')` at module evaluation, and you get a wall of red
 unit tests **with a green build and a green browser** — the same signature as a
 stale `__rp` name, and for the same reason.
 
 The same applies to how it strips the scripts. It used to cut from the first
 `<script` to the last `</script>`, which was exact while `index.html` held one
-script and became silently destructive once each `src/html/` partial carried
+script and became silently destructive once each partial carried
 its own: the first `<script>` is the header partial's, near the top of `<body>`,
 so the cut deleted every pane between. It strips every block by regex now, and
 asserts one id per partial afterwards so a repeat names the pane that vanished
@@ -289,6 +285,12 @@ test/
     app-fixture.js     the `app` fixture: determinism, seeding, pointer helpers
     __screenshots__/   the blueprint JSON goldens
 ```
+
+Tests stay here rather than beside the feature they test. They import
+straight out of `src/` (a feature's internals as well as its `index.js`;
+test code is outside the boundary rule), and keeping them in one tree is what
+keeps the budget above a one-line `find` and the jsdom shell, the lint
+globals and Vitest's `include` pointed at one place.
 
 ## Re-baselining a golden
 
