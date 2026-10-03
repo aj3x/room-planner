@@ -29,10 +29,10 @@ import { $, askConfirm, showShortcuts } from '../ui/modal.js';
 import { menuAtPoint } from '../ui/menu.js';
 import { cv, W, H } from '../canvas/view.js';
 import { fit, zoomAt } from '../canvas/camera.js';
-import {drawState, wallDrawState, splitDrawState} from '../canvas/interaction-state.js';
-import { onCanvasPointerDown, onCanvasPointerMove, onCanvasMouseMove, onCanvasPointerUp, onCanvasPointerLeave, onCanvasWheel } from '../canvas/interaction.js';
+import { activeTool, onCanvasPointerDown, onCanvasPointerMove, onCanvasMouseMove, onCanvasPointerUp, onCanvasPointerLeave, onCanvasWheel } from '../canvas/interaction.js';
 import { startSplitRoom } from '../canvas/split-room.js';
-import { pickFloorRoom } from '../canvas/tools/floor.js';
+import { floorTool, pickFloorRoom } from '../canvas/tools/floor.js';
+import { roomTool } from '../canvas/tools/room.js';
 import { pickRoom } from '../canvas/snap.js';
 import {measureOn, measureSel} from '../canvas/measure-state.js';
 import { liveMeasures, setMeasure, resetMeasureState, removeMeasure } from '../canvas/measure-tool.js';
@@ -78,14 +78,14 @@ function bindStage(){
   cv.addEventListener('pointercancel', onCanvasPointerUp);
   /* in Room mode, double-clicking a wall types its length in rather than dragging for it */
   cv.addEventListener('dblclick', e=>{
-    if(drawState.value) return;
+    const t=activeTool();
     /* double-clicking a room on the floor is the way back to editing it */
-    if(floorMode()){
+    if(t===floorTool){
       const id=pickFloorRoom(e.offsetX,e.offsetY);
       if(id){ transact('project', ()=>{ activateLayout(id); setMode('room'); }); fit(); }
       return;
     }
-    if(!roomMode()) return;
+    if(t!==roomTool) return;   // not while a drawing tool or Measure has the canvas
     const hit=pickRoom(e.offsetX,e.offsetY);
     if(hit&&hit.kind==='wall') wallDialog(hit.i);
   });
@@ -98,12 +98,12 @@ function bindStage(){
   /* right-clicking a room marked for merge/delete opens that menu; right-clicking any
      other room collapses the marked set down to just the one under the pointer first */
   cv.addEventListener('contextmenu', e=>{
-    if(roomMode() && !drawState.value && !wallDrawState.value && !splitDrawState.value && !measureOn.value){
+    if(activeTool()===roomTool){
       e.preventDefault();
       menuAtPoint(e.clientX, e.clientY, [{label:'Split room…', fn:()=>startSplitRoom(S.active)}]);
       return;
     }
-    if(!floorMode()) return;
+    if(activeTool()!==floorTool) return;
     const hit=pickFloorRoom(e.offsetX,e.offsetY);
     if(!hit) return;
     e.preventDefault();
