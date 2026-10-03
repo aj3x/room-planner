@@ -6,14 +6,13 @@
 
    invBox is a top-level DOM read, the same call ui/modal.js makes for `mo`.
 */
-import {esc} from '../ui/panels.js';
+import {emptyRow, esc} from '../ui/panels.js';
 import {moreBtn} from '../ui/menu.js';
 import {$} from '../ui/modal.js';
 import {S, L} from '../core/state.js';
 import {hasOpen, openSizeLabel} from '../core/open-state.js';
 import {INV_SCOPES, availableCount} from '../core/floor-space.js';
 import {sizeLabel} from '../model/items.js';
-import {emptyRow} from './room-panel.js';
 
 import {uniqueId} from '../core/ids.js';
 import {selectClear} from '../core/selection.js';

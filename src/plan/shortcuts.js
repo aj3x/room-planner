@@ -38,7 +38,8 @@ import {cv, snapMM} from '../canvas/view.js';
 import {flash} from '../ui/flash.js';
 import {closeModal, mo, showShortcuts} from '../ui/modal.js';
 import {turnFloorRoom} from './floors.js';
-import {deleteIWall, deleteOpening, deletePillar} from './room-panel.js';
+import {deleteIWall, deletePillar} from './walls-panel.js';
+import {deleteOpening} from './openings-panel.js';
 import {removeSel, rotate} from './selection-panel.js';
 
 function onDocumentKeyDown(e){
