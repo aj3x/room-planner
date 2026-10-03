@@ -136,9 +136,17 @@ with explicit scopes/priorities.
 This phase may be split into commits per feature; do the side-pane lists first
 (walls, openings, structures, items, layouts tree), then room/selection panels,
 floors, library/marketplace, dialogs/modals, header, blueprint wizard.
+**First item (carried from Phase 4 review):** `app/html/pane-left.html` /
+`pane-right.html` and `app/bind/pane-left.js` (315 lines, 10 features) are the
+remaining shared-file hotspot. Each pane section becomes a slot that its owning
+feature fills; after this, panel work in one feature edits no `app/` file.
+Also carried from Phase 4: narrow `features/canvas/index.js` (65 exports —
+others are 1–23); move `kernel/items.js` → library/furniture and
+`kernel/merge-rooms.js` → room (each has one owning feature); group the
+remaining shared domain model under `kernel/model/` so the kernel core stays small.
 **Done when:** `$('…')`/`innerHTML` are gone outside ui-kit internals and the
-canvas element itself; `src/bind/` and `src/html/` partials are gone or reduced
-to the shell.
+canvas element itself; `app/bind/` and `app/html/` pane partials are gone or
+reduced to slot containers in the shell.
 
 ### Phase 7 — Documentation and final sweep
 AGENTS.md, CONTRIBUTING.md, test/README.md, CODEOWNERS describe the new
@@ -159,3 +167,4 @@ Phase log (filled in by the orchestrator):
 | 1 transact() | e8e6436 | 6bccc41 | 1 | PASS; nits fixed; added opts.canvas, rev bump limited to room/furn/lib/project; Selected-panel X/Y undo gap logged in BACKLOG.md |
 | 2 signals | eef7fc8 | adbf951 | 2 | PASS; refused edits snap back, held panel released on change/click, restored field selected; registry kept for blueprint.*, plan.setMode/activateLayout, ui.flash (Phase 4 removes); room drag ~2x pointermove cost at 300 walls |
 | 3 layers/tools | 1c9af4e | 235f949 | 1 | PASS; fixed Phase 2 regression (wall/split cursor threw), compositor 82 lines, tools via stopOtherTools, 4 cycles left; dblclick on wall during interior-wall/split/measure no longer opens dialog; room drag 300 walls 12.8→4.1 ms; leftover by-name tool cancels in room-panel addPillar, pane-right:97, mode.js:47 → Phase 4 |
+| 4 feature folders | a541707 | 78995e3 | 1 | PASS; 0 cycles, registry deleted, rp/boundaries lint + cycle gate in lint/CI; shared model in kernel/, canvas+mode as features, pane partials still in app/ → Phase 6 first item; Add pillar now ends a split; drawing tools surviving mode change logged in BACKLOG |
