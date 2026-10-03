@@ -5,14 +5,8 @@
    byte-identical to what stood there, and the `export` block at the end is the
    only line added.
 
-   PARALLEL_TOL leads the file, and it is NOT from this region. It is a bare
-   const (no dependencies of any kind) declared at the head of the `arranging`
-   block, which canvas/draw.js will take later; three call sites use it, one
-   here in edgeFacing and two in arranging. It had to move because nothing in
-   src/ can import from index.html, and it is the whole of what this region
-   needed from outside. index.html imports it back at its exact spot for the
-   two arranging call sites, so when draw.js takes `arranging` it will find
-   PARALLEL_TOL already here and simply import it.
+   PARALLEL_TOL, the "do these two edges face each other" tolerance edgeFacing
+   shares with the floor magnet, is model/floor-place.js's.
 
    What did NOT come with this file is everything around the weld -- the merge
    selection UI, drawMergeOverlay, the Floor-mode merge menu -- because those
@@ -24,8 +18,7 @@ import {clone} from '../core/state.js';
 import {polySimple, signedArea} from '../core/geometry.js';
 import {syncWallOff} from '../model/walls.js';
 import {floorPt, floorXf} from '../core/floor-space.js';
-
-const PARALLEL_TOL = Math.sin(2*Math.PI/180);
+import {PARALLEL_TOL} from '../model/floor-place.js';
 
 /* ---- merging two rooms into one ----
    Two rooms on the same floor can share only part of a wall — one room's wall may run
@@ -147,4 +140,4 @@ function mergeGeometry(A, B){
   return {points:merged, wallOff:mergedOff, openings, measures, removedOpenings};
 }
 
-export {PARALLEL_TOL, mergeSplice, mergeGeometry};
+export {mergeSplice, mergeGeometry};

@@ -252,10 +252,10 @@ function drawMeasures(){
    is rule 4's case exactly: every name involved is a function declaration or
    is only read inside a function body, so nothing is touched during module
    evaluation and no binding is in TDZ when it matters. */
-import {PARALLEL_TOL} from './merge-rooms.js';
+import {depthRuns, floorEdgeDepths, floorMembers, floorRoomAt} from '../model/floor-place.js';
 import {drag, splitDrawState, wallDrawShift, wallDrawState} from './interaction-state.js';
-import {H, W, axisLockFrom, snapPt, view, wx, wy} from './view.js';
-import {floorIWall, floorInst, floorPt, floorPtInv, floorPts, floorXf, ptsAt} from '../core/floor-space.js';
+import {H, W, axisLockFrom, view, wx, wy} from './view.js';
+import {floorIWall, floorInst, floorPt, floorPtInv, floorXf} from '../core/floor-space.js';
 import {bbox, centroid, pointInPoly, polyArea, polyHit, shapePoly, worldPoly} from '../core/geometry.js';
 import {openPoly} from '../core/open-state.js';
 import {alignNote, floorGuides, floorSel, floorSnapNote, mergeSel, roomSel, sel, selSet} from '../core/selection.js';
@@ -326,9 +326,6 @@ function draw(){
    wall, with no boolean geometry anywhere. That only holds if every band is laid
    down BEFORE any opening is punched: punch as you go and the next room's band
    paints the doorway shut again. */
-function floorMembers(fl){
-  return fl ? floorLayouts(fl.id).map(l=>{ const t=floorXf(l); return {l, t, P:l.room.points.map(p=>floorPt(t,p))}; }) : [];
-}
 function drawFloor(){
   const C=PAL(), fl=floorOf(L().floorId), members=floorMembers(fl);
   ctx.clearRect(0,0,W,H);
@@ -455,159 +452,11 @@ function drawFloor(){
   }
   updateFloorReadout(fl, members);
 }
-/* ---- arranging ----
-   Two rooms share a wall when their measured faces sit exactly one wall-thickness
-   apart, so that is what the magnet aims for: not flush, but `max(wallA,wallB)` of
-   clear air, which both bands then fill. Corner alignment along the wall is solved
-   separately from the gap across it, so a room can meet one neighbour's face and
-   line up with another's corner in the same drag. */
 /* A room this size needs a more generous magnet than a wall endpoint does */
 const floorSnapRadius = () => 24/view.scale;
-/* Every way this room could line up with one neighbour edge, as {dir, delta}: move the
-   room by dir*delta and that relationship becomes exact. Three kinds, in priority order:
-     wall  — the two faces end up one wall-thickness apart, so they share a wall.
-             Only offered when the edges actually overlap, i.e. genuinely face each other.
-     line  — the two faces end up on the same line. This is what keeps the sides of
-             stacked rooms flush, and it must NOT require overlap: the left wall of a
-             kitchen sitting below a living room never overlaps the wall it lines up with.
-     end   — a corner of this room meets a corner of that one, along the wall. */
-function floorSnapCandidates(l, P, others, rad){
-  const out=[], n=P.length;
-  for(let i=0;i<n;i++){
-    const a1=P[i], b1=P[(i+1)%n];
-    const dx=b1[0]-a1[0], dy=b1[1]-a1[1], len1=Math.hypot(dx,dy);
-    if(len1<1) continue;
-    const u=[dx/len1, dy/len1], nr=[-u[1], u[0]];
-    const mineOff=wallIsOff(l.room,i);
-    for(const o of others){
-      const m=o.P.length;
-      for(let j=0;j<m;j++){
-        /* how much air belongs between these two faces: enough for both walls, for the
-           one wall that is there, or none at all when both sides have been opened —
-           which is what lets two rooms read as one open space with a continuous floor */
-        const theirsOff=wallIsOff(o.l.room,j);
-        const gap = mineOff && theirsOff ? 0
-                  : mineOff ? (o.l.room.wall||0)
-                  : theirsOff ? (l.room.wall||0)
-                  : Math.max(l.room.wall||0, o.l.room.wall||0);
-        const a2=o.P[j], b2=o.P[(j+1)%m];
-        const ex=b2[0]-a2[0], ey=b2[1]-a2[1], len2=Math.hypot(ex,ey);
-        if(len2<1) continue;
-        if(Math.abs(u[0]*(ey/len2)-u[1]*(ex/len2))>PARALLEL_TOL) continue;
-        const sep=(a2[0]-a1[0])*nr[0]+(a2[1]-a1[1])*nr[1];
-        const sa=(a2[0]-a1[0])*u[0]+(a2[1]-a1[1])*u[1];
-        const sb=(b2[0]-a1[0])*u[0]+(b2[1]-a1[1])*u[1];
-        if(Math.max(sa,sb)>1 && Math.min(sa,sb)<len1-1){
-          const d=sep-(sep>=0?gap:-gap);        // +delta along nr closes sep by delta
-          if(Math.abs(d)<rad) out.push({dir:nr, delta:d, cost:Math.abs(d), kind:gap?'wall':'open', guide:[a2,b2], gap});
-        }
-        if(Math.abs(sep)<rad) out.push({dir:nr, delta:sep, cost:Math.abs(sep)+rad*0.4, kind:'line', guide:[a2,b2]});
-        for(const s of [sa,sb]) for(const mine of [0,len1]){
-          const d=s-mine;
-          if(Math.abs(d)<rad) out.push({dir:u, delta:d, cost:Math.abs(d)+rad*0.25, kind:'end', guide:[a2,b2]});
-        }
-      }
-    }
-  }
-  return out;
-}
-/* Solve one axis, then the other. Taking the single best correction overall used to mean
-   a room could meet its left neighbour or line up with the one above it, never both. */
-function snapFloorPlace(l, x, y){
-  const others=floorLayouts(l.floorId).filter(o=>o.id!==l.id).map(o=>({l:o, P:floorPts(o)}));
-  if(!others.length){ const p=snapPt([x,y]); return {x:p[0], y:p[1], guides:[], note:'' }; }
-  const rad=floorSnapRadius(), rot=l.floorPlace.rot||0;
-  let px=x, py=y, took=null;
-  const guides=[], kinds=[];
-  for(let pass=0; pass<2; pass++){
-    const cands=floorSnapCandidates(l, ptsAt(l,{x:px,y:py,rot}), others, rad);
-    let pick=null;
-    for(const c of cands){
-      // the second correction has to be across a different axis, or it just re-solves the first
-      if(took && Math.abs(c.dir[0]*took[0]+c.dir[1]*took[1])>0.3) continue;
-      if(!pick || c.cost<pick.cost) pick=c;
-    }
-    if(!pick) break;
-    px+=pick.dir[0]*pick.delta; py+=pick.dir[1]*pick.delta;
-    guides.push(pick.guide); kinds.push(pick.kind);
-    took=pick.dir;
-  }
-  if(!guides.length){ const p=snapPt([x,y]); return {x:p[0], y:p[1], guides:[], note:''}; }
-  const note = kinds.includes('open') ? 'Open through'
-             : kinds.includes('wall') ? 'Sharing a wall'
-             : kinds.includes('line') ? 'Lined up' : 'Corners meet';
-  return {x:px, y:py, guides, note};
-}
-/* How deep each room's wall band runs, edge by edge.
-   An edge facing a neighbour is a SHARED wall, and its depth is the real gap between
-   the two faces — so a door punched from either side clears the whole thickness even
-   when the two rooms carry different wall settings. An edge facing nothing is
-   EXTERIOR and takes the floor's exterior thickness, which is how a plan gets a heavy
-   outer shell around thin partitions without any boolean union of the outline. */
-function floorEdgeDepths(members, extWall){
-  return members.map(m=>{
-    const own=m.l.room.wall||0, n=m.P.length;
-    return m.P.map((a1,i)=>{
-      const b1=m.P[(i+1)%n];
-      const dx=b1[0]-a1[0], dy=b1[1]-a1[1], len=Math.hypot(dx,dy);
-      if(len<1) return own;
-      if(wallIsOff(m.l.room,i)) return 0;        // no wall here: nothing to draw, nothing to punch
-      const u=[dx/len,dy/len], w=wallOf(i,m.P), out=[-w.nrm[0],-w.nrm[1]];
-      let found=0;
-      for(const o of members){
-        if(o.l.id===m.l.id) continue;
-        const lim=Math.max(own, o.l.room.wall||0)*1.35+1;
-        for(let j=0;j<o.P.length;j++){
-          const a2=o.P[j], b2=o.P[(j+1)%o.P.length];
-          const ex=b2[0]-a2[0], ey=b2[1]-a2[1], l2=Math.hypot(ex,ey);
-          if(l2<1) continue;
-          if(Math.abs(u[0]*(ey/l2)-u[1]*(ex/l2))>PARALLEL_TOL) continue;
-          const d=(a2[0]-a1[0])*out[0]+(a2[1]-a1[1])*out[1];
-          if(d<=0.5 || d>lim) continue;                       // behind us, or too far to be a shared wall
-          const sa=(a2[0]-a1[0])*u[0]+(a2[1]-a1[1])*u[1];
-          const sb=(b2[0]-a1[0])*u[0]+(b2[1]-a1[1])*u[1];
-          if(Math.max(sa,sb)<1 || Math.min(sa,sb)>len-1) continue;
-          if(!found || d<found) found=d;
-        }
-      }
-      return found || Math.max(own, extWall||0);
-    });
-  });
-}
-/* consecutive edges sharing a depth, so each run strokes as one mitred polyline */
-function extendEnd(pts,i,j,by){
-  const a=pts[i], b=pts[j];
-  const dx=a[0]-b[0], dy=a[1]-b[1], len=Math.hypot(dx,dy);
-  if(len<1e-6 || !by) return;
-  pts[i]=[a[0]+dx/len*by, a[1]+dy/len*by];
-}
-function depthRuns(P, depths){
-  const n=P.length, runs=[];
-  let start=-1;
-  for(let k=0;k<n;k++) if(depths[k]!==depths[(k-1+n)%n]){ start=k; break; }
-  if(start<0) return null;                                    // every edge the same: stroke it closed instead
-  let cur=null;
-  for(let k=0;k<n;k++){
-    const i=(start+k)%n;
-    if(!cur || depths[i]!==cur.depth){ cur={depth:depths[i], pts:[P[i].slice()], first:i, last:i}; runs.push(cur); }
-    cur.pts.push(P[(i+1)%n].slice());
-    cur.last=i;
-  }
-  /* A run stops wherever the thickness changes, which would leave that outside corner
-     open — a thick outer wall meeting a thin shared one has a square hole between them.
-     Carry each end on by the NEIGHBOURING band's depth and the two close up exactly.
-     Anything that overshoots into a room is removed by the floor-wide clip. */
-  for(const r of runs){
-    extendEnd(r.pts, 0, 1, depths[(r.first-1+n)%n]);
-    extendEnd(r.pts, r.pts.length-1, r.pts.length-2, depths[(r.last+1)%n]);
-  }
-  return runs;
-}
 function pickFloorRoom(px,py){
   const fl=floorOf(L().floorId); if(!fl) return null;
-  const ms=floorMembers(fl), pt=[wx(px),wy(py)];
-  for(let i=ms.length-1;i>=0;i--) if(pointInPoly(pt, ms[i].P)) return ms[i].l.id;
-  return null;
+  return floorRoomAt(fl, [wx(px),wy(py)]);
 }
 const floorRotHandle = P => { const b=bbox(P); return {x:sx((b.x0+b.x1)/2), y:sy(b.y0)-26}; };
 /* While editing one room, show the others on its floor as a faint backdrop, drawn
@@ -1061,5 +910,5 @@ export {CANVAS, darkMQ, PAL, setForceLightCanvas,
         addPoly, pathPoly, clip, normHex, hexA, pickText,
         drawAlignGuides, drawSquareTick, drawCustomOverlay,
         drawDimension, drawMeasures,
-        draw, scheduleDraw, mountCanvas, floorMembers, snapFloorPlace, floorEdgeDepths,
+        draw, scheduleDraw, mountCanvas, floorMembers, floorSnapRadius,
         pickFloorRoom, floorRotHandle, handlePos, sizeLabel};

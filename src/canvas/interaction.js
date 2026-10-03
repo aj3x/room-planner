@@ -21,7 +21,8 @@ import {centreInside, slideToValid, validate} from '../model/validity.js';
 import {clampOpenings, iwallOf, nearestOnWalls, pillarOf, wallOf} from '../model/walls.js';
 import {snapWallPoint} from './snap.js';
 import {flash} from '../ui/flash.js';
-import {draw, scheduleDraw, snapFloorPlace} from './draw.js';
+import {draw, floorSnapRadius, scheduleDraw} from './draw.js';
+import {snapFloorPlace} from '../model/floor-place.js';
 import {drag} from './interaction-state.js';
 import {alignRadius, bringToFront, snapCorner} from './snap.js';
 import {H, W, axisLockFrom, cv, snapMM, snapPt, view, wx, wy} from './view.js';
@@ -241,7 +242,7 @@ function applyDragAt(px,py,mods){
     const l=S.layouts.find(x=>x.id===drag.value.id); if(!l) return;
     let nx=pt[0]-drag.value.dx, ny=pt[1]-drag.value.dy;
     if(mods.altKey){ floorGuides.value = []; floorSnapNote.value = 'Free'; }   // alt drops the magnet, same as everywhere else
-    else { const s=snapFloorPlace(l,nx,ny); nx=s.x; ny=s.y; floorGuides.value = s.guides; floorSnapNote.value = s.note; }
+    else { const s=snapFloorPlace(l,nx,ny,floorSnapRadius(),snapPt); nx=s.x; ny=s.y; floorGuides.value = s.guides; floorSnapNote.value = s.note; }
     l.floorPlace.x=nx; l.floorPlace.y=ny;
     preview('floor'); return;
   }
