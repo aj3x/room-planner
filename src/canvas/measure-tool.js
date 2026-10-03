@@ -91,7 +91,6 @@ function removeMeasure(id){
 }
 
 
-/* ---- Phase 3: the rest of this file's region, move-only. ---- */
 function setMeasure(on){
   if(on){
     if(!isCanvasMode(S.mode)) return;

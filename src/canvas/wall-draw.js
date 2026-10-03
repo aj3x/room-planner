@@ -1,10 +1,6 @@
-/* Drawing a freestanding interior wall.
-
-   Extracted from index.html in Phase 3, move-only: the body below is
-   byte-identical to what stood there, and the `export` block at the end is
-   the only line added. §3 gives this banner no file of its own; it is its
-   own two-function region, so it gets one.
-*/
+/* Drawing a freestanding interior wall, the commands: starting, finishing
+   and abandoning it. The pointer and key handling, and the wall on screen,
+   are the wall-draw tool's (canvas/tools/wall-draw.js). */
 import {expect} from '../core/registry.js';
 import {batch} from '../core/signals.js';
 import {roomSel} from '../core/selection.js';
@@ -28,7 +24,6 @@ function finishWallDraw(a,b){
   });
 }
 
-/* ---- Phase 3: the rest of this file's region, move-only. ---- */
 /* ------------------------- drawing a freestanding wall ------------------------- */
 function startWallDraw(){
   if(drawState.value) cancelCustomDraw();

@@ -1,18 +1,7 @@
 /* Merging two rooms into one: the polygon weld, and the helpers that cut the
-   two outlines so they can be welded.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added.
-
-   PARALLEL_TOL, the "do these two edges face each other" tolerance edgeFacing
-   shares with the floor magnet, is model/floor-place.js's.
-
-   What did NOT come with this file is everything around the weld -- the merge
-   selection UI, drawMergeOverlay, the Floor-mode merge menu -- because those
-   read mergeSel and the rest of the selection lets, and call draw() and the
-   render*() functions. §3 puts them in this file; they follow once those move.
-*/
+   two outlines so they can be welded. PARALLEL_TOL, the "do these two edges
+   face each other" tolerance edgeFacing shares with the floor magnet, is
+   model/floor-place.js's. */
 
 import {clone} from '../core/state.js';
 import {polySimple, signedArea} from '../core/geometry.js';

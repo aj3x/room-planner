@@ -1,13 +1,7 @@
-/* Drawing a custom room: the in-progress polygon, the snap point the cursor
-   shows, and finishing or abandoning the outline.
-
-   Extracted from index.html in Phase 3, move-only: the body below is
-   byte-identical to what stood there, and the `export` block at the end is
-   the only line added.
-
-   startCustomDraw did not come with it: it calls setMeasure, which is still
-   in the monolith behind the two other cancel* functions.
-*/
+/* Drawing a custom room, the commands: starting, where the next corner
+   lands (drawSnapPoint), finishing and abandoning the outline. The pointer
+   and key handling, and the outline on screen, are the room-draw tool's
+   (canvas/tools/room-draw.js). */
 import {alignGuides, alignNote, roomSel} from '../core/selection.js';
 import {L} from '../core/state.js';
 import {transact} from '../core/tx.js';
@@ -65,7 +59,6 @@ function drawSnapPoint(raw,shift){
   return s.pt;
 }
 
-/* ---- Phase 3: the rest of this file's region, move-only. ---- */
 /* ------------------------- custom room drawing (walls may cross) ------------------------- */
 function startCustomDraw(){
   if(wallDrawState.value) cancelWallDraw();
