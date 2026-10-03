@@ -1,7 +1,8 @@
-/* The canvas's parts list: every layer and every tool overlay, registered
-   once from boot() — never at import time. A new layer is a new module under
-   canvas/layers/ and one line here; nothing else changes. Order within the
-   list matters only between layers of equal z. */
+/* The canvas's parts list: every layer and every tool, registered once from
+   boot() — never at import time. A new layer is a module under
+   canvas/layers/ and one line here, a new tool a module under canvas/tools/
+   and one line here; nothing else changes. Order among layers matters only
+   between equal z; order among tools is their priority. */
 
 import {addLayer} from './draw.js';
 import {stageLayer} from './layers/stage.js';
@@ -28,11 +29,14 @@ import {floorOverlapsLayer} from './layers/floor-overlaps.js';
 import {floorGuidesLayer} from './layers/floor-guides.js';
 import {floorSelectionLayer} from './layers/floor-selection.js';
 import {floorReadoutLayer} from './layers/floor-readout.js';
-import {cornerTickOverlay} from './tools/room.js';
-import {roomDrawOverlay} from './tools/room-draw.js';
-import {wallDrawOverlay} from './tools/wall-draw.js';
-import {splitOverlay} from './tools/split.js';
-import {marqueeOverlay} from './tools/furniture.js';
+import {registerTool} from './interaction.js';
+import {roomDrawTool} from './tools/room-draw.js';
+import {wallDrawTool} from './tools/wall-draw.js';
+import {splitTool} from './tools/split.js';
+import {measureTool} from './tools/measure.js';
+import {floorTool} from './tools/floor.js';
+import {roomTool} from './tools/room.js';
+import {furnitureTool} from './tools/furniture.js';
 
 const LAYERS = [
   stageLayer,
@@ -43,12 +47,15 @@ const LAYERS = [
   // every room on the floor (Floor mode)
   floorRoomsLayer, floorWallsLayer, floorContentsLayer, floorLabelsLayer, floorOverlapsLayer,
   floorGuidesLayer, floorSelectionLayer, floorReadoutLayer,
-  // gesture overlays
-  cornerTickOverlay, roomDrawOverlay, wallDrawOverlay, splitOverlay, marqueeOverlay,
 ];
+
+/* The first whose active() holds is the active tool: a drawing tool or the
+   Measure tool while one is on, else the canvas mode's own. */
+const TOOLS = [roomDrawTool, wallDrawTool, splitTool, measureTool, floorTool, roomTool, furnitureTool];
 
 function setupCanvas(){
   for(const l of LAYERS) addLayer(l);
+  for(const t of TOOLS) registerTool(t);   // each tool's overlay joins the layers
 }
 
 export {setupCanvas};

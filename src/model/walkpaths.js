@@ -4,7 +4,7 @@
    Extracted from index.html in Phase 3, move-only. The region arrived whole,
    drawing included; the decoupling pass (.claude/plans/decoupling.md §2.1,
    step 3) took the drawing back out. walkShade, walkPinchLabel, drawWalkPath
-   and drawWalkOverlay now live in canvas/walk-overlay.js, unchanged, and with
+   and drawWalkOverlay now live in canvas/layers/walk-paths.js, and with
    them went the imports of canvas/view.js and canvas/draw.js -- the upward
    edge that made the domain layer depend on the renderer and helped hold the
    45-module cycle together.

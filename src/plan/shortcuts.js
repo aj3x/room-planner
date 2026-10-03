@@ -1,8 +1,9 @@
 /* The keyboard. One handler on `document`, and the order of its guards is the
    whole design: a modifier-free letter must not fire while the user is typing
-   in a text box, Escape means "back out of whatever is innermost", and a mode
-   that owns the canvas (drawing a room, a wall, a split line) swallows the key
-   before the general bindings get a look at it. Read it top to bottom; each
+   in a text box, Escape means "back out of whatever is innermost", and a
+   canvas tool that is live (drawing a room, a wall, a split line; measuring)
+   gets the key — onKey, canvas/interaction.js — before the general bindings
+   get a look at it. Read it top to bottom; each
    early `return` is a claim on the key.
 
    Moved out of index.html's <script> as part of Step 4 of
@@ -29,14 +30,11 @@ import {transact} from '../core/tx.js';
 import {batch} from '../core/signals.js';
 import {bisectToValid, centreInside, isBad, validate} from '../model/validity.js';
 import {deleteCorner} from '../canvas/corners.js';
-import {cancelDrag, setSpaceDown} from '../canvas/interaction.js';
-import {drag, drawState, splitDrawState, wallDrawState} from '../canvas/interaction-state.js';
-import {measureOn, measureSel, measureStart} from '../canvas/measure-state.js';
-import {removeMeasure, setMeasure} from '../canvas/measure-tool.js';
-import {cancelCustomDraw, finishCustomDraw} from '../canvas/room-draw.js';
-import {cancelSplitDraw} from '../canvas/split-room.js';
+import {cancelGesture, gestureTool, isGesturing, onCanvasKey} from '../canvas/interaction.js';
+import {measureOn} from '../canvas/measure-state.js';
+import {setMeasure} from '../canvas/measure-tool.js';
+import {panTool, setSpaceDown} from '../canvas/tools/pan.js';
 import {cv, snapMM} from '../canvas/view.js';
-import {cancelWallDraw} from '../canvas/wall-draw.js';
 import {flash} from '../ui/flash.js';
 import {closeModal, mo, showShortcuts} from '../ui/modal.js';
 import {turnFloorRoom} from './floors.js';
@@ -45,39 +43,18 @@ import {removeSel, rotate} from './selection-panel.js';
 
 function onDocumentKeyDown(e){
   const tag=(e.target.tagName||'').toLowerCase();
-  if(drag.value && e.key==='Escape'){ e.preventDefault(); cancelDrag(); return; }
+  if(isGesturing() && e.key==='Escape'){ e.preventDefault(); cancelGesture(); return; }
   if(tag==='input'||tag==='textarea'||tag==='select') return;
   if(e.code==='Space' && !e.repeat && isCanvasMode(S.mode)){
-    setSpaceDown(true); cv.style.cursor='grab'; e.preventDefault(); return;
+    setSpaceDown(true); cv.style.cursor=panTool.cursor; e.preventDefault(); return;
   }
-  if(drawState.value){
-    if(e.key==='Escape'){ cancelCustomDraw(); return; }
-    if(e.key==='Enter'){ finishCustomDraw(); return; }
-    return;
-  }
-  if(wallDrawState.value){
-    if(e.key==='Escape'){ cancelWallDraw(); return; }
-    return;
-  }
-  if(splitDrawState.value){
-    if(e.key==='Escape'){ cancelSplitDraw(); return; }
-    return;
-  }
+  // a canvas tool that is live (drawing an outline, a wall or a split line; measuring) claims its keys first
+  if(onCanvasKey(e)) return;
   if(mo.hidden && (e.key==='m'||e.key==='M') && !e.ctrlKey && !e.metaKey && !e.altKey && isCanvasMode(S.mode) && !floorMode()){
     setMeasure(!measureOn.value); return;
   }
-  if(mo.hidden && !drag.value && e.key==='?' && isCanvasMode(S.mode)){
+  if(mo.hidden && !isGesturing() && e.key==='?' && isCanvasMode(S.mode)){
     e.preventDefault(); showShortcuts(); return;
-  }
-  if(measureOn.value && mo.hidden){
-    // Escape backs out one step at a time: the first end, then the selection, then the tool
-    if(e.key==='Escape'){
-      if(measureStart.value) measureStart.value = null;
-      else if(measureSel.value) measureSel.value = null;
-      else setMeasure(false);
-      return;
-    }
-    if((e.key==='Delete'||e.key==='Backspace') && measureSel.value){ e.preventDefault(); removeMeasure(measureSel.value); return; }
   }
   if(e.key==='Escape'){
     if(!mo.hidden){ closeModal(); return; }
@@ -139,17 +116,15 @@ function onDocumentKeyDown(e){
   }
 }
 
-/* Space's other half. It lives here rather than next to setSpaceDown in
-   canvas/interaction.js for the same reason the keydown does: the pair is one
+/* Space's other half. It lives here rather than beside setSpaceDown in
+   canvas/tools/pan.js for the same reason the keydown does: the pair is one
    binding, and reading them apart is how one of them gets forgotten. Note it
    does NOT clear the cursor mid-pan -- a pan started with Space keeps its
-   grabbing cursor until the pointer comes up, whatever the key does.
-
-   Moved from index.html with the keydown; its registration stayed behind too. */
+   grabbing cursor until the pointer comes up, whatever the key does. */
 function onDocumentKeyUp(e){
   if(e.code==='Space'){
     setSpaceDown(false);
-    if(!drag.value||drag.value.mode!=='pan') cv.style.cursor='';
+    if(gestureTool()!==panTool) cv.style.cursor='';
   }
 }
 

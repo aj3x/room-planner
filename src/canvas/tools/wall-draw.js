@@ -1,10 +1,34 @@
-/* Drawing a freestanding wall: its start, and the rubber band to where its
-   end would land. */
+/* Drawing a freestanding wall: a click for its start, a click for its end,
+   each landing on the wall magnet (Alt drops it; Shift locks the end to the
+   start's axis). Escape abandons it. While it is live it owns the canvas and
+   the keyboard. The commands it ends in are canvas/wall-draw.js. */
 
-import {axisLockFrom, ctx, sx, sy} from '../view.js';
-import {PAL} from '../paint.js';
+import {flash} from '../../ui/flash.js';
+import {draw, scheduleDraw} from '../draw.js';
 import {drawCursor, wallDrawShift, wallDrawState} from '../interaction-state.js';
+import {PAL} from '../paint.js';
 import {snapWallPoint} from '../snap.js';
+import {axisLockFrom, ctx, sx, sy, wx, wy} from '../view.js';
+import {cancelWallDraw, finishWallDraw} from '../wall-draw.js';
+
+function wallDrawDown(e,px,py){
+  const raw0=[wx(px),wy(py)];
+  const raw = (wallDrawState.value.a && e.shiftKey) ? axisLockFrom(wallDrawState.value.a,raw0) : raw0;
+  const snapped=snapWallPoint(raw,null,!e.altKey);
+  if(!wallDrawState.value.a){ wallDrawState.value.a=snapped; draw(); return null; }
+  if(Math.hypot(snapped[0]-wallDrawState.value.a[0], snapped[1]-wallDrawState.value.a[1])<50){ flash('Drag out a longer wall'); return null; }
+  finishWallDraw(wallDrawState.value.a, snapped);
+  return null;
+}
+function wallDrawCursor(px,py,mods){
+  drawCursor.value = [wx(px),wy(py)];
+  wallDrawShift.value = mods.shiftKey;
+  scheduleDraw();
+}
+function wallDrawKey(e){
+  if(e.key==='Escape') cancelWallDraw();
+  return true;
+}
 
 function drawWallDrawOverlay(){
   if(!wallDrawState.value) return;
@@ -29,4 +53,11 @@ const wallDrawOverlay = {
   draw(){ drawWallDrawOverlay(); }
 };
 
-export {wallDrawOverlay};
+const wallDrawTool = {
+  id:'wall-draw',
+  active: () => !!wallDrawState.value,
+  onDown: wallDrawDown, onCursor: wallDrawCursor, onKey: wallDrawKey,
+  overlay: wallDrawOverlay,
+};
+
+export {wallDrawTool};

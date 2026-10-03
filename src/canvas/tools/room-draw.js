@@ -1,9 +1,38 @@
-/* Drawing a room's outline: the corners placed so far and the rubber band
-   to the pointer. */
+/* Drawing a room's outline: each click places a corner, under the same
+   alignment magnet a corner drag uses (Shift locks to 45°); a click back on
+   the first corner, or Enter, closes it; Escape abandons it. While it is
+   live it owns the canvas and the keyboard. The commands it ends in are
+   canvas/room-draw.js. */
 
-import {ctx, sx, sy} from '../view.js';
+import {alignGuides, alignNote} from '../../core/selection.js';
+import {draw, scheduleDraw} from '../draw.js';
+import {drawCursor, drawState, wallDrawShift} from '../interaction-state.js';
 import {PAL} from '../paint.js';
-import {drawState, drawCursor} from '../interaction-state.js';
+import {cancelCustomDraw, drawSnapPoint, finishCustomDraw} from '../room-draw.js';
+import {ctx, sx, sy, wx, wy} from '../view.js';
+
+function roomDrawDown(e,px,py){
+  const raw=[wx(px),wy(py)];
+  if(drawState.value.pts.length>=3){
+    const s0=[sx(drawState.value.pts[0][0]), sy(drawState.value.pts[0][1])];
+    if(Math.hypot(px-s0[0], py-s0[1])<12){ finishCustomDraw(); return null; }
+  }
+  drawState.value.pts.push(drawSnapPoint(raw,e.shiftKey));
+  alignGuides.value = []; alignNote.value = '';
+  draw();
+  return null;
+}
+/* where the next corner would land, shown as the rubber band */
+function roomDrawCursor(px,py,mods){
+  drawCursor.value = drawSnapPoint([wx(px),wy(py)], mods.shiftKey);
+  wallDrawShift.value = mods.shiftKey;
+  scheduleDraw();
+}
+function roomDrawKey(e){
+  if(e.key==='Escape') cancelCustomDraw();
+  else if(e.key==='Enter') finishCustomDraw();
+  return true;
+}
 
 function drawCustomOverlay(){
   if(!drawState.value) return;
@@ -32,4 +61,11 @@ const roomDrawOverlay = {
   draw(){ drawCustomOverlay(); }
 };
 
-export {roomDrawOverlay};
+const roomDrawTool = {
+  id:'room-draw',
+  active: () => !!drawState.value,
+  onDown: roomDrawDown, onCursor: roomDrawCursor, onKey: roomDrawKey,
+  overlay: roomDrawOverlay,
+};
+
+export {roomDrawTool};

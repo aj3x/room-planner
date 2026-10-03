@@ -50,10 +50,10 @@ export const EPILOGUE = `
 /* commitFurn's last shell reader was the arrow-key nudge, which moved into
  * plan/shortcuts.js. */
 ;import {commitFurn} from './src/core/history.js';
-/* drag and the four undo/redo entry points were last read by the stage — the
- * canvas pointer handlers and the toolbar's undo/redo buttons — and went with
- * it. All five are __rp members. */
-;import {drag} from './src/canvas/interaction-state.js';
+/* The four undo/redo entry points were last read by the stage's toolbar and
+ * went with it; the room tool's drag lives in its own module. All five are
+ * __rp members. */
+;import {roomDrag} from './src/canvas/tools/room.js';
 ;import {undoRoom, redoRoom, undoFurn, redoFurn} from './src/core/history.js';
 ;import {exportPayload} from './src/io/export.js';
 /* readImport's last shell reader was the #fileIn change handler, which moved
@@ -74,13 +74,14 @@ export const EPILOGUE = `
 ;globalThis.__rp = {
   get S(){ return S; },
   get view(){ return view; },
-  /* The guide readouts, reassigned from all over the interaction region and
-     cleared again by endDrag() — so the only way to see them is to look while
-     the pointer is still down. */
+  /* The guide readouts, set by the tools mid-gesture and cleared again on
+     pointerup — so the only way to see them is to look while the pointer is
+     still down. */
   get alignGuides(){ return alignGuides.value; },
   get alignNote(){ return alignNote.value; },
-  /* drag says whether the deadzone has armed yet. */
-  get drag(){ return drag.value; },
+  /* The room tool's drag in flight: whether the deadzone has armed yet, and
+     the snapshot Escape would restore. */
+  get drag(){ return roomDrag.value; },
   get bpState(){ return bpState; },
   RP: RP,
   /* undo/redo. Room edits and item edits have separate per-layout stacks. */

@@ -1,8 +1,8 @@
 /* The two pointer gestures worth a permanent test: the drag deadzone and the
  * alignment magnet. They are the app's most intricate interaction, and the only
  * tests that go through the browser's real pointer pipeline — driving the same
- * functions through state skips `pointerdown`'s hit test, skips `applyDragAt`'s
- * arming, and never assigns a guide at all.
+ * functions through state skips `pointerdown`'s hit test, skips the room
+ * tool's arming, and never assigns a guide at all.
  *
  * Geometry all the way down. The fixture room is the 5000 x 4000 rectangle
  * [[0,0],[5000,0],[5000,4000],[0,4000]] and corner 1 is the one dragged; its
@@ -43,8 +43,8 @@ test.describe('dragging a room corner', () => {
        that has to be expressed in pixels. Alt is held throughout: without it
        the magnet re-latches onto the crossing the corner started on and a 5px
        move lands back on [5000,0], making "armed" and "not armed" look
-       identical in the polygon. The deadzone ignores modifiers — it is keyed
-       on drag.mode via DEADZONE_MODES. */
+       identical in the polygon. The deadzone ignores modifiers — every room
+       tool drag has one. */
     const modifiers = ['Alt'];
     const cam = await pointerDownAt(app, CORNER_AT, { modifiers });
     const origin = project(cam, CORNER_AT);
@@ -103,7 +103,7 @@ test.describe('dragging a room corner', () => {
     expect(g2[1][0]).toBeCloseTo(5000, 6);
     expect(g2[1][1]).toBeCloseTo(-over, 3);
 
-    /* endDrag clears everything it set. */
+    /* pointerup clears everything the drag set. */
     await settle(app);
     const after = await liveDrag(app);
     expect(after.drag).toBeNull();

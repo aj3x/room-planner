@@ -1,12 +1,56 @@
-/* Splitting a room: the cut drawn so far, and where its next point would
-   land. */
+/* Splitting a room in two: a click on the room's wall starts the cut,
+   clicks inside bend it, a click on another wall finishes it (and opens
+   the solid/open choice). Points land on the same magnet as a corner drag,
+   with a soft 45° snap (Shift forces it). Escape abandons it. While it is
+   live it owns the canvas and the keyboard. The geometry and the commit are
+   canvas/split-room.js. */
 
-import {ctx, sx, sy} from '../view.js';
-import {PAL, drawSquareTick} from '../paint.js';
+import {pointInPoly} from '../../core/geometry.js';
 import {alignGuides, alignNote} from '../../core/selection.js';
+import {RP} from '../../core/state.js';
+import {flash} from '../../ui/flash.js';
+import {draw, scheduleDraw} from '../draw.js';
 import {drawCursor, splitDrawState, wallDrawShift} from '../interaction-state.js';
+import {PAL, drawSquareTick} from '../paint.js';
 import {snapWallPoint} from '../snap.js';
-import {boundaryHit, splitCornerRef, splitResolvePoint} from '../split-room.js';
+import {boundaryHit, cancelSplitDraw, splitCornerRef, splitResolvePoint, trySplitLine} from '../split-room.js';
+import {ctx, sx, sy, wx, wy} from '../view.js';
+
+function splitDown(e,px,py){
+  const raw0=[wx(px),wy(py)];
+  const pts=splitDrawState.value.pts;
+  const resolved=splitResolvePoint(raw0, e.shiftKey);
+  const snapped=snapWallPoint(resolved.pt,null,!e.altKey);
+  const hit=boundaryHit(snapped);
+  if(hit){
+    if(!pts.length){ pts.push(hit); showGuides(); draw(); return null; }
+    trySplitLine(pts[0], pts.slice(1), hit);
+    return null;
+  }
+  if(!pts.length){ flash("Click a point on the room's wall"); return null; }
+  if(!pointInPoly(snapped, RP())){ flash('Stay inside the room'); return null; }
+  pts.push(snapped);
+  showGuides();
+  draw();
+  return null;
+}
+/* the guides and readout note for where the next point would land — worked
+   out when the pointer moves or a point is placed, never inside a draw */
+function showGuides(){
+  if(!splitDrawState.value || !drawCursor.value) return;
+  const resolved=splitResolvePoint(drawCursor.value, wallDrawShift.value);
+  alignGuides.value = resolved.guides; alignNote.value = resolved.note;
+}
+function splitCursor(px,py,mods){
+  drawCursor.value = [wx(px),wy(py)];
+  wallDrawShift.value = mods.shiftKey;
+  showGuides();
+  scheduleDraw();
+}
+function splitKey(e){
+  if(e.key==='Escape') cancelSplitDraw();
+  return true;
+}
 
 function drawSplitOverlay(){
   if(!splitDrawState.value) return;
@@ -14,7 +58,6 @@ function drawSplitOverlay(){
   let b=null;
   if(drawCursor.value){
     const resolved=splitResolvePoint(drawCursor.value, wallDrawShift.value);
-    alignGuides.value = resolved.guides; alignNote.value = resolved.note;
     const snapped=snapWallPoint(resolved.pt, null, true);
     const hit=boundaryHit(snapped);
     b=hit?hit.pt:snapped;
@@ -46,4 +89,11 @@ const splitOverlay = {
   draw(){ drawSplitOverlay(); }
 };
 
-export {splitOverlay};
+const splitTool = {
+  id:'split',
+  active: () => !!splitDrawState.value,
+  onDown: splitDown, onCursor: splitCursor, onKey: splitKey,
+  overlay: splitOverlay,
+};
+
+export {splitTool};

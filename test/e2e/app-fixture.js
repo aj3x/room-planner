@@ -127,11 +127,11 @@ export { expect };
       further than `DEADZONE_PX` (4) from the press. One jump arms it *and*
       applies the whole travel in a single step, which is not the path a real
       drag takes — so a drag is always stepped.
-   3. **Guides are readable only MID-drag.** `endDrag()` clears `alignGuides`,
+   3. **Guides are readable only MID-drag.** pointerup clears `alignGuides`,
       `alignNote` and `#readout`'s `.snap` span.
 
    Nothing here sleeps: `settle()` waits on the app's own rAF, and the drag's
-   effect on state is synchronous inside `applyDragAt`.
+   effect on state is synchronous inside the tool's onMove.
 --------------------------------------------------------------------------- */
 
 /** The canvas's viewport origin plus the live camera, read together. */

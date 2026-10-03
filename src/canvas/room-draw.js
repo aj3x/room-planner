@@ -16,10 +16,9 @@ import {expect} from '../core/registry.js';
 import {batch} from '../core/signals.js';
 import {flash} from '../ui/flash.js';
 import {$} from '../ui/modal.js';
-import {scheduleDraw} from './draw.js';
-import {drawState, drawCursor, wallDrawShift} from './interaction-state.js';
+import {drawState, drawCursor} from './interaction-state.js';
 import {alignPoint, alignRadius, isSquare} from './snap.js';
-import {snapPt, wx, wy} from './view.js';
+import {snapPt} from './view.js';
 import {fit} from './camera.js';
 import {roomMode} from '../core/state.js';
 import {splitDrawState, wallDrawState} from './interaction-state.js';
@@ -65,12 +64,6 @@ function drawSnapPoint(raw,shift){
   alignNote.value = s.guides.length ? (pts.length>1 && isSquare(pts[last-1], pts[last], s.pt) ? 'Right angle' : 'Lined up') : '';
   return s.pt;
 }
-function applyDrawCursorAt(px,py,shift){
-  const raw=[wx(px),wy(py)];
-  drawCursor.value = drawState.value ? drawSnapPoint(raw, shift) : raw;
-  wallDrawShift.value = shift;
-  scheduleDraw();
-}
 
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */
 /* ------------------------- custom room drawing (walls may cross) ------------------------- */
@@ -82,4 +75,4 @@ function startCustomDraw(){
   batch(()=>{ drawState.value = {pts:[]}; drawCursor.value = null; roomSel.value = null; });
   $('drawHint').hidden=false;
 }
-export {cancelCustomDraw, finishCustomDraw, drawSnapPoint, applyDrawCursorAt, startCustomDraw};
+export {cancelCustomDraw, finishCustomDraw, drawSnapPoint, startCustomDraw};

@@ -29,26 +29,20 @@ import { $, askConfirm, showShortcuts } from '../ui/modal.js';
 import { menuAtPoint } from '../ui/menu.js';
 import { cv, W, H } from '../canvas/view.js';
 import { fit, zoomAt } from '../canvas/camera.js';
-import {drag, drawState, wallDrawState, splitDrawState} from '../canvas/interaction-state.js';
-import { lastPX, lastPY, lastMods, setLastPX, setLastPY, setLastMods, onCanvasPointerDown, applyDragAt, endDrag, ZOOM_FACTOR, ZOOM_ACCEL_K, wheelState } from '../canvas/interaction.js';
-import { applyDrawCursorAt } from '../canvas/room-draw.js';
+import {drawState, wallDrawState, splitDrawState} from '../canvas/interaction-state.js';
+import { onCanvasPointerDown, onCanvasPointerMove, onCanvasMouseMove, onCanvasPointerUp, onCanvasPointerLeave, onCanvasWheel } from '../canvas/interaction.js';
 import { startSplitRoom } from '../canvas/split-room.js';
-import { scheduleDraw } from '../canvas/draw.js';
 import { pickFloorRoom } from '../canvas/tools/floor.js';
 import { pickRoom } from '../canvas/snap.js';
-import {measureOn, measureSel, measureHover, measureHoverId, measureCursor} from '../canvas/measure-state.js';
-import { liveMeasures, setMeasure, resetMeasureState, removeMeasure, measureHoverAt } from '../canvas/measure-tool.js';
+import {measureOn, measureSel} from '../canvas/measure-state.js';
+import { liveMeasures, setMeasure, resetMeasureState, removeMeasure } from '../canvas/measure-tool.js';
 import { setMode } from '../plan/mode.js';
 import { activateLayout } from '../plan/layout-tree.js';
 import { wallDialog } from '../plan/room-panel.js';
 import { openFloorMergeMenu } from '../plan/floors.js';
 
 function bindStage(){
-  cv.addEventListener('mousemove', e=>{
-    if(!drawState.value && !wallDrawState.value && !splitDrawState.value) return;
-    setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
-    applyDrawCursorAt(lastPX,lastPY,e.shiftKey);
-  });
+  cv.addEventListener('mousemove', onCanvasMouseMove);
 
   /* ------------------------- measuring -------------------------
      A measurement joins two anchors and shows the shortest distance between them.
@@ -63,10 +57,7 @@ function bindStage(){
      thing's id (a room wall's index), n which corner or side. Ends are looked up live, so a
      measurement follows what it joins as things move. It is a note on the plan, not part of
      the room or the furniture, so it has no undo history of its own. */
-  cv.addEventListener('pointerleave', ()=>{
-    if(!measureOn.value || drag.value) return;
-    measureHover.value = null; measureHoverId.value = null; measureCursor.value = null; scheduleDraw();
-  });
+  cv.addEventListener('pointerleave', onCanvasPointerLeave);
   $('btnMeasure').addEventListener('click', ()=>setMeasure(!measureOn.value));
   $('btnShortcuts').addEventListener('click', showShortcuts);
   $('measureBar').addEventListener('click', e=>{
@@ -82,26 +73,21 @@ function bindStage(){
   });
 
   cv.addEventListener('pointerdown', onCanvasPointerDown);
-  cv.addEventListener('pointermove', e=>{
-    if(measureOn.value && !drag.value){ measureHoverAt(e.offsetX,e.offsetY); return; }
-    if(!drag.value) return;
-    setLastPX(e.offsetX); setLastPY(e.offsetY); setLastMods({shiftKey:e.shiftKey,altKey:e.altKey});
-    applyDragAt(lastPX,lastPY,lastMods);
-  });
-  cv.addEventListener('pointerup',endDrag);
-  cv.addEventListener('pointercancel',endDrag);
+  cv.addEventListener('pointermove', onCanvasPointerMove);
+  cv.addEventListener('pointerup', onCanvasPointerUp);
+  cv.addEventListener('pointercancel', onCanvasPointerUp);
   /* in Room mode, double-clicking a wall types its length in rather than dragging for it */
   cv.addEventListener('dblclick', e=>{
     if(drawState.value) return;
     /* double-clicking a room on the floor is the way back to editing it */
     if(floorMode()){
       const id=pickFloorRoom(e.offsetX,e.offsetY);
-      if(id){ drag.value = null; transact('project', ()=>{ activateLayout(id); setMode('room'); }); fit(); }
+      if(id){ transact('project', ()=>{ activateLayout(id); setMode('room'); }); fit(); }
       return;
     }
     if(!roomMode()) return;
     const hit=pickRoom(e.offsetX,e.offsetY);
-    if(hit&&hit.kind==='wall'){ drag.value = null; wallDialog(hit.i); }
+    if(hit&&hit.kind==='wall') wallDialog(hit.i);
   });
   /* ------------------------- splitting a room in two ------------------------- */
   /* A room's own dividing line is drawn the same way a freestanding wall is (same
@@ -125,19 +111,7 @@ function bindStage(){
     if(mergeSel.value.size!==2) return;
     openFloorMergeMenu([...mergeSel.value], e.clientX, e.clientY);
   });
-  cv.addEventListener('wheel', e=>{
-    e.preventDefault();
-    const now = performance.now();
-    const dt = wheelState.last ? Math.max(1, now-wheelState.last) : 100;
-    wheelState.last = now;
-    // deltaMode 1 = DOM_DELTA_LINE (mouse wheel notches, chunky); 0 = DOM_DELTA_PIXEL (trackpad, many small events)
-    const norm = e.deltaMode===1 ? e.deltaY*16 : e.deltaY;
-    const velocity = Math.abs(norm)/dt;
-    const accel = Math.min(4, 1+velocity*ZOOM_ACCEL_K);
-    const speed = S.zoomSpeed||1;
-    const magnitude = accel*speed*Math.min(3, Math.abs(norm)/4);
-    zoomAt(Math.pow(ZOOM_FACTOR, (norm<0?1:-1)*magnitude), e.offsetX, e.offsetY);
-  }, {passive:false});
+  cv.addEventListener('wheel', onCanvasWheel, {passive:false});
 
   $('modeSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setMode(b.dataset.mode); });
 

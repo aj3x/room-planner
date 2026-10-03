@@ -1,6 +1,6 @@
 /* The Measure tool's canvas half: which anchor is under the pointer, which
-   measurement is, the live preview, the readout bar, and the pointer entry
-   points the interaction region calls.
+   measurement is, the readout bar, and turning the tool on and off. Its
+   pointer and key handling is canvas/tools/measure.js.
 
    The arithmetic half is model/measures.js and the tool's state is the
    canvas/measure-state.js signals; this is what sits between them. The bar
@@ -8,13 +8,11 @@
    measurements (mountMeasureBar), so nothing here repaints it by hand.
 */
 import {$} from '../ui/modal.js';
-import {S, L, uid} from '../core/state.js';
+import {S, L} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {pointInPoly, ptSegDist} from '../core/geometry.js';
 import {cv, view, sx, sy, wx, wy} from './view.js';
-import {draw, scheduleDraw} from './draw.js';
-import {drag} from './interaction-state.js';
-import {measuresOf, anchorKey, measureObjs, anchorGeom} from '../model/measures.js';
+import {measuresOf, measureObjs, anchorGeom} from '../model/measures.js';
 import {measureOn, measureStart, measureSel, measureHover, measureHoverId, measureCursor} from './measure-state.js';
 import {measuresLayer} from './layers/measures.js';
 import {roomSel, sel} from '../core/selection.js';
@@ -91,26 +89,6 @@ function removeMeasure(id){
     measureHoverId.value = null;
   }, {history:false});
 }
-function measurePointerDown(px,py){
-  const t=measureTargetAt(px,py);
-  if(t && t.id){ measureSel.value = t.id; draw(); return; }
-  measureSel.value = null;
-  if(t && t.a){
-    if(!measureStart.value) measureStart.value = t.a;
-    else if(anchorKey(t.a)!==anchorKey(measureStart.value)){
-      transact('room', ()=>{ measuresOf().push({id:uid(), a:measureStart.value, b:t.a}); measureStart.value = null; }, {history:false});
-    }
-  } else drag.value = {mode:'pan', px, py, ox:view.ox, oy:view.oy};
-  draw();
-}
-function measureHoverAt(px,py){
-  measureCursor.value = [wx(px),wy(py)];
-  const t=measureTargetAt(px,py);
-  measureHover.value = t&&t.a || null;
-  measureHoverId.value = t&&t.id || null;
-  cv.style.cursor = t ? 'pointer' : '';
-  scheduleDraw();
-}
 
 
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */
@@ -130,4 +108,4 @@ function setMeasure(on){
 function mountMeasureBar(){
   mountPanel(null, () => { rev.room.value; rev.project.value; measureOn.value; measureStart.value; measureSel.value; }, renderMeasureBar);
 }
-export {mountMeasureBar, measurePick, pickMeasure, measureTargetAt, liveMeasures, renderMeasureBar, resetMeasureState, removeMeasure, measurePointerDown, measureHoverAt, setMeasure};
+export {mountMeasureBar, measurePick, pickMeasure, measureTargetAt, liveMeasures, renderMeasureBar, resetMeasureState, removeMeasure, setMeasure};

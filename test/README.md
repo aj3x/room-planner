@@ -158,7 +158,7 @@ knows what they are inheriting.
   the refactor. The blueprint golden covers geometry, which is what a refactor
   actually breaks.
 - **Most pointer interaction.** `'rot'`, `'wall'`, `'open'`, `'pillar'` and
-  `'iwall'` drag modes, edge auto-pan, `cancelDrag()`, touch and pen, the
+  `'iwall'` drag modes, edge auto-pan, Escape mid-drag, touch and pen, the
   marquee, and the magnet against a non-rectangular room.
 - **The marketplace.** `subscribeMarket` and its refusals, `ensureDefaultMarket`,
   `loadRegistry`, `fetchJSON`'s timeout, both caches. Nothing here reaches the
