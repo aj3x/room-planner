@@ -10,7 +10,7 @@ import {anchorKey, measuresOf} from '../../model/measures.js';
 import {mo} from '../../ui/modal.js';
 import {draw, scheduleDraw} from '../draw.js';
 import {measureCursor, measureHover, measureHoverId, measureOn, measureSel, measureStart} from '../measure-state.js';
-import {measureTargetAt, removeMeasure, setMeasure} from '../measure-tool.js';
+import {measureTargetAt, removeMeasure, resetMeasureState, setMeasure} from '../measure-tool.js';
 import {cv, wx, wy} from '../view.js';
 import {startPan} from './pan.js';
 
@@ -57,6 +57,9 @@ const measureTool = {
   active: () => measureOn.value,
   onDown: measureDown, onHover: measureHoverAt, onLeave: measureLeave, onKey: measureKey,
   stop(){ setMeasure(false); },
+  /* measurements belong to one room, so Floor mode and the Library places leave the tool behind */
+  modes: ['room', 'furniture'],
+  reset: resetMeasureState,
 };
 
 export {measureTool};

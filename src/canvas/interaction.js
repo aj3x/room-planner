@@ -26,6 +26,14 @@
    - stop(): turn the tool off, for one that is switched on and off (the
      drawing tools, Measure). Its start command calls stopOtherTools(id)
      first, so only one such tool is ever on.
+   - modes: the canvas modes a switched-on tool may stay on in; setMode()
+     stops it on the way to any other (stopToolsFor). Without it, the tool
+     survives a mode change.
+   - reset(): forget what the tool picked in the room being left;
+     activateLayout calls every tool's (resetTools).
+   Code outside the tools never names one: it asks for all of a kind to
+   stop (stopOtherTools, stopDrawing, stopToolsFor) or reset (resetTools),
+   so a new tool needs no edit to the commands that end one.
 
    Tools are registered by setupCanvas() from boot(), never at import time;
    adding one is a module and a line there. The listeners are registered in
@@ -46,11 +54,24 @@ function activeTool(){
   for(const t of tools) if(t.active()) return t;
   return null;
 }
+/* Stop every tool that is on and can be stopped, except the ones `keep`
+   holds on to. */
+function stopTools(keep){
+  for(const t of tools) if(t.stop && t.active() && !keep(t)) t.stop();
+}
 /* Turning one tool on turns every other live one off: each start command
-   calls this with its own tool's id, and every other tool that is on and
-   can be stopped is. So a new tool needs no edit to the existing ones. */
-function stopOtherTools(id){
-  for(const t of tools) if(t.id!==id && t.stop && t.active()) t.stop();
+   calls this with its own tool's id. So a new tool needs no edit to the
+   existing ones. */
+function stopOtherTools(id){ stopTools(t => t.id===id); }
+/* Drop whatever is half drawn (an outline, a wall, a divider: the tools
+   with onCursor), before a command that edits the room directly. */
+function stopDrawing(){ stopTools(t => !t.onCursor); }
+/* Entering mode `m`: stop each tool that declares the modes it can stay on
+   in, and `m` is not one of them. */
+function stopToolsFor(m){ stopTools(t => !t.modes || t.modes.includes(m)); }
+/* A different room became the active one. */
+function resetTools(){
+  for(const t of tools) if(t.reset) t.reset();
 }
 
 let captured=null;   // the tool holding the pointer, between its press and release
@@ -148,6 +169,6 @@ function onCanvasWheel(e){
   zoomAt(Math.pow(ZOOM_FACTOR, (norm<0?1:-1)*magnitude), e.offsetX, e.offsetY);
 }
 
-export {registerTool, activeTool, stopOtherTools, isGesturing, gestureTool, cancelGesture, onCanvasKey,
+export {registerTool, activeTool, stopOtherTools, stopDrawing, stopToolsFor, resetTools, isGesturing, gestureTool, cancelGesture, onCanvasKey,
         onCanvasPointerDown, onCanvasPointerMove, onCanvasMouseMove, onCanvasPointerUp,
         onCanvasPointerLeave, onCanvasWheel, edgePanVel, edgePanTick};

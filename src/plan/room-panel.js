@@ -31,9 +31,7 @@ import {askConfirm} from '../ui/modal.js';
 import {plural} from '../ui/panels.js';
 import {openingDialog} from './opening-dialog.js';
 
-import {drawState, wallDrawState} from '../canvas/interaction-state.js';
-import {cancelCustomDraw} from '../canvas/room-draw.js';
-import {cancelWallDraw} from '../canvas/wall-draw.js';
+import {stopDrawing} from '../canvas/interaction.js';
 import {centroid} from '../core/geometry.js';
 import {uid} from '../core/state.js';
 import {unitWord} from '../core/units.js';
@@ -359,10 +357,8 @@ function renderOpeningProps(){
   $('oDel').addEventListener('click',()=>deleteOpening(o.id));
 }
 
-/* ---- Phase 3: the rest of this file's region, move-only. ---- */
 function addPillar(){
-  if(wallDrawState.value) cancelWallDraw();
-  if(drawState.value) cancelCustomDraw();
+  stopDrawing();
   if(!roomMode()) setMode('room');
   const b=bbox(RP()), c=centroid(RP())||[(b.x0+b.x1)/2,(b.y0+b.y1)/2];
   const pl={id:uid(), x:c[0], y:c[1], rot:0, shape:{type:'rect',w:300,d:300}};

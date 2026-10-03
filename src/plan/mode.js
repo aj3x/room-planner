@@ -13,9 +13,8 @@
    modal.js <-> panels.js cycle -- the boot failure that reverted togglePane.
    Nothing in ui/ imports plan/, so here it costs nothing.
 */
-import {measureOn} from '../canvas/measure-state.js';
-import {resetMeasureState} from '../canvas/measure-tool.js';
 import {fit, resize} from '../canvas/camera.js';
+import {stopToolsFor} from '../canvas/interaction.js';
 import {floorEntry, histAvail, histRev} from '../core/history.js';
 import {selectClear, alignGuides, alignNote, floorGuides, floorSel, floorSnapNote, roomSel} from '../core/selection.js';
 import {batch, pref, rev} from '../core/signals.js';
@@ -43,8 +42,7 @@ function setMode(m){
     else if(m==='floor'){ selectClear(); roomSel.value = null; floorSel.value = L().floorId ? L().id : null; floorEntry(); }
     if(m!=='floor'){ floorGuides.value = []; floorSnapNote.value = ''; }
     alignGuides.value = []; alignNote.value = '';
-    /* measurements belong to one room, so Floor mode leaves the tool behind too */
-    if((!isCanvasMode(m) || m==='floor') && measureOn.value){ measureOn.value = false; resetMeasureState(); }
+    stopToolsFor(m);
   });
   applyLayoutMode();
   if(isCanvasMode(m)){

@@ -18,7 +18,7 @@ import {mergeSel, treeOpen, floorSel, roomSel, sel, treeExpand, treeCollapse} fr
 import {curFloorId} from '../core/history.js';
 import {inlineEdit} from '../ui/inline-edit.js';
 import {transact} from '../core/tx.js';
-import {resetMeasureState} from '../canvas/measure-tool.js';
+import {resetTools} from '../canvas/interaction.js';
 import {seedHistFor} from '../core/history.js';
 
 import {L} from '../core/state.js';
@@ -108,7 +108,7 @@ function renameFloor(id){
    switching between rooms in the SAME folder leaves whatever filter the person set alone */
 function activateLayout(id){
   S.active=id; sel.value = null; roomSel.value = null; floorSel.value = null;
-  resetMeasureState();
+  resetTools();
   seedHistFor();
   const fid = L() ? (L().folderId||null) : null;
   if(fid !== S.lastFolderId){ S.tagFilter = (folderOf(fid)?.tags||[]).slice(); S.untaggedOnly=false; }
