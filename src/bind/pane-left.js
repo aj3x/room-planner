@@ -36,7 +36,7 @@ import { KIND } from '../model/openings.js';
 import { invBox, placeItem, renameItem, itemMenu, dragInv, setDragInv } from '../plan/item-list.js';
 import { itemDialog } from '../plan/item-dialog.js';
 import { openingDialog } from '../plan/opening-dialog.js';
-import { bpUploadDialog } from '../blueprint/step1-upload.js';
+import { bpUploadDialog } from '../blueprint/flow.js';
 
 function bindPaneLeft(){
   treeBox.addEventListener('click', e=>{

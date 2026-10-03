@@ -1,11 +1,11 @@
 import {$, moError, openModal} from '../ui/modal.js';
 import {bpFitCanvas, bpLoadImage} from './image.js';
 import {bpDispose, bpPasteFn, bpState, bpUnbindPaste, setBpPasteFn, setBpState} from './state.js';
-import {bpCropDialog} from './step2-crop.js';
 import {bpStepperHTML} from './wizard.js';
 
-/* ---- blueprint: step 1, upload ---- */
-function bpUploadDialog(keep, targetFloorId){
+/* ---- blueprint: step 1, upload ----
+   `to.next()` moves on to the crop (see flow.js). */
+function bpUploadStage(keep, targetFloorId, to){
   if(!keep) bpDispose();
   if(!bpState) setBpState({file:null,img:null,url:null,full:null,crop:null,cropRect:null,work:null,
                         proposal:null,detectedFor:null,edits:null,draft:null,cal:null,worker:null,
@@ -19,16 +19,16 @@ function bpUploadDialog(keep, targetFloorId){
     ()=>{
       if(!bpState||!bpState.full){ moError('Choose a photo first'); return false; }
       bpUnbindPaste();
-      bpCropDialog(targetFloorId);
+      to.next();
       return false;
     },
-    ()=>bpMountUpload(targetFloorId),
+    ()=>bpMountUpload(to),
     {onClose:bpDispose, stepper:bpStepperHTML(0)});
   /* choosing a photo is itself the confirmation — Continue only exists as a keyboard
      fallback once a photo is picked, so it stays out of the way until then */
   $('moOk').hidden=true;
 }
-function bpMountUpload(targetFloorId){
+function bpMountUpload(to){
   const drop=$('bpDrop'), file=$('bpFile'), status=$('bpStatus');
   const take=f=>{
     status.textContent='Reading the photo…';
@@ -38,7 +38,7 @@ function bpMountUpload(targetFloorId){
       bpState.full=bpFitCanvas(r.img, 2400);
       bpState.crop=null; bpState.proposal=null; bpState.detectedFor=null;
       bpUnbindPaste();
-      bpCropDialog(targetFloorId);
+      to.next();
     }).catch(()=>{ status.textContent="That file isn't an image the browser can open."; });
   };
   file.addEventListener('change', ()=>{ if(file.files[0]) take(file.files[0]); });
@@ -57,4 +57,4 @@ function bpMountUpload(targetFloorId){
   document.addEventListener('paste', bpPasteFn);
 }
 
-export {bpUploadDialog, bpMountUpload};
+export {bpUploadStage, bpMountUpload};

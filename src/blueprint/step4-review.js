@@ -10,13 +10,13 @@ import {bpCommit} from './commit.js';
 import {bpRebuild, bpScaleMm} from './draft.js';
 import {BP_DEBUG_MASKS, bpDebugMaskArr, bpDebugOn} from './mask-viewer.js';
 import {bpDispose, bpState} from './state.js';
-import {bpScaleDialog} from './step3-scale.js';
 import {bpStepperHTML} from './wizard.js';
 
 /* ---- blueprint: step 4, review ----
    Detection will be wrong somewhere. This is the screen that makes that survivable,
-   so everything it found is listed, named and removable before anything is created. */
-function bpReviewDialog(targetFloorId){
+   so everything it found is listed, named and removable before anything is created.
+   `to.back()` returns to the scale (see flow.js). */
+function bpReviewStage(targetFloorId, to){
   const st=bpState;
   st.draft=bpRebuild();
   if(!st.reviewTab) st.reviewTab='rooms';
@@ -26,7 +26,7 @@ function bpReviewDialog(targetFloorId){
       <div id="bpSide"></div>
     </div>`,
     'Import to plan', bpCommit, ()=>bpMountReview(),
-    {xwide:true, onClose:bpDispose, onBack:()=>bpScaleDialog(targetFloorId), stepper:bpStepperHTML(3)});
+    {xwide:true, onClose:bpDispose, onBack:to.back, stepper:bpStepperHTML(3)});
   bpRenderReview();
 }
 function bpMountReview(){
@@ -288,4 +288,4 @@ function bpDrawReview(){
   }
 }
 
-export {bpReviewDialog, bpMountReview, bpRenderReview, bpDebugListHTML, bpBindDebug, bpOpenListHTML, bpBindOpens, bpBindReview, bpMountReviewStage, bpDrawReview};
+export {bpReviewStage, bpMountReview, bpRenderReview, bpDebugListHTML, bpBindDebug, bpOpenListHTML, bpBindOpens, bpBindReview, bpMountReviewStage, bpDrawReview};

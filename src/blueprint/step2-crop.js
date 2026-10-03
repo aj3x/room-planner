@@ -3,14 +3,13 @@ import {$, moError, openModal} from '../ui/modal.js';
 import {bpCropCanvas, bpFitCanvas, bpLoadImage} from './image.js';
 import {bpAutoCropRect} from './pixels.js';
 import {bpClamp, bpDispose, bpState, bpUnbindPaste} from './state.js';
-import {bpUploadDialog} from './step1-upload.js';
-import {bpScaleDialog} from './step3-scale.js';
 import {bpStepperHTML} from './wizard.js';
 
 /* ---- blueprint: step 2, crop ----
    The box starts drawn at a small inset rather than empty: a box you adjust reads as
-   an invitation, an empty canvas reads as a puzzle. */
-function bpCropDialog(targetFloorId){
+   an invitation, an empty canvas reads as a puzzle. `to` holds the stages either
+   side (see flow.js). */
+function bpCropStage(targetFloorId, to){
   bpUnbindPaste();
   openModal('Import a blueprint', `
     <div class="bp-stage" id="bpCropWrap"><canvas id="bpCrop"></canvas></div>
@@ -22,7 +21,7 @@ function bpCropDialog(targetFloorId){
     ()=>{
       bpState.cropRect = bpState.crop || {x:0,y:0,w:bpState.full.width,h:bpState.full.height};
       bpState.work = bpCropCanvas(bpState.full, bpState.cropRect);
-      bpScaleDialog(targetFloorId);
+      to.next();
       return false;
     },
     ()=>{
@@ -34,11 +33,11 @@ function bpCropDialog(targetFloorId){
           bpState.file=r.file; bpState.img=r.img; bpState.url=r.url;
           bpState.full=bpFitCanvas(r.img, 2400);
           bpState.crop=null; bpState.proposal=null; bpState.detectedFor=null;
-          bpCropDialog(targetFloorId);
+          bpCropStage(targetFloorId, to);
         }).catch(()=>moError("That file isn't an image the browser can open."));
       });
     },
-    {xwide:true, onClose:bpDispose, onBack:()=>bpUploadDialog(true, targetFloorId), stepper:bpStepperHTML(1)});
+    {xwide:true, onClose:bpDispose, onBack:to.back, stepper:bpStepperHTML(1)});
 }
 function bpMountCropStage(){
   const old=$('bpCrop');
@@ -125,4 +124,4 @@ function bpMountCropStage(){
   paint();
 }
 
-export {bpCropDialog, bpMountCropStage};
+export {bpCropStage, bpMountCropStage};

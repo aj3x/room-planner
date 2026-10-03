@@ -6,16 +6,15 @@ import {esc, plural} from '../ui/panels.js';
 import {bpAnalyse} from './detect.js';
 import {bpEffExtWall, bpEffWall, bpRebuild, bpScaleSanity, bpScaleXY} from './draft.js';
 import {bpDispose, bpRunSeq, bpState, setBpRunSeq} from './state.js';
-import {bpCropDialog} from './step2-crop.js';
-import {bpReviewDialog} from './step4-review.js';
 import {bpStepperHTML} from './wizard.js';
 
 /* ---- blueprint: step 3, scale ----
    Detection runs entirely in pixel space (bpAnalyse never needs a real-world unit),
    so this step doesn't gate detection — it's the calibration and wall-thickness tool
-   that used to be stranded at the top of the review screen, given its own screen. */
+   that used to be stranded at the top of the review screen, given its own screen.
+   `to` holds the stages either side (see flow.js). */
 const BP_STEPS=[['walls','Reading the walls'],['rooms','Finding the rooms'],['text','Reading the text on the plan']];
-function bpScaleDialog(targetFloorId){
+function bpScaleStage(targetFloorId, to){
   const st=bpState, ready=!!st.proposal;
   openModal('Import a blueprint',
     ready ? `<div class="bp-review">
@@ -25,12 +24,12 @@ function bpScaleDialog(targetFloorId){
       ${BP_STEPS.map(s=>`<li data-step="${s[0]}">${svgI('check')}<span>${esc(s[1])}</span></li>`).join('')}
     </ul>`,
     'Generate layout',
-    ()=>{ if(!st.edits||!st.edits.scale) return false; bpReviewDialog(targetFloorId); return false; },
-    ()=>{ if(ready) bpMountScale(); else bpRunDetection(targetFloorId); },
-    {xwide:true, onClose:bpDispose, onBack:()=>{ setBpRunSeq(bpRunSeq+1); bpCropDialog(targetFloorId); }, stepper:bpStepperHTML(2)});
+    ()=>{ if(!st.edits||!st.edits.scale) return false; to.next(); return false; },
+    ()=>{ if(ready) bpMountScale(); else bpRunDetection(targetFloorId, to); },
+    {xwide:true, onClose:bpDispose, onBack:()=>{ setBpRunSeq(bpRunSeq+1); to.back(); }, stepper:bpStepperHTML(2)});
   $('moOk').disabled = !ready || !st.edits.scale;
 }
-function bpRunDetection(targetFloorId){
+function bpRunDetection(targetFloorId, to){
   $('moOk').disabled=true;
   const runId=setBpRunSeq(bpRunSeq+1);
   bpState.runId=runId;
@@ -55,7 +54,7 @@ function bpRunDetection(targetFloorId){
     for(const r of p.regions) bpState.edits.spaces[r.id]=
       {name:r.ocrName||'', kind:'room', touched:false, dimText:r.ocrDimText||''};
     bpState.cal=null;
-    bpScaleDialog(targetFloorId);
+    bpScaleStage(targetFloorId, to);
   });
 }
 function bpMountScale(){
@@ -232,4 +231,4 @@ function bpDrawScale(){
   if(c&&c.a) seg(c.a, c.b, null);
 }
 
-export {BP_STEPS, bpScaleDialog, bpRunDetection, bpMountScale, bpMeasurements, bpAxesDone, bpCalMsg, bpRenderScaleSide, bpBindScaleSide, bpDrawScale};
+export {BP_STEPS, bpScaleStage, bpRunDetection, bpMountScale, bpMeasurements, bpAxesDone, bpCalMsg, bpRenderScaleSide, bpBindScaleSide, bpDrawScale};

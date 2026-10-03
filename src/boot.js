@@ -1,5 +1,5 @@
 import {bpLastImport, bpUndoImport} from './blueprint/commit.js';
-import {bpUploadDialog} from './blueprint/step1-upload.js';
+import {bpUploadDialog} from './blueprint/flow.js';
 import {mountCanvas} from './canvas/draw.js';
 import {setupCanvas} from './canvas/setup.js';
 import {mountMeasureBar} from './canvas/measure-tool.js';
