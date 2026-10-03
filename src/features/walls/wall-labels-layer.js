@@ -1,3 +1,4 @@
+// @ts-check
 /* Each wall's length, set outside it along the wall, in accent when the
    wall is selected. */
 
@@ -26,6 +27,7 @@ function drawWallLabels(){
   }
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const wallLabelsLayer = {id:'wall-labels', z:100, scene:'room', deps(){ roomSel.value; }, draw(){ drawWallLabels(); }};
 
 export {wallLabelsLayer};

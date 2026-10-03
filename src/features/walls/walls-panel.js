@@ -1,3 +1,4 @@
+// @ts-check
 /* The room's walls and structures in the Room pane: the wall list, the
    structures list (pillars and interior walls), the Selection panel's view of
    a wall, a corner, a pillar or an interior wall, the wall dialog, and the
@@ -21,6 +22,8 @@ import {emptyRow, esc, plural} from '../../ui-kit/panels.js';
 import {setMode} from '../mode/index.js';
 import {openingDialog} from '../openings/index.js';
 
+/** @typedef {import('../../ui-kit/dom.js').FieldEvent} FieldEvent */
+
 function renderWalls(){
   const ul=$('wallList'), P=RP(), room=L().room;
   ul.innerHTML=P.map((_,i)=>{
@@ -34,6 +37,10 @@ function renderWalls(){
   }).join('');
   renderObstacles();
 }
+/* The render*Props below run only while something of their kind is picked
+   (the Selection panel chooses by roomSel.value.kind), so they read its i or
+   id through a cast. */
+/** @param {{w: number, d: number}} sh */
 const sizeLabelShape = sh => fmtLen(sh.w,S.unit)+' × '+fmtLen(sh.d,S.unit);
 function renderObstacles(){
   const ul=$('structList'), room=L().room;
@@ -51,12 +58,14 @@ function renderObstacles(){
   }).join('');
 }
 
+/** @param {string} id */
 function deletePillar(id){
   transact('room', ()=>{
     L().room.pillars=L().room.pillars.filter(p=>p.id!==id);
     if(roomSel.value&&roomSel.value.kind==='pillar'&&roomSel.value.id===id) roomSel.value = null;
   });
 }
+/** @param {string} id */
 function deleteIWall(id){
   transact('room', ()=>{
     L().room.iwalls=L().room.iwalls.filter(w=>w.id!==id);
@@ -65,7 +74,7 @@ function deleteIWall(id){
 }
 
 function renderWallProps(){
-  const i=roomSel.value.i, w=wallOf(i), room=L().room, off=wallIsOff(room,i);
+  const i=/** @type {{i: number}} */(roomSel.value).i, w=wallOf(i), room=L().room, off=wallIsOff(room,i);
   $('roomSelTitle').textContent='Wall '+(i+1);
   $('roomSelBox').innerHTML=`
     <div class="field"><label for="wLen">Length</label><input type="text" class="len" id="wLen" value="${esc(fmtLen(w.len,S.unit))}"></div>
@@ -78,11 +87,11 @@ function renderWallProps(){
       <button class="btn sm ${off?'':'danger'}" id="wOff">${off?'Put the wall back':'Open this side'}</button>
     </div>`;
   $('wOff').addEventListener('click',()=>toggleWallOff(i));
-  $('wLen').addEventListener('change', e=>{
+  $('wLen').addEventListener('change', (/** @type {FieldEvent} */e)=>{
     const v=parseLen(e.target.value,S.unit);
     transact('room', ()=>{ if(isFinite(v)&&v>=100) setWallLen(i,v); else flash('Give the wall a length'); });
   });
-  $('wAng').addEventListener('change', e=>{
+  $('wAng').addEventListener('change', (/** @type {FieldEvent} */e)=>{
     const v=parseFloat(e.target.value);
     transact('room', ()=>{ if(isFinite(v)) setWallAngle(i,v); });
   });
@@ -93,7 +102,7 @@ function renderWallProps(){
   $('wSplit').addEventListener('click',()=>splitWall(i));
 }
 function renderCornerProps(){
-  const i=roomSel.value.i, P=RP(), p=P[i], b=bbox(P);
+  const i=/** @type {{i: number}} */(roomSel.value).i, P=RP(), p=P[i], b=bbox(P);
   if(!p) return false;   // the corner went away under the selection
   $('roomSelTitle').textContent='Corner '+(i+1);
   $('roomSelBox').innerHTML=`
@@ -113,17 +122,18 @@ function renderCornerProps(){
 /* Taking a wall away takes its doors and windows with it — there is nothing left for
    them to sit in. It is all one room transaction, so one undo brings the wall and
    everything that was in it back together. */
+/** @param {number} i */
 function toggleWallOff(i){
   const l=L(), room=l.room;
   syncWallOff(room);
   if(wallIsOff(room,i)){
-    transact('room', ()=>{ room.wallOff[i]=false; });
+    transact('room', ()=>{ /** @type {boolean[]} */(room.wallOff)[i]=false; });
     return;
   }
   const inWall=l.openings.filter(o=>o.wall===i);
   const apply=()=>{
     transact('room', ()=>{
-      room.wallOff[i]=true;
+      /** @type {boolean[]} */(room.wallOff)[i]=true;
       if(inWall.length) l.openings=l.openings.filter(o=>o.wall!==i);
     });
   };
@@ -134,7 +144,7 @@ function toggleWallOff(i){
 }
 
 function renderPillarProps(){
-  const pl=pillarOf(roomSel.value.id);
+  const pl=pillarOf(/** @type {{id: string}} */(roomSel.value).id);
   if(!pl) return false;
   $('roomSelTitle').textContent='Pillar';
   $('roomSelBox').innerHTML=`
@@ -163,7 +173,7 @@ function renderPillarProps(){
   $('plDel').addEventListener('click',()=>deletePillar(pl.id));
 }
 function renderIWallProps(){
-  const w=iwallOf(roomSel.value.id);
+  const w=iwallOf(/** @type {{id: string}} */(roomSel.value).id);
   if(!w) return false;
   const na=nearestOnWalls(w.a), nb=nearestOnWalls(w.b);
   $('roomSelTitle').textContent='Interior wall';
@@ -175,23 +185,23 @@ function renderIWallProps(){
     <div class="field"><label for="iwDB" title="Gap from end B to wall ${nb?nb.i+1:'-'}">End B gap</label><input type="text" class="len" id="iwDB" value="${esc(fmtLen(nb?nb.d:0,S.unit))}" ${nb?'':'disabled'}></div>
     <p class="hint">Gaps are measured to wall ${na?na.i+1:'-'} and wall ${nb?nb.i+1:'-'}. Drag an end to resize or snap it; drag the middle to move it. Shift keeps it straight.</p>
     <div class="row actions"><button class="btn sm danger" id="iwDel">Remove wall</button></div>`;
-  $('iwLen').addEventListener('change', e=>{
+  $('iwLen').addEventListener('change', (/** @type {FieldEvent} */e)=>{
     const v=parseLen(e.target.value,S.unit);
     transact('room', ()=>{ if(isFinite(v)&&v>=50) setIWallLen(w,v); else flash('Give the wall a length'); });
   });
-  $('iwAng').addEventListener('change', e=>{
+  $('iwAng').addEventListener('change', (/** @type {FieldEvent} */e)=>{
     const v=parseFloat(e.target.value);
     transact('room', ()=>{ if(isFinite(v)) setIWallAngle(w,v); });
   });
-  $('iwT').addEventListener('change', e=>{
+  $('iwT').addEventListener('change', (/** @type {FieldEvent} */e)=>{
     const v=parseLen(e.target.value,S.unit);
     transact('room', ()=>{ if(isFinite(v)&&v>=10) w.t=v; else flash('Give the wall a thickness'); });
   });
-  $('iwDA').addEventListener('change', e=>{
+  $('iwDA').addEventListener('change', (/** @type {FieldEvent} */e)=>{
     const v=parseLen(e.target.value,S.unit);
     transact('room', ()=>{ if(isFinite(v)&&v>=0) setIWallEndDist(w,'a',v); });
   });
-  $('iwDB').addEventListener('change', e=>{
+  $('iwDB').addEventListener('change', (/** @type {FieldEvent} */e)=>{
     const v=parseLen(e.target.value,S.unit);
     transact('room', ()=>{ if(isFinite(v)&&v>=0) setIWallEndDist(w,'b',v); });
   });
@@ -212,6 +222,7 @@ function addPillar(){
 
 /* double-clicking a wall — in the plan or in the wall list — types its length in.
    Same two values as the Selected panel, just close to hand while you are in the plan. */
+/** @param {number} i */
 function wallDialog(i){
   if(!roomMode()) setMode('room');
   const P=RP();

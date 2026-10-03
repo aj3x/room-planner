@@ -1,3 +1,4 @@
+// @ts-check
 /* Splitting a room in two: a click on the room's wall starts the cut,
    clicks inside bend it, a click on another wall finishes it (and opens
    the solid/open choice). Points land on the same magnet as a corner drag,
@@ -12,9 +13,10 @@ import {flash} from '../../ui-kit/flash.js';
 import {draw, scheduleDraw, drawCursor, splitDrawState, wallDrawShift, PAL, drawSquareTick, snapWallPoint, ctx, sx, sy, wx, wy} from '../canvas/index.js';
 import {boundaryHit, cancelSplitDraw, splitCornerRef, splitResolvePoint, trySplitLine} from './split-room.js';
 
+/** @type {import('../canvas/types.js').Tool['onDown']} */
 function splitDown(e,px,py){
   const raw0=[wx(px),wy(py)];
-  const pts=splitDrawState.value.pts;
+  const pts=/** @type {{pts: any[]}} */(splitDrawState.value).pts;   // on: active() holds
   const resolved=splitResolvePoint(raw0, e.shiftKey);
   const snapped=snapWallPoint(resolved.pt,null,!e.altKey);
   const hit=boundaryHit(snapped);
@@ -37,12 +39,14 @@ function showGuides(){
   const resolved=splitResolvePoint(drawCursor.value, wallDrawShift.value);
   alignGuides.value = resolved.guides; alignNote.value = resolved.note;
 }
+/** @type {NonNullable<import('../canvas/types.js').Tool['onCursor']>} */
 function splitCursor(px,py,mods){
   drawCursor.value = [wx(px),wy(py)];
   wallDrawShift.value = mods.shiftKey;
   showGuides();
   scheduleDraw();
 }
+/** @type {NonNullable<import('../canvas/types.js').Tool['onKey']>} */
 function splitKey(e){
   if(e.key==='Escape') cancelSplitDraw();
   return true;
@@ -79,12 +83,14 @@ function drawSplitOverlay(){
   ctx.restore();
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const splitOverlay = {
   id:'split', z:160, scene:'room',
   deps(){ splitDrawState.value; drawCursor.value; wallDrawShift.value; },
   draw(){ drawSplitOverlay(); }
 };
 
+/** @satisfies {import('../canvas/types.js').Tool} */
 const splitTool = {
   id:'split',
   active: () => !!splitDrawState.value,

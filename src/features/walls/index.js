@@ -1,3 +1,4 @@
+// @ts-check
 /* The room's walls, corners, pillars and interior walls: their lists and
    Selection panel views, the wall dialog, drawing an interior wall, and
    their layers.

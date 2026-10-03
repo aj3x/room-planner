@@ -1,3 +1,4 @@
+// @ts-check
 /* The room's doors and windows in the Room pane: the list, the Selection
    panel's view of one (called by room-panel.js's renderRoomSel; false when
    it has gone), and deleting one. The list is an effect (mountOpeningList). */
@@ -24,6 +25,7 @@ function renderOpen(){
   }).join('');
 }
 
+/** @param {string} id */
 function deleteOpening(id){
   transact('room', ()=>{
     L().openings=L().openings.filter(o=>o.id!==id);
@@ -31,7 +33,7 @@ function deleteOpening(id){
   });
 }
 function renderOpeningProps(){
-  const o=openOf(roomSel.value.id);
+  const o=openOf(/** @type {{id: string}} */(roomSel.value).id);   // an opening is selected
   if(!o) return false;
   const len=wallOf(o.wall).len;
   o.corner = o.corner==='ccw' ? 'ccw' : 'cw';

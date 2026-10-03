@@ -1,3 +1,4 @@
+// @ts-check
 /* What the page is showing: the mode (setMode) and the active room
    (activateLayout), and the two views that follow the mode: the header and
    canvas mode buttons (renderMode, plus which half of the page is showing),
@@ -31,7 +32,9 @@ function syncModeParam(){
 }
 
 let pendingFit=false;
+/** @param {boolean} v */
 function setPendingFit(v){ pendingFit = v; }
+/** @param {import('../../kernel/types.js').Mode} m */
 function setMode(m){
   batch(()=>{
     transact('prefs', ()=>{ S.mode=m; if(isCanvasMode(m)) S.planMode=m; });
@@ -52,6 +55,7 @@ function setMode(m){
 }
 /* switching into a room under a DIFFERENT folder re-applies that folder's tag filter;
    switching between rooms in the SAME folder leaves whatever filter the person set alone */
+/** @param {string} id */
 function activateLayout(id){
   S.active=id; sel.value = null; roomSel.value = null; floorSel.value = null;
   resetTools();
@@ -74,7 +78,7 @@ function renderMode(){
 /* ------------------------- boot ------------------------- */
 function applyLayoutMode(){
   const lib = !isCanvasMode(S.mode);
-  document.querySelector('main').style.display = lib ? 'none' : '';
+  /** @type {HTMLElement} */(document.querySelector('main')).style.display = lib ? 'none' : '';
   $('paneLibrary').classList.toggle('on', lib);
   if(!lib) applyPanes();
 }
@@ -90,6 +94,7 @@ function mountMode(){
   mountPanel(null, () => { histRev.value; pref('mode'); rev.project.value; rev.floor.value; }, renderHistButtons);
 }
 
+/** @param {'left'|'right'} side */
 function togglePane(side){
   if(!wideLayout()) return;
   transact('prefs', ()=>{ if(side==='left') S.leftOpen=!S.leftOpen; else S.rightOpen=!S.rightOpen; }, {canvas:false});   // resize() redraws

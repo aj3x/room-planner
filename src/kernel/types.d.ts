@@ -50,10 +50,11 @@ export interface Item {
   count: number;
   /** derived: manualTags plus what the item's Library folder ancestry contributes */
   tags: string[];
-  manualTags: string[];
+  /** absent on an item fresh from a file (normItem leaves it); migrate() fills it on load */
+  manualTags?: string[];
   open: OpenSpec | null;
-  /** the Library folder (S.itemFolders) this item is filed under */
-  folderId: string | null;
+  /** the Library folder (S.itemFolders) this item is filed under; absent as manualTags is */
+  folderId?: string | null;
 }
 
 /** An item standing in a room. */
@@ -166,6 +167,8 @@ export interface MarketSub {
   version: number;
   itemURL: string;
   addedAt?: number;
+  /** the built-in default marketplace, which removing dismisses for good */
+  isDefault?: boolean;
 }
 
 /* ---- the document ---- */
@@ -190,8 +193,8 @@ export interface State {
   planMode: CanvasMode;
   inventory: Item[];
   layouts: Layout[];
-  /** the active layout's id */
-  active: string | null;
+  /** the active layout's id; migrate() makes sure it names one */
+  active: string;
   folders: Folder[];
   floors: Floor[];
   tagFilter: string[];
@@ -211,6 +214,21 @@ export interface State {
   marketSubs: MarketSub[];
   defaultMarketDismissed: boolean;
   uiLib: {tab: string; libFolderId: string | null; marketFolderId: string | null};
+}
+
+/* ---- files ---- */
+
+/** What Export writes and Import reads: part of a project, any of it possibly empty,
+    plus the view settings when they were ticked (and the active room, if it went). */
+export interface ProjectFile extends Partial<Pick<State, 'unit' | 'snap' | 'showSwing' | 'showDims' | 'showOpen'
+    | 'showWalk' | 'showMeasure' | 'invScope' | 'onlyAvailable' | 'zoomSpeed' | 'active'>> {
+  app: string;
+  version: number;
+  exported: string;
+  folders: Folder[];
+  floors: Floor[];
+  layouts: Layout[];
+  inventory: Item[];
 }
 
 /* ---- transact() ---- */

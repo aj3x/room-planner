@@ -1,3 +1,4 @@
+// @ts-check
 /* Room mode's editing handles: the selected pillar, interior wall or wall
    picked out in accent, a square on every corner, a dot on every opening.
    Drawn over everything but the measurements and tool overlays. */
@@ -11,12 +12,12 @@ import {iwallPoly, wallOf} from '../../kernel/walls.js';
 
 function drawHandles(){
   const P=RP(), C=PAL(), r=L().room;
-  const pl=roomSel.value&&roomSel.value.kind==='pillar'&&r.pillars.find(q=>q.id===roomSel.value.id);
+  const pl=roomSel.value&&roomSel.value.kind==='pillar'&&r.pillars.find(q=>q.id===roomSel.value?.id);
   if(pl){
     pathPoly(worldPoly(pl,pl));
     ctx.lineWidth=2.5; ctx.strokeStyle=C.accent; ctx.stroke();
   }
-  const iw=roomSel.value&&roomSel.value.kind==='iwall'&&r.iwalls.find(q=>q.id===roomSel.value.id);
+  const iw=roomSel.value&&roomSel.value.kind==='iwall'&&r.iwalls.find(q=>q.id===roomSel.value?.id);
   if(iw){
     pathPoly(iwallPoly(iw));
     ctx.lineWidth=2.5; ctx.strokeStyle=C.accent; ctx.stroke();
@@ -44,6 +45,7 @@ function drawHandles(){
   }
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const roomHandlesLayer = {
   id:'room-handles', z:120, scene:'room',
   deps(){ roomSel.value; },

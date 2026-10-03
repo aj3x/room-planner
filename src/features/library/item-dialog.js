@@ -1,3 +1,4 @@
+// @ts-check
 /* The item editor: the same modal Furniture mode's "Add a thing" and the
    Library tab's edit both open. It commits through transact('lib'); the item
    list, the Selection panel and the Library grid are effects on that scope
@@ -20,9 +21,11 @@ import {mountTagField, tagFieldHTML, tagFieldValue} from '../../ui-kit/tag-input
 
 /* ------------------------- item dialog ------------------------- */
 let dlgColor=PALETTE[0];
+/** @param {import('../../kernel/types.js').Item|null|undefined} it @param {keyof import('../../kernel/types.js').OpenSpec} k */
 const openV = (it,k) => fmtLen((it&&it.open&&it.open[k])||0, S.unit);
+/** @param {string} type @param {import('../../kernel/types.js').Shape|null} sh the item's shape, when it is of this type */
 function shapeFieldHTML(type,sh){
-  const v=(k,def)=>fmtLen(sh&&sh[k]!==undefined?sh[k]:def,S.unit);
+  const v=(/** @type {string} */k,/** @type {number} */def)=>{ const r=/** @type {Record<string, number>|null} */(sh); return fmtLen(r&&r[k]!==undefined?r[k]:def,S.unit); };
   if(type==='poly'){
     const pts = sh&&sh.type==='poly'
       ? sh.points.map(p=>fmtLen(p[0],S.unit)+', '+fmtLen(p[1],S.unit)).join('\n')
@@ -43,6 +46,7 @@ function shapeFieldHTML(type,sh){
   return h;
 }
 
+/** Add an item (no id) or edit one. @param {string|null} [id] */
 function itemDialog(id){
   const it=id?itemOf(id):null;
   dlgColor = (it&&normHex(it.color)) || PALETTE[S.inventory.length%PALETTE.length];
@@ -87,23 +91,23 @@ function itemDialog(id){
     'Save',
     ()=>{
       const type=$('iShape').value;
+      /** @type {import('../../kernel/types.js').Shape} */
       let shape;
       if(type==='poly'){
-        const pts=$('pPts').value.split('\n').map(line=>{
+        const pts=$('pPts').value.split('\n').map((/** @type {string} */line)=>{
           const [a,b]=line.split(',');
           return [parseLen(a,S.unit), parseLen(b,S.unit)];
-        }).filter(p=>isFinite(p[0])&&isFinite(p[1]));
+        }).filter((/** @type {number[]} */p)=>isFinite(p[0])&&isFinite(p[1]));
         if(pts.length<3){ moError('An outline needs at least 3 corners'); return false; }
         shape={type:'poly', points:pts};
       } else {
         const w=parseLen($('fW').value,S.unit), d=parseLen($('fD').value,S.unit);
         if(!isFinite(w)||!isFinite(d)||w<=0||d<=0){ moError('Width and depth must be positive'); return false; }
-        shape={type,w,d};
-        if(type==='lshape'){
-          shape.cw=Math.max(1,Math.min(parseLen($('fCW').value,S.unit)||w/2, w-1));
-          shape.cd=Math.max(1,Math.min(parseLen($('fCD').value,S.unit)||d/2, d-1));
-          shape.corner=$('fCorner').value;
-        }
+        if(type==='lshape') shape={type,w,d,
+          cw:Math.max(1,Math.min(parseLen($('fCW').value,S.unit)||w/2, w-1)),
+          cd:Math.max(1,Math.min(parseLen($('fCD').value,S.unit)||d/2, d-1)),
+          corner:$('fCorner').value};
+        else shape={type,w,d};
       }
       const name=($('iName').value||'').trim()||'Untitled';
       const count=Math.max(1, Math.round(parseFloat($('iCount').value))||1);
@@ -118,13 +122,14 @@ function itemDialog(id){
       if(S.inventory.some(x=>x.id===newId && x.id!==id)){ $('iId').closest('details').open=true; moError('Another item already uses that id'); return false; }
       transact('lib', ()=>{
         if(id){
-          const cur=itemOf(id);
+          const cur=/** @type {import('../../kernel/types.js').Item} */(itemOf(id));   // editing one that exists, so it is there
           Object.assign(cur,{name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,open});
           applyTags(cur);
           retagItem(id,newId);
         }
         else {
-          const nit=/** @type {import('../../kernel/types.js').Item} */({id:newId,name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,folderId:(isCanvasMode(S.mode)?null:nav.libFolderId)||null,open});   // tags: applyTags, next line
+          /** @type {import('../../kernel/types.js').Item} */
+          const nit={id:newId,name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,folderId:(isCanvasMode(S.mode)?null:nav.libFolderId)||null,open,tags:[]};   // tags: applyTags fills them, next line
           applyTags(nit);
           S.inventory.push(nit);
           // an untouched id is filed under the folder it was created in, same as moving it there
@@ -149,7 +154,7 @@ function itemDialog(id){
         pick.value=dlgColor;
       };
       const paint=()=>{ syncSw(); hx.value=dlgColor; hx.classList.remove('bad'); };
-      sw.addEventListener('click',e=>{ const b=e.target.closest('button'); if(b){ dlgColor=b.dataset.c; paint(); } });
+      sw.addEventListener('click',(/** @type {MouseEvent} */e)=>{ const b=/** @type {Element} */(e.target).closest('button'); if(b){ dlgColor=/** @type {string} */(b.dataset.c); paint(); } });
       pick.addEventListener('input',()=>{ dlgColor=normHex(pick.value)||dlgColor; paint(); });
       hx.addEventListener('input',()=>{ const c=normHex(hx.value); hx.classList.toggle('bad',!c); if(c){ dlgColor=c; syncSw(); } });
       hx.addEventListener('change',paint);

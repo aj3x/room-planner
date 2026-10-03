@@ -1,3 +1,4 @@
+// @ts-check
 import {fit} from '../canvas/index.js';
 import {floorHist, furnHist, histEntry, roomHist, snapFurn, snapRoom} from '../../kernel/history.js';
 import {normLayout} from '../../kernel/migrate.js';
@@ -15,13 +16,17 @@ import {bpDispose, bpState} from './state.js';
 /* ---- blueprint: commit ----
    A room that fails the polygon check is left out and named, never silently created
    broken and never blocking the rooms that are fine. */
+/** The last import, for "Undo this import": the floor, the rooms it made, the room active before, and whether the floor is new too.
+    @type {{floorId: string, layoutIds: string[], prevActive: string, createdFloor: boolean}|null} */
 let bpLastImport=null;
+/** @returns {false|undefined} false keeps the dialog open */
 function bpCommit(){
   const st=bpState, d=bpRebuild();
   if(!d.layouts.length){ moError('Nothing here could become a room yet — put at least one back from "Leave out"'); return false; }
   const target=st.targetFloorId ? floorOf(st.targetFloorId) : null;
   const extWall=bpEffExtWall();
   const floor=target || {id:uid(), name:bpFloorName(), parentId:null, extWall};
+  /** @type {string[]} */
   const ids=[];
   /* Not on any undo stack (it creates a floor and N rooms); bpUndoImport is the way back. */
   transact('project', ()=>{
@@ -51,6 +56,7 @@ function bpFloorName(){
 }
 /* each imported room needs its own pristine baseline, or undo inside it has nowhere
    to get back to */
+/** @param {import('../../kernel/types.js').Layout[]} created @param {string} floorId */
 function bpSeedHistory(created, floorId){
   const keep=S.active;
   for(const l of created){ S.active=l.id; histEntry(roomHist,snapRoom); histEntry(furnHist,snapFurn); }

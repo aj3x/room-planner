@@ -1,3 +1,4 @@
+// @ts-check
 /* The floor scene's status corner: how many rooms, their total area, or
    what the magnet is doing while a room is dragged. */
 
@@ -8,6 +9,7 @@ import {floorSnapNote} from '../../kernel/selection.js';
 import {S} from '../../kernel/state.js';
 import {fmtArea} from '../../kernel/units.js';
 
+/** @param {import('../../kernel/types.js').Floor|null|undefined} fl @param {import('../../kernel/floor-place.js').Member[]} members */
 function updateFloorReadout(fl, members){
   const el=$('readout'); if(!el) return;
   if(!fl || !members.length){ el.textContent = fl ? 'No rooms on this floor' : 'Not on a floor'; return; }
@@ -16,6 +18,7 @@ function updateFloorReadout(fl, members){
   el.textContent = plural(members.length,'room')+' · '+fmtArea(area,S.unit);
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const floorReadoutLayer = {
   id:'floor-readout', z:1000, scene:'floor',
   deps(){ floorSnapNote.value; },

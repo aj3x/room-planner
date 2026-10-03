@@ -1,3 +1,4 @@
+// @ts-check
 /* The room's walls, with its doorways and windows punched through them. */
 
 import {H, W, ctx, sx, sy, view, PAL, addPoly, pathPoly} from '../canvas/index.js';
@@ -34,6 +35,7 @@ function drawWalls(){
   ctx.restore();
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const wallsLayer = {id:'walls', z:40, scene:'room', draw(){ drawWalls(); }};
 
 export {wallsLayer};

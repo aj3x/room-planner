@@ -1,3 +1,4 @@
+// @ts-check
 /* Furniture mode: turning the selected item by its handle, dragging one or
    more items (Alt duplicates them first), and dragging out a marquee over
    empty floor to select. Every frame of a move or turn is a preview('furn');
@@ -17,13 +18,20 @@ import {itemToolsLayer} from './item-tools-layer.js';
 
 /* the drag in flight: {mode:'move'|'rot'|'marquee', …} — replaced when one
    starts or ends, mutated in place while it moves */
-const furnDrag = signal(null);
+/** @typedef {import('../../kernel/types.js').Placed} Placed */
+/** snap is the placements before anything moved, for Escape and for the undo step.
+    @typedef {{mode: 'rot', id: string, start: number, a0: number, loose: boolean, snap?: string}
+            | {mode: 'move', ids: string[], anchorId: string, dx: number, dy: number,
+               starts: {id: string, x: number, y: number}[], loose: boolean, snap?: string}
+            | {mode: 'marquee', x0: number, y0: number, x1: number, y1: number, additive: boolean, snap?: string}} FurnDrag */
+const furnDrag = /** @type {import('@preact/signals-core').Signal<FurnDrag|null>} */(signal(null));
 
+/** @type {import('../canvas/types.js').Tool['onDown']} */
 function furnDown(e,px,py){
   if(!e.altKey){
     const inst=itemToolsLayer.hitTest(px,py);
     if(inst){
-      furnDrag.value = {mode:'rot', id:sel.value, start:inst.rot||0, a0:Math.atan2(wy(py)-inst.y, wx(px)-inst.x), loose:isBad(inst)};
+      furnDrag.value = {mode:'rot', id:/** @type {string} */(sel.value), start:inst.rot||0, a0:Math.atan2(wy(py)-inst.y, wx(px)-inst.x), loose:isBad(inst)};
       return furnitureTool;
     }
   }
@@ -47,8 +55,9 @@ function furnDown(e,px,py){
     bringToFront(newIds);
     selectSet(newIds);
     const anchorNew=idMap.get(hit.id);
-    const starts=newIds.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
-    furnDrag.value = {mode:'move', ids:newIds, anchorId:anchorNew, dx:wx(px)-instOf(anchorNew).x, dy:wy(py)-instOf(anchorNew).y, starts, loose:isBad(instOf(anchorNew)), snap};
+    const starts=newIds.map(id=>{ const p=/** @type {Placed} */(instOf(id)); return {id,x:p.x,y:p.y}; });   // pushed just above
+    const anc=/** @type {Placed} */(instOf(anchorNew));
+    furnDrag.value = {mode:'move', ids:newIds, anchorId:/** @type {string} */(anchorNew), dx:wx(px)-anc.x, dy:wy(py)-anc.y, starts, loose:isBad(anc), snap};
     preview('furn');   // the copies are committed with the drag, by furnUp
     return furnitureTool;
   }
@@ -57,7 +66,7 @@ function furnDown(e,px,py){
     else if(!selSet.value.has(hit.id)) selectOnly(hit.id);
     bringToFront([...selSet.value]);
     const ids=[...selSet.value];
-    const starts=ids.map(id=>{ const p=instOf(id); return {id,x:p.x,y:p.y}; });
+    const starts=ids.map(id=>{ const p=/** @type {Placed} */(instOf(id)); return {id,x:p.x,y:p.y}; });   // selected, so placed
     furnDrag.value = {mode:'move', ids, anchorId:hit.id, dx:wx(px)-hit.x, dy:wy(py)-hit.y, starts, loose:isBad(hit)};
   } else {
     furnDrag.value = {mode:'marquee', x0:px, y0:py, x1:px, y1:py, additive:e.shiftKey};
@@ -65,6 +74,7 @@ function furnDown(e,px,py){
   return furnitureTool;
 }
 
+/** @type {import('../canvas/types.js').HeldTool['onMove']} */
 function furnMove(px,py,mods){
   const d=furnDrag.value;
   if(!d) return;
@@ -100,7 +110,7 @@ function furnMove(px,py,mods){
     anx=Math.round((anx+b.x0)/g)*g-b.x0;
     any=Math.round((any+b.y0)/g)*g-b.y0;
   }
-  const anchorStart=d.starts.find(s=>s.id===d.anchorId);
+  const anchorStart=/** @type {{x: number, y: number}} */(d.starts.find(s=>s.id===d.anchorId));   // the anchor is one of the dragged
   const ddx=anx-anchorStart.x, ddy=any-anchorStart.y;
   for(const st of d.starts){
     const inst=instOf(st.id); const it=inst&&itemOf(inst.itemId);
@@ -122,8 +132,9 @@ function furnMove(px,py,mods){
   preview('furn');
 }
 
+/** @type {import('../canvas/types.js').HeldTool['onUp']} */
 function furnUp(){
-  const d=furnDrag.value;
+  const d=/** @type {FurnDrag} */(furnDrag.value);   // held
   if(d.mode==='marquee'){
     const x0=Math.min(d.x0,d.x1), x1=Math.max(d.x0,d.x1);
     const y0=Math.min(d.y0,d.y1), y1=Math.max(d.y0,d.y1);
@@ -150,8 +161,9 @@ function furnUp(){
 }
 
 /* Escape mid-drag: put whatever was being dragged back exactly where it started */
+/** @type {import('../canvas/types.js').HeldTool['onCancel']} */
 function furnCancel(){
-  const d=furnDrag.value;
+  const d=/** @type {FurnDrag} */(furnDrag.value);   // held
   if(d.mode==='marquee'){ furnDrag.value = null; alignGuides.value = []; alignNote.value = ''; draw(); return; }
   if(d.snap) L().placed=JSON.parse(d.snap).placed;
   furnDrag.value = null; alignGuides.value = []; alignNote.value = '';
@@ -173,12 +185,14 @@ function drawMarquee(){
   ctx.setLineDash([]);
   ctx.restore();
 }
+/** @satisfies {import('../canvas/types.js').Layer} */
 const marqueeOverlay = {
   id:'marquee', z:170, scene:'room',
   deps(){ furnDrag.value; },
   draw(){ drawMarquee(); }
 };
 
+/** @satisfies {import('../canvas/types.js').Tool} */
 const furnitureTool = {
   id:'furniture', autoPan:true,
   active: furnMode,

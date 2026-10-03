@@ -1,3 +1,4 @@
+// @ts-check
 /* The furniture: pass-through items (rugs) first, then the rest in placement
    order, each hatched when it does not fit. Faded in Room mode. The floor
    scene draws every room's items with drawItem too. */
@@ -8,6 +9,7 @@ import {bbox, centroid, pointInPoly, worldPoly} from '../../kernel/geometry.js';
 import {selSet} from '../../kernel/selection.js';
 import {L, furnMode, itemOf, roomMode} from '../../kernel/state.js';
 
+/** @param {import('../../kernel/types.js').Placed} p @param {boolean} isSel @param {boolean} isBadPos */
 function drawItem(p,isSel,isBadPos){
   const it=itemOf(p.itemId);
   if(!it) return;
@@ -45,7 +47,7 @@ function drawItem(p,isSel,isBadPos){
     const fg=pickText(it.color,it.passThrough);
     const halo = fg==='#ffffff' ? 'rgba(23,27,26,.45)' : 'rgba(255,255,255,.6)';
     ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineJoin='round'; ctx.miterLimit=2;
-    const line=(txt,y,font,alpha)=>{
+    const line=(/** @type {string} */txt,/** @type {number} */y,/** @type {string} */font,/** @type {number} */alpha)=>{
       ctx.font=font; ctx.globalAlpha*=alpha;
       ctx.strokeStyle=halo; ctx.lineWidth=3; ctx.strokeText(txt,cxp,y);
       ctx.fillStyle=fg; ctx.fillText(txt,cxp,y);
@@ -57,6 +59,7 @@ function drawItem(p,isSel,isBadPos){
   }
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const itemsLayer = {
   id:'items', z:90, scene:'room',
   deps(){ selSet.value; },

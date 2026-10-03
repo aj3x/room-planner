@@ -1,3 +1,4 @@
+// @ts-check
 /* The room as a whole: its properties, the Selection panel that shows
    whichever part is picked, drawing a custom outline, splitting a room in
    two, the Room-mode tool and the room's floor and handle layers.

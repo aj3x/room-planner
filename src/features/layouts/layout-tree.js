@@ -1,3 +1,4 @@
+// @ts-check
 /* The layout tree: the folder/floor/room tree in the left pane, the HTML its
    rows are built from, and what the rows' menus do to the project.
 
@@ -34,10 +35,12 @@ import {dropHalf} from '../../ui-kit/dnd.js';
 import {pref, rev} from '../../kernel/signals.js';
 import {mountPanel} from '../../ui-kit/mount.js';
 /* ------------------------- layout tree (folders + rooms) ------------------------- */
+/** @param {import('../../kernel/types.js').Folder} f */
 function folderLabel(f){
   const tags=(f.tags&&f.tags.length) ? `<span class="tagchip" title="Tag filter: ${esc(f.tags.join(', '))}">${esc(f.tags[0])}${f.tags.length>1?' +'+(f.tags.length-1):''}</span>` : '';
   return `<span class="nm">${esc(f.name)}</span>${tags}`;
 }
+/** @param {import('../../kernel/types.js').Layout} l @param {number} depth */
 const layoutRowHTML = (l,depth) =>
   `<div class="tree-row layout-row ${l.id===S.active?'active':''} ${mergeSel.value.size>=2 && mergeSel.value.has(l.id)?'merge-sel':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*12+26}px" ${l.id===S.active?'aria-current="true"':''}>
       <span class="ico">${svgI('room')}</span><span class="nm">${esc(l.name)}</span>
@@ -45,6 +48,7 @@ const layoutRowHTML = (l,depth) =>
     </div>`;
 /* a floor holds its rooms directly: a room standing on one shows up here, not
    back under its folder, so it is only ever in the tree once */
+/** @param {import('../../kernel/types.js').Floor} fl @param {number} depth */
 function floorRowHTML(fl,depth){
   const open=treeOpen.value.has(fl.id), rooms=floorLayouts(fl.id);
   const active=floorMode() && curFloorId()===fl.id;
@@ -60,6 +64,7 @@ function floorRowHTML(fl,depth){
   }
   return html;
 }
+/** @param {string|null} parentId @param {number} depth @returns {string} */
 function renderTreeLevel(parentId,depth){
   let html='';
   if(!parentId) for(const fl of childFloors(null)) html+=floorRowHTML(fl,depth);
@@ -81,18 +86,22 @@ function renderTreeLevel(parentId,depth){
 }
 function renderTree(){ $('layoutTree').innerHTML=renderTreeLevel(null,0); }
 const treeBox=$('layoutTree');
+/** @param {string} id @returns {HTMLElement|null} */
 const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layout="'+id+'"],[data-floor="'+id+'"]');
 
+/** @param {string} id */
 function renameFolder(id){
   const f=folderOf(id), row=treeRowEl(id);
   if(!f||!row) return;
   inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('project', ()=>{ f.name=v; }); });
 }
+/** @param {string} id */
 function renameLayout(id){
   const l=S.layouts.find(x=>x.id===id), row=treeRowEl(id);
   if(!l||!row) return;
   inlineEdit(row.querySelector('.nm'), l.name, v=>{ if(v) transact('project', ()=>{ l.name=v; }); });
 }
+/** @param {string} id */
 function renameFloor(id){
   const f=floorOf(id), row=treeRowEl(id);
   if(!f||!row) return;
@@ -101,12 +110,14 @@ function renameFloor(id){
 
 
 /* folder path from root to id, inclusive */
+/** @param {string|null|undefined} id */
 function folderPath(id){
   const out=[]; let f=folderOf(id);
   while(f){ out.unshift(f); f=folderOf(f.parentId); }
   return out;
 }
 /* would putting `id` under `parentId` create a cycle? */
+/** is folder `id` parentId or above it? @param {string} id @param {string|null|undefined} parentId */
 function folderDescendant(id,parentId){
   let f=folderOf(parentId);
   while(f){ if(f.id===id) return true; f=folderOf(f.parentId); }
@@ -116,6 +127,7 @@ function folderDescendant(id,parentId){
 /* clicking a floor switches the canvas to that floor's arrangement, not just the tree
    row — Floor mode has no floor id of its own (see curFloorId), so the anchor is
    whichever room on it is already active, or its first room otherwise */
+/** @param {string} id */
 function enterFloor(id){
   const rooms=floorLayouts(id);
   if(!rooms.length){ flash('Add a room to this floor first'); return; }
@@ -125,6 +137,7 @@ function enterFloor(id){
   });
 }
 
+/** @param {string} id @param {Element} anchor */
 function folderMenu(id, anchor){
   const f=folderOf(id); if(!f) return;
   openMenu(anchor, [
@@ -143,6 +156,7 @@ function folderMenu(id, anchor){
     {label:'Delete folder\u2026', danger:true, fn:()=>deleteFolder(id)},
   ], f.name);
 }
+/** @param {string} id @param {Element} anchor */
 function layoutMenu(id, anchor){
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
   openMenu(anchor, [
@@ -163,8 +177,9 @@ function layoutMenu(id, anchor){
   ], l.name);
 }
 
+/** @param {string} id */
 function folderTagsDialog(id){
-  const f=folderOf(id);
+  const f=/** @type {import('../../kernel/types.js').Folder} */(folderOf(id));   // asked from that folder's menu
   openModal('Tag filter for '+f.name, `
     <label class="stack-label" for="fTagsInput">Tags</label>
     ${tagFieldHTML('fTags','living room, seating')}
@@ -176,19 +191,21 @@ function folderTagsDialog(id){
     ()=>{ mountTagField('fTags', f.tags||[]); });
 }
 /* every folder and room under `id`, deepest last */
+/** @param {string} id */
 function folderContents(id){
-  const folders=[], layouts=[];
-  (function walk(pid){
+  const folders=/** @type {import('../../kernel/types.js').Folder[]} */([]), layouts=/** @type {import('../../kernel/types.js').Layout[]} */([]);
+  (function walk(/** @type {string|null} */pid){
     for(const f of childFolders(pid)){ folders.push(f); walk(f.id); }
     for(const l of childLayouts(pid)) layouts.push(l);
   })(id);
   return {folders,layouts};
 }
+/** @param {string} id */
 function deleteFolder(id){
   const f=folderOf(id); if(!f) return;
-  const up = folderOf(f.parentId) ? '\u201c'+folderOf(f.parentId).name+'\u201d' : 'the top level';
+  const up = folderOf(f.parentId) ? '\u201c'+/** @type {import('../../kernel/types.js').Folder} */(folderOf(f.parentId)).name+'\u201d' : 'the top level';
   const {folders,layouts}=folderContents(id);
-  const drop=keep=>{
+  const drop=(/** @type {boolean} */keep)=>{
     transact('project', ()=>{
       if(keep){
         for(const sub of childFolders(id)) sub.parentId=f.parentId;
@@ -219,12 +236,14 @@ function deleteFolder(id){
     <p class="hint">Your library is never touched, only the rooms themselves.</p>`,
     'Delete folder', ()=>drop($('keepKids').checked), null, {danger:true});
 }
+/** @param {string} id */
 function duplicateLayout(id){
   const src=S.layouts.find(x=>x.id===id); if(!src) return;
-  const c=JSON.parse(JSON.stringify(src));
+  const c=/** @type {import('../../kernel/types.js').Layout} */(JSON.parse(JSON.stringify(src)));
   c.id=uid(); c.name=c.name+' copy';
+  /** @type {Record<string, Record<string, string>>} */
   const map={open:{}, item:{}, pillar:{}, iwall:{}};
-  const renew = (k,x) => { const id=uid(); map[k][x.id]=id; x.id=id; };
+  const renew = (/** @type {string} */k,/** @type {{id: string}} */x) => { const id=uid(); map[k][x.id]=id; x.id=id; };
   c.openings.forEach(o=>renew('open',o));
   c.placed.forEach(p=>renew('item',p));
   c.room.pillars.forEach(p=>renew('pillar',p));
@@ -234,6 +253,7 @@ function duplicateLayout(id){
   if(c.floorId) c.floorPlace={x:(c.floorPlace.x||0)+500, y:(c.floorPlace.y||0)+500, rot:c.floorPlace.rot||0};
   transact('project', ()=>{ S.layouts.splice(S.layouts.indexOf(src)+1, 0, c); activateLayout(c.id); });
 }
+/** @param {string} id */
 function deleteLayout(id){
   if(S.layouts.length===1){ flash('You need at least one room'); return; }
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
@@ -248,12 +268,13 @@ function deleteLayout(id){
 }
 
 /* the menu's long way round to what dragging does */
+/** @param {'folder'|'layout'} kind @param {string} id */
 function moveDialog(kind,id){
   const obj = /** @type {Partial<import('../../kernel/types.js').Folder & import('../../kernel/types.js').Layout>|null|undefined} */(kind==='folder' ? folderOf(id) : S.layouts.find(x=>x.id===id));   // a Folder when kind is 'folder', else a Layout
   if(!obj) return;
   const cur = (kind==='folder' ? obj.parentId : obj.folderId) || '';
   let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
-  (function walk(pid,depth){
+  (function walk(/** @type {string|null} */pid,/** @type {number} */depth){
     for(const f of childFolders(pid)){
       const bad = kind==='folder' && (f.id===id || folderDescendant(id,f.id));
       if(!bad) opts+=`<option value="${f.id}" ${f.id===cur?'selected':''}>${'\u00a0\u00a0'.repeat(depth)}${esc(f.name)}</option>`;
@@ -273,9 +294,11 @@ function moveDialog(kind,id){
 /* The Rooms list holds more than one kind of thing, so + stays the one-click common case
    (a new room) and everything rarer sits behind the ⋯ with a word for a label. */
 /* the floor row's menu; the blueprint import lands on a floor, so it starts here */
+/** @param {string} id a floor */
 function bpUndoableOn(id){
   return !!(bpLastImport && bpLastImport.floorId===id);
 }
+/** @param {string} id @param {Element} anchor */
 function floorMenu(id, anchor){
   const fl=floorOf(id); if(!fl) return;
   openMenu(anchor, [
@@ -290,17 +313,20 @@ function floorMenu(id, anchor){
 
 const newFolder = () =>
   askText('New folder','Name','Folder', n=>{ transact('project', ()=>{ S.folders.push({id:uid(),name:n,parentId:null,tags:[]}); }); });
+/** The row being dragged in the tree. @type {{kind: 'folder'|'layout', id: string}|null} */
 let dragTree=null;
+/** @param {{kind: 'folder'|'layout', id: string}|null} v */
 function setDragTree(v){ dragTree=v; }
 
+/** Where a drop at e would land. @param {DragEvent} e @returns {{mode: 'root'} | {mode: 'onto-floor', id: string, row: HTMLElement} | {mode: 'into'|'before'|'after', id: string, isFolder: boolean, row: HTMLElement} | null} */
 function treeDropSpot(e){
   if(!dragTree) return null;
-  const row=e.target.closest('.tree-row');
+  const row=/** @type {HTMLElement|null} */(/** @type {Element} */(e.target).closest('.tree-row'));
   if(!row) return {mode:'root'};
   /* dropping a room on a floor row is how you stand it on that floor */
   if(row.dataset.floor) return dragTree.kind==='layout' ? {mode:'onto-floor',id:row.dataset.floor,row} : null;
   const isFolder=!!row.dataset.folder;
-  const id=isFolder?row.dataset.folder:row.dataset.layout;
+  const id=/** @type {string} */(isFolder?row.dataset.folder:row.dataset.layout);   // every row carries one
   if(isFolder && dragTree.kind==='folder' && id===dragTree.id) return null;
   const t=dropHalf(e,row);
   if(isFolder && t>=0.3 && t<=0.7) return {mode:'into',id,isFolder,row};

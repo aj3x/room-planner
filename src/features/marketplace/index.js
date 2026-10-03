@@ -1,3 +1,4 @@
+// @ts-check
 /* Marketplace sources: subscriptions to market.json catalogues and ad hoc
    listings, fetched, validated and cached.
 

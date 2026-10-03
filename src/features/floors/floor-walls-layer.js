@@ -1,3 +1,4 @@
+// @ts-check
 /* Passes B and C of the floor scene: every wall band at its depth (shared,
    exterior or taken away — kernel/floor-place.js), then the doorways punched
    through them. Bands first, all of them, or the next room's band paints a
@@ -8,6 +9,7 @@ import {depthRuns} from '../../kernel/floor-place.js';
 import {openGeom} from '../../kernel/openings.js';
 import {wallIsOff} from '../../kernel/walls.js';
 
+/** @param {import('../canvas/types.js').FullFloorFrame} f */
 function drawFloorWalls({C, members, depths}){
   // B — every wall band, clipped outside EVERY room so a band can never paint over a neighbour's floor
   ctx.save();
@@ -49,6 +51,7 @@ function drawFloorWalls({C, members, depths}){
   ctx.restore();
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const floorWallsLayer = {
   id:'floor-walls', z:40, scene:'floor',
   draw(ctx, view, f){ if(!f.empty) drawFloorWalls(f); }

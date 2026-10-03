@@ -1,3 +1,4 @@
+// @ts-check
 /* The Properties pane's Selected section, and the three things its buttons do
    to what is selected: turn it, take it away, duplicate it, put one down.
    The section is an effect on the furniture and the selection
@@ -19,6 +20,9 @@ import {setMode} from '../mode/index.js';
 import {pref, rev} from '../../kernel/signals.js';
 import {mountPanel} from '../../ui-kit/mount.js';
 
+/** @typedef {import('../../ui-kit/dom.js').FieldEvent} FieldEvent */
+
+/** @param {number} deg */
 function rotate(deg){
   const inst=instOf(sel.value); if(!inst) return;
   const it=itemOf(inst.itemId); if(!it) return;
@@ -32,6 +36,7 @@ function removeSel(){
   if(!selSet.value.size) return;
   transact('furn', ()=>{ L().placed=L().placed.filter(p=>!selSet.value.has(p.id)); selectClear(); });
 }
+/** @param {string} itemId */
 function place(itemId){
   const it=itemOf(itemId); if(!it) return;
   const b0=bbox(RP());
@@ -64,6 +69,7 @@ function place(itemId){
 function duplicateSel(){
   if(selSet.value.size<2) return;
   const srcIds=[...selSet.value];
+  /** @type {string[]} */
   const newIds=[];
   transact('furn', ()=>{
     for(const id of srcIds){
@@ -140,7 +146,7 @@ function renderSel(){
       <button class="btn sm danger" id="sDel">Remove</button>
     </div>`;
   $('sEdit').addEventListener('click',()=>itemDialog(it.id));
-  const move=(which,val)=>{
+  const move=(/** @type {'x'|'y'} */which,/** @type {string} */val)=>{
     const mm=parseLen(val,S.unit);
     if(!isFinite(mm)){ renderSel(); return; }
     const loose=isBad(inst), bb=bbox(worldPoly(inst,it)), ox=inst.x, oy=inst.y;
@@ -153,9 +159,9 @@ function renderSel(){
       }
     }, {history:false});
   };
-  $('sX').addEventListener('change',e=>move('x',e.target.value));
-  $('sY').addEventListener('change',e=>move('y',e.target.value));
-  $('sR').addEventListener('change',e=>rotate((parseFloat(e.target.value)||0)-(inst.rot||0)));
+  $('sX').addEventListener('change',(/** @type {FieldEvent} */e)=>move('x',e.target.value));
+  $('sY').addEventListener('change',(/** @type {FieldEvent} */e)=>move('y',e.target.value));
+  $('sR').addEventListener('change',(/** @type {FieldEvent} */e)=>rotate((parseFloat(e.target.value)||0)-(inst.rot||0)));
   $('sRotL').addEventListener('click',()=>rotate(-90));
   $('sRotR').addEventListener('click',()=>rotate(90));
   $('sDel').addEventListener('click',removeSel);

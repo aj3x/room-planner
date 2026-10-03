@@ -13,6 +13,9 @@
 const $ = id => document.getElementById(id);
 /** @param {unknown} s */
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>/** @type {Record<string, string>} */({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+/** An event from a form field, whose target is the field.
+    @typedef {Event & {target: HTMLInputElement}} FieldEvent */
+
 /* icons come from the <symbol> sprite at the top of <body> */
 /** @param {string} name */
 const svgI = name => `<svg class="i" aria-hidden="true"><use href="#i-${name}"/></svg>`;

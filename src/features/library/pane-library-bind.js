@@ -1,3 +1,4 @@
+// @ts-check
 /* The Library pane's wiring: the search box's debounce, and the folder tree —
    click routing, rename on double-click, and the drag that either reparents a
    folder or drops a grid item into one.
@@ -30,15 +31,24 @@ import { renderLibTree, markActiveTreeRow, libTreeBox, dragLib, setDragLib, libD
 import { renameLibFolder, renameAdhocFolder, libFolderMenu, adhocFolderMenu, listingMenu } from './folder-menus.js';
 import { renderLibContent } from './router.js';
 
+/** @typedef {import('../../ui-kit/dom.js').FieldEvent} FieldEvent */
+
+/* The tree's events are read through e.target.closest(...).dataset on rows
+   whose markup is a template string, the same untyped DOM $ hands out (see
+   ui-kit/dom.js); typing them would be a cast at every read in code Phase 6
+   replaces with a component. So they are any, here and only here. */
+/** @typedef {any} TreeEvent */
+
 function bindPaneLibrary(){
-  let libSearchT=null;
-  $('searchBox').addEventListener('input', e=>{
+  /** @type {number|undefined} */
+  let libSearchT=undefined;
+  $('searchBox').addEventListener('input', (/** @type {FieldEvent} */e)=>{
     clearTimeout(libSearchT);
     const q=e.target.value;
     libSearchT=setTimeout(()=>{ nav.searching=!!q.trim(); markActiveTreeRow(); renderLibContent(); }, 120);
   });
 
-  libTreeBox.addEventListener('click', e=>{
+  libTreeBox.addEventListener('click', (/** @type {TreeEvent} */e)=>{
     const more=e.target.closest('[data-act=more]');
     const root=e.target.closest('[data-root]');
     const toggle=e.target.closest('[data-act=toggle]');
@@ -68,7 +78,7 @@ function bindPaneLibrary(){
     if(row.dataset.mfolder){ singleClick(()=>goLibFolder('market', row.dataset.mfolder)); return; }
     if(row.dataset.listing){ singleClick(()=>selectListing(row.dataset.listing)); return; }
   });
-  libTreeBox.addEventListener('dblclick', e=>{
+  libTreeBox.addEventListener('dblclick', (/** @type {TreeEvent} */e)=>{
     cancelSingleClick();
     if(e.target.closest('button')) return;
     const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]'); if(!row) return;
@@ -77,19 +87,19 @@ function bindPaneLibrary(){
   });
 
   /* ---- drag: reparent a library folder, or drop a library item onto one ---- */
-  libTreeBox.addEventListener('dragstart', e=>{
+  libTreeBox.addEventListener('dragstart', (/** @type {TreeEvent} */e)=>{
     const row=e.target.closest('.tree-row[data-folder],.tree-row[data-mfolder]'); if(!row) return;
     cancelSingleClick(); closeMenu();
     setDragLib(row.dataset.folder ? {kind:'folder',id:row.dataset.folder,realm:'library'} : {kind:'folder',id:row.dataset.mfolder,realm:'market'});
     row.classList.add('dragging');
     e.dataTransfer.effectAllowed='move';
-    try{ e.dataTransfer.setData('text/plain',dragLib.id); }catch(err){}
+    try{ e.dataTransfer.setData('text/plain',/** @type {{id: string}} */(dragLib).id); }catch(err){}
   });
   libTreeBox.addEventListener('dragend', ()=>{
     setDragLib(null); clearDropMarks(libTreeBox);
     for(const r of libTreeBox.querySelectorAll('.dragging')) r.classList.remove('dragging');
   });
-  libTreeBox.addEventListener('dragover', e=>{
+  libTreeBox.addEventListener('dragover', (/** @type {TreeEvent} */e)=>{
     if(!dragLib && !gridDragItem) return;
     const spot=libDropSpot(e); if(!spot) return;
     e.preventDefault(); e.dataTransfer.dropEffect='move';
@@ -98,8 +108,8 @@ function bindPaneLibrary(){
     if(gridDragItem){ if(spot.isLib) spot.row.classList.add('drop-into'); return; }
     spot.row.classList.add(spot.mode==='into'?'drop-into':spot.mode==='before'?'drop-before':'drop-after');
   });
-  libTreeBox.addEventListener('dragleave', e=>{ if(e.target===libTreeBox) clearDropMarks(libTreeBox); });
-  libTreeBox.addEventListener('drop', e=>{
+  libTreeBox.addEventListener('dragleave', (/** @type {TreeEvent} */e)=>{ if(e.target===libTreeBox) clearDropMarks(libTreeBox); });
+  libTreeBox.addEventListener('drop', (/** @type {TreeEvent} */e)=>{
     const spot=libDropSpot(e);
     clearDropMarks(libTreeBox);
     if(!spot) return;

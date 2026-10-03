@@ -1,3 +1,4 @@
+// @ts-check
 /* Furniture placed in a room: the item list, the Selection panel, the
    Furniture-mode tool and the layers that draw items, their open regions and
    their handles.

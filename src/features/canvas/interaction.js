@@ -77,7 +77,7 @@ function stopOtherTools(id){ stopTools(t => t.id===id); }
 function stopDrawing(){ stopTools(t => !t.onCursor); }
 /* Entering mode `m`: stop each tool that declares the modes it can stay on
    in, and `m` is not one of them. */
-/** @param {import('../../kernel/types.js').CanvasMode} m */
+/** @param {import('../../kernel/types.js').Mode} m */
 function stopToolsFor(m){ stopTools(t => !t.modes || t.modes.includes(m)); }
 /* A different room became the active one. */
 function resetTools(){

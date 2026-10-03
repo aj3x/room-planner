@@ -10,7 +10,7 @@
    runtime. It is part of the canvas feature's public surface, alongside
    index.js. */
 
-import type {CanvasMode, Floor, Pt} from '../../kernel/types.js';
+import type {Floor, Mode} from '../../kernel/types.js';
 import type {PAL} from './paint.js';
 import type {Member} from '../../kernel/floor-place.js';
 
@@ -29,16 +29,25 @@ export interface RoomFrame {
   /** placed id -> why it cannot open */
   openBad: Map<string, string>;
 }
-/** What every layer of a floor-scene frame shares. */
-export interface FloorFrame {
+/** What every layer of a floor-scene frame shares: either there is nothing
+    to draw (no floor, or no room on it), or there is a floor with rooms. */
+export type FloorFrame = EmptyFloorFrame | FullFloorFrame;
+export interface EmptyFloorFrame {
   scene: 'floor';
   C: Palette;
   fl: Floor | null | undefined;
   members: Member[];
-  /** no floor, or nothing on it */
-  empty: boolean;
-  /** per member, per edge: how deep its wall band runs; null when empty */
-  depths: number[][] | null;
+  empty: true;
+  depths: null;
+}
+export interface FullFloorFrame {
+  scene: 'floor';
+  C: Palette;
+  fl: Floor;
+  members: Member[];
+  empty: false;
+  /** per member, per edge: how deep its wall band runs */
+  depths: number[][];
 }
 export type Frame = RoomFrame | FloorFrame;
 
@@ -48,6 +57,8 @@ interface LayerBase {
   z: number;
   /** read the signals this layer shows, so the canvas repaints when they change */
   deps?(): void;
+  /** whatever only this layer knows, e.g. where it last drew a label; tools call it directly */
+  hitTest?(...args: never[]): unknown;
 }
 /** Drawn in Room and Furniture modes. */
 export interface RoomLayer extends LayerBase {
@@ -92,7 +103,7 @@ export interface Tool {
   /** turn a switched-on tool off */
   stop?(): void;
   /** the canvas modes a switched-on tool may stay on in */
-  modes?: CanvasMode[];
+  modes?: Mode[];
   /** forget what was picked in the room being left */
   reset?(): void;
 }

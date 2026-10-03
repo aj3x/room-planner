@@ -1,3 +1,4 @@
+// @ts-check
 /* The Library/Marketplace shell: the whole rebuild (renderLibAll) and the
    toolbar above the grid.
 

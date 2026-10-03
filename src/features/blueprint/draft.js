@@ -120,6 +120,8 @@ function bpEffExtWall(){
   if(!mm||!st.proposal) return 146;
   return Math.max(50, Math.round((st.proposal.tExt||st.proposal.tPart||18)*mm));
 }
+/** The draft the current proposal and edits make: the rooms, the ones left out and why, the total area.
+    @returns {{layouts: import('../../kernel/types.js').Layout[], problems: {id: string, name: string, why: string}[], area: number, openingRooms?: unknown}} */
 function bpRebuild(){
   const st=bpState; if(!st||!st.proposal) return {layouts:[], problems:[], area:0};
   const e=st.edits, xy=bpScaleXY(e.scale), mmX=xy&&xy.x, mmY=xy&&xy.y;

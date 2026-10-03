@@ -1,3 +1,4 @@
+// @ts-check
 /* Import: read a file back without assuming it is a whole project, then
    either replace the project or merge into it.
 
@@ -28,18 +29,26 @@ import {ancestorFolderIds, folderLine, pickValues, pickerHTML, pickerMount} from
 /* ------------------------- import ------------------------- */
 /* pull the parts out of a file without assuming it is a whole project — a things-only
    or rooms-only export is a perfectly good file */
+/** @typedef {import('../../kernel/types.js').State} State */
+/** A file's parts, each cleaned up as if it had been loaded; prefs are the settings it carried, if any.
+    @typedef {{layouts: import('../../kernel/types.js').Layout[], folders: import('../../kernel/types.js').Folder[],
+      floors: import('../../kernel/types.js').Floor[], inventory: import('../../kernel/types.js').Item[],
+      active: unknown, prefs: Partial<State>|null}} Imported */
+/* What `data` holds is whatever the file did, so it is read as any and
+   everything taken out of it goes through normLayout/normItem or a check. */
+/** @param {any} data a parsed file @returns {Imported|null} */
 function readImport(data){
   if(!data || typeof data!=='object') return null;
-  const layouts = (Array.isArray(data.layouts)?data.layouts:[]).filter(l=>l&&typeof l==='object').map(l=>normLayout(clone(l)));
-  const inventory = (Array.isArray(data.inventory)?data.inventory:[]).filter(i=>i&&typeof i==='object'&&i.shape).map(i=>normItem(clone(i)));
-  const folders = (Array.isArray(data.folders)?data.folders:[]).filter(f=>f&&f.id).map(f=>{
+  const layouts = (Array.isArray(data.layouts)?data.layouts:[]).filter((/** @type {any} */l)=>l&&typeof l==='object').map((/** @type {any} */l)=>normLayout(clone(l)));
+  const inventory = (Array.isArray(data.inventory)?data.inventory:[]).filter((/** @type {any} */i)=>i&&typeof i==='object'&&i.shape).map((/** @type {any} */i)=>normItem(clone(i)));
+  const folders = (Array.isArray(data.folders)?data.folders:[]).filter((/** @type {any} */f)=>f&&f.id).map((/** @type {any} */f)=>{
     const c=clone(f);
     c.name=c.name||'Folder';
     c.parentId=c.parentId||null;
     if(!Array.isArray(c.tags)) c.tags=[];
     return c;
   });
-  const floors = (Array.isArray(data.floors)?data.floors:[]).filter(f=>f&&f.id).map(f=>{
+  const floors = (Array.isArray(data.floors)?data.floors:[]).filter((/** @type {any} */f)=>f&&f.id).map((/** @type {any} */f)=>{
     const c=clone(f);
     c.name=c.name||'Floor';
     c.parentId=null;
@@ -47,6 +56,7 @@ function readImport(data){
     return c;
   });
   if(!layouts.length && !inventory.length) return null;
+  /** @type {Record<string, any>} the settings as the file had them, checked below */
   const prefs={};
   for(const k of PREF_KEYS) if(data[k]!==undefined) prefs[k]=data[k];
   if(prefs.unit && !['ftin','in','cm','mm','m'].includes(prefs.unit)) delete prefs.unit;
@@ -55,6 +65,7 @@ function readImport(data){
   for(const k of ['showSwing','showDims','showOpen','showWalk','showMeasure','onlyAvailable']) if(prefs[k]!==undefined) prefs[k]=!!prefs[k];
   return {layouts, folders, floors, inventory, active:data.active, prefs:Object.keys(prefs).length?prefs:null};
 }
+/** @param {Imported} inc */
 function importDialog(inc){
   const rooms=inc.layouts.map(l=>({value:l.id, label:l.name, sub:folderLine(l,inc.folders), checked:true}));
   const things=inc.inventory.map(i=>({value:i.id, label:i.name, sub:i.id, checked:true}));
@@ -98,12 +109,17 @@ function importDialog(inc){
 }
 /* One project transaction, whichever way it goes: no undo stack covers it (a
    replace starts every stack afresh below). */
+/** @param {Imported} inc @param {string[]} roomIds @param {string[]} itemIds @param {boolean} wantPrefs
+    @param {boolean} replace replace the project rather than merge into it
+    @param {'mine'|'theirs'|string} dupe on an item id already here: keep mine, or add theirs beside it */
 function applyImport(inc, roomIds, itemIds, wantPrefs, replace, dupe){
   transact('project', ()=>importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe));
 }
+/** @param {Imported} inc @param {string[]} roomIds @param {string[]} itemIds @param {boolean} wantPrefs @param {boolean} replace @param {string} dupe */
 function importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe){
   const layouts=inc.layouts.filter(l=>roomIds.includes(l.id)).map(clone);
   const items=inc.inventory.filter(i=>itemIds.includes(i.id)).map(clone);
+  /** @type {Set<string>} */
   const keep=new Set();
   for(const l of layouts) for(const id of ancestorFolderIds(inc.folders, l.folderId)) keep.add(id);
   const folders=inc.folders.filter(f=>keep.has(f.id)).map(clone);
@@ -111,6 +127,7 @@ function importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe){
   const floors=(inc.floors||[]).filter(f=>keepFl.has(f.id)).map(clone);
 
   if(replace){
+    /** @type {Record<string, any> & {layouts: import('../../kernel/types.js').Layout[]}} a partial save; migrate() completes it */
     const st={
       mode:'furniture', tagFilter:[], untaggedOnly:false,
       leftOpen:S.leftOpen, rightOpen:S.rightOpen, secClosed:S.secClosed.slice(),
@@ -137,6 +154,7 @@ function importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe){
   /* adding: an id that is already spoken for either points at what you have, or is
      brought in beside it under id-2 — and every reference in the file follows along */
   const takenItems=new Set(S.inventory.map(i=>i.id));
+  /** @type {Record<string, string>} */
   const itemMap={};
   let addedItems=0;
   for(const it of items){
@@ -157,7 +175,8 @@ function importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe){
   /* a folder id that already exists here IS that folder — importing the same file twice
      files the rooms into the folder you already have rather than growing a twin of it */
   const takenFolders=new Set(S.folders.map(f=>f.id));
-  const folderMap={}, freshFolders=[];
+  /** @type {Record<string, string>} */
+  const folderMap={}, freshFolders=/** @type {import('../../kernel/types.js').Folder[]} */([]);
   for(const f of folders){
     folderMap[f.id]=f.id;
     if(takenFolders.has(f.id)) continue;
@@ -183,9 +202,10 @@ function importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe){
     l.floorId = l.floorId && takenFloors.has(l.floorId) ? l.floorId : null;
     /* importing the same file twice must not hide one room exactly under another */
     if(l.floorId){
-      const near = p => floorLayouts(l.floorId).some(o=>Math.abs(o.floorPlace.x-p.x)<50 && Math.abs(o.floorPlace.y-p.y)<50);
+      const near = (/** @type {import('../../kernel/types.js').FloorPlace} */p) => floorLayouts(l.floorId).some(o=>Math.abs(o.floorPlace.x-p.x)<50 && Math.abs(o.floorPlace.y-p.y)<50);
       while(near(l.floorPlace)){ l.floorPlace.x+=300; l.floorPlace.y+=300; }
     }
+    /** @type {Record<string, string>} */
     const placedMap={};
     l.placed = l.placed.filter(p=>{
       // the thing came in with the room, or one of yours already answers to that id

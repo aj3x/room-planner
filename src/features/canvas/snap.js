@@ -26,7 +26,7 @@ import {flash} from '../../ui-kit/flash.js';
 /** A line a dragged point can latch onto: through p along dir, hanging off pin; bias makes it reluctant.
     @typedef {{pin: Pt, p: Pt, dir: Pt, bias?: number}} AlignLine */
 /** A point to line up with: bias as above, edge the wall arriving at it.
-    @typedef {{p: Pt, bias?: number, edge?: Pt}} AlignRef */
+    @typedef {{p: Pt, bias?: number, edge?: Pt|null}} AlignRef */
 /** What is under the pointer in Room mode: a RoomSel, and for an interior wall which end, if either.
     @typedef {import('../../kernel/types.js').RoomSel & {end?: 'a'|'b'|null}} RoomPick */
 

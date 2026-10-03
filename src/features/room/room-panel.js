@@ -1,3 +1,4 @@
+// @ts-check
 /* The Room mode panels for the room itself: its properties (size, wall
    thickness, floor colour, trim, area) and the Selection panel, which shows
    whichever part of the room is selected through that part's own renderer

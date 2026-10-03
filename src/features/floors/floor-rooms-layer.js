@@ -1,3 +1,4 @@
+// @ts-check
 /* ---- the floor, drawn as one plan ----
    Walls are why this has its own pass order rather than reusing the room scene's layers. A room's
    band lies OUTSIDE its measured face (see drawWalls), so two rooms parked exactly
@@ -14,6 +15,7 @@ import {L} from '../../kernel/state.js';
 import {drawRoomFloor} from '../room/index.js';
 
 /* nothing to show: say which of the two reasons it is */
+/** @param {import('../../kernel/types.js').Floor|null|undefined} fl */
 function drawFloorEmpty(fl){
   const C=PAL();
   ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -26,6 +28,7 @@ function drawFloorEmpty(fl){
                   : 'Put it on one from its ⋯ menu in the Rooms list.', W/2, H/2+12);
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const floorRoomsLayer = {
   id:'floor-rooms', z:20, scene:'floor',
   draw(ctx, view, {fl, members, empty}){

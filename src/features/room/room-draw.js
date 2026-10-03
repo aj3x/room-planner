@@ -1,3 +1,4 @@
+// @ts-check
 /* Drawing a custom room, the commands: starting, where the next corner
    lands (drawSnapPoint), finishing and abandoning the outline. The pointer
    and key handling, and the outline on screen, are the room-draw tool's
@@ -19,7 +20,7 @@ function cancelCustomDraw(){
 function finishCustomDraw(){
   if(!drawState.value||drawState.value.pts.length<3){ flash('Add at least 3 corners first'); return; }
   transact('room', ()=>{
-    L().room.points=drawState.value.pts.map(p=>p.slice());
+    L().room.points=/** @type {{pts: import("../../kernel/types.js").Pt[]}} */(drawState.value).pts.map(p=>p.slice());   // drawing
     L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
     clampOpenings(); roomSel.value = null;
     drawState.value = null; alignGuides.value = []; alignNote.value = ''; $('drawHint').hidden=true;
@@ -29,8 +30,9 @@ function finishCustomDraw(){
 /* Where the next corner would land, and why — the same magnet the corner drag uses, so
    an outline comes out straight and square while it is being drawn rather than having to
    be tidied up afterwards. Shift still means the old 45° lock off the last corner. */
+/** @param {import('../../kernel/types.js').Pt} raw @param {boolean} shift @returns {import('../../kernel/types.js').Pt} */
 function drawSnapPoint(raw,shift){
-  const pts=drawState.value.pts;
+  const pts=/** @type {{pts: import("../../kernel/types.js").Pt[]}} */(drawState.value).pts;   // drawing
   if(shift&&pts.length){
     const prev=pts[pts.length-1];
     const v=[raw[0]-prev[0], raw[1]-prev[1]], len=Math.hypot(v[0],v[1])||1;

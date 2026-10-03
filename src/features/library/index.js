@@ -1,3 +1,4 @@
+// @ts-check
 /* The Library and Marketplace page (#paneLibrary): browsing, the grid and
    tree, folders, search, export, adding a marketplace item to the library,
    and the item editor (itemDialog) the plan's item list shares.

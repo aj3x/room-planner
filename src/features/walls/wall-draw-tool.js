@@ -1,3 +1,4 @@
+// @ts-check
 /* Drawing a freestanding wall: a click for its start, a click for its end,
    each landing on the wall magnet (Alt drops it; Shift locks the end to the
    start's axis). Escape abandons it. While it is live it owns the canvas and
@@ -7,20 +8,24 @@ import {flash} from '../../ui-kit/flash.js';
 import {draw, scheduleDraw, drawCursor, wallDrawShift, wallDrawState, PAL, snapWallPoint, axisLockFrom, ctx, sx, sy, wx, wy} from '../canvas/index.js';
 import {cancelWallDraw, finishWallDraw} from './wall-draw.js';
 
+/** @type {import('../canvas/types.js').Tool['onDown']} */
 function wallDrawDown(e,px,py){
+  const ws=/** @type {{a: import('../../kernel/types.js').Pt|null}} */(wallDrawState.value);   // on: active() holds
   const raw0=[wx(px),wy(py)];
-  const raw = (wallDrawState.value.a && e.shiftKey) ? axisLockFrom(wallDrawState.value.a,raw0) : raw0;
+  const raw = (ws.a && e.shiftKey) ? axisLockFrom(ws.a,raw0) : raw0;
   const snapped=snapWallPoint(raw,null,!e.altKey);
-  if(!wallDrawState.value.a){ wallDrawState.value.a=snapped; draw(); return null; }
-  if(Math.hypot(snapped[0]-wallDrawState.value.a[0], snapped[1]-wallDrawState.value.a[1])<50){ flash('Drag out a longer wall'); return null; }
-  finishWallDraw(wallDrawState.value.a, snapped);
+  if(!ws.a){ ws.a=snapped; draw(); return null; }
+  if(Math.hypot(snapped[0]-ws.a[0], snapped[1]-ws.a[1])<50){ flash('Drag out a longer wall'); return null; }
+  finishWallDraw(ws.a, snapped);
   return null;
 }
+/** @type {NonNullable<import('../canvas/types.js').Tool['onCursor']>} */
 function wallDrawCursor(px,py,mods){
   drawCursor.value = [wx(px),wy(py)];
   wallDrawShift.value = mods.shiftKey;
   scheduleDraw();
 }
+/** @type {NonNullable<import('../canvas/types.js').Tool['onKey']>} */
 function wallDrawKey(e){
   if(e.key==='Escape') cancelWallDraw();
   return true;
@@ -43,12 +48,14 @@ function drawWallDrawOverlay(){
   ctx.restore();
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const wallDrawOverlay = {
   id:'wall-draw', z:150, scene:'room',
   deps(){ wallDrawState.value; drawCursor.value; wallDrawShift.value; },
   draw(){ drawWallDrawOverlay(); }
 };
 
+/** @satisfies {import('../canvas/types.js').Tool} */
 const wallDrawTool = {
   id:'wall-draw',
   active: () => !!wallDrawState.value,

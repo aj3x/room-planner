@@ -1,3 +1,4 @@
+// @ts-check
 /* Room mode's tracing aid: the other rooms on this room's floor, faint. */
 
 import {ctx, sx, sy, view, PAL, clip, pathPoly} from '../canvas/index.js';
@@ -31,6 +32,7 @@ function drawFloorUnderlay(){
   ctx.restore();
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const floorUnderlayLayer = {
   id:'floor-underlay', z:10, scene:'room',
   draw(){ if(roomMode()) drawFloorUnderlay(); }

@@ -1,3 +1,4 @@
+// @ts-check
 /* Splitting a room in two: cutting a polyline from one point on the room's
    outline to another. The drawing state is a signal (splitDrawState), so the
    canvas follows it; committing the split is a transact('project'). */
@@ -7,6 +8,21 @@ import {nearestOnWalls} from '../../kernel/walls.js';
 
 /* is `pt` (already snapped) essentially exactly on the room's own outline? Returns
    the room-wall hit {i,t,len,pt} if so, else null — used to accept/reject each click. */
+/** @typedef {import('../../kernel/types.js').Pt} Pt */
+/** A point on the room's own outline: wall i, t of the way along its len.
+    @typedef {{i: number, t: number, len: number, pt: Pt}} WallHit */
+/** What a valid cut splits the room into, carried from the check to the commit.
+    @typedef {{chainA: Pt[], chainB: Pt[], offA: boolean[], offB: boolean[], newEdgeCount: number,
+      openingsA: import('../../kernel/types.js').Opening[], openingsB: import('../../kernel/types.js').Opening[],
+      pillarsA: import('../../kernel/types.js').Pillar[], pillarsB: import('../../kernel/types.js').Pillar[],
+      iwallsA: import('../../kernel/types.js').IWall[], iwallsB: import('../../kernel/types.js').IWall[],
+      placedA: import('../../kernel/types.js').Placed[], placedB: import('../../kernel/types.js').Placed[],
+      measuresA: import('../../kernel/types.js').Measure[], measuresB: import('../../kernel/types.js').Measure[],
+      straddling: number}} SplitCtx */
+/* splitDrawState.value is set while the split tool is on, which is when everything below runs */
+/** @typedef {{pts: any[]}} SplitDraw */
+
+/** @param {Pt} pt @returns {WallHit|null} */
 function boundaryHit(pt){
   const nb=nearestOnWalls(pt);
   if(!nb || nb.d>1) return null;
@@ -18,6 +34,7 @@ function boundaryHit(pt){
    multiple off the previous point, the point magnet-snaps there; Shift forces it
    regardless of how far off the raw angle actually is. */
 const SPLIT_ANGLE_STEP=Math.PI/4, SPLIT_ANGLE_TOL=6*Math.PI/180;
+/** @param {Pt} prev @param {Pt} raw @param {boolean} hard @returns {Pt} */
 function splitAngleSnap(prev, raw, hard){
   const dx=raw[0]-prev[0], dy=raw[1]-prev[1], dist=Math.hypot(dx,dy);
   if(dist<1) return raw;
@@ -61,7 +78,7 @@ function splitRefs(){
     refs.push({p:P[i], bias:0.3, edge:wallOf(i).dir});
     refs.push({p:P[i], bias:0.3, edge:wallOf((i-1+n)%n).dir});
   }
-  const pts=splitDrawState.value.pts;
+  const pts=/** @type {SplitDraw} */(splitDrawState.value).pts;
   for(let k=0;k<pts.length;k++){
     const p=pts[k].pt||pts[k], last=k===pts.length-1;
     let edge=null;
@@ -75,6 +92,7 @@ function splitRefs(){
    the last two placed points plus the candidate, or, before any bend exists
    yet, a point synthesised back along the start wall so the very first
    segment can still be told apart from square. */
+/** @param {any[]} pts the split line so far @param {Pt} candidatePt @returns {Pt[]|null} */
 function splitCornerRef(pts, candidatePt){
   if(pts.length>=2){
     return [pts[pts.length-2].pt||pts[pts.length-2], pts[pts.length-1].pt||pts[pts.length-1], candidatePt];
@@ -93,8 +111,9 @@ function splitCornerRef(pts, candidatePt){
    line's own last segment get first pick (so a bend can line up square in a
    corner, same as dragging a room corner does), falling back to the plain
    45°-ish soft angle magnet, and finally to whatever raw point was given. */
+/** @param {Pt} raw0 @param {boolean} hard @returns {{pt: Pt, guides: import('../../kernel/types.js').Seg[], note: string}} */
 function splitResolvePoint(raw0, hard){
-  const pts=splitDrawState.value.pts;
+  const pts=/** @type {SplitDraw} */(splitDrawState.value).pts;
   const prev=pts.length ? (pts[pts.length-1].pt||pts[pts.length-1]) : null;
   if(hard && prev) return {pt:splitAngleSnap(prev, raw0, true), guides:[], note:'Straight'};
   const aligned=alignPoint(raw0, splitRefs(), alignRadius());
@@ -119,6 +138,7 @@ function cancelSplitDraw(){ batch(()=>{ splitDrawState.value = null; alignGuides
    whatever interior points were placed. Nothing is committed here — this only
    gets as far as opening the solid/open choice; the actual S.layouts mutation
    happens in commitSplit(). */
+/** @param {WallHit} hitA @param {Pt[]} mid @param {WallHit} hitB */
 function trySplitLine(hitA, mid, hitB){
   const P=RP(), n=P.length;
   if(hitA.i===hitB.i){ flash('Pick two different walls to split between'); return; }
@@ -128,7 +148,7 @@ function trySplitLine(hitA, mid, hitB){
      against — exclude both, or a segment merely starting/ending at that shared
      corner can register as "crossing" the other one via a degenerate collinear
      case in segHit. */
-  const endEdges = hit => {
+  const endEdges = (/** @type {WallHit} */hit) => {
     const s=new Set([hit.i]), tAbs=hit.t*hit.len;
     if(tAbs<=1) s.add((hit.i-1+n)%n);
     else if(tAbs>=hit.len-1) s.add((hit.i+1)%n);
@@ -160,7 +180,7 @@ function trySplitLine(hitA, mid, hitB){
   const work={points:clone(P), wallOff:syncWallOff(L().room).slice(), openings:clone(L().openings), measures:clone(L().measures)};
   /* insert (or reuse) the vertex at `hit`, reporting where the new point actually
      landed so a later, lower-edge insertion can tell whether it shifted this one */
-  const resolveHit = hit => {
+  const resolveHit = (/** @type {WallHit} */hit) => {
     const tAbs=hit.t*hit.len;
     if(tAbs<=1) return {idx:hit.i, insertAt:null};
     if(tAbs>=hit.len-1) return {idx:(hit.i+1)%work.points.length, insertAt:null};
@@ -187,15 +207,15 @@ function trySplitLine(hitA, mid, hitB){
   const offB=work.wallOff.slice(q).concat(work.wallOff.slice(0, p));
   const newEdgeCount=mid.length+1;   // however many segments the drawn path has
 
-  const inA = w => w>=p && w<q;
-  const remapA = w => w-p;
-  const remapB = w => w>=q ? w-q : w+(n2-q);
+  const inA = (/** @type {number} */w) => w>=p && w<q;
+  const remapA = (/** @type {number} */w) => w-p;
+  const remapB = (/** @type {number} */w) => w>=q ? w-q : w+(n2-q);
   const openingsA=[], openingsB=[];
   for(const o of work.openings){
     if(inA(o.wall)) openingsA.push(Object.assign(clone(o), {wall:remapA(o.wall)}));
     else openingsB.push(Object.assign(clone(o), {wall:remapB(o.wall)}));
   }
-  const remapMeasureWalls = remapFn => clone(work.measures).map(m=>{
+  const remapMeasureWalls = (/** @type {(w: number) => number|null} */remapFn) => clone(work.measures).map(m=>{
     for(const anc of [m.a,m.b]) if(anc.k==='wall'){ const w=remapFn(anc.id); anc.id = w==null ? -1 : w; }
     return m;
   });
@@ -203,17 +223,20 @@ function trySplitLine(hitA, mid, hitB){
   const measuresB=remapMeasureWalls(w=>inA(w)?null:remapB(w));
 
   const room=L();
-  const pillarsA=[], pillarsB=[];
+  /** @type {import('../../kernel/types.js').Pillar[]} */
+  const pillarsA=[], pillarsB=/** @type {import('../../kernel/types.js').Pillar[]} */([]);
   for(const pl of room.room.pillars) (pointInPoly([pl.x,pl.y], chainA)?pillarsA:pillarsB).push(clone(pl));
-  const iwallsA=[], iwallsB=[];
+  /** @type {import('../../kernel/types.js').IWall[]} */
+  const iwallsA=[], iwallsB=/** @type {import('../../kernel/types.js').IWall[]} */([]);
   for(const w of room.room.iwalls){
     const wmid=[(w.a[0]+w.b[0])/2, (w.a[1]+w.b[1])/2];
     (pointInPoly(wmid, chainA)?iwallsA:iwallsB).push(clone(w));
   }
-  const placedA=[], placedB=[];
+  /** @type {import('../../kernel/types.js').Placed[]} */
+  const placedA=[], placedB=/** @type {import('../../kernel/types.js').Placed[]} */([]);
   for(const inst of room.placed) (pointInPoly([inst.x,inst.y], chainA)?placedA:placedB).push(clone(inst));
 
-  const crossesCut = poly => {
+  const crossesCut = (/** @type {Pt[]} */poly) => {
     for(let k=0;k<poly.length;k++) for(let s=0;s<path.length-1;s++)
       if(segHit(path[s],path[s+1],poly[k],poly[(k+1)%poly.length])) return true;
     return false;
@@ -225,10 +248,12 @@ function trySplitLine(hitA, mid, hitB){
 
   openSplitChoice({chainA,chainB,offA,offB,newEdgeCount,openingsA,openingsB,pillarsA,pillarsB,iwallsA,iwallsB,placedA,placedB,measuresA,measuresB,straddling});
 }
+/** @param {SplitCtx} ctx */
 function openSplitChoice(ctx){
   /* #moFoot is the shared modal chrome every dialog reuses, so the extra
      button this one needs has to be added on mount and torn back out again
      on close — otherwise it would linger in the footer of every later modal. */
+  /** @type {HTMLButtonElement|null} */
   let openBtn=null;
   openModal("Split this room into two?",
     `<p>${ctx.straddling ? plural(ctx.straddling,'item')+' sit on the dividing line and will move fully onto one side. ' : ''}Choose how the new boundary between the two rooms should look.</p>
@@ -244,7 +269,10 @@ function openSplitChoice(ctx){
     },
     {onClose:()=>{ if(openBtn){ openBtn.remove(); openBtn=null; } cancelSplitDraw(); }});
 }
+/** @type {{aId: string, aBefore: import('../../kernel/types.js').Layout, bId: string,
+    aRoomHist?: import('../../kernel/types.js').Hist, aFurnHist?: import('../../kernel/types.js').Hist}|null} */
 let lastSplit=null;   // one slot, same "not a stack" precedent as lastMerge
+/** @param {SplitCtx} ctx @param {boolean} openWall leave the cut with no wall */
 function commitSplit(ctx, openWall){
   const A=L(), room=A.room;
   const {wall, floor, trimOn, trim}=room;
@@ -296,6 +324,7 @@ function splitUndo(){
 }
 
 /* start cutting room `id` in two, in Room mode, with nothing else live */
+/** @param {string} id */
 function startSplitRoom(id){
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
   if(!polySimple(l.room.points)){ flash("Straighten this room's outline before splitting it"); return; }

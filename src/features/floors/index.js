@@ -1,3 +1,4 @@
+// @ts-check
 /* Floors: arranging rooms on a floor, merging two of them, the floor
    panels, the Floor-mode tool and its layers.
 

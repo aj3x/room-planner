@@ -1,3 +1,4 @@
+// @ts-check
 /* The room picked up on the floor, with its rotate handle, and the rooms
    marked for merge/delete. hitTest says whether a screen point is on the
    picked room's rotate handle. */
@@ -8,7 +9,9 @@ import {floorSel, mergeSel} from '../../kernel/selection.js';
 import {L, floorOf} from '../../kernel/state.js';
 import {floorMembers} from '../../kernel/floor-place.js';
 
+/** where the rotate handle sits over outline P, screen px @param {import('../../kernel/types.js').Pt[]} P */
 const floorRotHandle = P => { const b=bbox(P); return {x:sx((b.x0+b.x1)/2), y:sy(b.y0)-26}; };
+/** @param {import('../canvas/types.js').FullFloorFrame} f */
 function drawFloorSelection({C, members}){
   const selM=members.find(m=>m.l.id===floorSel.value);
   if(selM){
@@ -35,11 +38,13 @@ function drawFloorSelection({C, members}){
   }
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const floorSelectionLayer = {
   id:'floor-selection', z:120, scene:'floor',
   deps(){ floorSel.value; mergeSel.value; },
   draw(ctx, view, f){ if(!f.empty) drawFloorSelection(f); },
   /* the picked room, if (px,py) is on its rotate handle */
+  /** @param {number} px @param {number} py */
   hitTest(px,py){
     const fl=floorOf(L().floorId);
     if(!fl || !floorSel.value) return null;

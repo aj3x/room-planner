@@ -1,3 +1,4 @@
+// @ts-check
 /* Drawing a room's outline: each click places a corner, under the same
    alignment magnet a corner drag uses (Shift locks to 45°); a click back on
    the first corner, or Enter, closes it; Escape abandons it. While it is
@@ -8,23 +9,27 @@ import {alignGuides, alignNote} from '../../kernel/selection.js';
 import {draw, scheduleDraw, drawCursor, drawState, wallDrawShift, PAL, ctx, sx, sy, wx, wy} from '../canvas/index.js';
 import {cancelCustomDraw, drawSnapPoint, finishCustomDraw} from './room-draw.js';
 
+/** @type {import('../canvas/types.js').Tool['onDown']} */
 function roomDrawDown(e,px,py){
+  const ds=/** @type {{pts: import('../../kernel/types.js').Pt[]}} */(drawState.value);   // on: active() holds
   const raw=[wx(px),wy(py)];
-  if(drawState.value.pts.length>=3){
-    const s0=[sx(drawState.value.pts[0][0]), sy(drawState.value.pts[0][1])];
+  if(ds.pts.length>=3){
+    const s0=[sx(ds.pts[0][0]), sy(ds.pts[0][1])];
     if(Math.hypot(px-s0[0], py-s0[1])<12){ finishCustomDraw(); return null; }
   }
-  drawState.value.pts.push(drawSnapPoint(raw,e.shiftKey));
+  ds.pts.push(drawSnapPoint(raw,e.shiftKey));
   alignGuides.value = []; alignNote.value = '';
   draw();
   return null;
 }
 /* where the next corner would land, shown as the rubber band */
+/** @type {NonNullable<import('../canvas/types.js').Tool['onCursor']>} */
 function roomDrawCursor(px,py,mods){
   drawCursor.value = drawSnapPoint([wx(px),wy(py)], mods.shiftKey);
   wallDrawShift.value = mods.shiftKey;
   scheduleDraw();
 }
+/** @type {NonNullable<import('../canvas/types.js').Tool['onKey']>} */
 function roomDrawKey(e){
   if(e.key==='Escape') cancelCustomDraw();
   else if(e.key==='Enter') finishCustomDraw();
@@ -52,12 +57,14 @@ function drawCustomOverlay(){
   ctx.restore();
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const roomDrawOverlay = {
   id:'room-draw', z:140, scene:'room',
   deps(){ drawState.value; drawCursor.value; },
   draw(){ drawCustomOverlay(); }
 };
 
+/** @satisfies {import('../canvas/types.js').Tool} */
 const roomDrawTool = {
   id:'room-draw',
   active: () => !!drawState.value,

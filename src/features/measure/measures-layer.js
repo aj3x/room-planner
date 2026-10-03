@@ -1,3 +1,4 @@
+// @ts-check
 /* Measurements: each dimension line with its label, and while the Measure
    tool is on, the anchors under the pointer and the one being made. Where
    each label was drawn is kept for hitTest, so a click can pick one. */
@@ -8,8 +9,13 @@ import {measureOn, measureStart, measureHover, measureHoverId, measureSel, measu
 import {measuresOf, measureObjs, objOfAnchor, anchorKey, anchorGeom, closestBetween} from './measures.js';
 import {S} from '../../kernel/state.js';
 
+/** @typedef {import('../../kernel/types.js').Pt} Pt */
+/** @typedef {import('../canvas/types.js').Palette} Palette */
+/** @typedef {import('./measures.js').MeasureObj} MeasureObj */
+/** @type {{id: string, p: Pt, q: Pt, x: number, y: number, w: number, h: number}[]} */
 let boxes = [];   // where each measurement was last drawn, in screen px
 
+/** @param {Pt} p @param {boolean} on @param {Palette} C @param {boolean} [square] */
 function drawMeasurePoint(p,on,C,square){
   const x=sx(p[0]), y=sy(p[1]);
   ctx.beginPath();
@@ -17,19 +23,22 @@ function drawMeasurePoint(p,on,C,square){
   ctx.fillStyle = on?C.accent:C.surface; ctx.fill();
   ctx.lineWidth=2; ctx.strokeStyle=C.accent; ctx.stroke();
 }
+/** @param {MeasureObj} o */
 function strokeWhole(o){
   if(o.whole.area) pathPoly(o.whole.pts);
   else { ctx.beginPath(); ctx.moveTo(sx(o.whole.pts[0][0]),sy(o.whole.pts[0][1])); ctx.lineTo(sx(o.whole.pts[1][0]),sy(o.whole.pts[1][1])); }
   ctx.stroke();
 }
 /* one anchor, marked in accent */
+/** @param {import('../../kernel/types.js').Anchor} a @param {MeasureObj[]} objs @param {Palette} C */
 function drawAnchorPart(a,objs,C){
   const o=objOfAnchor(a,objs);
   if(!o) return;
   ctx.save(); ctx.strokeStyle=C.accent; ctx.lineCap='round'; ctx.lineJoin='round';
-  if(a.part==='corner'){ if(o.corners[a.n]) drawMeasurePoint(o.corners[a.n],true,C,true); }
+  const n=/** @type {number} */(a.n);   // a corner or side anchor names which
+  if(a.part==='corner'){ if(o.corners[n]) drawMeasurePoint(o.corners[n],true,C,true); }
   else if(a.part==='side'){
-    const s=o.sides[a.n];
+    const s=o.sides[n];
     if(s){ ctx.beginPath(); ctx.moveTo(sx(s[0][0]),sy(s[0][1])); ctx.lineTo(sx(s[1][0]),sy(s[1][1])); ctx.lineWidth=3.5; ctx.stroke(); }
   } else if(a.part==='swing'){
     if(o.swing){ pathPoly(o.swing.pts); ctx.fillStyle=C.accentSoft; ctx.globalAlpha=.5; ctx.fill(); ctx.globalAlpha=1; ctx.lineWidth=2; ctx.stroke(); }
@@ -40,6 +49,7 @@ function drawAnchorPart(a,objs,C){
   ctx.restore();
 }
 /* the thing under the pointer: every anchor it offers, with the one a click would take filled in */
+/** @param {import('../../kernel/types.js').Anchor} a @param {MeasureObj[]} objs @param {Palette} C */
 function drawAnchorChoices(a,objs,C){
   const o=objOfAnchor(a,objs);
   if(!o) return;
@@ -75,11 +85,13 @@ function drawMeasures(){
   }
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const measuresLayer = {
   id:'measures', z:130, scene:'room',
   deps(){ measureOn.value; measureStart.value; measureHover.value; measureHoverId.value; measureSel.value; measureCursor.value; },
   draw(){ drawMeasures(); },
   /* a drawn measurement under a screen point: its label, or with `lines` its line too */
+  /** @param {number} px @param {number} py @param {boolean} [lines] */
   hitTest(px,py,lines){
     for(let i=boxes.length-1;i>=0;i--){
       const b=boxes[i];

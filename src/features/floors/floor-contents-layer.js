@@ -1,3 +1,4 @@
+// @ts-check
 /* Pass D of the floor scene: door and window symbols, structure, then
    everything standing in each room — room by room, so one room's contents
    stack over the last room's exactly as they always have. */
@@ -9,6 +10,7 @@ import {iwallPoly, wallIsOff} from '../../kernel/walls.js';
 import {drawOpening} from '../openings/index.js';
 import {drawItem} from '../furniture/index.js';
 
+/** @param {import('../canvas/types.js').FullFloorFrame} f */
 function drawFloorContents({C, members, depths}){
   members.forEach((m,mi)=>{
     /* jambs and window lines are drawn across the band, so they take its depth too */
@@ -32,6 +34,7 @@ function drawFloorContents({C, members, depths}){
   });
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const floorContentsLayer = {
   id:'floor-contents', z:70, scene:'floor',
   draw(ctx, view, f){ if(!f.empty) drawFloorContents(f); }

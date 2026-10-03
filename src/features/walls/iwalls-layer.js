@@ -1,3 +1,4 @@
+// @ts-check
 /* Freestanding interior walls. */
 
 import {ctx, PAL, pathPoly} from '../canvas/index.js';
@@ -13,6 +14,7 @@ function drawIWalls(){
   }
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const iwallsLayer = {id:'iwalls', z:50, scene:'room', draw(){ drawIWalls(); }};
 
 export {iwallsLayer};

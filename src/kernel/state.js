@@ -36,7 +36,7 @@ function blankLayout(name,folderId){
 /** @type {State} */
 let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true, showWalk:false, showMeasure:true, mode:'furniture',
          planMode:'furniture', // the Room/Furniture mode to go back to when returning to the Plan screen
-         inventory:[], layouts:[blankLayout()], active:null,
+         inventory:[], layouts:[blankLayout()], active:'',   // set just below
          folders:[],          // {id, name, parentId(null=root), tags:[...]}
          floors:[],           // {id, name, parentId(null=root)} — an arrangement of rooms; see l.floorId / l.floorPlace
          tagFilter:[],        // active tag chips in the Things pane
@@ -70,11 +70,11 @@ function setS(v){ S = v; }
 /** @type {() => Layout} */
 const L = () => S.layouts.find(l=>l.id===S.active) || S.layouts[0];
 const RP = () => L().room.points;
-/** @param {string} id */
+/** @param {string|null|undefined} id */
 const itemOf = id => S.inventory.find(i=>i.id===id);
-/** @param {string} id */
+/** @param {string|null|undefined} id */
 const instOf = id => L().placed.find(p=>p.id===id);
-/** @param {string} id */
+/** @param {string|null|undefined} id */
 const openOf = id => L().openings.find(o=>o.id===id);
 const roomMode = () => S.mode==='room';
 const furnMode = () => S.mode==='furniture';

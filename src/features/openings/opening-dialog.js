@@ -1,3 +1,4 @@
+// @ts-check
 /* The door/window editor.
 
    Extracted from index.html in Phase 3 as part of the 49-name SCC commit,
@@ -14,6 +15,7 @@ import {esc} from '../../ui-kit/panels.js';
 import {setMode} from '../mode/index.js';
 
 /* ------------------------- opening dialog ------------------------- */
+/** New (no id) or edit an opening. @param {string|null} [id] @param {'door'|'window'} [kind] @param {number} [wallIdx] */
 function openingDialog(id, kind, wallIdx){
   const o = id?openOf(id):null;
   const k = o?o.kind:(kind||'door');

@@ -51,7 +51,8 @@ function frame(){
   const C=PAL();
   if(!floorMode()){ const {bad,openBad}=getConflicts(); return {scene:'room', C, bad, openBad}; }
   const fl=floorOf(L().floorId), members=floorMembers(fl), empty=!fl || !members.length;
-  return {scene:'floor', C, fl, members, empty, depths: empty ? null : floorEdgeDepths(members, fl.extWall)};
+  /* empty and depths agree by construction, which tsc cannot follow */
+  return /** @type {import('./types.js').FloorFrame} */({scene:'floor', C, fl, members, empty, depths: empty ? null : floorEdgeDepths(members, /** @type {import('../../kernel/types.js').Floor} */(fl).extWall)});
 }
 
 function draw(){

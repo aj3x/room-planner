@@ -1,3 +1,4 @@
+// @ts-check
 /* What the page is showing: the place and canvas mode (setMode), the active
    room (activateLayout), and the views that follow the mode.
 

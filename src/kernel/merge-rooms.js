@@ -13,6 +13,8 @@ import {PARALLEL_TOL} from './floor-place.js';
 /** @typedef {import('./types.js').Pt} Pt */
 /** A detached copy of one room's outline and what is numbered by its walls.
     @typedef {{points: Pt[], wallOff: boolean[], openings: import('./types.js').Opening[], measures: import('./types.js').Measure[]}} MergeWork */
+/** A merge that worked: the welded room, and how many doors/windows the shared wall took with it.
+    @typedef {MergeWork & {removedOpenings: number, error?: undefined}} MergeOk */
 
 /* ---- merging two rooms into one ----
    Two rooms on the same floor can share only part of a wall — one room's wall may run
@@ -71,7 +73,7 @@ function mergeInsertCuts(work, i, lo, hi, len){
    two rooms don't share exactly one clean wall. */
 /** @param {import('./types.js').Layout} A @param {import('./types.js').Layout} B
     @returns {({error: string} & {[K in keyof MergeWork | 'removedOpenings']?: undefined})
-            | (MergeWork & {removedOpenings: number, error?: undefined})} */
+            | MergeOk} */
 function mergeGeometry(A, B){
   const tA=floorXf(A), tB=floorXf(B);
   const PA=A.room.points.map(p=>floorPt(tA,p));

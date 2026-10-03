@@ -1,3 +1,4 @@
+// @ts-check
 /* The walk-path overlay: the shading passes and the route lines that put
    features/walkpaths/walkpaths.js's clearance numbers on the canvas. The computation is
    features/walkpaths/walkpaths.js; only the paint is here. Furniture mode, with the view
@@ -14,6 +15,7 @@ import {WALK, walkGrid, walkPaths, walkBand} from './walkpaths.js';
    tight, actually blocked"), the same construction the invalid-placement
    hatch uses — texture, not just colour, carries the warning (never colour
    alone, DESIGN.md §3.2) */
+/** @param {{rows: number, cols: number, res: number, x0: number, y0: number, cells: (number|null)[]}} grid @param {(clear: number) => boolean} test @param {string} color @param {number} alpha @param {number} step @param {boolean} [cross] */
 function walkShade(grid,test,color,alpha,step,cross){
   let any=false;
   ctx.save(); ctx.beginPath();
@@ -34,6 +36,7 @@ function walkShade(grid,test,color,alpha,step,cross){
   ctx.stroke();
   ctx.restore();
 }
+/** @param {{pt: import('../../kernel/types.js').Pt, clear: number}[]} path @param {import('../canvas/types.js').Palette} C */
 function walkPinchLabel(path,C){
   let min=path[0];
   for(const p of path) if(p.clear<min.clear) min=p;
@@ -52,6 +55,7 @@ function walkPinchLabel(path,C){
   ctx.fillText(txt,x,y);
   ctx.restore();
 }
+/** @param {{pt: import('../../kernel/types.js').Pt, clear: number}[]} path @param {import('../canvas/types.js').Palette} C */
 function drawWalkPath(path,C){
   if(path.length<2) return;
   ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=.85;
@@ -84,6 +88,7 @@ function drawWalkOverlay(){
   for(const path of walkPaths()) drawWalkPath(path,C);
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const walkPathsLayer = {id:'walk-paths', z:30, scene:'room', draw(){ drawWalkOverlay(); }};
 
 export {walkPathsLayer};

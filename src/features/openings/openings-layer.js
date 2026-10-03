@@ -1,3 +1,4 @@
+// @ts-check
 /* Door and window symbols: jambs, glazing lines, swings and sliding leaves.
    The floor scene draws them with drawOpening too, on every room. */
 
@@ -7,8 +8,10 @@ import {blockedOpenings, openGeom, swingPoly} from '../../kernel/openings.js';
 import {wallIsOff} from '../../kernel/walls.js';
 
 /* `room`/`poly` let a floor draw a door on a room other than the active one */
+/** @param {import('../../kernel/types.js').Opening} o @param {string[]} blocked ids of doors something stands in @param {import('../../kernel/types.js').Room} [room] @param {import('../../kernel/types.js').Pt[]} [poly] */
 function drawOpening(o,blocked,room,poly){
-  const r=room||L().room, g=openGeom(o,poly,r), t=Math.max(2,r.wall*view.scale);
+  /* each branch below reads the door fields openGeom sets for that dtype */
+  const r=room||L().room, g=/** @type {Required<import('../../kernel/openings.js').OpenGeom>} */(openGeom(o,poly,r)), t=Math.max(2,r.wall*view.scale);
   const C=PAL();
   // jambs
   ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(1.5,t*.35);
@@ -29,7 +32,7 @@ function drawOpening(o,blocked,room,poly){
   } else if(o.dtype==='hinge'){
     if(S.showSwing){
       const sp=swingPoly(o,poly,r), bad=blocked.includes(o.id);
-      pathPoly(sp);
+      pathPoly(/** @type {import('../../kernel/types.js').Pt[]} */(sp));   // a hinged door swings
       ctx.fillStyle = bad?'rgba('+C.dangerRGB+',.16)':C.swing; ctx.fill();
       ctx.strokeStyle = bad?'rgba('+C.dangerRGB+',.7)':C.swingLine;
       ctx.setLineDash([4,4]); ctx.lineWidth=bad?1.5:1; ctx.stroke(); ctx.setLineDash([]);
@@ -44,7 +47,7 @@ function drawOpening(o,blocked,room,poly){
        so shading it by default drew attention to clearance that is rarely the problem */
     const bad=blocked.includes(o.id);
     if(S.showSwing && bad){
-      pathPoly(swingPoly(o,poly,r));
+      pathPoly(/** @type {import('../../kernel/types.js').Pt[]} */(swingPoly(o,poly,r)));   // a bi-fold folds
       ctx.fillStyle='rgba('+C.dangerRGB+',.16)'; ctx.fill();
       ctx.strokeStyle='rgba('+C.dangerRGB+',.7)';
       ctx.setLineDash([4,4]); ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]);
@@ -71,6 +74,7 @@ function drawOpening(o,blocked,room,poly){
   }
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const openingsLayer = {
   id:'openings', z:70, scene:'room',
   draw(){

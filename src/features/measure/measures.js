@@ -8,10 +8,21 @@ import {L, itemOf} from '../../kernel/state.js';
 import {wallOf, iwallGeom, iwallPoly} from '../../kernel/walls.js';
 import {openGeom, swingPoly} from '../../kernel/openings.js';
 
+/** @typedef {import('../../kernel/types.js').Pt} Pt */
+/** @typedef {import('../../kernel/types.js').Anchor} Anchor */
+/** An anchor's shape: one point, a segment, or (area) a solid polygon.
+    @typedef {{pts: Pt[], area?: boolean}} AnchorShape */
+/** Something that can be measured, and the anchors it offers.
+    @typedef {{k: import('../../kernel/types.js').AnchorKind, id: string|number, center: Pt, whole: AnchorShape,
+      corners: Pt[], sides: Pt[][], swing?: AnchorShape|null, band?: number}} MeasureObj */
+
+/** @returns {import('../../kernel/types.js').Measure[]} */
 const measuresOf = () => L().measures || (L().measures=[]);
+/** @param {Anchor|null|undefined} a */
 const anchorKey = a => a ? [a.k,a.id,a.part,a.n==null?'':a.n].join(':') : '';
 
 /* everything that can be measured, top-most first, each with the anchors it offers */
+/** @returns {MeasureObj[]} */
 function measureObjs(){
   const l=L(), r=l.room, out=[];
   const solid = (k,id,poly,center,angular) => ({k, id, center, whole:{pts:poly, area:true},
@@ -36,8 +47,10 @@ function measureObjs(){
   }
   return out;
 }
+/** @param {Anchor} a @param {MeasureObj[]} objs */
 const objOfAnchor = (a,objs) => objs.find(o=>o.k===a.k && o.id===a.id);
 /* an anchor's shape: {pts, area} — one point, a segment, or a solid polygon */
+/** @param {Anchor} a @param {MeasureObj[]} objs @returns {AnchorShape|null} */
 function anchorGeom(a,objs){
   const o=objOfAnchor(a,objs);
   if(!o) return null;
@@ -46,6 +59,7 @@ function anchorGeom(a,objs){
   if(a.part==='swing') return o.swing||null;
   return o.whole;
 }
+/** @param {Pt} a @param {Pt} b @param {Pt} c @param {Pt} d @returns {Pt|null} */
 function segCross(a,b,c,d){
   const rx=b[0]-a[0], ry=b[1]-a[1], qx=d[0]-c[0], qy=d[1]-c[1], den=rx*qy-ry*qx;
   if(Math.abs(den)<1e-9) return null;
@@ -53,6 +67,7 @@ function segCross(a,b,c,d){
   return t>=0&&t<=1&&u>=0&&u<=1 ? [a[0]+rx*t, a[1]+ry*t] : null;
 }
 /* the closest pair of points between two anchor shapes: {d, p, q} */
+/** @param {AnchorShape} A @param {AnchorShape} B @returns {{d: number, p: Pt, q: Pt}} */
 function closestBetween(A,B){
   for(const [X,Y] of [[A,B],[B,A]]){
     if(X.area) for(const p of Y.pts) if(pointInPoly(p,X.pts)) return {d:0, p, q:p};

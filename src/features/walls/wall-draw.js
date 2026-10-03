@@ -1,3 +1,4 @@
+// @ts-check
 /* Drawing a freestanding interior wall, the commands: starting, finishing
    and abandoning it. The pointer and key handling, and the wall on screen,
    are the wall-draw tool's (features/walls/wall-draw-tool.js). */
@@ -10,6 +11,7 @@ import {roomMode} from '../../kernel/state.js';
 import {flash} from '../../ui-kit/flash.js';
 import {setMode} from '../mode/index.js';
 function cancelWallDraw(){ wallDrawState.value = null; }
+/** @param {import('../../kernel/types.js').Pt} a @param {import('../../kernel/types.js').Pt} b */
 function finishWallDraw(a,b){
   const w={id:uid(), a, b, t:L().room.wall};
   transact('room', ()=>{

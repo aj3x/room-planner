@@ -1,3 +1,4 @@
+// @ts-check
 /* Room mode: picking and dragging what a room is made of — a corner, a
    wall, a door or window, a pillar, an interior wall or one of its ends.
    A press on nothing pans.
@@ -20,8 +21,16 @@ const DEADZONE_PX=4;
 
 /* the drag in flight: {mode, ox, oy, armed, snap, …} — replaced when one
    starts or ends, mutated in place while it moves */
-const roomDrag = signal(null);
+/** @typedef {import('../../kernel/types.js').Pt} Pt */
+/** What is held, where the press was (ox, oy), whether it has moved past the dead zone,
+    and (snap) the room before anything moved.
+    @typedef {{ox: number, oy: number, armed: boolean, snap?: string}} DragBase */
+/** @typedef {DragBase & ({mode: 'open', id: string} | {mode: 'corner', i: number}
+            | {mode: 'pillar' | 'iwall', id: string, dx: number, dy: number}
+            | {mode: 'iwall-end', id: string, end: 'a'|'b'} | {mode: 'wall', i: number, last: Pt})} RoomDrag */
+const roomDrag = /** @type {import('@preact/signals-core').Signal<RoomDrag|null>} */(signal(null));
 
+/** @type {import('../canvas/types.js').Tool['onDown']} */
 function roomDown(e,px,py){
   const hit=pickRoom(px,py);
   if(!hit){ roomSel.value = null; return startPan(px,py); }
@@ -29,17 +38,18 @@ function roomDown(e,px,py){
   if(hit.kind==='opening') roomDrag.value = {mode:'open', id:hit.id, ox:px, oy:py, armed:false};
   else if(hit.kind==='corner') roomDrag.value = {mode:'corner', i:hit.i, ox:px, oy:py, armed:false};
   else if(hit.kind==='pillar'){
-    const pl=pillarOf(hit.id);
+    const pl=/** @type {import('../../kernel/types.js').Pillar} */(pillarOf(hit.id));   // just picked
     roomDrag.value = {mode:'pillar', id:hit.id, dx:wx(px)-pl.x, dy:wy(py)-pl.y, ox:px, oy:py, armed:false};
   }
   else if(hit.kind==='iwall'){
     if(hit.end) roomDrag.value = {mode:'iwall-end', id:hit.id, end:hit.end, ox:px, oy:py, armed:false};
-    else { const w=iwallOf(hit.id); roomDrag.value = {mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1], ox:px, oy:py, armed:false}; }
+    else { const w=/** @type {import('../../kernel/types.js').IWall} */(iwallOf(hit.id)); roomDrag.value = {mode:'iwall', id:hit.id, dx:wx(px)-w.a[0], dy:wy(py)-w.a[1], ox:px, oy:py, armed:false}; }
   }
-  else roomDrag.value = {mode:'wall', i:hit.i, last:[wx(px),wy(py)], ox:px, oy:py, armed:false};
+  else roomDrag.value = {mode:'wall', i:/** @type {number} */(hit.i), last:[wx(px),wy(py)], ox:px, oy:py, armed:false};
   return roomTool;
 }
 
+/** @type {import('../canvas/types.js').HeldTool['onMove']} */
 function roomMove(px,py,mods){
   const d=roomDrag.value;
   if(!d) return;
@@ -110,14 +120,16 @@ function roomMove(px,py,mods){
 }
 
 /* the whole gesture is one undo step, recorded here and nowhere in between */
+/** @type {import('../canvas/types.js').HeldTool['onUp']} */
 function roomUp(){
   transact('room', ()=>{ alignGuides.value = []; alignNote.value = ''; });
   roomDrag.value = null;
 }
 
 /* Escape mid-drag: put whatever was being dragged back exactly where it started */
+/** @type {import('../canvas/types.js').HeldTool['onCancel']} */
 function roomCancel(){
-  const d=roomDrag.value;
+  const d=/** @type {RoomDrag} */(roomDrag.value);   // held
   if(d.snap){ const s=JSON.parse(d.snap); L().room=s.room; L().openings=s.openings; }
   roomDrag.value = null; alignGuides.value = []; alignNote.value = '';
   // back where the gesture started, which is what storage and history already hold
@@ -125,6 +137,7 @@ function roomCancel(){
 }
 
 /* the 90° tick on a corner being dragged square, under the handles */
+/** @satisfies {import('../canvas/types.js').Layer} */
 const cornerTickOverlay = {
   id:'corner-tick', z:115, scene:'room',
   deps(){ roomDrag.value; alignNote.value; },
@@ -137,6 +150,7 @@ const cornerTickOverlay = {
   }
 };
 
+/** @satisfies {import('../canvas/types.js').Tool} */
 const roomTool = {
   id:'room', autoPan:true,
   active: roomMode,

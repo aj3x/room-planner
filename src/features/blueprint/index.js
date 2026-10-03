@@ -1,3 +1,4 @@
+// @ts-check
 /* Blueprint import: the four-stage wizard that traces a photo of a floor
    plan into rooms on a floor, and undoing the last import.
 

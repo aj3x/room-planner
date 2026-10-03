@@ -90,7 +90,10 @@ function markActiveTreeRow(){
   }
 }
 const libTreeBox=$('tree');
+/** The folder being dragged in the Library tree. @typedef {{kind: 'folder', id: string, realm: 'library'|'market'}} DragLib */
+/** @type {DragLib|null} */
 let dragLib=null;
+/** @param {DragLib|null} v */
 function setDragLib(v){ dragLib=v; }
 
 function libDropSpot(e){

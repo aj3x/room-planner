@@ -1,3 +1,4 @@
+// @ts-check
 /* A room's floor: its colour, the grid and the baseboard trim. The room
    scene paints the active room with it; the floor scene paints every room
    on the floor with the same drawRoomFloor. */
@@ -13,6 +14,7 @@ function gridStep(){
   while(base*view.scale>90) base/=2;
   return base;
 }
+/** @param {import('../../kernel/types.js').Pt[]} P */
 function drawGrid(P){
   const step=gridStep();
   if(step*view.scale<7) return;
@@ -24,6 +26,7 @@ function drawGrid(P){
   for(let y=Math.ceil(b.y0/step)*step;y<=b.y1;y+=step){ ctx.moveTo(sx(b.x0),Math.round(sy(y))+.5); ctx.lineTo(sx(b.x1),Math.round(sy(y))+.5); }
   ctx.stroke(); ctx.restore();
 }
+/** @param {import('../../kernel/types.js').Pt[]} P @param {import('../../kernel/types.js').Room} r */
 function drawRoomFloor(P, r){
   const C=PAL();
   pathPoly(P); ctx.fillStyle=r.floor; ctx.fill('evenodd');
@@ -37,6 +40,7 @@ function drawRoomFloor(P, r){
   }
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const roomFloorLayer = {
   id:'room-floor', z:20, scene:'room',
   draw(){ drawRoomFloor(RP(), L().room); }

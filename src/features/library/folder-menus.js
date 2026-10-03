@@ -17,6 +17,7 @@ import {goLibFolder, nav, selectListing} from './nav.js';
 import {libTreeBox} from './tree.js';
 
 /* ------------------------- folder menus & dialogs ------------------------- */
+/** @param {string} title @param {(name: string, tags: string[]) => void} onOk */
 function askNewLibFolder(title,onOk){
   openModal(title, `
     <label class="stack-label">Name</label>

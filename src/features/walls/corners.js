@@ -1,3 +1,4 @@
+// @ts-check
 /* Adding and taking away a corner. A wall has no id -- it IS the gap between
    two points -- so splicing the polygon renumbers walls underneath everything
    standing in them; both functions renumber before they render.
@@ -26,12 +27,13 @@ import {flash} from '../../ui-kit/flash.js';
    wall number against a polygon that has already been renumbered, so each one is
    measured against somebody else's wall and its offset is squashed to fit. Splice,
    renumber, and only then clamp. */
+/** @param {number} i */
 function splitWall(i){
   const P=RP(), room=L().room, w=wallOf(i);
   P.splice(i+1, 0, [w.mid[0], w.mid[1]]);
   if(!polySimple(P)){ P.splice(i+1,1); flash('That would fold the room over itself'); return; }
   transact('room', ()=>{
-    room.wallOff.splice(i+1, 0, wallIsOff(room,i));   // both halves inherit whether that wall was there
+    /** @type {boolean[]} */(room.wallOff).splice(i+1, 0, wallIsOff(room,i));   // both halves inherit whether that wall was there
     /* One wall became two, so every wall past it moves up a number. A door or window in
        the far half changes wall as well, and starts that much further back along it; one
        straddling the join goes wherever most of it is, since an opening cannot span two
@@ -48,6 +50,7 @@ function splitWall(i){
     roomSel.value = {kind:'corner', i:i+1};
   });
 }
+/** @param {number} i */
 function deleteCorner(i){
   const P=RP();
   if(P.length<=3){ flash('A room needs at least three corners'); return; }
@@ -58,9 +61,9 @@ function deleteCorner(i){
   const removed=P.splice(i,1);
   if(!polySimple(P)){ P.splice(i,0,removed[0]); flash("That corner can't be removed"); return; }
   transact('room', ()=>{
-    room.wallOff.splice(i,1);   // the two edges merge; the one before keeps its state
+    /** @type {boolean[]} */(room.wallOff).splice(i,1);   // the two edges merge; the one before keeps its state
     // walls i-1 and i are now one wall, numbered i-1, and everything past i drops a number
-    const to = w => { const t = w===i ? prev : w; return t>i ? t-1 : t; };
+    const to = (/** @type {number} */w) => { const t = w===i ? prev : w; return t>i ? t-1 : t; };
     for(const o of L().openings){
       if(o.wall===i) o.offset+=absorbed;
       o.wall=to(o.wall);
@@ -69,7 +72,7 @@ function deleteCorner(i){
     for(const m of l.measures) for(const a of [m.a,m.b]) if(a.k==='wall') a.id=to(a.id);
     /* a measurement that ran between the two walls now joins one wall to itself and reads
        zero, so it goes with them */
-    const sameEnd = m => m.a.k==='wall' && m.b.k==='wall' && m.a.id===m.b.id
+    const sameEnd = (/** @type {import('../../kernel/types.js').Measure} */m) => m.a.k==='wall' && m.b.k==='wall' && m.a.id===m.b.id
                       && m.a.part===m.b.part && m.a.n===m.b.n;
     l.measures = l.measures.filter(m=>!sameEnd(m));
     syncWallOff(room);

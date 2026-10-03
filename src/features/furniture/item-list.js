@@ -1,3 +1,4 @@
+// @ts-check
 /* The Furniture pane's inventory list: the tag-filter chips, the list itself,
    the two filter helpers behind them, and what a row's menu does.
 
@@ -32,12 +33,13 @@ function allTags(){
   for(const f of S.itemFolders) for(const t of (f.tags||[])) s.add(t);
   return [...s].sort((a,b)=>a.localeCompare(b));
 }
+/** @param {import('../../kernel/types.js').Item} it */
 function itemMatchesFilter(it){
   if(S.onlyAvailable && availableCount(it)<=0) return false;
   const tags=it.tags||[];
   if(S.tagFilter.length || S.untaggedOnly){
     // the chips read as "any of these": a tag chip, or the Untagged chip
-    if(!(tags.some(t=>S.tagFilter.includes(t)) || (S.untaggedOnly && !tags.length))) return false;
+    if(!(tags.some((/** @type {string} */t)=>S.tagFilter.includes(t)) || (S.untaggedOnly && !tags.length))) return false;
   }
   const q=(S.invSearch||'').trim().toLowerCase();
   if(q){
@@ -74,6 +76,7 @@ function renderInv(){
   if(empty){ ul.innerHTML=''; return; }
   const shown = S.inventory.filter(itemMatchesFilter);
   if(!shown.length){ ul.innerHTML=emptyRow('Nothing matches this filter.'); return; }
+  /** @type {Record<string, number>} */
   const counts={};
   for(const p of L().placed) counts[p.itemId]=(counts[p.itemId]||0)+1;
   ul.innerHTML=shown.map(i=>{
@@ -99,16 +102,19 @@ const invBox=$('invList');
 
 
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */
+/** @param {string} id */
 function placeItem(id){
   const it=itemOf(id); if(!it) return;
   if(availableCount(it)<=0){ flash("None left to place \u2014 edit the item to own more"); return; }
   place(id);
 }
+/** @param {string} id */
 function renameItem(id){
   const it=itemOf(id), li=invBox.querySelector('li[data-id="'+id+'"]');
   if(!it||!li) return;
   inlineEdit(li.querySelector('.nm'), it.name, v=>{ if(v) transact('lib', ()=>{ it.name=v; }); });
 }
+/** @param {string} id @param {Element} anchor */
 function itemMenu(id, anchor){
   const it=itemOf(id); if(!it) return;
   openMenu(anchor, [
@@ -126,6 +132,7 @@ function itemMenu(id, anchor){
     {label:'Delete\u2026', danger:true, fn:()=>deleteItem(id)},
   ], it.name);
 }
+/** @param {string} id */
 function deleteItem(id){
   const n=S.layouts.reduce((a,l)=>a+l.placed.filter(p=>p.itemId===id).length,0);
   /* The placements go too, in every room, and none of that is a furniture undo
@@ -140,7 +147,9 @@ function deleteItem(id){
   if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+'. Those will be removed too.', 'Delete', kill);
   else kill();
 }
+/** @type {string|null} the item id being dragged out of the list */
 let dragInv=null;
+/** @param {string|null} v */
 function setDragInv(v){ dragInv=v; }
 
 /* The list repaints on library edits and filter changes, and on furniture

@@ -1,3 +1,4 @@
+// @ts-check
 /* The layout tree in the left pane: folders, floors and rooms, their row
    menus and drag-and-drop.
 

@@ -1,3 +1,4 @@
+// @ts-check
 /* Doors and windows: their list, their Selection panel view, the dialog
    that adds or edits one, and their layer.
 

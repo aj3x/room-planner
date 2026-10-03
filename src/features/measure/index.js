@@ -1,3 +1,4 @@
+// @ts-check
 /* The Measure tool: measurements between two anchors, their layer, the
    tool, its state and the bar over the canvas.
 

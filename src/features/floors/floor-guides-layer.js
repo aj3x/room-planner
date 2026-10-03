@@ -1,8 +1,10 @@
+// @ts-check
 /* The floor magnet's guides: the neighbour edges a dragged room is lining up with. */
 
 import {ctx, sx, sy} from '../canvas/index.js';
 import {floorGuides} from '../../kernel/selection.js';
 
+/** @param {import('../canvas/types.js').FullFloorFrame} f */
 function drawFloorGuides({C}){
   for(const g of floorGuides.value){
     ctx.save();
@@ -12,6 +14,7 @@ function drawFloorGuides({C}){
   }
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const floorGuidesLayer = {
   id:'floor-guides', z:110, scene:'floor',
   deps(){ floorGuides.value; },

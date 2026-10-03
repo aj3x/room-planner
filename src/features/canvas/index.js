@@ -1,3 +1,4 @@
+// @ts-check
 /* The plan canvas: the camera (view, camera), the compositor (draw) and its
    palette (paint), the pointer dispatcher (interaction) with the pan tool,
    the shared drawing-tool state, snapping and picking (snap), and the layers

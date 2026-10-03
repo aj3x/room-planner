@@ -1,3 +1,4 @@
+// @ts-check
 /* Pillars and other fixed structure. */
 
 import {ctx, PAL, pathPoly} from '../canvas/index.js';
@@ -13,6 +14,7 @@ function drawPillars(){
   }
 }
 
+/** @satisfies {import('../canvas/types.js').Layer} */
 const pillarsLayer = {id:'pillars', z:60, scene:'room', draw(){ drawPillars(); }};
 
 export {pillarsLayer};
