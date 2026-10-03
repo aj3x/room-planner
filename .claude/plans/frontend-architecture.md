@@ -158,3 +158,4 @@ Phase log (filled in by the orchestrator):
 |-------|----------|-----------|-------|-------|
 | 1 transact() | e8e6436 | 6bccc41 | 1 | PASS; nits fixed; added opts.canvas, rev bump limited to room/furn/lib/project; Selected-panel X/Y undo gap logged in BACKLOG.md |
 | 2 signals | eef7fc8 | adbf951 | 2 | PASS; refused edits snap back, held panel released on change/click, restored field selected; registry kept for blueprint.*, plan.setMode/activateLayout, ui.flash (Phase 4 removes); room drag ~2x pointermove cost at 300 walls |
+| 3 layers/tools | 1c9af4e | 235f949 | 1 | PASS; fixed Phase 2 regression (wall/split cursor threw), compositor 82 lines, tools via stopOtherTools, 4 cycles left; dblclick on wall during interior-wall/split/measure no longer opens dialog; room drag 300 walls 12.8→4.1 ms; leftover by-name tool cancels in room-panel addPillar, pane-right:97, mode.js:47 → Phase 4 |
