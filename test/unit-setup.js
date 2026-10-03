@@ -38,10 +38,11 @@ document.documentElement.innerHTML = src.replace(SCRIPTS, '');
 /* Fail loudly and here, rather than as a null dereference deep inside a
    module. One id per partial: if a future change to the stripping above, or
    to the include expansion, drops a pane again, this names the pane. */
-for (const [id, partial] of [['modal', 'modal'], ['cv', 'stage'],
-  ['layoutTree', 'pane-left'], ['paneStuff', 'pane-right'], ['tree', 'pane-library']]) {
+for (const [id, partial] of [['modal', 'ui-kit/modal'], ['cv', 'app/html/stage'],
+  ['layoutTree', 'app/html/pane-left'], ['paneStuff', 'app/html/pane-right'],
+  ['tree', 'features/library/pane-library']]) {
   if (!document.getElementById(id))
-    throw new Error(`unit-setup: #${id} is missing — src/html/${partial}.html did not survive into the harness DOM`);
+    throw new Error(`unit-setup: #${id} is missing — src/${partial}.html did not survive into the harness DOM`);
 }
 
 /* jsdom has no canvas. This records calls rather than rasterising -- enough for

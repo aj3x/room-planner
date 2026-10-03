@@ -82,9 +82,9 @@ const RELAXED = {
    `ui.flash`, or core/history.js's `repaint.*`. If you are about to add a path
    to this allow-list instead, that is the signal that the thing you are moving
    belongs on the other side of the line. */
-const UPWARD = ['canvas', 'plan', 'library', 'ui', 'io', 'blueprint'];
+const UPWARD = ['app', 'features', 'ui-kit'];
 const DOMAIN_LAYER = {
-  files: ['src/core/**/*.js', 'src/model/**/*.js'],
+  files: ['src/kernel/**/*.js'],
   rules: {
     'no-restricted-imports': ['error', {
       patterns: [{

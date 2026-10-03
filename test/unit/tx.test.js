@@ -4,12 +4,12 @@
    suite would see outside the two gestures it drives. So: its four rules. */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { S, setS, L } from '../../src/core/state.js';
-import { migrate } from '../../src/core/migrate.js';
-import { roomHist, furnHist, seedHistFor } from '../../src/core/history.js';
-import { SCOPES, rev, planRev, effect } from '../../src/core/signals.js';
-import { KEY } from '../../src/core/store.js';
-import { transact, preview } from '../../src/core/tx.js';
+import { S, setS, L } from '../../src/kernel/state.js';
+import { migrate } from '../../src/kernel/migrate.js';
+import { roomHist, furnHist, seedHistFor } from '../../src/kernel/history.js';
+import { SCOPES, rev, planRev, effect } from '../../src/kernel/signals.js';
+import { KEY } from '../../src/kernel/store.js';
+import { transact, preview } from '../../src/kernel/tx.js';
 
 const steps = (map) => map[L().id].stack.length;
 /* Each run of this effect is one notification views would see: the scopes

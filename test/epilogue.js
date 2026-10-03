@@ -35,42 +35,42 @@ const GLOBALS = [
  * importing a name back into index.html just to keep the epilogue fed.
  */
 export const EPILOGUE = `
-;import {alignGuides, alignNote} from './src/core/selection.js';
+;import {alignGuides, alignNote} from './src/kernel/selection.js';
 /* S, and the four GLOBALS entries draw/fit/save/setMode, were last read by the
  * left-hand pane — the layout tree and the inventory list — and went with it.
  * index.html now imports nothing the app's own listeners do not need. */
-;import {S} from './src/core/state.js';
-;import {save} from './src/core/store.js';
-;import {draw} from './src/canvas/draw.js';
-;import {fit} from './src/canvas/camera.js';
-;import {setMode} from './src/plan/mode.js';
+;import {S} from './src/kernel/state.js';
+;import {save} from './src/kernel/store.js';
+;import {draw} from './src/features/canvas/draw.js';
+;import {fit} from './src/features/canvas/camera.js';
+;import {setMode} from './src/features/mode/mode.js';
 /* view left index.html's scope when onCanvasPointerDown moved into
  * canvas/interaction.js — it was the shell's last reader. */
-;import {view} from './src/canvas/view.js';
+;import {view} from './src/features/canvas/view.js';
 /* commitFurn's last shell reader was the arrow-key nudge, which moved into
  * plan/shortcuts.js. */
-;import {commitFurn} from './src/core/history.js';
+;import {commitFurn} from './src/kernel/history.js';
 /* The four undo/redo entry points were last read by the stage's toolbar and
  * went with it; the room tool's drag lives in its own module. All five are
  * __rp members. */
-;import {roomDrag} from './src/canvas/tools/room.js';
-;import {undoRoom, redoRoom, undoFurn, redoFurn} from './src/core/history.js';
-;import {exportPayload} from './src/io/export.js';
+;import {roomDrag} from './src/features/room/room-tool.js';
+;import {undoRoom, redoRoom, undoFurn, redoFurn} from './src/kernel/history.js';
+;import {exportPayload} from './src/features/io/export.js';
 /* readImport's last shell reader was the #fileIn change handler, which moved
  * into bind/header.js when the header's wiring went to its partial. It was in
  * GLOBALS, where a missing name fails silently inside a try/catch — the
  * round-trip spec went red and lint said nothing, which is rule 2 exactly. */
-;import {applyImport, readImport} from './src/io/import.js';
+;import {applyImport, readImport} from './src/features/io/import.js';
 /* RP, commitRoom and startCustomDraw all left the shell with the right-hand
  * Room pane's wiring — the outline presets and the colour/trim controls were
  * their last readers there. RP and commitRoom are __rp getters, which fail
  * loudly; startCustomDraw is a GLOBALS entry, which does not. */
-;import {RP} from './src/core/state.js';
-;import {commitRoom} from './src/core/history.js';
-;import {startCustomDraw} from './src/canvas/room-draw.js';
-;import {polySimple} from './src/core/geometry.js';
-;import {bpState} from './src/blueprint/state.js';
-;import {bpRebuild} from './src/blueprint/draft.js';
+;import {RP} from './src/kernel/state.js';
+;import {commitRoom} from './src/kernel/history.js';
+;import {startCustomDraw} from './src/features/room/room-draw.js';
+;import {polySimple} from './src/kernel/geometry.js';
+;import {bpState} from './src/features/blueprint/state.js';
+;import {bpRebuild} from './src/features/blueprint/draft.js';
 ;globalThis.__rp = {
   get S(){ return S; },
   get view(){ return view; },

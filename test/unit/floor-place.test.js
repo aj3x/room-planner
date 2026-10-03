@@ -6,9 +6,9 @@
    floor whose exterior walls are 200mm. */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { S, setS } from '../../src/core/state.js';
-import { migrate } from '../../src/core/migrate.js';
-import { floorMembers, floorEdgeDepths, depthRuns, snapFloorPlace, floorRoomAt } from '../../src/model/floor-place.js';
+import { S, setS } from '../../src/kernel/state.js';
+import { migrate } from '../../src/kernel/migrate.js';
+import { floorMembers, floorEdgeDepths, depthRuns, snapFloorPlace, floorRoomAt } from '../../src/kernel/floor-place.js';
 
 const rect = [[0,0],[4000,0],[4000,3000],[0,3000]];
 const room = (id, x) => ({ id, name: id, floorId: 'F', floorPlace: { x, y: 0, rot: 0 },

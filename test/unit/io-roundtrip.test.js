@@ -5,10 +5,10 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { fixture, clone } from '../unit-setup.js';
-import { S, setS } from '../../src/core/state.js';
-import { migrate } from '../../src/core/migrate.js';
-import { exportPayload, PREF_KEYS } from '../../src/io/export.js';
-import { readImport, applyImport } from '../../src/io/import.js';
+import { S, setS } from '../../src/kernel/state.js';
+import { migrate } from '../../src/kernel/migrate.js';
+import { exportPayload, PREF_KEYS } from '../../src/features/io/export.js';
+import { readImport, applyImport } from '../../src/features/io/import.js';
 
 /** Load a fixture into the live S, the way boot() does. */
 const load = (name) => setS(migrate(clone(fixture(name))));

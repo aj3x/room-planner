@@ -1,0 +1,31 @@
+  <header>
+    <h1 class="brand"><svg class="i" aria-hidden="true"><use href="#i-plan"/></svg><span>Room Planner</span></h1>
+    <nav class="nav" id="navSeg" aria-label="Sections">
+      <button type="button" data-nav="plan">Plan</button>
+      <button type="button" data-nav="inventory">Library</button>
+      <button type="button" data-nav="marketplace">Marketplace</button>
+    </nav>
+    <div class="spacer"></div>
+    <div class="hgroup">
+      <select id="unitSel" aria-label="Units" title="Units">
+        <option value="ftin">Feet &amp; inches</option>
+        <option value="in">Inches</option>
+        <option value="cm">Centimetres</option>
+        <option value="mm">Millimetres</option>
+        <option value="m">Metres</option>
+      </select>
+      <button class="btn" id="btnImport">Import…</button>
+      <button class="btn" id="btnExport">Export…</button>
+      <input type="file" id="fileIn" accept="application/json,.json" hidden>
+    </div>
+  </header>
+
+<!-- This pane's listeners. The bind function is called here rather than at
+     import time so that nothing in src/ has a top-level side effect, and so
+     the registrations happen at the point in the document this markup
+     occupies. Path is relative to index.html, which is where this file is
+     spliced, not to src/html/. -->
+<script type="module">
+import {bindHeader} from './src/app/bind/header.js';
+bindHeader();
+</script>

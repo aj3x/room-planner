@@ -5,25 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Room Planner</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cstyle%3Epath%7Bfill:none;stroke:%231d1d1b;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round%7D@media (prefers-color-scheme:dark)%7Bpath%7Bstroke:%23ececea%7D%7D%3C/style%3E%3Cpath d='M2 2h12v12H2z'/%3E%3Cpath d='M2 8h5v6M10 2v4h4'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="./src/styles/main.scss">
+<link rel="stylesheet" href="./src/app/styles/main.scss">
 </head>
 <body>
-<!-- @include src/html/sprite.html -->
+<!-- @include src/app/html/sprite.html -->
 <div id="app">
-  <!-- @include src/html/header.html -->
+  <!-- @include src/app/html/header.html -->
 
   <main>
-    <!-- @include src/html/pane-left.html -->
+    <!-- @include src/app/html/pane-left.html -->
 
-    <!-- @include src/html/stage.html -->
+    <!-- @include src/app/html/stage.html -->
 
-    <!-- @include src/html/pane-right.html -->
+    <!-- @include src/app/html/pane-right.html -->
   </main>
 
-  <!-- @include src/html/pane-library.html -->
+  <!-- @include src/features/library/pane-library.html -->
 </div>
 
-<!-- @include src/html/modal.html -->
+<!-- @include src/ui-kit/modal.html -->
 
 <script type="module">
 "use strict";
@@ -50,16 +50,16 @@
    order they must stay in.
    =================================================================== */
 
-import {scheduleDraw} from './src/canvas/draw.js';
-import {darkMQ} from './src/canvas/paint.js';
-import {edgePanTick} from './src/canvas/interaction.js';
-import {resize} from './src/canvas/camera.js';
-import {applyLayoutMode, togglePane} from './src/plan/mode.js';
-import {onDocumentKeyDown, onDocumentKeyUp} from './src/plan/shortcuts.js';
-import {closeMenu, menuEl} from './src/ui/menu.js';
-import {$} from './src/ui/modal.js';
-import {toggleSection} from './src/ui/panels.js';
-import {boot} from './src/boot.js';
+import {scheduleDraw} from './src/features/canvas/draw.js';
+import {darkMQ} from './src/features/canvas/paint.js';
+import {edgePanTick} from './src/features/canvas/interaction.js';
+import {resize} from './src/features/canvas/camera.js';
+import {applyLayoutMode, togglePane} from './src/features/mode/mode.js';
+import {onDocumentKeyDown, onDocumentKeyUp} from './src/app/shortcuts.js';
+import {closeMenu, menuEl} from './src/ui-kit/menu.js';
+import {$} from './src/ui-kit/modal.js';
+import {toggleSection} from './src/ui-kit/panels.js';
+import {boot} from './src/app/boot.js';
 
 /* Any open menu closes on a click outside it, Escape, a resize or a scroll.
    Capture phase, so it runs before whatever was actually clicked. */

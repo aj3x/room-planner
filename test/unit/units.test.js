@@ -5,7 +5,7 @@
    Pure logic, imported straight from src/ — no harness, no jsdom, no app. */
 
 import { describe, it, expect } from 'vitest';
-import { parseLen, fmtLen, fmtArea } from '../../src/core/units.js';
+import { parseLen, fmtLen, fmtArea } from '../../src/kernel/units.js';
 
 describe('parseLen — explicit units win regardless of the display unit', () => {
   const cases = [

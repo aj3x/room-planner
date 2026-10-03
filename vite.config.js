@@ -64,11 +64,12 @@ function htmlIncludes() {
       },
     },
     /* A partial is not a module in the graph, so nothing would reload when one
-       changes. Watch the directory and ask the page to reload itself. */
+       changes. Partials live beside the code that binds them, anywhere under
+       src/, so watch src/ and ask the page to reload on any .html change. */
     configureServer(server) {
-      server.watcher.add(resolve(ROOT, 'src/html'));
+      server.watcher.add(resolve(ROOT, 'src'));
       server.watcher.on('change', (f) => {
-        if (f.startsWith(resolve(ROOT, 'src/html'))) {
+        if (f.startsWith(resolve(ROOT, 'src')) && f.endsWith('.html')) {
           server.ws.send({ type: 'full-reload', path: '*' });
         }
       });

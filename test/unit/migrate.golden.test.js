@@ -9,10 +9,10 @@
 
 import { describe, it, expect } from 'vitest';
 import { fixture, clone, stableIds } from '../unit-setup.js';
-import { migrate, normLayout, normItem } from '../../src/core/migrate.js';
-import { readImport } from '../../src/io/import.js';
-import { parseLen, fmtLen } from '../../src/core/units.js';
-import { S } from '../../src/core/state.js';
+import { migrate, normLayout, normItem } from '../../src/kernel/migrate.js';
+import { readImport } from '../../src/features/io/import.js';
+import { parseLen, fmtLen } from '../../src/kernel/units.js';
+import { S } from '../../src/kernel/state.js';
 
 const FIXTURES = [
   'v0-legacy-rect-doors.json',
