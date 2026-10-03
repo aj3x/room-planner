@@ -2,7 +2,7 @@ import {bpLastImport, bpUndoImport} from './blueprint/commit.js';
 import {bpUploadDialog} from './blueprint/step1-upload.js';
 import {mountCanvas} from './canvas/draw.js';
 import {mountMeasureBar} from './canvas/measure-tool.js';
-import {fit, resize} from './canvas/view.js';
+import {fit, resize} from './canvas/camera.js';
 import {seedHistFor} from './core/history.js';
 import {migrate} from './core/migrate.js';
 import {provide} from './core/registry.js';

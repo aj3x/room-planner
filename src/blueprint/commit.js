@@ -1,4 +1,4 @@
-import {fit} from '../canvas/view.js';
+import {fit} from '../canvas/camera.js';
 import {floorHist, furnHist, histEntry, roomHist, snapFurn, snapRoom} from '../core/history.js';
 import {normLayout} from '../core/migrate.js';
 import {treeExpand, treeCollapse} from '../core/selection.js';

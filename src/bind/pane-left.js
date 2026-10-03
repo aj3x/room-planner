@@ -25,7 +25,7 @@ import { singleClick, cancelSingleClick } from '../ui/inline-edit.js';
 import { moveBefore, clearDropMarks, dropHalf } from '../ui/dnd.js';
 import { flash } from '../ui/flash.js';
 import {wallDrawState} from '../canvas/interaction-state.js';
-import { fit } from '../canvas/view.js';
+import { fit } from '../canvas/camera.js';
 import { startWallDraw, cancelWallDraw } from '../canvas/wall-draw.js';
 import { startSplitRoom } from '../canvas/split-room.js';
 import { setMode } from '../plan/mode.js';

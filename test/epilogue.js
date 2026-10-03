@@ -42,7 +42,7 @@ export const EPILOGUE = `
 ;import {S} from './src/core/state.js';
 ;import {save} from './src/core/store.js';
 ;import {draw} from './src/canvas/draw.js';
-;import {fit} from './src/canvas/view.js';
+;import {fit} from './src/canvas/camera.js';
 ;import {setMode} from './src/plan/mode.js';
 /* view left index.html's scope when onCanvasPointerDown moved into
  * canvas/interaction.js — it was the shell's last reader. */

@@ -7,7 +7,7 @@
    to them, the tree and the canvas.
 */
 import {mergeGeometry} from '../canvas/merge-rooms.js';
-import {fit} from '../canvas/view.js';
+import {fit} from '../canvas/camera.js';
 import {floorIWall, floorInst, floorXf} from '../core/floor-space.js';
 import {bbox, norm360} from '../core/geometry.js';
 import {floorHist, furnHist, roomHist} from '../core/history.js';

@@ -15,7 +15,7 @@
 */
 import {measureOn} from '../canvas/measure-state.js';
 import {resetMeasureState} from '../canvas/measure-tool.js';
-import {fit, resize} from '../canvas/view.js';
+import {fit, resize} from '../canvas/camera.js';
 import {floorEntry, histAvail, histRev} from '../core/history.js';
 import {selectClear, alignGuides, alignNote, floorGuides, floorSel, floorSnapNote, roomSel} from '../core/selection.js';
 import {batch, pref, rev} from '../core/signals.js';

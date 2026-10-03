@@ -24,7 +24,7 @@ import {seedHistFor} from '../core/history.js';
 import {L} from '../core/state.js';
 
 import {lastSplit, splitUndo, startSplitRoom} from '../canvas/split-room.js';
-import {fit} from '../canvas/view.js';
+import {fit} from '../canvas/camera.js';
 import {remapMeasures} from '../core/migrate.js';
 import {blankLayout, uid} from '../core/state.js';
 import {flash} from '../ui/flash.js';

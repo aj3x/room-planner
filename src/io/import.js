@@ -11,7 +11,7 @@
 
    The $('btnImport') registration stays in index.html, per rule 6.
 */
-import {fit} from '../canvas/view.js';
+import {fit} from '../canvas/camera.js';
 import {INV_SCOPES} from '../core/floor-space.js';
 import {furnHist, roomHist, seedHistFor} from '../core/history.js';
 import {uniqueId} from '../core/ids.js';

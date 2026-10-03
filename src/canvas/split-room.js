@@ -49,7 +49,7 @@ import {$, askConfirm, closeModal, openModal} from '../ui/modal.js';
 import {plural} from '../ui/panels.js';
 
 import {mergeSplice} from './merge-rooms.js';
-import {fit} from './view.js';
+import {fit} from './camera.js';
 
 import {drawState, wallDrawState} from './interaction-state.js';
 import {measureOn} from './measure-state.js';
