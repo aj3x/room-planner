@@ -1,7 +1,6 @@
 /* Drawing a freestanding interior wall, the commands: starting, finishing
    and abandoning it. The pointer and key handling, and the wall on screen,
    are the wall-draw tool's (canvas/tools/wall-draw.js). */
-import {expect} from '../core/registry.js';
 import {batch} from '../core/signals.js';
 import {roomSel} from '../core/selection.js';
 import {L, uid} from '../core/state.js';
@@ -10,6 +9,7 @@ import {wallDrawState, drawCursor} from './interaction-state.js';
 import {roomMode} from '../core/state.js';
 import {flash} from '../ui/flash.js';
 import {stopOtherTools} from './interaction.js';
+import {setMode} from '../plan/mode.js';
 function cancelWallDraw(){ wallDrawState.value = null; }
 function finishWallDraw(a,b){
   const w={id:uid(), a, b, t:L().room.wall};
@@ -23,7 +23,7 @@ function finishWallDraw(a,b){
 /* ------------------------- drawing a freestanding wall ------------------------- */
 function startWallDraw(){
   stopOtherTools('wall-draw');
-  if(!roomMode()) expect('plan.setMode')('room');
+  if(!roomMode()) setMode('room');
   batch(()=>{ wallDrawState.value = {a:null}; drawCursor.value = null; roomSel.value = null; });
   flash('Click the wall’s start, then its end. Esc cancels.');
 }

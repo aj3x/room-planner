@@ -36,8 +36,7 @@ import { roomTool } from '../canvas/tools/room.js';
 import { pickRoom } from '../canvas/snap.js';
 import {measureOn, measureSel} from '../canvas/measure-state.js';
 import { liveMeasures, setMeasure, resetMeasureState, removeMeasure } from '../canvas/measure-tool.js';
-import { setMode } from '../plan/mode.js';
-import { activateLayout } from '../plan/layout-tree.js';
+import { activateLayout, setMode } from '../plan/mode.js';
 import { wallDialog } from '../plan/room-panel.js';
 import { openFloorMergeMenu } from '../plan/floors.js';
 

@@ -1,6 +1,6 @@
 /* Floor mode's Properties pane: the picked room's place on the floor, the
    floor itself, and merging or deleting two picked rooms; and the floor
-   commands the layout tree's menus reach.
+   commands the layout tree's menus reach (its floor menu is layout-tree.js's).
 
    The two Properties sections are effects (mountFloorPanels, at the end);
    every command here commits through transact() and leaves the repainting
@@ -20,16 +20,12 @@ import {clampOpenings, syncWallOff} from '../model/walls.js';
 import {flash} from '../ui/flash.js';
 import {$, askConfirm, svgI} from '../ui/modal.js';
 import {esc, plural} from '../ui/panels.js';
-import {activateLayout} from './layout-tree.js';
-import {setMode} from './mode.js';
+import {activateLayout, setMode} from './mode.js';
 import {placeOnFloor} from '../core/floor-space.js';
 import {uid} from '../core/state.js';
 import {folderLine, pickValues, pickerHTML} from '../io/pickers.js';
 import {menuAtPoint} from '../ui/menu.js';
 import {askText, openModal} from '../ui/modal.js';
-import {has, use} from '../core/registry.js';
-import {openMenu} from '../ui/menu.js';
-import {renameFloor} from './layout-tree.js';
 import {pref, rev} from '../core/signals.js';
 import {mountPanel} from '../ui/mount.js';
 /* one slot, not a stack \u2014 mirrors bpLastImport's own "undo the last thing" precedent */
@@ -280,31 +276,6 @@ function openFloorMergeMenu(ids, clientX, clientY){
     {label:'Delete both rooms\u2026', danger:true, fn:()=>deleteBothDialog(aId,bId)},
   ], a.name+' + '+b.name);
 }
-/* `blueprint.lastImport` is provided as a getter, not a value: commit.js
-   reassigns its `bpLastImport` binding, and a value captured at boot would
-   freeze at null. */
-function bpUndoableOn(id){
-  const last = use('blueprint.lastImport')?.();
-  return !!(last && last.floorId===id);
-}
-function floorMenu(id, anchor){
-  const fl=floorOf(id); if(!fl) return;
-  openMenu(anchor, [
-    {label:'Rename', fn:()=>renameFloor(id)},
-    {label:'Rooms on this floor…', fn:()=>floorRoomsDialog(id)},
-    /* Blueprint import reaches this menu through core/registry.js rather than a
-       direct import: floors.js is what blueprint/commit.js calls back into, so
-       importing it here would close the cycle that keeps all twenty blueprint
-       modules inside the main tangle. boot.js provides both names. */
-    ...(has('blueprint.uploadDialog')
-      ? [{label:'Import a blueprint onto this floor…', fn:()=>use('blueprint.uploadDialog')(false, id)}]
-      : []),
-    ...(bpUndoableOn(id) ? [{label:'Undo the blueprint import…', fn:use('blueprint.undoImport')}] : []),
-    {sep:true},
-    {label:'Delete floor…', danger:true, fn:()=>deleteFloor(id)},
-  ], fl.name);
-}
-
 /* Floor mode's two Properties sections, each an effect on what it shows
    (ui/mount.js). */
 function mountFloorPanels(){
@@ -313,4 +284,4 @@ function mountFloorPanels(){
   }, renderFloorSel);
   mountPanel($('floorPropsBox').closest('section'), () => { rev.project.value; pref('unit'); }, renderFloorProps);
 }
-export {mountFloorPanels, lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, renderFloorProps, turnFloorRoom, newFloor, floorRoomsDialog, deleteFloor, putOnFloor, newFloorWith, putOnFloorDialog, mergeUndo, openFloorMergeMenu, floorMenu};
+export {mountFloorPanels, lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, renderFloorProps, turnFloorRoom, newFloor, floorRoomsDialog, deleteFloor, putOnFloor, newFloorWith, putOnFloorDialog, mergeUndo, openFloorMergeMenu};

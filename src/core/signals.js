@@ -51,4 +51,11 @@ function pref(key){
   return c.value;
 }
 
-export {SCOPES, rev, planRev, bump, pref, batch, computed, effect, signal, untracked};
+/* A message for the person from code that does not own a toast: the domain
+   layer refusing an edit (tryRoomEdit). report() writes it; the app shows it
+   (boot.js mounts the effect that flashes it). A fresh object each time, so
+   the same message twice is still two notices. */
+const notice = signal(null);
+function report(msg){ notice.value = {msg}; }
+
+export {SCOPES, rev, planRev, bump, pref, notice, report, batch, computed, effect, signal, untracked};

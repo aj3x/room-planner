@@ -2,7 +2,6 @@
    outline to another. The drawing state is a signal (splitDrawState), so the
    canvas follows it; committing the split is a transact('project'). */
 
-import {expect} from '../core/registry.js';
 import {batch} from '../core/signals.js';
 import {nearestOnWalls} from '../model/walls.js';
 
@@ -50,6 +49,7 @@ import {mergeSplice} from './merge-rooms.js';
 import {fit} from './camera.js';
 
 import {stopOtherTools} from './interaction.js';
+import {activateLayout, setMode} from '../plan/mode.js';
 
 /* Every existing room corner, and every split point already placed, that the
    NEXT split point can align to — the same {p, bias, edge} shape snapCorner
@@ -292,7 +292,7 @@ function splitUndo(){
       if(m.aFurnHist) furnHist[m.aId]=m.aFurnHist; else delete furnHist[m.aId];
       delete roomHist[m.bId]; delete furnHist[m.bId];
       lastSplit=null;
-      if(S.active===m.bId) expect('plan.activateLayout')(m.aId);
+      if(S.active===m.bId) activateLayout(m.aId);
     });
     fit();
   });
@@ -303,8 +303,8 @@ function startSplitRoom(id){
   const l=S.layouts.find(x=>x.id===id); if(!l) return;
   if(!polySimple(l.room.points)){ flash("Straighten this room's outline before splitting it"); return; }
   stopOtherTools('split');
-  if(S.active!==id) transact('project', ()=>expect('plan.activateLayout')(id));
-  expect('plan.setMode')('room');
+  if(S.active!==id) transact('project', ()=>activateLayout(id));
+  setMode('room');
   batch(()=>{ splitDrawState.value = {pts:[]}; drawCursor.value = null; roomSel.value = null; });
   fit();
   flash("Click a point on the room's wall to start the divider. Click inside the room to bend it, or click another wall to finish. Esc cancels.");

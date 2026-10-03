@@ -1,4 +1,5 @@
-/* The mode switch, and the two views that follow the mode: the header and
+/* What the page is showing: the mode (setMode) and the active room
+   (activateLayout), and the two views that follow the mode: the header and
    canvas mode buttons (renderMode, plus which half of the page is showing),
    and the undo/redo buttons.
 
@@ -14,11 +15,11 @@
    Nothing in ui/ imports plan/, so here it costs nothing.
 */
 import {fit, resize} from '../canvas/camera.js';
-import {stopToolsFor} from '../canvas/interaction.js';
-import {floorEntry, histAvail, histRev} from '../core/history.js';
-import {selectClear, alignGuides, alignNote, floorGuides, floorSel, floorSnapNote, roomSel} from '../core/selection.js';
+import {resetTools, stopToolsFor} from '../canvas/interaction.js';
+import {floorEntry, histAvail, histRev, seedHistFor} from '../core/history.js';
+import {selectClear, alignGuides, alignNote, floorGuides, floorSel, floorSnapNote, roomSel, sel} from '../core/selection.js';
 import {batch, pref, rev} from '../core/signals.js';
-import {L, S, isCanvasMode} from '../core/state.js';
+import {L, S, folderOf, isCanvasMode} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {$} from '../ui/modal.js';
 import {mountPanel} from '../ui/mount.js';
@@ -52,6 +53,17 @@ function setMode(m){
   }
   syncModeParam();
 }
+/* switching into a room under a DIFFERENT folder re-applies that folder's tag filter;
+   switching between rooms in the SAME folder leaves whatever filter the person set alone */
+function activateLayout(id){
+  S.active=id; sel.value = null; roomSel.value = null; floorSel.value = null;
+  resetTools();
+  seedHistFor();
+  const fid = L() ? (L().folderId||null) : null;
+  if(fid !== S.lastFolderId){ S.tagFilter = (folderOf(fid)?.tags||[]).slice(); S.untaggedOnly=false; }
+  S.lastFolderId = fid;
+}
+
 /* places (Plan / Library / Marketplace) live in the header; the Room/Furniture mode lives on the canvas it changes */
 function renderMode(){
   const place = isCanvasMode(S.mode) ? 'plan' : S.mode;
@@ -92,4 +104,4 @@ function paramMode(){
   return ['room','furniture','floor','inventory','marketplace'].includes(m) ? m : null;
 }
 
-export {mountMode, setPendingFit, syncModeParam, setMode, renderMode, applyLayoutMode, togglePane, paramMode};
+export {mountMode, setPendingFit, syncModeParam, setMode, activateLayout, renderMode, applyLayoutMode, togglePane, paramMode};

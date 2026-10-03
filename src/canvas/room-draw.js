@@ -6,7 +6,6 @@ import {alignGuides, alignNote, roomSel} from '../core/selection.js';
 import {L} from '../core/state.js';
 import {transact} from '../core/tx.js';
 import {clampOpenings, syncWallOff} from '../model/walls.js';
-import {expect} from '../core/registry.js';
 import {batch} from '../core/signals.js';
 import {flash} from '../ui/flash.js';
 import {$} from '../ui/modal.js';
@@ -16,6 +15,7 @@ import {snapPt} from './view.js';
 import {fit} from './camera.js';
 import {roomMode} from '../core/state.js';
 import {stopOtherTools} from './interaction.js';
+import {setMode} from '../plan/mode.js';
 function cancelCustomDraw(){
   batch(()=>{ drawState.value = null; alignGuides.value = []; alignNote.value = ''; });
   $('drawHint').hidden=true;
@@ -58,7 +58,7 @@ function drawSnapPoint(raw,shift){
 /* ------------------------- custom room drawing (walls may cross) ------------------------- */
 function startCustomDraw(){
   stopOtherTools('room-draw');
-  if(!roomMode()) expect('plan.setMode')('room');
+  if(!roomMode()) setMode('room');
   batch(()=>{ drawState.value = {pts:[]}; drawCursor.value = null; roomSel.value = null; });
   $('drawHint').hidden=false;
 }

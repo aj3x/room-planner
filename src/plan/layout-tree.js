@@ -14,14 +14,10 @@ import {moreBtn} from '../ui/menu.js';
 import {$, svgI} from '../ui/modal.js';
 import {S, floorMode, floorLayouts, childFloors, childFolders, childLayouts,
         folderOf, floorOf} from '../core/state.js';
-import {mergeSel, treeOpen, floorSel, roomSel, sel, treeExpand, treeCollapse} from '../core/selection.js';
+import {mergeSel, treeOpen, treeExpand, treeCollapse} from '../core/selection.js';
 import {curFloorId} from '../core/history.js';
 import {inlineEdit} from '../ui/inline-edit.js';
 import {transact} from '../core/tx.js';
-import {resetTools} from '../canvas/interaction.js';
-import {seedHistFor} from '../core/history.js';
-
-import {L} from '../core/state.js';
 
 import {lastSplit, splitUndo, startSplitRoom} from '../canvas/split-room.js';
 import {fit} from '../canvas/camera.js';
@@ -31,8 +27,10 @@ import {flash} from '../ui/flash.js';
 import {openMenu} from '../ui/menu.js';
 import {askConfirm, askText, openModal} from '../ui/modal.js';
 import {mountTagField, tagFieldHTML, tagFieldValue} from '../ui/tag-input.js';
-import {lastMerge, mergeUndo, newFloorWith, putOnFloorDialog, setLastMerge} from './floors.js';
-import {setMode} from './mode.js';
+import {deleteFloor, floorRoomsDialog, lastMerge, mergeUndo, newFloorWith, putOnFloorDialog, setLastMerge} from './floors.js';
+import {bpLastImport, bpUndoImport} from '../blueprint/commit.js';
+import {bpUploadDialog} from '../blueprint/flow.js';
+import {activateLayout, setMode} from './mode.js';
 import {dropHalf} from '../ui/dnd.js';
 import {pref, rev} from '../core/signals.js';
 import {mountPanel} from '../ui/mount.js';
@@ -103,19 +101,6 @@ function renameFloor(id){
 }
 
 
-/* ---- Phase 3: the rest of this file's region, move-only. ---- */
-/* switching into a room under a DIFFERENT folder re-applies that folder's tag filter;
-   switching between rooms in the SAME folder leaves whatever filter the person set alone */
-function activateLayout(id){
-  S.active=id; sel.value = null; roomSel.value = null; floorSel.value = null;
-  resetTools();
-  seedHistFor();
-  const fid = L() ? (L().folderId||null) : null;
-  if(fid !== S.lastFolderId){ S.tagFilter = (folderOf(fid)?.tags||[]).slice(); S.untaggedOnly=false; }
-  S.lastFolderId = fid;
-}
-
-/* ---- Phase 3: the rest of this file's region, move-only. ---- */
 /* folder path from root to id, inclusive */
 function folderPath(id){
   const out=[]; let f=folderOf(id);
@@ -288,6 +273,22 @@ function moveDialog(kind,id){
 }
 /* The Rooms list holds more than one kind of thing, so + stays the one-click common case
    (a new room) and everything rarer sits behind the ⋯ with a word for a label. */
+/* the floor row's menu; the blueprint import lands on a floor, so it starts here */
+function bpUndoableOn(id){
+  return !!(bpLastImport && bpLastImport.floorId===id);
+}
+function floorMenu(id, anchor){
+  const fl=floorOf(id); if(!fl) return;
+  openMenu(anchor, [
+    {label:'Rename', fn:()=>renameFloor(id)},
+    {label:'Rooms on this floor…', fn:()=>floorRoomsDialog(id)},
+    {label:'Import a blueprint onto this floor…', fn:()=>bpUploadDialog(false, id)},
+    ...(bpUndoableOn(id) ? [{label:'Undo the blueprint import…', fn:bpUndoImport}] : []),
+    {sep:true},
+    {label:'Delete floor…', danger:true, fn:()=>deleteFloor(id)},
+  ], fl.name);
+}
+
 const newFolder = () =>
   askText('New folder','Name','Folder', n=>{ transact('project', ()=>{ S.folders.push({id:uid(),name:n,parentId:null,tags:[]}); }); });
 let dragTree=null;
@@ -312,4 +313,4 @@ function treeDropSpot(e){
 function mountTree(){
   mountPanel('layoutTree', () => { rev.project.value; pref('mode'); mergeSel.value; treeOpen.value; }, renderTree);
 }
-export {mountTree, folderLabel, layoutRowHTML, floorRowHTML, renderTreeLevel, renderTree, treeBox, treeRowEl, renameFolder, renameLayout, renameFloor, activateLayout, folderPath, folderDescendant, enterFloor, folderMenu, layoutMenu, folderTagsDialog, folderContents, deleteFolder, duplicateLayout, deleteLayout, moveDialog, newFolder, dragTree, setDragTree, treeDropSpot};
+export {mountTree, folderLabel, layoutRowHTML, floorRowHTML, renderTreeLevel, renderTree, treeBox, treeRowEl, renameFolder, renameLayout, renameFloor, folderPath, folderDescendant, enterFloor, folderMenu, layoutMenu, folderTagsDialog, folderContents, deleteFolder, duplicateLayout, deleteLayout, moveDialog, floorMenu, newFolder, dragTree, setDragTree, treeDropSpot};

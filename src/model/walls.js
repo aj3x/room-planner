@@ -1,32 +1,13 @@
 /* Walls: the room's own outline, plus the pillars and freestanding interior
-   walls that stand inside it.
+   walls that stand inside it. Pure: nothing here reads the view or the DOM.
 
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added.
-
-   Six functions of this region could NOT come along in the model/ round,
-   because each reached into a phase that had not run yet. All six came home in
-   the canvas/ round, in two commits: tryRoomEdit / setWallAngle / setWallLen /
-   setRectSize once flash() reached ui/flash.js, then snapRadius (reads view)
-   and snapWallPoint (calls snapPt) once both landed in canvas/view.js.
-
-   Two of those six have since gone back out, the other way. The decoupling
-   pass (.claude/plans/decoupling.md §4, step 3) made model/ the domain layer
-   proper: nothing here may import from canvas/, plan/, library/, ui/ or io/,
-   and eslint.config.js enforces it. snapRadius reads the camera's scale and
-   snapWallPoint falls back to the grid snap, so both are view-dependent and
-   both now live in canvas/snap.js. What stayed is magneticWallPoint — "the
-   nearest corner, wall face or interior-wall point within R" — which is the
-   half that is actually about walls, and is now pure and testable.
-
-   tryRoomEdit still reports a rejected edit to the user, but through the
-   `ui.flash` hook in core/registry.js rather than an import. The message
+   tryRoomEdit reports a rejected edit to the person through report()
+   (core/signals.js) rather than a toast it would have to import. The message
    belongs next to the rule that produced it; the toast does not. */
 
 import {norm360, pointInPoly, ptSegDist, worldPoly, bbox, polySimple} from '../core/geometry.js';
-import {use} from '../core/registry.js';
 import {L, RP} from '../core/state.js';
+import {report} from '../core/signals.js';
 
 /* ------------------------- walls ------------------------- */
 /* ---- walls you can take away ----
@@ -167,7 +148,7 @@ function tryRoomEdit(fn){
   fn();
   if(!polySimple(RP())){
     L().room.points = JSON.parse(before);
-    use('ui.flash')?.('That would fold the room over itself');
+    report('That would fold the room over itself');
     syncWallOff(L().room);
     return false;
   }
