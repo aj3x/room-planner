@@ -1,20 +1,21 @@
-/* Report the import cycles in src/, largest first.
+/* Report the import cycles in src/, largest first, and fail if there is one.
 
-   `npm run cycles`. Exits non-zero if the largest cycle exceeds the budget
-   below, or if any cycle spans more than one directory.
+   `npm run cycles`; `npm run lint` runs it after ESLint, so CI does too.
 
-   Why two checks and not one. Size alone is the wrong target: a cycle inside
-   one directory is how a wizard's back/next navigation looks, and that is
-   fine. A cycle that spans directories is the bad kind — it means those
-   directories are not really separate, whatever the folder names say, and it
-   is what the decoupling pass spent its time removing
-   (.claude/plans/decoupling.md). Ratchet BUDGET down; never up without a
-   written reason.
+   There are none, and the budget is zero. A cycle means the modules in it
+   cannot be understood, tested or changed one at a time, and in ESM it means
+   one of them is evaluated before its imports are ready, which is only safe
+   while nothing in the loop is read at load time. ESLint's boundary rule
+   (eslint.config.js) keeps features from importing each other's insides; this
+   is what keeps the features, and the modules inside each one, a DAG.
+
+   When one appears, break it the way the existing code does: move the shared
+   piece down into a leaf both sides can import, or turn the back edge into a
+   signal the other side subscribes to.
 */
 import fs from 'fs';
 import path from 'path';
 
-const BUDGET = 9;
 const ROOT = 'src';
 
 const files = [];
@@ -57,26 +58,15 @@ function visit(v){
 for(const f of files) if(!index.has(f)) visit(f);
 groups.sort((a, b) => b.length - a.length);
 
-const dirOf = f => path.dirname(f).replace(ROOT + '/', '');
-const spanning = groups.filter(g => new Set(g.map(dirOf)).size > 1);
 const largest = groups[0] ? groups[0].length : 0;
 
-console.log(`${files.length} modules, ${groups.length} cycles, largest ${largest} (budget ${BUDGET})\n`);
+console.log(`${files.length} modules, ${groups.length} cycles, largest ${largest}\n`);
 for(const g of groups){
-  const dirs = [...new Set(g.map(dirOf))];
-  console.log(`  [${g.length}] ${dirs.join(' + ')}${dirs.length > 1 ? '   <-- spans directories' : ''}`);
-  console.log(`       ${g.map(f => f.replace(ROOT + '/', '')).sort().join(', ')}`);
+  console.log(`  [${g.length}] ${g.map(f => f.replace(ROOT + '/', '')).sort().join(', ')}`);
 }
 
-let bad = false;
-if(largest > BUDGET){
-  console.error(`\nFAIL: largest cycle is ${largest}, budget is ${BUDGET}.`);
-  bad = true;
+if(groups.length){
+  console.error(`\nFAIL: ${groups.length} import cycle(s). There must be none.`);
+  process.exit(1);
 }
-if(spanning.length){
-  console.error(`\nFAIL: ${spanning.length} cycle(s) span more than one directory.`);
-  console.error('Those directories are not separate components. See .claude/plans/decoupling.md.');
-  bad = true;
-}
-if(!bad) console.log('\nOK');
-process.exit(bad ? 1 : 0);
+console.log('OK');

@@ -1,4 +1,5 @@
-# Pull-request gate: lint, unit tests, build, browser suite.
+# Pull-request gate: lint (with the boundary and cycle checks), unit tests,
+# build, browser suite.
 #
 # The browser suite (`npm run test:e2e`) builds both artifacts itself and then
 # runs Playwright over two Chromium projects — `chromium-light` (the Vite dev
@@ -53,6 +54,8 @@ jobs:
 
       - run: npm ci
 
+      # ESLint (correctness rules and src/'s import boundaries), then
+      # `npm run cycles`, which fails on any import cycle.
       - run: npm run lint
 
       - run: npm run test:unit

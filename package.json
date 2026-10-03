@@ -9,7 +9,7 @@
     "build": "vite build",
     "build:test": "vite build --mode instrumented",
     "preview": "vite preview",
-    "lint": "eslint .",
+    "lint": "eslint . && npm run cycles",
     "cycles": "node scripts/import-cycles.mjs",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
