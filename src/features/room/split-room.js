@@ -32,9 +32,8 @@ function splitAngleSnap(prev, raw, hard){
    canvas/tools/split.js. */
 import {RP} from '../../kernel/state.js';
 import {wallOf} from '../../kernel/walls.js';
-import {splitDrawState, drawCursor} from '../canvas/interaction-state.js';
+import {splitDrawState, drawCursor, alignPoint, alignRadius, isSquare, fit, stopOtherTools} from '../canvas/index.js';
 import {alignGuides, alignNote, roomSel, mergeClear} from '../../kernel/selection.js';
-import {alignPoint, alignRadius, isSquare} from '../canvas/snap.js';
 import {pointInPoly, polySimple, segHit, worldPoly} from '../../kernel/geometry.js';
 import {floorHist, furnHist, roomHist} from '../../kernel/history.js';
 import {pruneMeasures} from '../../kernel/migrate.js';
@@ -46,10 +45,8 @@ import {$, askConfirm, closeModal, openModal} from '../../ui-kit/modal.js';
 import {plural} from '../../ui-kit/panels.js';
 
 import {mergeSplice} from '../../kernel/merge-rooms.js';
-import {fit} from '../canvas/camera.js';
 
-import {stopOtherTools} from '../canvas/interaction.js';
-import {activateLayout, setMode} from '../mode/mode.js';
+import {activateLayout, setMode} from '../mode/index.js';
 
 /* Every existing room corner, and every split point already placed, that the
    NEXT split point can align to — the same {p, bias, edge} shape snapCorner

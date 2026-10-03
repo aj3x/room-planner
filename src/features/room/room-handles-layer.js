@@ -2,8 +2,7 @@
    picked out in accent, a square on every corner, a dot on every opening.
    Drawn over everything but the measurements and tool overlays. */
 
-import {ctx, sx, sy} from '../canvas/view.js';
-import {PAL, pathPoly} from '../canvas/paint.js';
+import {ctx, sx, sy, PAL, pathPoly} from '../canvas/index.js';
 import {worldPoly} from '../../kernel/geometry.js';
 import {roomSel} from '../../kernel/selection.js';
 import {L, RP, roomMode} from '../../kernel/state.js';

@@ -28,11 +28,9 @@ import { transact } from '../../kernel/tx.js';
 import { syncWallOff, clampOpenings } from '../../kernel/walls.js';
 import { $, openModal, moError } from '../../ui-kit/modal.js';
 import { esc } from '../../ui-kit/panels.js';
-import {drawState} from '../../features/canvas/interaction-state.js';
-import { fit } from '../../features/canvas/camera.js';
+import {drawState, fit} from '../../features/canvas/index.js';
 import { normHex } from '../../kernel/color.js';
-import { startCustomDraw, cancelCustomDraw } from '../../features/room/room-draw.js';
-import { bindLen, setFloorColor } from '../../features/room/room-controls.js';
+import { startCustomDraw, cancelCustomDraw, bindLen, setFloorColor } from '../../features/room/index.js';
 
 function bindPaneRight(){
   $('invScope').addEventListener('change', e=>transact('prefs', ()=>{ S.invScope=e.target.value; }, {canvas:false}));

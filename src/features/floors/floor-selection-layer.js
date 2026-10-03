@@ -2,8 +2,7 @@
    marked for merge/delete. hitTest says whether a screen point is on the
    picked room's rotate handle. */
 
-import {ctx, sx, sy} from '../canvas/view.js';
-import {pathPoly} from '../canvas/paint.js';
+import {ctx, sx, sy, pathPoly} from '../canvas/index.js';
 import {bbox} from '../../kernel/geometry.js';
 import {floorSel, mergeSel} from '../../kernel/selection.js';
 import {L, floorOf} from '../../kernel/state.js';

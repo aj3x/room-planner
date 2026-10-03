@@ -1,8 +1,7 @@
 /* Each wall's length, set outside it along the wall, in accent when the
    wall is selected. */
 
-import {ctx, sx, sy, view} from '../canvas/view.js';
-import {PAL} from '../canvas/paint.js';
+import {ctx, sx, sy, view, PAL} from '../canvas/index.js';
 import {roomSel} from '../../kernel/selection.js';
 import {L, RP, S} from '../../kernel/state.js';
 import {fmtLen} from '../../kernel/units.js';

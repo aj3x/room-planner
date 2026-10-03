@@ -14,7 +14,7 @@
    Plan-panels/Library SCC.
 */
 import {S} from '../../kernel/state.js';
-import {childMarketFolders, listingsInFolder} from '../marketplace/adhoc-folders.js';
+import {childMarketFolders, listingsInFolder} from '../marketplace/index.js';
 import {childItemFolders, itemCountInSubtree} from './item-folders.js';
 import {libTreeOpen, nav} from './nav.js';
 import {moreBtn} from '../../ui-kit/menu.js';

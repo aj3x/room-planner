@@ -1,11 +1,11 @@
-import {fit} from '../canvas/camera.js';
+import {fit} from '../canvas/index.js';
 import {floorHist, furnHist, histEntry, roomHist, snapFurn, snapRoom} from '../../kernel/history.js';
 import {normLayout} from '../../kernel/migrate.js';
 import {treeExpand, treeCollapse} from '../../kernel/selection.js';
 import {S, blankLayout, floorOf, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {clampOpenings} from '../../kernel/walls.js';
-import {activateLayout, setMode} from '../mode/mode.js';
+import {activateLayout, setMode} from '../mode/index.js';
 import {flash} from '../../ui-kit/flash.js';
 import {askConfirm, moError} from '../../ui-kit/modal.js';
 import {plural} from '../../ui-kit/panels.js';

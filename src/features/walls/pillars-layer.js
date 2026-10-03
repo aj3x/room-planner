@@ -1,7 +1,6 @@
 /* Pillars and other fixed structure. */
 
-import {ctx} from '../canvas/view.js';
-import {PAL, pathPoly} from '../canvas/paint.js';
+import {ctx, PAL, pathPoly} from '../canvas/index.js';
 import {worldPoly} from '../../kernel/geometry.js';
 import {L} from '../../kernel/state.js';
 

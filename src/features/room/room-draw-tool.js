@@ -5,11 +5,8 @@
    canvas/room-draw.js. */
 
 import {alignGuides, alignNote} from '../../kernel/selection.js';
-import {draw, scheduleDraw} from '../canvas/draw.js';
-import {drawCursor, drawState, wallDrawShift} from '../canvas/interaction-state.js';
-import {PAL} from '../canvas/paint.js';
+import {draw, scheduleDraw, drawCursor, drawState, wallDrawShift, PAL, ctx, sx, sy, wx, wy} from '../canvas/index.js';
 import {cancelCustomDraw, drawSnapPoint, finishCustomDraw} from './room-draw.js';
-import {ctx, sx, sy, wx, wy} from '../canvas/view.js';
 
 function roomDrawDown(e,px,py){
   const raw=[wx(px),wy(py)];

@@ -29,18 +29,14 @@ import {S, floorMode, instOf, isCanvasMode, itemOf, roomMode} from '../kernel/st
 import {transact} from '../kernel/tx.js';
 import {batch} from '../kernel/signals.js';
 import {bisectToValid, centreInside, isBad, validate} from '../kernel/validity.js';
-import {deleteCorner} from '../features/walls/corners.js';
-import {cancelGesture, gestureTool, isGesturing, onCanvasKey} from '../features/canvas/interaction.js';
-import {measureOn} from '../features/measure/measure-state.js';
-import {setMeasure} from '../features/measure/measure.js';
-import {panTool, setSpaceDown} from '../features/canvas/pan-tool.js';
-import {cv, snapMM} from '../features/canvas/view.js';
+import {deleteCorner, deleteIWall, deletePillar} from '../features/walls/index.js';
+import {cancelGesture, gestureTool, isGesturing, onCanvasKey, panTool, setSpaceDown, cv, snapMM} from '../features/canvas/index.js';
+import {measureOn, setMeasure} from '../features/measure/index.js';
 import {flash} from '../ui-kit/flash.js';
 import {closeModal, mo, showShortcuts} from '../ui-kit/modal.js';
-import {turnFloorRoom} from '../features/floors/floors.js';
-import {deleteIWall, deletePillar} from '../features/walls/walls-panel.js';
-import {deleteOpening} from '../features/openings/openings-panel.js';
-import {removeSel, rotate} from '../features/furniture/selection-panel.js';
+import {turnFloorRoom} from '../features/floors/index.js';
+import {deleteOpening} from '../features/openings/index.js';
+import {removeSel, rotate} from '../features/furniture/index.js';
 
 function onDocumentKeyDown(e){
   const tag=(e.target.tagName||'').toLowerCase();

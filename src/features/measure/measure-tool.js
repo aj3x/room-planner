@@ -8,11 +8,9 @@ import {uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {anchorKey, measuresOf} from './measures.js';
 import {mo} from '../../ui-kit/modal.js';
-import {draw, scheduleDraw} from '../canvas/draw.js';
+import {draw, scheduleDraw, cv, wx, wy, startPan} from '../canvas/index.js';
 import {measureCursor, measureHover, measureHoverId, measureOn, measureSel, measureStart} from './measure-state.js';
 import {measureTargetAt, removeMeasure, resetMeasureState, setMeasure} from './measure.js';
-import {cv, wx, wy} from '../canvas/view.js';
-import {startPan} from '../canvas/pan-tool.js';
 
 function measureDown(e,px,py){
   const t=measureTargetAt(px,py);

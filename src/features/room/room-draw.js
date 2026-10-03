@@ -9,13 +9,9 @@ import {clampOpenings, syncWallOff} from '../../kernel/walls.js';
 import {batch} from '../../kernel/signals.js';
 import {flash} from '../../ui-kit/flash.js';
 import {$} from '../../ui-kit/modal.js';
-import {drawState, drawCursor} from '../canvas/interaction-state.js';
-import {alignPoint, alignRadius, isSquare} from '../canvas/snap.js';
-import {snapPt} from '../canvas/view.js';
-import {fit} from '../canvas/camera.js';
+import {drawState, drawCursor, alignPoint, alignRadius, isSquare, snapPt, fit, stopOtherTools} from '../canvas/index.js';
 import {roomMode} from '../../kernel/state.js';
-import {stopOtherTools} from '../canvas/interaction.js';
-import {setMode} from '../mode/mode.js';
+import {setMode} from '../mode/index.js';
 function cancelCustomDraw(){
   batch(()=>{ drawState.value = null; alignGuides.value = []; alignNote.value = ''; });
   $('drawHint').hidden=true;

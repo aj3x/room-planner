@@ -2,8 +2,7 @@
    scene paints the active room with it; the floor scene paints every room
    on the floor with the same drawRoomFloor. */
 
-import {ctx, sx, sy, view} from '../canvas/view.js';
-import {PAL, pathPoly} from '../canvas/paint.js';
+import {ctx, sx, sy, view, PAL, pathPoly} from '../canvas/index.js';
 import {bbox} from '../../kernel/geometry.js';
 import {RP, L, S} from '../../kernel/state.js';
 

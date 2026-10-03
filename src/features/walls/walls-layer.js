@@ -1,7 +1,6 @@
 /* The room's walls, with its doorways and windows punched through them. */
 
-import {H, W, ctx, sx, sy, view} from '../canvas/view.js';
-import {PAL, addPoly, pathPoly} from '../canvas/paint.js';
+import {H, W, ctx, sx, sy, view, PAL, addPoly, pathPoly} from '../canvas/index.js';
 import {L, RP} from '../../kernel/state.js';
 import {openGeom} from '../../kernel/openings.js';
 import {wallIsOff, wallRuns} from '../../kernel/walls.js';

@@ -12,11 +12,8 @@ import {L, furnMode, instOf, itemOf, uid} from '../../kernel/state.js';
 import {preview, transact} from '../../kernel/tx.js';
 import {centreInside, isBad, slideToValid, validate} from '../../kernel/validity.js';
 import {flash} from '../../ui-kit/flash.js';
-import {draw, scheduleDraw} from '../canvas/draw.js';
+import {draw, scheduleDraw, PAL, bringToFront, pickAt, ctx, snapMM, wx, wy} from '../canvas/index.js';
 import {itemToolsLayer} from './item-tools-layer.js';
-import {PAL} from '../canvas/paint.js';
-import {bringToFront, pickAt} from '../canvas/snap.js';
-import {ctx, snapMM, wx, wy} from '../canvas/view.js';
 
 /* the drag in flight: {mode:'move'|'rot'|'marquee', …} — replaced when one
    starts or ends, mutated in place while it moves */

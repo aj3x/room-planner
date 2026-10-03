@@ -2,8 +2,7 @@
    order, each hatched when it does not fit. Faded in Room mode. The floor
    scene draws every room's items with drawItem too. */
 
-import {ctx, sx, sy, view} from '../canvas/view.js';
-import {PAL, clip, pathPoly} from '../canvas/paint.js';
+import {ctx, sx, sy, view, PAL, clip, pathPoly} from '../canvas/index.js';
 import {hexA, pickText} from '../../kernel/color.js';
 import {bbox, centroid, pointInPoly, worldPoly} from '../../kernel/geometry.js';
 import {selSet} from '../../kernel/selection.js';

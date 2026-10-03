@@ -4,11 +4,7 @@
    the keyboard. The commands it ends in are canvas/wall-draw.js. */
 
 import {flash} from '../../ui-kit/flash.js';
-import {draw, scheduleDraw} from '../canvas/draw.js';
-import {drawCursor, wallDrawShift, wallDrawState} from '../canvas/interaction-state.js';
-import {PAL} from '../canvas/paint.js';
-import {snapWallPoint} from '../canvas/snap.js';
-import {axisLockFrom, ctx, sx, sy, wx, wy} from '../canvas/view.js';
+import {draw, scheduleDraw, drawCursor, wallDrawShift, wallDrawState, PAL, snapWallPoint, axisLockFrom, ctx, sx, sy, wx, wy} from '../canvas/index.js';
 import {cancelWallDraw, finishWallDraw} from './wall-draw.js';
 
 function wallDrawDown(e,px,py){

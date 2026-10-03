@@ -1,6 +1,6 @@
 /* Ad hoc listings: their tiles, an ad hoc folder's view, a listing's detail
    view and the add-a-listing dialog. Their menus are in folder-menus.js. */
-import {childMarketFolders, listingsInFolder} from '../marketplace/adhoc-folders.js';
+import {childMarketFolders, listingsInFolder, loadListing} from '../marketplace/index.js';
 import {svgI} from '../../ui-kit/modal.js';
 import {esc, plural} from '../../ui-kit/panels.js';
 import {sizeLabel} from '../../kernel/items.js';
@@ -10,7 +10,6 @@ import {transact} from '../../kernel/tx.js';
 import {libFlash} from '../../ui-kit/flash.js';
 import {$, askConfirm, moError, openModal} from '../../ui-kit/modal.js';
 import {addMarketItemToInventory} from './add-to-inventory.js';
-import {loadListing} from '../marketplace/adhoc-folders.js';
 import {bindCrumbs, bindLibGrid, crumbsHTML} from './grid.js';
 import {nav} from './nav.js';
 import {drawPreview} from './preview.js';

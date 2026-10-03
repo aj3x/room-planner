@@ -12,15 +12,14 @@ import {transact} from '../../kernel/tx.js';
 import {pref, rev} from '../../kernel/signals.js';
 import {iwallAngle, iwallLen, iwallOf, nearestOnWalls, pillarOf, setIWallAngle, setIWallEndDist, setIWallLen, setWallAngle, setWallLen, syncWallOff, tryRoomEdit, wallAngle, wallIsOff, wallOf} from '../../kernel/walls.js';
 import {deleteCorner, splitWall} from './corners.js';
-import {stopDrawing} from '../canvas/interaction.js';
-import {squareCorner} from '../canvas/snap.js';
+import {stopDrawing, squareCorner} from '../canvas/index.js';
 import {flash} from '../../ui-kit/flash.js';
 import {moreBtn} from '../../ui-kit/menu.js';
 import {$, askConfirm, moError, openModal} from '../../ui-kit/modal.js';
 import {mountPanel} from '../../ui-kit/mount.js';
 import {emptyRow, esc, plural} from '../../ui-kit/panels.js';
-import {setMode} from '../mode/mode.js';
-import {openingDialog} from '../openings/opening-dialog.js';
+import {setMode} from '../mode/index.js';
+import {openingDialog} from '../openings/index.js';
 
 function renderWalls(){
   const ul=$('wallList'), P=RP(), room=L().room;

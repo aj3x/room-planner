@@ -2,8 +2,7 @@
    tool is on, the anchors under the pointer and the one being made. Where
    each label was drawn is kept for hitTest, so a click can pick one. */
 
-import {ctx, sx, sy} from '../canvas/view.js';
-import {PAL, drawDimension, pathPoly} from '../canvas/paint.js';
+import {ctx, sx, sy, PAL, drawDimension, pathPoly} from '../canvas/index.js';
 import {ptSegDist} from '../../kernel/geometry.js';
 import {measureOn, measureStart, measureHover, measureHoverId, measureSel, measureCursor} from './measure-state.js';
 import {measuresOf, measureObjs, objOfAnchor, anchorKey, anchorGeom, closestBetween} from './measures.js';

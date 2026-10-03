@@ -11,7 +11,7 @@
 
    The $('btnImport') registration stays in index.html, per rule 6.
 */
-import {fit} from '../canvas/camera.js';
+import {fit} from '../canvas/index.js';
 import {INV_SCOPES} from '../../kernel/floor-space.js';
 import {furnHist, roomHist, seedHistFor} from '../../kernel/history.js';
 import {uniqueId} from '../../kernel/ids.js';
@@ -19,7 +19,7 @@ import {migrate, normItem, normLayout, remapMeasures} from '../../kernel/migrate
 import {roomSel, sel} from '../../kernel/selection.js';
 import {S, clone, floorLayouts, setS, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
-import {ensureDefaultMarket} from '../marketplace/market-subs.js';
+import {ensureDefaultMarket} from '../marketplace/index.js';
 import {flash} from '../../ui-kit/flash.js';
 import {$, moError, openModal} from '../../ui-kit/modal.js';
 import {plural} from '../../ui-kit/panels.js';

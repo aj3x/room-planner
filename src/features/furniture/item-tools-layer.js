@@ -2,8 +2,7 @@
    single one its rotate handle and dimension lines. hitTest says whether a
    screen point is on that rotate handle. */
 
-import {ctx, sx, sy, view} from '../canvas/view.js';
-import {PAL, drawDimension, pathPoly} from '../canvas/paint.js';
+import {ctx, sx, sy, view, PAL, drawDimension, pathPoly} from '../canvas/index.js';
 import {bbox, shapePoly, worldPoly} from '../../kernel/geometry.js';
 import {sel, selSet} from '../../kernel/selection.js';
 import {L, S, furnMode, instOf, itemOf} from '../../kernel/state.js';

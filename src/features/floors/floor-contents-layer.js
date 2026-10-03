@@ -2,13 +2,12 @@
    everything standing in each room — room by room, so one room's contents
    stack over the last room's exactly as they always have. */
 
-import {ctx} from '../canvas/view.js';
-import {pathPoly} from '../canvas/paint.js';
+import {ctx, pathPoly} from '../canvas/index.js';
 import {floorIWall, floorInst} from '../../kernel/floor-space.js';
 import {worldPoly} from '../../kernel/geometry.js';
 import {iwallPoly, wallIsOff} from '../../kernel/walls.js';
-import {drawOpening} from '../openings/openings-layer.js';
-import {drawItem} from '../furniture/items-layer.js';
+import {drawOpening} from '../openings/index.js';
+import {drawItem} from '../furniture/index.js';
 
 function drawFloorContents({C, members, depths}){
   members.forEach((m,mi)=>{

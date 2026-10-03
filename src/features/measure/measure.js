@@ -11,14 +11,13 @@ import {$} from '../../ui-kit/modal.js';
 import {S, L} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {pointInPoly, ptSegDist} from '../../kernel/geometry.js';
-import {cv, view, sx, sy, wx, wy} from '../canvas/view.js';
+import {cv, view, sx, sy, wx, wy, stopOtherTools} from '../canvas/index.js';
 import {measuresOf, measureObjs, anchorGeom} from './measures.js';
 import {measureOn, measureStart, measureSel, measureHover, measureHoverId, measureCursor} from './measure-state.js';
 import {measuresLayer} from './measures-layer.js';
 import {roomSel, sel} from '../../kernel/selection.js';
 import {isCanvasMode} from '../../kernel/state.js';
 
-import {stopOtherTools} from '../canvas/interaction.js';
 import {batch, rev} from '../../kernel/signals.js';
 import {mountPanel} from '../../ui-kit/mount.js';
 

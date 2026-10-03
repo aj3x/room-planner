@@ -9,10 +9,9 @@
 /* Pass A: each room's floor, grid and baseboard; or, with nothing to show,
    which of the two reasons it is. */
 
-import {H, W, ctx} from '../canvas/view.js';
-import {PAL} from '../canvas/paint.js';
+import {H, W, ctx, PAL} from '../canvas/index.js';
 import {L} from '../../kernel/state.js';
-import {drawRoomFloor} from '../room/room-floor-layer.js';
+import {drawRoomFloor} from '../room/index.js';
 
 /* nothing to show: say which of the two reasons it is */
 function drawFloorEmpty(fl){

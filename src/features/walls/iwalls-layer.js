@@ -1,7 +1,6 @@
 /* Freestanding interior walls. */
 
-import {ctx} from '../canvas/view.js';
-import {PAL, pathPoly} from '../canvas/paint.js';
+import {ctx, PAL, pathPoly} from '../canvas/index.js';
 import {L} from '../../kernel/state.js';
 import {iwallPoly} from '../../kernel/walls.js';
 

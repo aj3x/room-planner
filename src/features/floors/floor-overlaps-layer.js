@@ -1,7 +1,6 @@
 /* Pass F of the floor scene. */
 
-import {ctx} from '../canvas/view.js';
-import {pathPoly} from '../canvas/paint.js';
+import {ctx, pathPoly} from '../canvas/index.js';
 import {polyHit} from '../../kernel/geometry.js';
 
 function drawFloorOverlaps({C, members}){

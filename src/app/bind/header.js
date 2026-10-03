@@ -17,11 +17,10 @@
    SAME element in the SAME phase, and every such group lives in one partial.
    The order within this function is the order these had in index.html. */
 
-import { readImport, importDialog } from '../../features/io/import.js';
-import { exportDialog } from '../../features/io/export.js';
+import { readImport, importDialog, exportDialog } from '../../features/io/index.js';
 import { transact } from '../../kernel/tx.js';
 import { S, isCanvasMode } from '../../kernel/state.js';
-import { setMode } from '../../features/mode/mode.js';
+import { setMode } from '../../features/mode/index.js';
 import { flash } from '../../ui-kit/flash.js';
 import { $ } from '../../ui-kit/modal.js';
 

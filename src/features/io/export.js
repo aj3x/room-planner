@@ -14,9 +14,7 @@
 
    The `$('btnExport')` registration stays in index.html, per rule 6.
 */
-import {draw} from '../canvas/draw.js';
-import {setForceLightCanvas} from '../canvas/paint.js';
-import {cv} from '../canvas/view.js';
+import {draw, setForceLightCanvas, cv} from '../canvas/index.js';
 import {L, S, clone, isCanvasMode} from '../../kernel/state.js';
 import {ancestorFolderIds, fileSlug, folderLine, pickValues, pickerHTML, pickerMount} from './pickers.js';
 import {$, closeModal, moError, openModal, svgI} from '../../ui-kit/modal.js';

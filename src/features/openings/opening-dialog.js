@@ -11,7 +11,7 @@ import {KIND, openingDispOffset} from '../../kernel/openings.js';
 import {wallIsOff, wallOf} from '../../kernel/walls.js';
 import {$, moError, openModal} from '../../ui-kit/modal.js';
 import {esc} from '../../ui-kit/panels.js';
-import {setMode} from '../mode/mode.js';
+import {setMode} from '../mode/index.js';
 
 /* ------------------------- opening dialog ------------------------- */
 function openingDialog(id, kind, wallIdx){

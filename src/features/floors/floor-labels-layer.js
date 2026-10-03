@@ -1,7 +1,6 @@
 /* Pass E of the floor scene: which room is which, without having to open it. */
 
-import {ctx, sx, sy, view} from '../canvas/view.js';
-import {PAL, clip} from '../canvas/paint.js';
+import {ctx, sx, sy, view, PAL, clip} from '../canvas/index.js';
 import {bbox, centroid, pointInPoly} from '../../kernel/geometry.js';
 import {S} from '../../kernel/state.js';
 import {fmtLen} from '../../kernel/units.js';

@@ -1,8 +1,7 @@
 /* Door and window symbols: jambs, glazing lines, swings and sliding leaves.
    The floor scene draws them with drawOpening too, on every room. */
 
-import {ctx, sx, sy, view} from '../canvas/view.js';
-import {PAL, pathPoly} from '../canvas/paint.js';
+import {ctx, sx, sy, view, PAL, pathPoly} from '../canvas/index.js';
 import {L, S} from '../../kernel/state.js';
 import {blockedOpenings, openGeom, swingPoly} from '../../kernel/openings.js';
 import {wallIsOff} from '../../kernel/walls.js';

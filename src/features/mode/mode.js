@@ -14,8 +14,7 @@
    modal.js <-> panels.js cycle -- the boot failure that reverted togglePane.
    Nothing in ui/ imports plan/, so here it costs nothing.
 */
-import {fit, resize} from '../canvas/camera.js';
-import {resetTools, stopToolsFor} from '../canvas/interaction.js';
+import {fit, resize, resetTools, stopToolsFor} from '../canvas/index.js';
 import {floorEntry, histAvail, histRev, seedHistFor} from '../../kernel/history.js';
 import {selectClear, alignGuides, alignNote, floorGuides, floorSel, floorSnapNote, roomSel, sel} from '../../kernel/selection.js';
 import {batch, pref, rev} from '../../kernel/signals.js';

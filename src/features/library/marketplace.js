@@ -4,7 +4,7 @@
    content follows as an effect. */
 import {idParts} from '../../kernel/ids.js';
 import {S} from '../../kernel/state.js';
-import {marketIndexCache} from '../marketplace/market-subs.js';
+import {marketIndexCache, fetchMarketItem, loadRegistry, reloadMarketSub, removeMarketSub, subscribeMarket} from '../marketplace/index.js';
 import {nav, navChanged} from './nav.js';
 import {drawPreview} from './preview.js';
 import {svgI} from '../../ui-kit/modal.js';
@@ -16,7 +16,6 @@ import {$, askConfirm, closeModal, moError, openModal} from '../../ui-kit/modal.
 import {normSearch} from '../../ui-kit/panels.js';
 import {addMarketItemToInventory} from './add-to-inventory.js';
 import {bindCrumbs} from './grid.js';
-import {fetchMarketItem, loadRegistry, reloadMarketSub, removeMarketSub, subscribeMarket} from '../marketplace/market-subs.js';
 
 function marketSubTile(sub){
   const items=marketIndexCache.get(sub.id);

@@ -5,11 +5,10 @@ import {batch} from '../../kernel/signals.js';
 import {roomSel} from '../../kernel/selection.js';
 import {L, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
-import {wallDrawState, drawCursor} from '../canvas/interaction-state.js';
+import {wallDrawState, drawCursor, stopOtherTools} from '../canvas/index.js';
 import {roomMode} from '../../kernel/state.js';
 import {flash} from '../../ui-kit/flash.js';
-import {stopOtherTools} from '../canvas/interaction.js';
-import {setMode} from '../mode/mode.js';
+import {setMode} from '../mode/index.js';
 function cancelWallDraw(){ wallDrawState.value = null; }
 function finishWallDraw(a,b){
   const w={id:uid(), a, b, t:L().room.wall};

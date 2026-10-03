@@ -24,20 +24,17 @@ import { closeMenu, openMenu, menuAtPoint } from '../../ui-kit/menu.js';
 import { singleClick, cancelSingleClick } from '../../ui-kit/inline-edit.js';
 import { moveBefore, clearDropMarks, dropHalf } from '../../ui-kit/dnd.js';
 import { flash } from '../../ui-kit/flash.js';
-import {wallDrawState} from '../../features/canvas/interaction-state.js';
-import { fit } from '../../features/canvas/camera.js';
-import { startWallDraw, cancelWallDraw } from '../../features/walls/wall-draw.js';
-import { startSplitRoom } from '../../features/room/split-room.js';
-import { activateLayout, setMode } from '../../features/mode/mode.js';
-import { folderDescendant, enterFloor, floorMenu, folderMenu, layoutMenu, newFolder, treeBox, renameFolder, renameLayout, renameFloor, dragTree, setDragTree, treeDropSpot } from '../../features/layouts/layout-tree.js';
-import { newFloor, putOnFloor, openFloorMergeMenu } from '../../features/floors/floors.js';
-import { deletePillar, deleteIWall, addPillar, wallDialog } from '../../features/walls/walls-panel.js';
-import { deleteOpening } from '../../features/openings/openings-panel.js';
+import {wallDrawState, fit} from '../../features/canvas/index.js';
+import { startWallDraw, cancelWallDraw, deletePillar, deleteIWall, addPillar, wallDialog } from '../../features/walls/index.js';
+import { startSplitRoom } from '../../features/room/index.js';
+import { activateLayout, setMode } from '../../features/mode/index.js';
+import { folderDescendant, enterFloor, floorMenu, folderMenu, layoutMenu, newFolder, treeBox, renameFolder, renameLayout, renameFloor, dragTree, setDragTree, treeDropSpot } from '../../features/layouts/index.js';
+import { newFloor, putOnFloor, openFloorMergeMenu } from '../../features/floors/index.js';
+import { deleteOpening, openingDialog } from '../../features/openings/index.js';
 import { KIND } from '../../kernel/openings.js';
-import { invBox, placeItem, renameItem, itemMenu, dragInv, setDragInv } from '../../features/furniture/item-list.js';
-import { itemDialog } from '../../features/library/item-dialog.js';
-import { openingDialog } from '../../features/openings/opening-dialog.js';
-import { bpUploadDialog } from '../../features/blueprint/flow.js';
+import { invBox, placeItem, renameItem, itemMenu, dragInv, setDragInv } from '../../features/furniture/index.js';
+import { itemDialog } from '../../features/library/index.js';
+import { bpUploadDialog } from '../../features/blueprint/index.js';
 
 function bindPaneLeft(){
   treeBox.addEventListener('click', e=>{

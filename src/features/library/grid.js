@@ -2,7 +2,7 @@
    and what a tile's menu and the grid's drag-and-drop do. */
 import {itemDialog} from './item-dialog.js';
 import {sizeLabel} from '../../kernel/items.js';
-import {marketFolderPath} from '../marketplace/adhoc-folders.js';
+import {marketFolderPath} from '../marketplace/index.js';
 import {childItemFolders, itemFolderPath, itemsInFolder} from './item-folders.js';
 import {svgI} from '../../ui-kit/modal.js';
 import {esc} from '../../ui-kit/panels.js';
@@ -10,7 +10,7 @@ import {uniqueId} from '../../kernel/ids.js';
 import {selectClear} from '../../kernel/selection.js';
 import {S, clone} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
-import {fileSlug} from '../io/pickers.js';
+import {fileSlug} from '../io/index.js';
 import {clearDropMarks} from '../../ui-kit/dnd.js';
 import {libFlash} from '../../ui-kit/flash.js';
 import {openMenu} from '../../ui-kit/menu.js';

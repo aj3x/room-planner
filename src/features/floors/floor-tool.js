@@ -13,8 +13,7 @@ import {L, S, floorMode, floorOf} from '../../kernel/state.js';
 import {preview, transact} from '../../kernel/tx.js';
 import {floorRoomAt, snapFloorPlace} from '../../kernel/floor-place.js';
 import {floorSelectionLayer} from './floor-selection-layer.js';
-import {snapPt, view, wx, wy} from '../canvas/view.js';
-import {startPan} from '../canvas/pan-tool.js';
+import {snapPt, view, wx, wy, startPan} from '../canvas/index.js';
 
 /* A room this size needs a more generous magnet than a wall endpoint does */
 const floorSnapRadius = () => 24/view.scale;

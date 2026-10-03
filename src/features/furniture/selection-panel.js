@@ -3,7 +3,7 @@
    The section is an effect on the furniture and the selection
    (mountSelPanel, at the end); the commands only commit.
 */
-import {bringToFront} from '../canvas/snap.js';
+import {bringToFront} from '../canvas/index.js';
 import {bbox, centroid, norm360, worldPoly} from '../../kernel/geometry.js';
 import {hasOpen, openSizeLabel} from '../../kernel/open-state.js';
 import {sel, selSet, selectClear, selectOnly, selectSet} from '../../kernel/selection.js';
@@ -14,8 +14,8 @@ import {centreInside, getConflicts, isBad, validate} from '../../kernel/validity
 import {flash} from '../../ui-kit/flash.js';
 import {$, svgI} from '../../ui-kit/modal.js';
 import {esc} from '../../ui-kit/panels.js';
-import {itemDialog} from '../library/item-dialog.js';
-import {setMode} from '../mode/mode.js';
+import {itemDialog} from '../library/index.js';
+import {setMode} from '../mode/index.js';
 import {pref, rev} from '../../kernel/signals.js';
 import {mountPanel} from '../../ui-kit/mount.js';
 

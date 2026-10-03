@@ -7,7 +7,7 @@
    to them, the tree and the canvas.
 */
 import {mergeGeometry} from '../../kernel/merge-rooms.js';
-import {fit} from '../canvas/camera.js';
+import {fit} from '../canvas/index.js';
 import {floorIWall, floorInst, floorXf} from '../../kernel/floor-space.js';
 import {bbox, norm360} from '../../kernel/geometry.js';
 import {floorHist, furnHist, roomHist} from '../../kernel/history.js';
@@ -20,10 +20,10 @@ import {clampOpenings, syncWallOff} from '../../kernel/walls.js';
 import {flash} from '../../ui-kit/flash.js';
 import {$, askConfirm, svgI} from '../../ui-kit/modal.js';
 import {esc, plural} from '../../ui-kit/panels.js';
-import {activateLayout, setMode} from '../mode/mode.js';
+import {activateLayout, setMode} from '../mode/index.js';
 import {placeOnFloor} from '../../kernel/floor-space.js';
 import {uid} from '../../kernel/state.js';
-import {folderLine, pickValues, pickerHTML} from '../io/pickers.js';
+import {folderLine, pickValues, pickerHTML} from '../io/index.js';
 import {menuAtPoint} from '../../ui-kit/menu.js';
 import {askText, openModal} from '../../ui-kit/modal.js';
 import {pref, rev} from '../../kernel/signals.js';

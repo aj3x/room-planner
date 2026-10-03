@@ -2,8 +2,7 @@
    everything when the view setting is on, and always for what you have hold
    of. Faded in Room mode, like the items. */
 
-import {ctx} from '../canvas/view.js';
-import {PAL, pathPoly} from '../canvas/paint.js';
+import {ctx, PAL, pathPoly} from '../canvas/index.js';
 import {openPoly} from '../../kernel/open-state.js';
 import {hexA} from '../../kernel/color.js';
 import {selSet} from '../../kernel/selection.js';

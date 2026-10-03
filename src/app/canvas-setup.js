@@ -4,39 +4,14 @@
    and one line here; nothing else changes. Order among layers matters only
    between equal z; order among tools is their priority. */
 
-import {addLayer} from '../features/canvas/draw.js';
-import {stageLayer} from '../features/canvas/stage-layer.js';
-import {floorUnderlayLayer} from '../features/floors/floor-underlay-layer.js';
-import {roomFloorLayer} from '../features/room/room-floor-layer.js';
-import {walkPathsLayer} from '../features/walkpaths/walk-paths-layer.js';
-import {wallsLayer} from '../features/walls/walls-layer.js';
-import {iwallsLayer} from '../features/walls/iwalls-layer.js';
-import {pillarsLayer} from '../features/walls/pillars-layer.js';
-import {openingsLayer} from '../features/openings/openings-layer.js';
-import {openRegionsLayer} from '../features/furniture/open-regions-layer.js';
-import {itemsLayer} from '../features/furniture/items-layer.js';
-import {wallLabelsLayer} from '../features/walls/wall-labels-layer.js';
-import {alignGuidesLayer} from '../features/canvas/align-guides-layer.js';
-import {roomHandlesLayer} from '../features/room/room-handles-layer.js';
-import {itemToolsLayer} from '../features/furniture/item-tools-layer.js';
-import {measuresLayer} from '../features/measure/measures-layer.js';
-import {readoutLayer} from '../features/canvas/readout-layer.js';
-import {floorRoomsLayer} from '../features/floors/floor-rooms-layer.js';
-import {floorWallsLayer} from '../features/floors/floor-walls-layer.js';
-import {floorContentsLayer} from '../features/floors/floor-contents-layer.js';
-import {floorLabelsLayer} from '../features/floors/floor-labels-layer.js';
-import {floorOverlapsLayer} from '../features/floors/floor-overlaps-layer.js';
-import {floorGuidesLayer} from '../features/floors/floor-guides-layer.js';
-import {floorSelectionLayer} from '../features/floors/floor-selection-layer.js';
-import {floorReadoutLayer} from '../features/floors/floor-readout-layer.js';
-import {registerTool} from '../features/canvas/interaction.js';
-import {roomDrawTool} from '../features/room/room-draw-tool.js';
-import {wallDrawTool} from '../features/walls/wall-draw-tool.js';
-import {splitTool} from '../features/room/split-tool.js';
-import {measureTool} from '../features/measure/measure-tool.js';
-import {floorTool} from '../features/floors/floor-tool.js';
-import {roomTool} from '../features/room/room-tool.js';
-import {furnitureTool} from '../features/furniture/furniture-tool.js';
+import {addLayer, stageLayer, alignGuidesLayer, readoutLayer, registerTool} from '../features/canvas/index.js';
+import {floorUnderlayLayer, floorRoomsLayer, floorWallsLayer, floorContentsLayer, floorLabelsLayer, floorOverlapsLayer, floorGuidesLayer, floorSelectionLayer, floorReadoutLayer, floorTool} from '../features/floors/index.js';
+import {roomFloorLayer, roomHandlesLayer, roomDrawTool, splitTool, roomTool} from '../features/room/index.js';
+import {walkPathsLayer} from '../features/walkpaths/index.js';
+import {wallsLayer, iwallsLayer, pillarsLayer, wallLabelsLayer, wallDrawTool} from '../features/walls/index.js';
+import {openingsLayer} from '../features/openings/index.js';
+import {openRegionsLayer, itemsLayer, itemToolsLayer, furnitureTool} from '../features/furniture/index.js';
+import {measuresLayer, measureTool} from '../features/measure/index.js';
 
 const LAYERS = [
   stageLayer,

@@ -3,8 +3,7 @@
    model/walkpaths.js; only the paint is here. Furniture mode, with the view
    setting on. */
 
-import {ctx, sx, sy, view} from '../canvas/view.js';
-import {PAL, addPoly} from '../canvas/paint.js';
+import {ctx, sx, sy, view, PAL, addPoly} from '../canvas/index.js';
 import {S, RP, furnMode} from '../../kernel/state.js';
 import {bbox} from '../../kernel/geometry.js';
 import {fmtLen} from '../../kernel/units.js';

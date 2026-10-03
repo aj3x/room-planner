@@ -27,18 +27,12 @@ import { transact } from '../../kernel/tx.js';
 import { undoRoom, redoRoom, undoFurn, redoFurn, undoFloor, redoFloor } from '../../kernel/history.js';
 import { $, askConfirm, showShortcuts } from '../../ui-kit/modal.js';
 import { menuAtPoint } from '../../ui-kit/menu.js';
-import { cv, W, H } from '../../features/canvas/view.js';
-import { fit, zoomAt } from '../../features/canvas/camera.js';
-import { activeTool, onCanvasPointerDown, onCanvasPointerMove, onCanvasMouseMove, onCanvasPointerUp, onCanvasPointerLeave, onCanvasWheel } from '../../features/canvas/interaction.js';
-import { startSplitRoom } from '../../features/room/split-room.js';
-import { floorTool, pickFloorRoom } from '../../features/floors/floor-tool.js';
-import { roomTool } from '../../features/room/room-tool.js';
-import { pickRoom } from '../../features/canvas/snap.js';
-import {measureOn, measureSel} from '../../features/measure/measure-state.js';
-import { liveMeasures, setMeasure, resetMeasureState, removeMeasure } from '../../features/measure/measure.js';
-import { activateLayout, setMode } from '../../features/mode/mode.js';
-import { wallDialog } from '../../features/walls/walls-panel.js';
-import { openFloorMergeMenu } from '../../features/floors/floors.js';
+import { cv, W, H, fit, zoomAt, activeTool, onCanvasPointerDown, onCanvasPointerMove, onCanvasMouseMove, onCanvasPointerUp, onCanvasPointerLeave, onCanvasWheel, pickRoom } from '../../features/canvas/index.js';
+import { startSplitRoom, roomTool } from '../../features/room/index.js';
+import { floorTool, pickFloorRoom, openFloorMergeMenu } from '../../features/floors/index.js';
+import {measureOn, measureSel, liveMeasures, setMeasure, resetMeasureState, removeMeasure} from '../../features/measure/index.js';
+import { activateLayout, setMode } from '../../features/mode/index.js';
+import { wallDialog } from '../../features/walls/index.js';
 
 function bindStage(){
   cv.addEventListener('mousemove', onCanvasMouseMove);

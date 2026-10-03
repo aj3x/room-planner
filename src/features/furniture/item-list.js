@@ -22,7 +22,7 @@ import {flash} from '../../ui-kit/flash.js';
 import {inlineEdit} from '../../ui-kit/inline-edit.js';
 import {openMenu} from '../../ui-kit/menu.js';
 import {askConfirm} from '../../ui-kit/modal.js';
-import {itemDialog} from '../library/item-dialog.js';
+import {itemDialog} from '../library/index.js';
 import {place} from './selection-panel.js';
 import {computed, rev} from '../../kernel/signals.js';
 import {mountPanel} from '../../ui-kit/mount.js';

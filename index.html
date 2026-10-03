@@ -50,11 +50,8 @@
    order they must stay in.
    =================================================================== */
 
-import {scheduleDraw} from './src/features/canvas/draw.js';
-import {darkMQ} from './src/features/canvas/paint.js';
-import {edgePanTick} from './src/features/canvas/interaction.js';
-import {resize} from './src/features/canvas/camera.js';
-import {applyLayoutMode, togglePane} from './src/features/mode/mode.js';
+import {scheduleDraw, darkMQ, edgePanTick, resize} from './src/features/canvas/index.js';
+import {applyLayoutMode, togglePane} from './src/features/mode/index.js';
 import {onDocumentKeyDown, onDocumentKeyUp} from './src/app/shortcuts.js';
 import {closeMenu, menuEl} from './src/ui-kit/menu.js';
 import {$} from './src/ui-kit/modal.js';

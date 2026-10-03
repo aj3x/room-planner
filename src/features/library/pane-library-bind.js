@@ -24,7 +24,7 @@ import { $ } from '../../ui-kit/modal.js';
 import { S } from '../../kernel/state.js';
 import { transact } from '../../kernel/tx.js';
 import { itemFolderOf, itemFolderDescendant, recomputeFolderSubtree, moveItemToFolder } from './item-folders.js';
-import { marketFolderOf, marketFolderDescendant } from '../marketplace/adhoc-folders.js';
+import { marketFolderOf, marketFolderDescendant } from '../marketplace/index.js';
 import { nav, libTreeOpen, gridDragItem, setGridDragItem, goLibFolder, selectListing } from './nav.js';
 import { renderLibTree, markActiveTreeRow, libTreeBox, dragLib, setDragLib, libDropSpot } from './tree.js';
 import { renameLibFolder, renameAdhocFolder, libFolderMenu, adhocFolderMenu, listingMenu } from './folder-menus.js';

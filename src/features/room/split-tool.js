@@ -9,12 +9,8 @@ import {pointInPoly} from '../../kernel/geometry.js';
 import {alignGuides, alignNote} from '../../kernel/selection.js';
 import {RP} from '../../kernel/state.js';
 import {flash} from '../../ui-kit/flash.js';
-import {draw, scheduleDraw} from '../canvas/draw.js';
-import {drawCursor, splitDrawState, wallDrawShift} from '../canvas/interaction-state.js';
-import {PAL, drawSquareTick} from '../canvas/paint.js';
-import {snapWallPoint} from '../canvas/snap.js';
+import {draw, scheduleDraw, drawCursor, splitDrawState, wallDrawShift, PAL, drawSquareTick, snapWallPoint, ctx, sx, sy, wx, wy} from '../canvas/index.js';
 import {boundaryHit, cancelSplitDraw, splitCornerRef, splitResolvePoint, trySplitLine} from './split-room.js';
-import {ctx, sx, sy, wx, wy} from '../canvas/view.js';
 
 function splitDown(e,px,py){
   const raw0=[wx(px),wy(py)];

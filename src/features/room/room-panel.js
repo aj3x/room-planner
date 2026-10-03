@@ -13,8 +13,8 @@ import {isRectRoom, setRectSize} from '../../kernel/walls.js';
 import {$} from '../../ui-kit/modal.js';
 import {mountPanel} from '../../ui-kit/mount.js';
 import {esc} from '../../ui-kit/panels.js';
-import {renderOpeningProps} from '../openings/openings-panel.js';
-import {renderCornerProps, renderIWallProps, renderPillarProps, renderWallProps} from '../walls/walls-panel.js';
+import {renderOpeningProps} from '../openings/index.js';
+import {renderCornerProps, renderIWallProps, renderPillarProps, renderWallProps} from '../walls/index.js';
 
 function renderRoom(){
   const r=L().room;

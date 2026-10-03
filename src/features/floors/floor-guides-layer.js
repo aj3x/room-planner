@@ -1,6 +1,6 @@
 /* The floor magnet's guides: the neighbour edges a dragged room is lining up with. */
 
-import {ctx, sx, sy} from '../canvas/view.js';
+import {ctx, sx, sy} from '../canvas/index.js';
 import {floorGuides} from '../../kernel/selection.js';
 
 function drawFloorGuides({C}){

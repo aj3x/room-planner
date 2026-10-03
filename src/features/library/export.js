@@ -7,8 +7,7 @@
    the only line added.
 */
 import {S, clone} from '../../kernel/state.js';
-import {downloadJSON} from '../io/export.js';
-import {fileSlug, pickValues, pickerHTML, pickerMount} from '../io/pickers.js';
+import {downloadJSON, fileSlug, pickValues, pickerHTML, pickerMount} from '../io/index.js';
 import {itemFolderOf, itemFolderPath, itemFolderSubtreeIds} from './item-folders.js';
 import {libFlash} from '../../ui-kit/flash.js';
 import {moError, openModal} from '../../ui-kit/modal.js';

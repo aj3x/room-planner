@@ -3,8 +3,7 @@
    through them. Bands first, all of them, or the next room's band paints a
    doorway shut again. */
 
-import {H, W, ctx, sx, sy, view} from '../canvas/view.js';
-import {addPoly, pathPoly} from '../canvas/paint.js';
+import {H, W, ctx, sx, sy, view, addPoly, pathPoly} from '../canvas/index.js';
 import {depthRuns} from '../../kernel/floor-place.js';
 import {openGeom} from '../../kernel/openings.js';
 import {wallIsOff} from '../../kernel/walls.js';
