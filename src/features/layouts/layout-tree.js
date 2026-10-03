@@ -249,7 +249,7 @@ function deleteLayout(id){
 
 /* the menu's long way round to what dragging does */
 function moveDialog(kind,id){
-  const obj = kind==='folder' ? folderOf(id) : S.layouts.find(x=>x.id===id);
+  const obj = /** @type {Partial<import('../../kernel/types.js').Folder & import('../../kernel/types.js').Layout>|null|undefined} */(kind==='folder' ? folderOf(id) : S.layouts.find(x=>x.id===id));   // a Folder when kind is 'folder', else a Layout
   if(!obj) return;
   const cur = (kind==='folder' ? obj.parentId : obj.folderId) || '';
   let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;

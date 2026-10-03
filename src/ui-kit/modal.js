@@ -1,3 +1,4 @@
+// @ts-check
 /* The modal dialog. A plain <div>, never <dialog>/<form> — both are blocked in
    the sandboxed iframes this app may run in, which is what the banner below
    records.
@@ -14,12 +15,22 @@ import {$, esc, svgI} from './dom.js';
 import {tagInputs} from './tag-input.js';
 
 /* ------------------------- modal (no <dialog>, no <form>) ------------------------- */
-const mo=$('modal');
-let moOkFn=null, moCloseFn=null;
+/** What a dialog may ask of the shell besides its title, body and OK.
+    @typedef {{danger?: boolean, wide?: boolean, xwide?: boolean, stepper?: string,
+      onBack?: () => void, onClose?: () => void}} ModalOpts */
+
+const mo=/** @type {HTMLElement} */($('modal'));
+/** @type {(() => unknown)|null} returning false keeps the dialog open */
+let moOkFn=null;
+/** @type {(() => void)|null} */
+let moCloseFn=null;
 /* opts.danger styles the action as destructive, so a delete never wears the encouraging primary look.
    opts.wide widens the card for a dialog built around a picture rather than a form.
    opts.onClose runs however the modal goes away — the OK button, Cancel, the backdrop or Esc — which
    is what a dialog holding an object URL or a worker needs to clean up after itself. */
+/** @param {string} title @param {string} bodyHTML @param {string|null} [okLabel] 'Save' when absent
+    @param {(() => unknown)|null} [onOk] returning false keeps the dialog open; no OK button without one
+    @param {(() => void)|null} [onMount] @param {ModalOpts} [opts] */
 function openModal(title, bodyHTML, okLabel, onOk, onMount, opts){
   $('moTitle').textContent=title;
   tagInputs.clear();
@@ -45,9 +56,12 @@ function openModal(title, bodyHTML, okLabel, onOk, onMount, opts){
 /* clear moCloseFn before running it: a handler that opens the next stage of a wizard
    must not have its own close hook fire again on the way in */
 function closeModal(){ const f=moCloseFn; moCloseFn=null; mo.hidden=true; moOkFn=null; moBackFn=null; if(f) f(); }
+/** @param {string} m */
 const moError = m => { $('moErr').textContent=m; };
+/** @type {(() => void)|null} */
 let moBackFn=null;
 
+/** @param {string} title @param {string} label @param {string|null|undefined} value @param {(v: string) => void} onOk */
 function askText(title,label,value,onOk){
   openModal(title,
     `<label class="stack-label" for="moText">${esc(label)}</label>
@@ -55,6 +69,7 @@ function askText(title,label,value,onOk){
     ()=>{ const v=$('moText').value.trim(); if(!v){ moError('Enter a name'); return false; } onOk(v); });
 }
 /* every confirmation in the app guards something destructive */
+/** @param {string} title @param {string} msg @param {string|null|undefined} okLabel @param {() => void} onOk */
 function askConfirm(title,msg,okLabel,onOk){
   openModal(title, `<p>${esc(msg)}</p>`, okLabel||'Delete', ()=>onOk(), null, {danger:true});
 }

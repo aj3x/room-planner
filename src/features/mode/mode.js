@@ -64,10 +64,10 @@ function activateLayout(id){
 /* places (Plan / Library / Marketplace) live in the header; the Room/Furniture mode lives on the canvas it changes */
 function renderMode(){
   const place = isCanvasMode(S.mode) ? 'plan' : S.mode;
-  for(const b of document.querySelectorAll('#navSeg button')){
+  for(const b of /** @type {NodeListOf<HTMLElement>} */(document.querySelectorAll('#navSeg button'))){
     if(b.dataset.nav===place) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
   }
-  for(const b of document.querySelectorAll('#modeSeg button')) b.setAttribute('aria-pressed', String(b.dataset.mode===S.mode));
+  for(const b of /** @type {NodeListOf<HTMLElement>} */(document.querySelectorAll('#modeSeg button'))) b.setAttribute('aria-pressed', String(b.dataset.mode===S.mode));
   document.body.dataset.mode = S.mode;
 }
 
@@ -96,9 +96,10 @@ function togglePane(side){
   closeMenu(); resize();   // the mode effect has applied the panes by now: this is never inside a batch
 }
 /* the mode also lives in ?mode=, so a refresh (or a shared link) lands back in the same mode */
+/** @returns {import('../../kernel/types.js').Mode|null} the ?mode= the page was opened with, if it names one */
 function paramMode(){
   const m=new URLSearchParams(location.search).get('mode');
-  return ['room','furniture','floor','inventory','marketplace'].includes(m) ? m : null;
+  return ['room','furniture','floor','inventory','marketplace'].includes(/** @type {string} */(m)) ? /** @type {import('../../kernel/types.js').Mode} */(m) : null;
 }
 
 export {mountMode, setPendingFit, syncModeParam, setMode, activateLayout, renderMode, applyLayoutMode, togglePane, paramMode};

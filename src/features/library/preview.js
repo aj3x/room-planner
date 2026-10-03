@@ -16,7 +16,7 @@ function drawPreview(cv,it){
   const b=ob?{x0:ob.x0,y0:ob.y0,x1:ob.x1,y1:ob.y1,w:ob.x1-ob.x0,h:ob.y1-ob.y0}:bbox(shapePoly(it.shape));
   const pad=18, s=Math.min((W-pad*2)/Math.max(b.w,1),(H-pad*2)/Math.max(b.h,1));
   const cx=W/2-((b.x0+b.x1)/2)*s, cy=H/2-((b.y0+b.y1)/2)*s;
-  const toPx=([x,y])=>[cx+x*s, cy+y*s];
+  const toPx=(/** @type {import('../../kernel/types.js').Pt} */[x,y])=>[cx+x*s, cy+y*s];
   if(ob){
     ctx.beginPath();
     [[ob.x0,ob.y0],[ob.x1,ob.y0],[ob.x1,ob.y1],[ob.x0,ob.y1]].forEach((p,i)=>{const [x,y]=toPx(p); i?ctx.lineTo(x,y):ctx.moveTo(x,y);});

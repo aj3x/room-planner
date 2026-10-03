@@ -86,7 +86,7 @@ function addListingDialog(){
       transact('lib', ()=>{ S.marketListings.push({id:uid(), name, parentId:nav.marketFolderId, kind:'file', content, addedAt:Date.now()}); });
     },
     ()=>{
-      const tabs=[...document.querySelectorAll('.addmode-tabs button')];
+      const tabs=[.../** @type {NodeListOf<HTMLElement>} */(document.querySelectorAll('.addmode-tabs button'))];
       tabs.forEach(b=>b.addEventListener('click', ()=>{
         tabs.forEach(x=>x.setAttribute('aria-pressed', String(x===b)));
         $('modeFile').hidden = b.dataset.lmode!=='file';
@@ -97,7 +97,7 @@ function addListingDialog(){
       function readFile(file){
         if(!file) return;
         const r=new FileReader();
-        r.onload=()=>{ try{ pendingFile=JSON.parse(r.result); $('lFileNote').textContent='Loaded “'+file.name+'”'; if(!$('lName').value.trim()) $('lName').value=file.name.replace(/\.json$/i,''); }
+        r.onload=()=>{ try{ pendingFile=JSON.parse(/** @type {string} */(r.result)); $('lFileNote').textContent='Loaded “'+file.name+'”'; if(!$('lName').value.trim()) $('lName').value=file.name.replace(/\.json$/i,''); }
           catch(e){ pendingFile=null; $('lFileNote').textContent='That file isn’t valid JSON.'; } };
         r.readAsText(file);
       }

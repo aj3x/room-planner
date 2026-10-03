@@ -144,7 +144,7 @@ function bindPaneLeft(){
     let parent=null, targetId=null, after=false;
     if(spot.mode==='into'){ parent=spot.id; treeExpand(parent); }
     else if(spot.mode!=='root'){
-      const t = spot.isFolder ? folderOf(spot.id) : S.layouts.find(x=>x.id===spot.id);
+      const t = /** @type {Partial<import('../../kernel/types.js').Folder & import('../../kernel/types.js').Layout>|null|undefined} */(spot.isFolder ? folderOf(spot.id) : S.layouts.find(x=>x.id===spot.id));   // a Folder when isFolder, else a Layout
       if(!t) return;
       parent = (spot.isFolder ? t.parentId : t.folderId) || null;
       // folders and rooms are kept in separate lists, so only order against your own kind

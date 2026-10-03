@@ -1,3 +1,4 @@
+// @ts-check
 /* Toasts. Two of them: flash() on the canvas, libFlash() on the Library and
    Marketplace tabs. Both stay up for readTime(msg).
 
@@ -20,9 +21,12 @@
 import {$} from './modal.js';
 
 /* long enough to read: ~60ms a character, never under 1.6s or over 5s */
+/** @param {unknown} msg */
 const readTime = msg => Math.max(1600, Math.min(5000, String(msg).length*60));
 
-let flashT=null;
+/** @type {number|undefined} */
+let flashT;
+/** @param {string|null|undefined} msg */
 function flash(msg){
   if(!msg) return;
   const el=$('flash');
@@ -31,7 +35,9 @@ function flash(msg){
 }
 
 /* ------------------------- library flash (Inventory/Marketplace tabs) ------------------------- */
-let libFlashT=null;
+/** @type {number|undefined} */
+let libFlashT;
+/** @param {string|null|undefined} msg @param {boolean} [warn] */
 function libFlash(msg,warn){
   if(!msg) return;
   const el=$('libFlash');

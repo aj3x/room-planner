@@ -202,6 +202,7 @@ function addPillar(){
   stopDrawing();
   if(!roomMode()) setMode('room');
   const b=bbox(RP()), c=centroid(RP())||[(b.x0+b.x1)/2,(b.y0+b.y1)/2];
+  /** @type {import('../../kernel/types.js').Pillar} */
   const pl={id:uid(), x:c[0], y:c[1], rot:0, shape:{type:'rect',w:300,d:300}};
   transact('room', ()=>{
     L().room.pillars.push(pl);

@@ -1,3 +1,4 @@
+// @ts-check
 /* The modal shell's wiring: the footer's two buttons, and the two ways to
    dismiss a dialog without them — a click on the backdrop, and Enter.
 
@@ -20,7 +21,7 @@ function bindModal(){
   $('moOk').addEventListener('click', ()=>{ if(!moOkFn) return closeModal(); if(moOkFn()===false) return; closeModal(); });
   mo.addEventListener('click', e=>{ if(e.target===mo) closeModal(); });
   mo.addEventListener('keydown', e=>{
-    if(e.key==='Enter' && e.target.tagName!=='TEXTAREA'){ e.preventDefault(); $('moOk').click(); }
+    if(e.key==='Enter' && /** @type {Element} */(e.target).tagName!=='TEXTAREA'){ e.preventDefault(); $('moOk').click(); }
   });
 }
 

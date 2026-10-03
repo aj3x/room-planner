@@ -50,6 +50,7 @@ function openingDialog(id, kind, wallIdx){
       if(!isFinite(dispOffset)) dispOffset=0;
       let offset = cnr==='ccw' ? (len-width-dispOffset) : dispOffset;
       offset=Math.max(0,Math.min(offset,len-width));
+      /** @type {import('../../kernel/types.js').Opening} */
       const rec={
         id:id||uid(), kind:k, wall, width, offset, corner:cnr,
         dtype: k==='door' ? $('dType').value : 'open',

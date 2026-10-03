@@ -1,3 +1,4 @@
+// @ts-check
 /* Side panels: text helpers for the render* functions (esc is ui-kit/dom.js's,
    re-exported here), and collapsing a section of a pane or a whole pane.
 
@@ -11,22 +12,26 @@ import {$, esc, svgI} from './dom.js';
 import {rev} from '../kernel/signals.js';
 import {mountPanel} from './mount.js';
 
+/** @param {number} n @param {string} w */
 const plural = (n,w) => n+' '+w+(n===1?'':'s');
+/** @param {string} msg */
 const emptyRow = msg => `<li class="list-empty"><div class="empty">${msg}</div></li>`;
 /* strip diacritics so "a" also finds "ä", "café" also finds "cafe", etc. */
+/** @param {unknown} s */
 function normSearch(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
 
 /* ------------------------- collapsing sections ------------------------- */
 function applySections(){
-  for(const sec of document.querySelectorAll('.pane-body section[data-sec]')){
-    const shut=S.secClosed.includes(sec.dataset.sec);
+  for(const sec of /** @type {NodeListOf<HTMLElement>} */(document.querySelectorAll('.pane-body section[data-sec]'))){
+    const shut=S.secClosed.includes(/** @type {string} */(sec.dataset.sec));   // the selector requires it
     sec.classList.toggle('collapsed', shut);
-    const h=sec.querySelector('.sec-head h2');
+    const h=/** @type {HTMLElement|null} */(sec.querySelector('.sec-head h2'));
     if(h){ h.tabIndex=0; h.setAttribute('role','button'); h.setAttribute('aria-expanded', String(!shut)); }
   }
 }
+/** @param {Element} h a section's heading */
 function toggleSection(h){
-  const k=h.closest('section[data-sec]').dataset.sec;
+  const k=/** @type {string} */(/** @type {HTMLElement} */(h.closest('section[data-sec]')).dataset.sec);   // every heading is in one
   transact('prefs', ()=>{ S.secClosed = S.secClosed.includes(k) ? S.secClosed.filter(x=>x!==k) : S.secClosed.concat(k); }, {canvas:false});
 }
 /* Which sections are shut, as an effect on the settings (ui-kit/mount.js). */
@@ -39,14 +44,14 @@ function mountSections(){
    so collapsing there would leave nothing to look at. */
 const wideLayout = () => !window.matchMedia('(max-width:900px)').matches;
 function applyPanes(){
-  const wide=wideLayout(), m=document.querySelector('main');
+  const wide=wideLayout(), m=/** @type {HTMLElement} */(document.querySelector('main'));   // the shell's
   const lShut = wide && !S.leftOpen, rShut = wide && !S.rightOpen;
   $('paneRoom').classList.toggle('collapsed', lShut);
   $('paneStuff').classList.toggle('collapsed', rShut);
   m.classList.toggle('lc', lShut);
   m.classList.toggle('rc', rShut);
   // the head is the button; its chevron always points the way the panel would move
-  const set=(headId,chevId,shut,isLeft,name)=>{
+  const set=(/** @type {string} */headId,/** @type {string} */chevId,/** @type {boolean} */shut,/** @type {boolean} */isLeft,/** @type {string} */name)=>{
     const h=$(headId), label=(shut?'Show ':'Hide ')+name;
     $(chevId).innerHTML = svgI((shut===isLeft) ? 'chev-r' : 'chev-l');
     h.title=label; h.setAttribute('aria-label',label);

@@ -1,3 +1,4 @@
+// @ts-check
 /* Rename in place, and the single-click delay that lets a double-click land. */
 
 /* ------------------------- rename in place -------------------------
@@ -9,16 +10,17 @@
    repaint the row the moment the caller commits the new name. When there is
    nothing to commit, the original name goes back where it was and `done`
    gets null. */
+/** @param {HTMLElement|null} el @param {string} value @param {(v: string|null) => void} done */
 function inlineEdit(el, value, done){
   if(!el) return;
-  const row=el.closest('[draggable]');
+  const row=/** @type {HTMLElement|null} */(el.closest('[draggable]'));
   if(row) row.draggable=false;          // so the text stays selectable
   const inp=document.createElement('input');
   inp.type='text'; inp.className='inline-edit'; inp.value=value;
   el.replaceWith(inp);
   inp.focus(); try{ inp.select(); }catch(e){}
   let closed=false;
-  const finish=ok=>{
+  const finish=(/** @type {boolean} */ok)=>{
     if(closed) return;
     closed=true;
     const v=inp.value.trim();
@@ -38,8 +40,10 @@ function inlineEdit(el, value, done){
    the single-click action back long enough to see whether a second one lands.
    Rows that re-render themselves on click need this or the second click would
    arrive at a fresh element and never become a dblclick. */
-let clickT=null;
-function singleClick(fn){ clearTimeout(clickT); clickT=setTimeout(()=>{ clickT=null; fn(); }, 190); }
-function cancelSingleClick(){ clearTimeout(clickT); clickT=null; }
+/** @type {number|undefined} */
+let clickT;
+/** @param {() => void} fn */
+function singleClick(fn){ clearTimeout(clickT); clickT=setTimeout(()=>{ clickT=undefined; fn(); }, 190); }
+function cancelSingleClick(){ clearTimeout(clickT); clickT=undefined; }
 
 export {inlineEdit, singleClick, cancelSingleClick};

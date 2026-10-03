@@ -1,3 +1,4 @@
+// @ts-check
 /* Dropdown menus: the ⋯ button, the popup it opens, and the right-click
    variant that has no button to anchor against.
 
@@ -21,8 +22,16 @@ import {svgI} from './modal.js';
    The ⋯ buttons open a small menu pinned to the button itself. Anything that
    needs more than one click — a text box, a folder picker, a confirmation —
    opens the modal from inside the menu. */
+/** One row of a menu: an action, or a separator.
+    (The separator names the action's fields as absent so that `if(a.sep)` narrows
+    with and without strictNullChecks; see tsconfig.json.)
+    @typedef {{label: string, fn: () => void, danger?: boolean, sep?: undefined}
+            | {sep: true, label?: undefined, fn?: undefined, danger?: undefined}} MenuAction */
+
+/** @type {HTMLElement|null} */
 let menuEl=null;
 function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl=null; } }
+/** @param {Element} anchor @param {MenuAction[]} actions @param {string} [title] */
 function openMenu(anchor, actions, title){
   closeMenu();
   const el=document.createElement('div');
@@ -48,6 +57,7 @@ function openMenu(anchor, actions, title){
 }
 /* a right-click menu has no button to anchor against — plant an invisible point-sized
    one where the pointer was, let openMenu read its rect, then remove it */
+/** @param {number} clientX @param {number} clientY @param {MenuAction[]} actions @param {string} [title] */
 function menuAtPoint(clientX, clientY, actions, title){
   const a=document.createElement('div');
   a.style.cssText='position:fixed;left:'+clientX+'px;top:'+clientY+'px;width:0;height:0;';
@@ -56,6 +66,7 @@ function menuAtPoint(clientX, clientY, actions, title){
   a.remove();
 }
 
+/** @param {string} cls @param {string} [label] */
 const moreBtn = (cls,label) => `<button type="button" class="btn quiet sm icon ${cls}" data-act="more" title="${label||'More actions'}" aria-label="${label||'More actions'}">${svgI('more')}</button>`;
 
 export {menuEl, closeMenu, openMenu, menuAtPoint, moreBtn};

@@ -27,8 +27,8 @@
 export type Pt = number[];
 /** An axis-aligned box. */
 export interface BBox { x0: number; y0: number; x1: number; y1: number; w: number; h: number }
-/** A segment, from one point to another. */
-export type Seg = [Pt, Pt];
+/** A segment, [from, to]. An array for the same reason Pt is. */
+export type Seg = Pt[];
 
 /* ---- items (ITEM_SCHEMA.md) ---- */
 
@@ -154,7 +154,8 @@ export interface MarketListing {
   parentId: string | null;
   kind: 'file' | 'link' | 'paste';
   url?: string;
-  content?: string;
+  /** the bundle itself, for 'file' and 'paste' */
+  content?: {inventory: Item[]};
   addedAt?: number;
 }
 /** A subscribed marketplace. Only this record is saved; its index and items are cached in memory. */
@@ -232,10 +233,12 @@ export type HistMap = Record<string, Hist>;
 
 /* ---- the selection ---- */
 
-/** What is picked in Room mode. */
+/** What is picked in Room mode: a wall or corner by index, or a thing by id.
+    Each side names the other's field as absent, so `roomSel.value.id===x`
+    reads cleanly without narrowing first. */
 export type RoomSel =
-  | {kind: 'wall' | 'corner'; i: number}
-  | {kind: 'opening' | 'pillar' | 'iwall'; id: string};
+  | {kind: 'wall' | 'corner'; i: number; id?: undefined}
+  | {kind: 'opening' | 'pillar' | 'iwall'; id: string; i?: undefined};
 
 /* ---- the host ---- */
 

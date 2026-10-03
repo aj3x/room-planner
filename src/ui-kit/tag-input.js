@@ -1,3 +1,4 @@
+// @ts-check
 /* Tag input: chips plus autocomplete. */
 
 import {S} from '../kernel/state.js';
@@ -7,13 +8,17 @@ import {$, esc} from './dom.js';
    Tags are shown as chips, the way they read elsewhere in the app. Tab or comma
    commits what you typed (or the highlighted suggestion); backspace on an empty
    box removes the whole chip before the caret, not one letter of it. */
+/** @type {Map<string, () => string[]>} */
 const tagInputs = new Map();                 // field id -> () => string[]
+/** @returns {string[]} every tag in use, sorted */
 function tagSuggestions(){
+  /** @type {Set<string>} */
   const s=new Set();
   for(const it of S.inventory) for(const t of (it.tags||[])) s.add(t);
   for(const f of S.folders) for(const t of (f.tags||[])) s.add(t);
   return [...s].sort((a,b)=>a.localeCompare(b));
 }
+/** @param {string} id @param {string} [placeholder] */
 function tagFieldHTML(id, placeholder){
   return `<div class="tagfield" id="${id}">
     <div class="taginput"><input type="text" id="${id}Input" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="${esc(placeholder||'')}"></div>
@@ -21,25 +26,28 @@ function tagFieldHTML(id, placeholder){
   </div>`;
 }
 /* mount after openModal has put the HTML in place; read the value with tagFieldValue(id) */
+/** @param {string} id @param {string[]} [tags] */
 function mountTagField(id, tags){
-  const root=$(id), box=root.querySelector('.taginput'),
-        inp=box.querySelector('input'), sug=root.querySelector('.tagsuggest');
+  /* tagFieldHTML wrote all four */
+  const root=/** @type {HTMLElement} */($(id)), box=/** @type {HTMLElement} */(root.querySelector('.taginput')),
+        inp=/** @type {HTMLInputElement} */(box.querySelector('input')), sug=/** @type {HTMLElement} */(root.querySelector('.tagsuggest'));
   const list=(tags||[]).slice();
-  let items=[], idx=-1;
+  let items=/** @type {string[]} */([]), idx=-1;
 
-  const has = v => list.some(t=>t.toLowerCase()===v.toLowerCase());
+  const has = (/** @type {string} */v) => list.some(t=>t.toLowerCase()===v.toLowerCase());
   function renderChips(){
     for(const el of [...box.querySelectorAll('.tag')]) el.remove();
     list.forEach((t,i)=>{
       const el=document.createElement('span');
       el.className='tag';
       el.innerHTML=`<span>${esc(t)}</span><button type="button" tabindex="-1" aria-label="Remove ${esc(t)}">×</button>`;
-      el.querySelector('button').addEventListener('click', ev=>{
+      /** @type {HTMLElement} */(el.querySelector('button')).addEventListener('click', ev=>{
         ev.stopPropagation(); list.splice(i,1); renderChips(); refresh(); inp.focus();
       });
       box.insertBefore(el, inp);
     });
   }
+  /** @param {string|null} [text] what to add; the typed text when absent */
   function commit(text){
     const v=String(text==null?inp.value:text).trim();
     inp.value='';
@@ -65,14 +73,14 @@ function mountTagField(id, tags){
     idx = (q && items.length && items[0].toLowerCase().startsWith(q)) ? 0 : -1;
     drawSug();
   }
-  const pick = i => { if(items[i]!=null) commit(items[i]); inp.focus(); };
+  const pick = (/** @type {number} */i) => { if(items[i]!=null) commit(items[i]); inp.focus(); };
 
   // clicks anywhere in the box (gaps, chips, the × button) keep the caret in the input,
   // so a chip is never re-rendered out from under the click that was removing it
   box.addEventListener('mousedown', e=>{ if(e.target!==inp){ e.preventDefault(); inp.focus(); } });
   sug.addEventListener('mousedown', e=>e.preventDefault());   // keep focus in the input
   sug.addEventListener('click', e=>{
-    const b=e.target.closest('button[data-i]'); if(b) pick(+b.dataset.i);
+    const b=/** @type {HTMLElement|null} */(/** @type {Element} */(e.target).closest('button[data-i]')); if(b) pick(+/** @type {string} */(b.dataset.i));
   });
   inp.addEventListener('input', refresh);
   inp.addEventListener('focus', ()=>{ box.classList.add('on'); refresh(); });
@@ -109,6 +117,7 @@ function mountTagField(id, tags){
   });
   return inp;
 }
+/** @param {string} id @returns {string[]} */
 const tagFieldValue = id => (tagInputs.get(id)||(()=>[]))();
 
 export {tagInputs, tagSuggestions, tagFieldHTML, mountTagField, tagFieldValue};

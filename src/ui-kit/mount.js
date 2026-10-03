@@ -1,3 +1,4 @@
+// @ts-check
 /* mountPanel(): run a panel's render as an effect, without rebuilding a field
    while the user is typing in it.
 
@@ -42,11 +43,15 @@ import {effect, signal} from '../kernel/signals.js';
 const TYPING = 'textarea, select, input:not([type=checkbox]):not([type=radio]):not([type=color])'
              + ':not([type=range]):not([type=button]):not([type=submit]):not([type=reset]):not([type=file])';
 
+/** @param {HTMLElement|null} root */
 function typingIn(root){
   const a = root && document.activeElement;
   return !!a && root.contains(a) && a.matches(TYPING);
 }
 
+/** Run render as an effect over what deps reads, holding it while a field inside root is being typed in.
+    @param {string|HTMLElement|null} root the smallest element whose fields render rewrites; null when it writes none
+    @param {() => void} deps @param {() => unknown} render */
 function mountPanel(root, deps, render){
   const el = typeof root === 'string' ? document.getElementById(root) : root;
   const retry = signal(0);
@@ -55,7 +60,7 @@ function mountPanel(root, deps, render){
   if(el){
     el.addEventListener('change', release);
     el.addEventListener('click', e => { if(e.target !== document.activeElement) release(); });
-    el.addEventListener('focusout', e => { if(!(e.relatedTarget && el.contains(e.relatedTarget))) release(); });
+    el.addEventListener('focusout', e => { if(!(e.relatedTarget && el.contains(/** @type {Node} */(e.relatedTarget)))) release(); });
   }
   return effect(() => {
     retry.value;
@@ -71,7 +76,7 @@ function mountPanel(root, deps, render){
         /* The value under the caret was just replaced (normalised, or put
            back after a refusal); select it so the next keystroke retypes it
            rather than landing at position 0 in front of it. */
-        if(n.matches('input[type=text], input:not([type]), textarea')) n.select();
+        if(n.matches('input[type=text], input:not([type]), textarea')) /** @type {HTMLInputElement} */(n).select();
       }
     }
   });

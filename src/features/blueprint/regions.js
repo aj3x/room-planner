@@ -19,7 +19,7 @@ function bpIdentify(regions){
    enough to fail the floor on its own — is left exactly as it was, not guessed at, and
    the exterior wall itself is never a target since "outside" doesn't carry a label. */
 function bpAbsorbSlivers(bar, w, h, tPart, rl, accepted){
-  const reach=Math.ceil(tPart*2.5), steps=5;
+  const reach=Math.ceil(tPart*2.5), steps=/** @type {number} */(5);   // a knob: the 1-step case below stays correct if it is turned down
   const sideLabel=(x0,y0,x1,y1,dx,dy)=>{
     const tally=new Map();
     let inconclusive=false;

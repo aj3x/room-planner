@@ -124,7 +124,7 @@ function itemDialog(id){
           retagItem(id,newId);
         }
         else {
-          const nit={id:newId,name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,folderId:(isCanvasMode(S.mode)?null:nav.libFolderId)||null,open};
+          const nit=/** @type {import('../../kernel/types.js').Item} */({id:newId,name,color:dlgColor,shape,passThrough:$('iPass').checked,count,manualTags,folderId:(isCanvasMode(S.mode)?null:nav.libFolderId)||null,open});   // tags: applyTags, next line
           applyTags(nit);
           S.inventory.push(nit);
           // an untouched id is filed under the folder it was created in, same as moving it there
@@ -138,7 +138,7 @@ function itemDialog(id){
       const fill=()=>{
         const t=sel2.value, sh=it&&it.shape.type===t?it.shape:null;
         $('shapeFields').innerHTML=shapeFieldHTML(t,sh);
-        if(t==='lshape'&&sh) $('fCorner').value=sh.corner;
+        if(t==='lshape'&&sh) $('fCorner').value=/** @type {{corner?: string}} */(sh).corner;
       };
       sel2.addEventListener('change',fill);
       fill();

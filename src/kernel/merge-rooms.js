@@ -70,7 +70,8 @@ function mergeInsertCuts(work, i, lo, hi, len){
    measures, removedOpenings} ready to drop onto the surviving room, or {error} when the
    two rooms don't share exactly one clean wall. */
 /** @param {import('./types.js').Layout} A @param {import('./types.js').Layout} B
-    @returns {{error: string} | (MergeWork & {removedOpenings: number, error?: undefined})} */
+    @returns {({error: string} & {[K in keyof MergeWork | 'removedOpenings']?: undefined})
+            | (MergeWork & {removedOpenings: number, error?: undefined})} */
 function mergeGeometry(A, B){
   const tA=floorXf(A), tB=floorXf(B);
   const PA=A.room.points.map(p=>floorPt(tA,p));

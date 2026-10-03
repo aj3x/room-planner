@@ -42,7 +42,7 @@ function bindHeader(){
     const rd=new FileReader();
     rd.onload=()=>{
       let inc=null;
-      try{ inc=readImport(JSON.parse(rd.result)); }catch(err){ inc=null; }
+      try{ inc=readImport(JSON.parse(/** @type {string} */(rd.result))); }catch(err){ inc=null; }
       if(!inc){ flash("That file isn't a Room Planner export"); return; }
       importDialog(inc);
     };
