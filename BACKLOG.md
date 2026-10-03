@@ -154,7 +154,7 @@ layouts are both currently active).
 ## Known defects
 
 - **Typing an item's position in the Selected panel is not undoable.** The
-  `sX`/`sY` fields (`move` in **`src/plan/selection-panel.js`**) save but never
+  `sX`/`sY` fields (`move` in **`src/features/furniture/selection-panel.js`**) save but never
   recorded a furniture undo step, unlike the rotate field next to them and
   every other placement edit. It is kept that way by an explicit
   `transact('furn', …, {history:false})` so the move to `transact()` changed
@@ -163,7 +163,7 @@ layouts are both currently active).
   it into its own step.
 
 - **Arriving in Floor mode leaves both floor panels stale.** `setMode('floor')`
-  (**`src/plan/mode.js`**) seeds `floorSel` with the active room, baselines the
+  (**`src/features/mode/mode.js`**) seeds `floorSel` with the active room, baselines the
   arrangement and fits the camera, so the plan opens with that room drawn
   selected — but the render list it then runs is `renderRoomSel(); renderWalls();
   renderOpen(); renderSel();`, which does not include `renderFloorSel()`. And
@@ -173,8 +173,8 @@ layouts are both currently active).
   Label fields never appear, and the Floor section shows whatever was last
   rendered into it. Clicking the room on the plan, shift-clicking a row in the
   tree, or anything else that calls `renderFloorSel()`/`renderAll()` puts it
-  right. `setMode` now lives in **`src/plan/mode.js`** and both render
-  functions in **`src/plan/floors.js`**; the one-word fix is to add
+  right. `setMode` now lives in **`src/features/mode/mode.js`** and both render
+  functions in **`src/features/floors/floors.js`**; the one-word fix is to add
   `renderFloorSel()` to that list. Found while writing the Floor-mode panel
   coverage. **No longer pinned by a test** — `panel-select.spec.js` was
   scaffolding for the Plan+Library SCC move and went with the rest of it (see
@@ -183,7 +183,7 @@ layouts are both currently active).
 - **Filing an item into a folder derives its id prefix from the folder's
   *display name*, case and all.** `rehomeItemId()` builds the new id from
   `folderIdPrefix(folderId)`, which is `itemFolderPath(...).map(f=>idSlug(f.name))`
-  (now **`src/core/ids.js`**, used from **`src/library/item-folders.js`**), and
+  (now **`src/kernel/ids.js`**, used from **`src/features/library/item-folders.js`**), and
   `idSlug` only strips characters outside the id charset — it does not
   case-fold. So dragging "sofa" onto a folder named
   **IKEA** files it as `IKEA/sofa`, while an item already sitting in that same
@@ -201,7 +201,7 @@ layouts are both currently active).
   scaffolding for the SCC move and went with it.
 
 - **"Added" never appears on a listing's Add button.** In
-  `renderListingDetail` (**`src/library/adhoc-listings.js`**) the per-item handler is
+  `renderListingDetail` (**`src/features/library/adhoc-listings.js`**) the per-item handler is
   `addMarketItemToInventory(it); b.textContent='Added'; b.disabled=true;` —
   but `addMarketItemToInventory` ends in `save(); renderLibAll();`, which
   re-runs `renderListingDetail` and replaces the whole of `#listingBody`. The
@@ -220,7 +220,7 @@ layouts are both currently active).
   list.** The picker is rebuilt from `SNAPS.imperial` or `SNAPS.metric`
   depending on `S.unit`, and if the saved snap size is not one of the six
   options it is reset to the list's **third** entry
-  (`src/plan/room-panel.js`, `if(!list.some(([v])=>v===S.snap)) S.snap=list[2][0]`).
+  (`src/features/room/room-panel.js`, `if(!list.some(([v])=>v===S.snap)) S.snap=list[2][0]`).
   Changing the display unit therefore changes the user's snap size, with no
   flash, no confirmation and no undo: 10 cm becomes 1 inch on the way to ft+in,
   and 1 inch becomes 5 cm on the way back — a round trip through the unit
@@ -236,20 +236,29 @@ layouts are both currently active).
   than resetting to `list[2]`.
 
 - **A room standing on a floor is invisible in the tree at boot.** `treeOpen`
-  (`src/core/selection.js`) starts as an empty `Set` and is never persisted, so
+  (`src/kernel/selection.js`) starts as an empty `Set` and is never persisted, so
   every floor and folder row renders collapsed on load. When the active room
   sits on a floor — the normal case once floors are used at all — the left pane
   opens with no row for the room the canvas is showing, no `.active` row
   anywhere, and nothing that reveals it short of finding and expanding the
-  right floor by hand. `renderTree` (**`src/plan/layout-tree.js`**) has all it needs to auto-expand
+  right floor by hand. `renderTree` (**`src/features/layouts/layout-tree.js`**) has all it needs to auto-expand
   the ancestors of `S.active`; it does not. The fix is to seed `treeOpen` with
   those ancestors at boot, or to expand them in `renderTree` when nothing else
   has. **No longer pinned by a test** — `panel-tree.spec.js` was scaffolding
   for the SCC move and went with it.
 
+- **A half-drawn outline, interior wall or split survives leaving Plan or
+  switching mode.** The three drawing tools (room-draw, wall-draw, split, in
+  **`src/features/room/`** and **`src/features/walls/`**) are ended only by
+  Escape, finishing, or another tool starting; `setMode()` stops only tools
+  that declare `modes` (today just Measure, via `stopToolsFor`). So a drawing
+  started in Room mode is still live after switching to Furniture, Floor or
+  the Library, and picks up again on return. Pre-existing. The fix is one line
+  per tool: give each `modes: ['room']`.
+
 - **A placement that is already invalid can be dragged *further* out of the
   room.** `drag.loose` is seeded from `isBad(hit)` at pointerdown, and while it
-  is true the `move` branch of the furniture tool's `furnMove` (**`src/canvas/tools/furniture.js`**) skips
+  is true the `move` branch of the furniture tool's `furnMove` (**`src/features/furniture/furniture-tool.js`**) skips
   `slideToValid` entirely and accepts any position whose *centre* is still
   inside the room (`centreInside`). The intent is clear and right — a piece
   that does not fit has to be draggable at all, or it would be stuck — but the
@@ -263,10 +272,10 @@ layouts are both currently active).
   it.
 
 - **`sel = null` does not clear `selSet`.** Three sites set the primary
-  selection directly — `setSel(null)` in **`src/io/import.js`**,
-  **`src/plan/layout-tree.js`** (`activateLayout`) and
-  **`src/canvas/measure-tool.js`** — without going through `selectClear()`
-  (**`src/core/selection.js`**), so the multi-select set can survive a clear of the primary
+  selection directly — `setSel(null)` in **`src/features/io/import.js`**,
+  **`src/features/layouts/layout-tree.js`** (`activateLayout`) and
+  **`src/features/measure/measure.js`** — without going through `selectClear()`
+  (**`src/kernel/selection.js`**), so the multi-select set can survive a clear of the primary
   selection and leave the two out of sync. Pre-existing on `main` (not
   introduced by the blueprint merge); found during the Phase 0 merge audit.
   Every other path uses the `selectOnly`/`selectAdd`/`selectToggle`/
@@ -274,7 +283,7 @@ layouts are both currently active).
 
 - **`isFinite(null)` is `true`, so `null` coordinates survive normalisation.**
   `normLayout()` guards its numeric fields with `isFinite(p.y) ? p.y : 0`
-  (**`src/core/migrate.js`**, in `normLayout()`: the `floorPlace` line and the
+  (**`src/kernel/migrate.js`**, in `normLayout()`: the `floorPlace` line and the
   pillar loop's `x`/`y`/`rot`). `null`
   coerces to `0`, so `isFinite(null)` is `true` and a `null` passes straight
   through, while a genuinely bad value like the string `"nope"` is correctly
@@ -299,7 +308,7 @@ layouts are both currently active).
 - **`migrate()` never validates `S.unit`.** It range-checks `mode`, `planMode`,
   `invScope` and `zoomSpeed`, but a saved state carrying a nonsense `unit`
   keeps it forever. `readImport()` *does* validate the same field
-  (**`src/io/import.js`**), so the import path is stricter than the load path. The
+  (**`src/features/io/import.js`**), so the import path is stricter than the load path. The
   two halves of the unit system then disagree: `fmtLen` falls through to its
   ft+in `default:` branch while `parseLen`, finding no `BARE` entry, reads bare
   numbers as millimetres — so the app displays feet and inches but silently
@@ -336,9 +345,9 @@ layouts are both currently active).
   `test/e2e/smoke.spec.js` ("dist/index.html boots and paints straight off disk").
 
 - **A marketplace item's folder path does not find a folder that differs only
-  in case.** `addMarketItemToInventory()` (**`src/library/add-to-inventory.js`**) files an
+  in case.** `addMarketItemToInventory()` (**`src/features/library/add-to-inventory.js`**) files an
   incoming item under its id path via `ensureItemFolderPath(parts)`
-  (**`src/library/item-folders.js`**), which matches an existing folder with
+  (**`src/features/library/item-folders.js`**), which matches an existing folder with
   `x.name===name` — exact, case-sensitive. Marketplace ids
   are lower-case by convention (`ikea/kallax/4x2`), so a user whose Library
   already has a folder called "IKEA" gets a second, separate folder called
@@ -350,7 +359,7 @@ layouts are both currently active).
   marketplace were scaffolding for the SCC move and went with it.
 
 - **Stepping out of a subscription answers the typed search about a different
-  collection.** `renderLibContent()` (**`src/library/router.js`**) routes to
+  collection.** `renderLibContent()` (**`src/features/library/router.js`**) routes to
   `renderMarketSub()` *before* the generic search view (the comment there says
   so deliberately), so while a subscription is open the search box searches that
   marketplace's index. Press "Marketplaces" to go back and `nav.searching` is
@@ -364,7 +373,7 @@ layouts are both currently active).
   the SCC scaffolding.
 
 - **An index entry with a malformed id disappears without a word.**
-  `subscribeMarket()` (**`src/library/market-subs.js`**) filters shard entries
+  `subscribeMarket()` (**`src/features/marketplace/market-subs.js`**) filters shard entries
   with `if(it&&it.id&&!idProblem(it.id))` and says nothing
   about the ones it drops — not to the user, not to the console. Every other
   validation failure in that function throws a message the Add dialog shows;
@@ -386,8 +395,8 @@ layouts are both currently active).
   without touching anything stores **810**. The same applies to any existing
   opening or item re-saved from its dialog — the value drifts to whatever the
   current display unit can express, once per save, silently, and switching
-  units between saves drifts it again. The dialogs are now **`src/plan/item-dialog.js`** and
-  **`src/plan/opening-dialog.js`**; the fix is to keep the original millimetre
+  units between saves drifts it again. The dialogs are now **`src/features/library/item-dialog.js`** and
+  **`src/features/openings/opening-dialog.js`**; the fix is to keep the original millimetre
   value when the field's text is unchanged. Found while writing the Phase 3.6
   dialog coverage. **No longer pinned by a test** — `panel-dialogs.spec.js`
   was scaffolding for the SCC move and went with it.
@@ -399,12 +408,12 @@ layouts are both currently active).
   `index.html` and is no longer flagged. The rest came through the split
   untouched, which is what move-only means, and they now report against the
   module they landed in:
-  - `walkTrace` (`src/model/walkpaths.js:181`): a top-level function with no
+  - `walkTrace` (`src/features/walkpaths/walkpaths.js:181`): a top-level function with no
     caller anywhere.
-  - unused parameters: `len` (`src/canvas/merge-rooms.js:72`), `tPart`
-    (`src/blueprint/openings.js:12`).
-  - dead stores: `a` (`src/blueprint/walls.js:50`), `raw`
-    (`src/library/adhoc-listings.js:120`), `inc` (`index.html:918`) — each
+  - unused parameters: `len` (`src/kernel/merge-rooms.js:72`), `tPart`
+    (`src/features/blueprint/openings.js:12`).
+  - dead stores: `a` (`src/features/blueprint/walls.js:50`), `raw`
+    (`src/features/library/adhoc-listings.js:120`), `inc` (`index.html:918`) — each
     assigned and then overwritten or never read.
   They are reported as ESLint **warnings** rather than errors, deliberately:
   Phase 2 may not edit application code, and a lint that fails the build over
@@ -412,7 +421,7 @@ layouts are both currently active).
   the rule that matters for the extraction, is an error and is clean.
 
 - **A stray `/*$vite$:1*/` comment rides in the shipped CSS.** Since A4 moved the
-  styles to `src/styles/main.scss`, `dist/index.html`'s `<style>` block ends with
+  styles to `src/app/styles/main.scss`, `dist/index.html`'s `<style>` block ends with
   a 12-byte marker comment: `…{padding-inline:16px}}\n/*$vite$:1*/</style>`. It is
   `vite-plugin-singlefile`'s own placeholder, left behind when it inlines a real
   stylesheet asset rather than an already-inline `<style>`; it did not appear

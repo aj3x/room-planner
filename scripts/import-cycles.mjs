@@ -30,8 +30,10 @@ const deps = new Map();
 for(const f of files){
   const src = fs.readFileSync(f, 'utf8');
   const out = [];
-  for(const m of src.matchAll(/from\s*['"](\.[^'"]+)['"]/g)){
-    let t = path.normalize(path.join(path.dirname(f), m[1]));
+  /* `... from './x.js'`, a bare `import './x.js'`, and a literal
+     `import('./x.js')`; relative, or root-absolute ('/src/...'). */
+  for(const m of src.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)['"]((?:\.|\/src\/)[^'"]+)['"]/g)){
+    let t = m[1].startsWith('/') ? path.normalize(m[1].slice(1)) : path.normalize(path.join(path.dirname(f), m[1]));
     if(!t.endsWith('.js')) t += '.js';
     if(fs.existsSync(t)) out.push(t);
   }

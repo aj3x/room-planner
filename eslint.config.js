@@ -81,7 +81,8 @@ const RELAXED = {
    A small rule rather than `no-restricted-imports`, because what is allowed
    depends on where the importing file is and where the import resolves to,
    not on the spelling of the path. */
-const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'src');
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
+const SRC = path.join(ROOT, 'src');
 function place(abs){
   const rel = path.relative(SRC, abs);
   if(rel.startsWith('..') || path.isAbsolute(rel)) return {area:'outside'};
@@ -118,8 +119,13 @@ const boundaries = {
     const from = place(file);
     const check = node => {
       const spec = node.source && node.source.value;
-      if(typeof spec !== 'string' || !spec.startsWith('.')) return;   // a package
-      const msg = verdict(from, place(path.resolve(path.dirname(file), spec)));
+      if(typeof spec !== 'string') return;
+      /* relative, or root-absolute the way Vite serves it ('/src/...');
+         anything else is a package */
+      const abs = spec.startsWith('.') ? path.resolve(path.dirname(file), spec)
+                : spec.startsWith('/') ? path.join(ROOT, spec) : null;
+      if(!abs) return;
+      const msg = verdict(from, place(abs));
       if(msg) context.report({node: node.source, message: `${msg} (${spec})`});
     };
     return {ImportDeclaration: check, ExportNamedDeclaration: check, ExportAllDeclaration: check, ImportExpression: check};
@@ -133,8 +139,13 @@ const BOUNDARIES = [
   },
   {
     files: ['src/kernel/**/*.js'],
-    rules: {'no-restricted-globals': ['error',
-      {name: 'document', message: 'kernel/ has no DOM; write a signal and let a view (a feature or app/) render it.'}]},
+    rules: {
+      'no-restricted-globals': ['error',
+        {name: 'document', message: 'kernel/ has no DOM; write a signal and let a view (a feature or app/) render it.'}],
+      'no-restricted-properties': ['error',
+        ...['window', 'globalThis', 'self'].map(object => ({object, property: 'document',
+          message: 'kernel/ has no DOM; write a signal and let a view (a feature or app/) render it.'}))],
+    },
   },
 ];
 
