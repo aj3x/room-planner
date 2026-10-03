@@ -2,7 +2,7 @@
 
 ## What this is
 
-A field-level reference for the JSON shape of an **item** (a library/inventory entry — furniture, fixtures, anything placeable in a room), for people who want to hand-author their own items. Canonical normalization lives in `normItem()` in **[src/core/migrate.js](src/core/migrate.js)**. All lengths are stored internally in millimetres; `parseLen`/`fmtLen` convert to/from the user's display unit.
+A field-level reference for the JSON shape of an **item** (a library/inventory entry — furniture, fixtures, anything placeable in a room), for people who want to hand-author their own items. Canonical normalization lives in `normItem()` in **[src/kernel/migrate.js](src/kernel/migrate.js)**. All lengths are stored internally in millimetres; `parseLen`/`fmtLen` convert to/from the user's display unit.
 
 ## Item
 
@@ -19,10 +19,10 @@ A field-level reference for the JSON shape of an **item** (a library/inventory e
 }
 ```
 
-- **`id`** (`string`): user-editable identifier. Must stay within the `idProblem()` charset (**[src/core/ids.js](src/core/ids.js)**) — letters, digits, `! - _ . * ' ( )` — and may use `/` as a path separator to group related items (e.g. `ikea/kallax/4x2`), similar to an S3 key.
+- **`id`** (`string`): user-editable identifier. Must stay within the `idProblem()` charset (**[src/kernel/ids.js](src/kernel/ids.js)**) — letters, digits, `! - _ . * ' ( )` — and may use `/` as a path separator to group related items (e.g. `ikea/kallax/4x2`), similar to an S3 key.
 - **`name`** (`string`): display name; defaults to `'Untitled'` when missing.
 - **`shape`** (`Shape`): the item's footprint. See [Shape](#shape) below. A missing shape defaults to `{type:'rect', w:900, d:600}`.
-- **`color`** (`string`): hex color, normalized via `normHex()` (**[src/canvas/draw.js](src/canvas/draw.js)**); falls back to `PALETTE[0]` (**[src/core/state.js](src/core/state.js)**) if invalid/missing.
+- **`color`** (`string`): hex color, normalized via `normHex()` (**[src/kernel/color.js](src/kernel/color.js)**); falls back to `PALETTE[0]` (**[src/kernel/state.js](src/kernel/state.js)**) if invalid/missing.
 - **`passThrough`** (`boolean`): when `true`, other items/placements are allowed to overlap this one (e.g. rugs, floor mats).
 - **`count`** (`number`): how many of this item the user owns; defaults to `1`.
 - **`tags`** (`string[]`): defaults to `[]`. In the Inventory tab, this is a *derived* field — the union of `manualTags` and any tags inherited from the item's library folder.
@@ -33,15 +33,15 @@ A field-level reference for the JSON shape of an **item** (a library/inventory e
 These are used by the Inventory tab for folder/tag management and are not read by Furniture-mode placement logic:
 
 - **`folderId`** (`string | null`): the library folder this item is filed under. **This is a reference into a tree that no export writes** — see the warning below.
-- **`manualTags`** (`string[]`): the tags picked by hand for this item; the authoritative source. `tags` is recomputed from `manualTags` plus the tags inherited from the folder's ancestry (`ancestorTags`/`applyTags`/`reconcileTags`, **[src/library/item-folders.js](src/library/item-folders.js)**).
+- **`manualTags`** (`string[]`): the tags picked by hand for this item; the authoritative source. `tags` is recomputed from `manualTags` plus the tags inherited from the folder's ancestry (`ancestorTags`/`applyTags`/`reconcileTags`, **[src/features/library/item-folders.js](src/features/library/item-folders.js)**).
 
 #### The Library folder tree is not part of this schema, and `folderId` does not travel
 
 The Library tab's folder tree lives in `S.itemFolders`, a top-level array of
 `{id, name, parentId, tags:[]}`. **No export path writes it** — not
-`exportPayload()` (**[src/io/export.js](src/io/export.js)**), which writes the
+`exportPayload()` (**[src/features/io/export.js](src/features/io/export.js)**), which writes the
 *layout* folder tree `S.folders`, and not the Library tab's own Export
-(**[src/library/export.js](src/library/export.js)**), which writes
+(**[src/features/library/export.js](src/features/library/export.js)**), which writes
 `{app, version, exported, inventory}` and nothing else. `readImport()` and
 `applyImport()` have no notion of it either.
 

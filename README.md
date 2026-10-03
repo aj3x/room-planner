@@ -68,26 +68,26 @@ cover is written down rather than left to be discovered. See
 
 The app was a single 10,893-line `index.html`. It has been taken apart into
 modules so several people can work on it without colliding, and that is
-finished: `index.html` is now a 111-line shell — a `<head>`, a stylesheet
+finished: `index.html` is now a 109-line shell — a `<head>`, a stylesheet
 link, seven include directives for the static markup, and a short script
 holding the dozen listeners that belong to no single pane, plus the call to
 `boot()`. Each pane's own wiring sits with its markup: every HTML partial
-ends with a module script that calls one `bind*()` from `src/bind/`.
-Everything else is **93 JS modules, 14 SCSS partials and 7 HTML partials**
-under `src/`.
+ends with a module script that calls one `bind*()` from the module beside it.
+Everything else is **150 JS modules, 15 SCSS partials and 7 HTML partials**
+under `src/`:
 
 ```
-src/core/       units, geometry, ids, state, selection, storage, migrations, undo/redo
-src/model/      walls, openings, validity, walk paths, measurements
-src/ui/         modal, menus, panels, inline edit, drag and drop, toasts
-src/canvas/     the view, the drawing pass, snapping, the interaction state
-src/plan/       the side panels — layout tree, floors, room panel, item list, dialogs
-src/library/    the Library and Marketplace UI
-src/blueprint/  the blueprint import wizard
-src/io/         export, import, file pickers
-src/styles/     SCSS partials; main.scss is the @use manifest
-src/html/       the static markup, included into index.html at build time
+src/kernel/            the document and its rules: state, transact(), signals,
+                       undo, storage, migrations, the shared model. No DOM.
+src/ui-kit/            generic UI: modal, menus, panels, drag and drop, toasts
+src/features/<name>/   one feature each (canvas, walls, openings, room,
+                       furniture, floors, measure, library, blueprint, …),
+                       with an index.js that is its public API
+src/app/               boot, the canvas's layers and tools, shortcuts, panes
 ```
+
+What may import what is enforced by `npm run lint`; [AGENTS.md](AGENTS.md)
+has the details and how to add a feature, a layer, a tool or a panel.
 
 The build is what puts it back together into one file. Note that the source
 `index.html` is a module entry point and so does **not** open over `file://` —
