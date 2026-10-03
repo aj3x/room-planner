@@ -4,8 +4,8 @@
 
 > **Test code stays under 20% of the codebase, and ideally under 10%.**
 
-Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,696 lines
-against 13,627** today — 11.1% of the two together (12.4% of the app's own
+Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,758 lines
+against 14,302** today — 10.9% of the two together (12.3% of the app's own
 size). Check it before adding a
 file:
 
@@ -66,7 +66,7 @@ green — investigate.
 
 ## What the suite covers
 
-### Suite A — `test/unit`, Vitest + jsdom (124 tests)
+### Suite A — `test/unit`, Vitest + jsdom (130 tests)
 
 Pure logic, imported straight out of `src/`. No app boot, no bundler, no
 harness; a file evaluates the modules it names and calls them.
@@ -93,6 +93,11 @@ harness; a file evaluates the modules it names and calls them.
   the envelope, a lossless replace-mode round trip asserted down to the
   geometry, all three id-collision rules (keep mine / overwrite mine / add as a
   copy), dropped placements and folder-id identity.
+- **`floor-place.test.js`** — `model/floor-place.js` on two rooms side by
+  side: how deep each wall band is drawn (shared, exterior, taken away),
+  `depthRuns`' joins, the floor magnet closing to one wall-thickness of gap,
+  and `floorRoomAt`. Every wall on a floor is drawn from these numbers and the
+  e2e suite never opens Floor mode; a wrong depth only looks a little off.
 - **`wiring.test.js`** — every `use()`/`has()`/`expect()` key in
   `core/registry.js`'s callers has a `provide()` in `boot.js`. A misspelt key
   is a call that silently does nothing — `use()` returns undefined by design —

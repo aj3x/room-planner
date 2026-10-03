@@ -249,7 +249,7 @@ layouts are both currently active).
 
 - **A placement that is already invalid can be dragged *further* out of the
   room.** `drag.loose` is seeded from `isBad(hit)` at pointerdown, and while it
-  is true the `move` branch of `applyDragAt` (**`src/canvas/interaction.js`**) skips
+  is true the `move` branch of the furniture tool's `furnMove` (**`src/canvas/tools/furniture.js`**) skips
   `slideToValid` entirely and accepts any position whose *centre* is still
   inside the room (`centreInside`). The intent is clear and right — a piece
   that does not fit has to be draggable at all, or it would be stuck — but the

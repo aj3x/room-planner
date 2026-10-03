@@ -50,9 +50,9 @@ run means something is wrong, so investigate it rather than re-running it.
 
 ```
 src/core/       units, geometry, ids, state, selection, storage, migrations, undo/redo
-src/model/      walls, openings, validity, walk paths, measurements
+src/model/      walls, openings, validity, walk paths, measurements, floor arranging
 src/ui/         modal, menus, panels, inline edit, drag and drop, toasts
-src/canvas/     the view, the drawing pass, snapping, interaction state
+src/canvas/     the camera, the compositor and its layers/, the gesture tools/, snapping
 src/plan/       the side panels — layout tree, floors, room panel, item list, dialogs
 src/library/    the Library and Marketplace UI
 src/blueprint/  the four-stage blueprint import wizard
