@@ -1,19 +1,5 @@
 /* The library grid: the tiles it is built from, the breadcrumb bar above it,
-   and the id of the tile currently being dragged.
-
-   Extracted from index.html in Phase 3, move-only: the three blocks below
-   are byte-identical to what stood there, and the `export` block at the end
-   is the only line added.
-
-   gridDragItem is written both from bindLibGrid, which is coming here with
-   the SCC, and from the libTreeBox drop listener, which stays in index.html
-   under rule 6 -- hence setGridDragItem, landed as a declared code change in
-   its own commit just before this one.
-
-   renderLibraryFolder, bindLibGrid, bindCrumbs, createLibItem,
-   duplicateLibItem, deleteLibItem and libItemMenu did not come: they are
-   inside the Plan-panels/Library SCC.
-*/
+   and what a tile's menu and the grid's drag-and-drop do. */
 import {itemDialog} from '../plan/item-dialog.js';
 import {sizeLabel} from '../model/items.js';
 import {marketFolderPath} from './adhoc-folders.js';
@@ -30,15 +16,11 @@ import {libFlash} from '../ui/flash.js';
 import {openMenu} from '../ui/menu.js';
 import {$, askConfirm} from '../ui/modal.js';
 import {plural} from '../ui/panels.js';
-import {listingMenu} from './adhoc-listings.js';
 import {exportLibFolder, exportLibItems, exportLibraryDialog} from './export.js';
-import {libFolderTagsDialog, moveLibItemDialog} from './folder-menus.js';
+import {libFolderTagsDialog, listingMenu, moveLibItemDialog} from './folder-menus.js';
 import {ancestorTags, itemFolderOf, moveItemToFolder, purgeItem} from './item-folders.js';
-import {drawPreview, selectListing} from './marketplace.js';
-import {goLibFolder} from './shell.js';
-
-let gridDragItem=null;
-function setGridDragItem(v){ gridDragItem = v; }
+import {gridDragItem, goLibFolder, selectListing, setGridDragItem} from './nav.js';
+import {drawPreview} from './preview.js';
 
 function itemTile(it){
   const chips=(it.tags&&it.tags.length) ? `<div class="chips">${it.tags.slice(0,3).map(t=>{
@@ -190,4 +172,4 @@ function bindCrumbs(box, kind){
     b.addEventListener('click', ()=>goLibFolder(kind, b.dataset.crumb||null));
   });
 }
-export {gridDragItem, setGridDragItem, itemTile, folderTile, folderCountLabel, crumbsHTML, createLibItem, duplicateLibItem, deleteLibItem, libItemMenu, renderLibraryFolder, bindLibGrid, bindCrumbs};
+export {itemTile, folderTile, folderCountLabel, crumbsHTML, createLibItem, duplicateLibItem, deleteLibItem, libItemMenu, renderLibraryFolder, bindLibGrid, bindCrumbs};

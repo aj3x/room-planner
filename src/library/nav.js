@@ -1,20 +1,32 @@
-/* The Library/Marketplace UI's nav state -- which tab, which folder, what is
-   selected. Not persisted, except the tab and folder, which are mirrored into
-   S.uiLib by goLibFolder.
-
-   Extracted from index.html in Phase 3, move-only: the body below is
-   byte-identical to what stood there, and the `export` block at the end is
-   the only line added.
-
-   A leaf that imports nothing, per rule 5. Neither binding is ever
-   reassigned -- both are mutated in place -- so neither needed a setter.
-
-   goLibFolder, the third declaration under this banner, did not come: it
-   calls renderLibAll and is inside the Plan-panels/Library SCC.
-*/
+/* The Library/Marketplace page's browsing state -- which tab, which folder,
+   what is selected, which tile is being dragged -- and the two moves that
+   change it. Not persisted, except the tab and folder, which goLibFolder
+   mirrors into S.uiLib through a prefs commit (the page is an effect on it).
+   Everything else that browses changes `nav` and calls navChanged(); the
+   content (router.js) is an effect on navRev (shell.js), so the views that
+   browse need not import the router that imports them. */
+import {S} from '../core/state.js';
+import {signal} from '../core/signals.js';
+import {transact} from '../core/tx.js';
+import {$} from '../ui/modal.js';
 
 /* ------------------------- nav state (not persisted, except tab + folder) ------------------------- */
 let nav={tab:'library', libFolderId:null, marketFolderId:null, searching:false,
   marketSubId:null, subPath:null, marketSelItemId:null, marketSelListingId:null, marketTagFilter:null, showMarketContents:false};
 let libTreeOpen=new Set();
-export {nav, libTreeOpen};
+let gridDragItem=null;
+function setGridDragItem(v){ gridDragItem = v; }
+
+const navRev = signal(0);
+function navChanged(){ navRev.value++; }
+
+function goLibFolder(kind,id){
+  transact('prefs', ()=>{
+    if(kind==='library'){ nav.libFolderId=id; S.uiLib.libFolderId=id; }
+    else { nav.marketFolderId=id; S.uiLib.marketFolderId=id; nav.marketSubId=null; nav.subPath=null; nav.marketSelListingId=null; }
+    nav.searching=false; $('searchBox').value='';
+  }, {canvas:false});
+}
+function selectListing(id){ nav.marketSelListingId=id; navChanged(); }
+
+export {nav, libTreeOpen, gridDragItem, setGridDragItem, navRev, navChanged, goLibFolder, selectListing};

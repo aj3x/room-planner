@@ -1,16 +1,11 @@
-/* Library folder dialogs: new folder, folder tags, move an item, and the two
-   "what is inside this folder" counts the delete confirmations read.
-
-   Extracted from index.html in Phase 3 as part of the 49-name SCC commit,
-   move-only. libFolderMenu, deleteLibFolder, moveLibFolderDialog and their ad
-   hoc twins are NOT here: they are downstream of the SCC, not in it, and
-   follow in a later commit.
-*/
+/* Library and ad hoc folder menus and dialogs (new, rename, tags, move,
+   delete), an ad hoc listing's menu, and the "what is inside this folder"
+   counts the delete confirmations read. */
 import {transact} from '../core/tx.js';
 import {$, moError, openModal} from '../ui/modal.js';
 import {esc} from '../ui/panels.js';
 import {mountTagField, tagFieldHTML, tagFieldValue} from '../ui/tag-input.js';
-import {childMarketFolders, listingsInFolder} from './adhoc-folders.js';
+import {adhocCache, childMarketFolders, listingsInFolder} from './adhoc-folders.js';
 import {childItemFolders, itemFolderOf, moveItemToFolder, recomputeFolderSubtree} from './item-folders.js';
 import {libTreeOpen} from './nav.js';
 import {S, uid} from '../core/state.js';
@@ -19,8 +14,7 @@ import {openMenu} from '../ui/menu.js';
 import {askConfirm, askText} from '../ui/modal.js';
 import {marketFolderDescendant, marketFolderOf} from './adhoc-folders.js';
 import {applyTags, itemFolderDescendant, itemsInFolder, purgeItem} from './item-folders.js';
-import {nav} from './nav.js';
-import {goLibFolder} from './shell.js';
+import {goLibFolder, nav, selectListing} from './nav.js';
 import {libTreeBox} from './tree.js';
 
 /* ------------------------- folder menus & dialogs ------------------------- */
@@ -224,4 +218,33 @@ function moveAdhocFolderDialog(id){
       transact('lib', ()=>{ obj.parentId=v; if(v) libTreeOpen.add('m:'+v); });
     });
 }
-export {askNewLibFolder, libFolderTagsDialog, adhocFolderContents, moveLibItemDialog, renameLibFolder, renameAdhocFolder, itemFolderContents, deleteLibFolder, deleteAdhocFolder, moveLibFolderDialog, moveAdhocFolderDialog, libFolderMenu, adhocFolderMenu};
+function listingMenu(id, anchor){
+  const l=S.marketListings.find(x=>x.id===id); if(!l) return;
+  openMenu(anchor, [
+    {label:'Open', fn:()=>selectListing(id)},
+    {label:'Move to folder…', fn:()=>moveListingDialog(l)},
+    {sep:true},
+    {label:'Delete…', danger:true, fn:()=>askConfirm('Delete this listing?', '“'+l.name+'” will be removed. Your library isn’t affected.', 'Delete', ()=>{
+      transact('lib', ()=>{
+        S.marketListings=S.marketListings.filter(x=>x.id!==id);
+        adhocCache.delete(id);
+        if(nav.marketSelListingId===id) nav.marketSelListingId=null;
+      });
+    })},
+  ], l.name);
+}
+function moveListingDialog(l){
+  const cur=l.parentId||'';
+  let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
+  (function walk(pid,depth){
+    for(const f of childMarketFolders(pid)){
+      opts+=`<option value="${f.id}" ${f.id===cur?'selected':''}>${' '.repeat(depth)}${esc(f.name)}</option>`;
+      walk(f.id,depth+1);
+    }
+  })(null,0);
+  openModal('Move “'+l.name+'”', `<label class="stack-label">Folder</label>
+    <select id="moFolder">${opts}</select>`, 'Move', ()=>{
+      transact('lib', ()=>{ l.parentId=$('moFolder').value||null; });
+    });
+}
+export {askNewLibFolder, libFolderTagsDialog, adhocFolderContents, moveLibItemDialog, renameLibFolder, renameAdhocFolder, itemFolderContents, deleteLibFolder, deleteAdhocFolder, moveLibFolderDialog, moveAdhocFolderDialog, libFolderMenu, adhocFolderMenu, listingMenu, moveListingDialog};

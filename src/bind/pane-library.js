@@ -25,13 +25,9 @@ import { S } from '../core/state.js';
 import { transact } from '../core/tx.js';
 import { itemFolderOf, itemFolderDescendant, recomputeFolderSubtree, moveItemToFolder } from '../library/item-folders.js';
 import { marketFolderOf, marketFolderDescendant } from '../library/adhoc-folders.js';
-import { nav, libTreeOpen } from '../library/nav.js';
-import { goLibFolder } from '../library/shell.js';
+import { nav, libTreeOpen, gridDragItem, setGridDragItem, goLibFolder, selectListing } from '../library/nav.js';
 import { renderLibTree, markActiveTreeRow, libTreeBox, dragLib, setDragLib, libDropSpot } from '../library/tree.js';
-import { renameLibFolder, renameAdhocFolder, libFolderMenu, adhocFolderMenu } from '../library/folder-menus.js';
-import { gridDragItem, setGridDragItem } from '../library/grid.js';
-import { selectListing } from '../library/marketplace.js';
-import { listingMenu } from '../library/adhoc-listings.js';
+import { renameLibFolder, renameAdhocFolder, libFolderMenu, adhocFolderMenu, listingMenu } from '../library/folder-menus.js';
 import { renderLibContent } from '../library/router.js';
 
 function bindPaneLibrary(){

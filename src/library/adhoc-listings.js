@@ -1,14 +1,5 @@
-/* Ad hoc listing tiles.
-
-   Extracted from index.html in Phase 3, move-only: the two functions below
-   are byte-identical to what stood there, and the `export` block at the end
-   is the only line added.
-
-   The rest of the `ad hoc listings` banner -- renderAdhocFolder, listingMenu,
-   moveListingDialog, addListingDialog, pendingFile and renderListingDetail --
-   did not come: every one of them reaches renderLibAll or bindLibGrid, and is
-   inside the Plan-panels/Library SCC.
-*/
+/* Ad hoc listings: their tiles, an ad hoc folder's view, a listing's detail
+   view and the add-a-listing dialog. Their menus are in folder-menus.js. */
 import {childMarketFolders, listingsInFolder} from './adhoc-folders.js';
 import {svgI} from '../ui/modal.js';
 import {esc, plural} from '../ui/panels.js';
@@ -22,8 +13,8 @@ import {$, askConfirm, moError, openModal} from '../ui/modal.js';
 import {addMarketItemToInventory} from './add-to-inventory.js';
 import {adhocCache, loadListing} from './adhoc-folders.js';
 import {bindCrumbs, bindLibGrid, crumbsHTML} from './grid.js';
-import {drawPreview, selectListing} from './marketplace.js';
 import {nav} from './nav.js';
+import {drawPreview} from './preview.js';
 
 function listingTile(l){
   const sub = l.kind==='link' ? 'Link' : (l.content&&Array.isArray(l.content.inventory) ? plural(l.content.inventory.length,'item') : 'File');
@@ -59,35 +50,6 @@ function renderAdhocFolder(box, folderId, standalone){
   bindCrumbs(target,'market');
   bindLibGrid(target,'market');
   const al=target.querySelector('[data-addlisting-empty]'); if(al) al.addEventListener('click', addListingDialog);
-}
-function listingMenu(id, anchor){
-  const l=S.marketListings.find(x=>x.id===id); if(!l) return;
-  openMenu(anchor, [
-    {label:'Open', fn:()=>selectListing(id)},
-    {label:'Move to folder…', fn:()=>moveListingDialog(l)},
-    {sep:true},
-    {label:'Delete…', danger:true, fn:()=>askConfirm('Delete this listing?', '“'+l.name+'” will be removed. Your library isn’t affected.', 'Delete', ()=>{
-      transact('lib', ()=>{
-        S.marketListings=S.marketListings.filter(x=>x.id!==id);
-        adhocCache.delete(id);
-        if(nav.marketSelListingId===id) nav.marketSelListingId=null;
-      });
-    })},
-  ], l.name);
-}
-function moveListingDialog(l){
-  const cur=l.parentId||'';
-  let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
-  (function walk(pid,depth){
-    for(const f of childMarketFolders(pid)){
-      opts+=`<option value="${f.id}" ${f.id===cur?'selected':''}>${' '.repeat(depth)}${esc(f.name)}</option>`;
-      walk(f.id,depth+1);
-    }
-  })(null,0);
-  openModal('Move “'+l.name+'”', `<label class="stack-label">Folder</label>
-    <select id="moFolder">${opts}</select>`, 'Move', ()=>{
-      transact('lib', ()=>{ l.parentId=$('moFolder').value||null; });
-    });
 }
 let pendingFile=null;
 function addListingDialog(){
@@ -193,4 +155,4 @@ function renderListingDetail(box, id){
     });
   });
 }
-export {listingTile, adhocFolderTile, renderAdhocFolder, listingMenu, moveListingDialog, addListingDialog, renderListingDetail};
+export {listingTile, adhocFolderTile, renderAdhocFolder, addListingDialog, renderListingDetail};

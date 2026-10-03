@@ -21,7 +21,7 @@ import {moreBtn} from '../ui/menu.js';
 import {$, svgI} from '../ui/modal.js';
 import {esc, plural} from '../ui/panels.js';
 import {dropHalf} from '../ui/dnd.js';
-import {gridDragItem} from './grid.js';
+import {gridDragItem} from './nav.js';
 
 /* ------------------------- library tree: folders only ------------------------- */
 function folderTagsInline(f){

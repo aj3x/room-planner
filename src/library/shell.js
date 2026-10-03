@@ -1,11 +1,11 @@
-/* The Library/Marketplace shell: which folder is being browsed, the whole
-   rebuild (renderLibAll) and the toolbar above the grid.
+/* The Library/Marketplace shell: the whole rebuild (renderLibAll) and the
+   toolbar above the grid.
 
    renderLibAll runs as an effect on the library, the project and the view
    settings (mountLibrary): a library edit commits through transact('lib')
-   and the page follows. Browsing — opening a folder, a subscription, a
-   listing — changes only `nav` (library/nav.js), which is not a signal; those
-   calls repaint the content themselves (renderLibContent).
+   and the page follows. Browsing within the content — a subscription, a
+   listing, a marketplace sub-folder — changes `nav` and calls navChanged()
+   (library/nav.js); the content is an effect on that too.
 */
 import {S, isCanvasMode, uid} from '../core/state.js';
 import {transact} from '../core/tx.js';
@@ -14,19 +14,11 @@ import {addListingDialog} from './adhoc-listings.js';
 import {askNewLibFolder} from './folder-menus.js';
 import {createLibItem} from './grid.js';
 import {addMarketDialog} from './marketplace.js';
-import {libTreeOpen, nav} from './nav.js';
+import {libTreeOpen, nav, navRev} from './nav.js';
 import {renderLibContent} from './router.js';
 import {renderLibTree} from './tree.js';
-import {rev} from '../core/signals.js';
+import {effect, rev, untracked} from '../core/signals.js';
 import {mountPanel} from '../ui/mount.js';
-
-function goLibFolder(kind,id){
-  transact('prefs', ()=>{
-    if(kind==='library'){ nav.libFolderId=id; S.uiLib.libFolderId=id; }
-    else { nav.marketFolderId=id; S.uiLib.marketFolderId=id; nav.marketSubId=null; nav.subPath=null; nav.marketSelListingId=null; }
-    nav.searching=false; $('searchBox').value='';
-  }, {canvas:false});
-}
 
 /* ------------------------- rendering: shell ------------------------- */
 function renderLibAll(){
@@ -75,5 +67,10 @@ function renderLibTools(){
    It holds while a folder is being renamed in the tree. */
 function mountLibrary(){
   mountPanel('tree', () => { rev.lib.value; rev.prefs.value; rev.project.value; }, renderLibAll);
+  /* Browsing repaints only the content, at once, as the direct call it
+     replaces did. The first run is the subscription; the page is already
+     painted. */
+  let first=true;
+  effect(() => { navRev.value; if(first){ first=false; return; } untracked(renderLibContent); });
 }
-export {mountLibrary, goLibFolder, renderLibAll, renderLibTools};
+export {mountLibrary, renderLibAll, renderLibTools};
