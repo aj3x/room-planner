@@ -1,0 +1,38 @@
+/* Type checking: JS with JSDoc types, checked by tsc. There are no .ts
+   sources and nothing here changes the build — Vite never reads this file, and
+   `noEmit` means tsc only reports. `npm run typecheck` runs two passes:
+
+   1. this file: every module under src/ is checked, at TypeScript's default
+      (non-strict) level. Calls must match the declared signatures, properties
+      must exist on the declared types, and so on; an unannotated parameter is
+      simply `any`.
+
+   2. tsconfig.strict.json: `strict: true`, applied to each module that opts
+      in with a `// @ts-check` first line. In this repo that pragma means
+      "held to strict" — pass 1 already checks every file. kernel/, ui-kit/,
+      every feature's index.js and every module an index.js re-exports from
+      carry it, and scripts/strict-files.mjs fails the run if one of those
+      loses it. The rest (a feature's private modules, app/bind/) is the
+      ratchet: `npm run typecheck` prints that list, and making a file strict
+      is adding the pragma and fixing what pass 2 then reports.
+
+   Shared types are declarations in src/kernel/types.d.ts (the saved document,
+   transact()'s scopes) and src/features/canvas/types.d.ts (Layer, Tool),
+   named from JS with JSDoc `import('…').Name`. */
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    /* no ambient @types: the app runs in a browser and nothing else */
+    "types": [],
+    /* our own .d.ts files are checked too */
+    "skipLibCheck": false
+  },
+  "include": ["src/**/*.js", "src/**/*.d.ts"]
+}

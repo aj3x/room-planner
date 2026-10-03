@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "lint": "eslint . && npm run cycles",
     "cycles": "node scripts/import-cycles.mjs",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.strict.json && node scripts/strict-files.mjs",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
@@ -25,6 +26,7 @@
     "globals": "^17.12.0",
     "jsdom": "^29.1.1",
     "sass": "^1.105.0",
+    "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^5.0.1"

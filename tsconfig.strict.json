@@ -1,0 +1,11 @@
+/* Pass 2 of `npm run typecheck`: strict, for the modules that say
+   `// @ts-check`. checkJs is off here so the pragma is what selects a file;
+   every other module is still read, for the types it exports, but its body
+   is not reported on — pass 1 (tsconfig.json) covers it. See tsconfig.json. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "checkJs": false
+  }
+}
