@@ -12,7 +12,7 @@
 import {childMarketFolders, listingsInFolder} from './adhoc-folders.js';
 import {svgI} from '../ui/modal.js';
 import {esc, plural} from '../ui/panels.js';
-import {sizeLabel} from '../canvas/draw.js';
+import {sizeLabel} from '../model/items.js';
 import {normItem} from '../core/migrate.js';
 import {S, clone, uid} from '../core/state.js';
 import {transact} from '../core/tx.js';

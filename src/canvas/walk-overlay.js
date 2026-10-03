@@ -19,7 +19,7 @@
    inside a function body, never at module evaluation. */
 
 import {ctx, sx, sy, view} from './view.js';
-import {PAL, addPoly} from './draw.js';
+import {PAL, addPoly} from './paint.js';
 import {S, RP, furnMode} from '../core/state.js';
 import {bbox} from '../core/geometry.js';
 import {fmtLen} from '../core/units.js';

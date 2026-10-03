@@ -15,7 +15,7 @@
    inside the Plan-panels/Library SCC.
 */
 import {itemDialog} from '../plan/item-dialog.js';
-import {sizeLabel} from '../canvas/draw.js';
+import {sizeLabel} from '../model/items.js';
 import {marketFolderPath} from './adhoc-folders.js';
 import {childItemFolders, itemFolderPath, itemsInFolder} from './item-folders.js';
 import {svgI} from '../ui/modal.js';

@@ -12,7 +12,7 @@ import {$} from '../ui/modal.js';
 import {S, L} from '../core/state.js';
 import {hasOpen, openSizeLabel} from '../core/open-state.js';
 import {INV_SCOPES, availableCount} from '../core/floor-space.js';
-import {sizeLabel} from '../canvas/draw.js';
+import {sizeLabel} from '../model/items.js';
 import {emptyRow} from './room-panel.js';
 
 import {uniqueId} from '../core/ids.js';

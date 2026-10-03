@@ -6,7 +6,7 @@
    dlgColor is written only from inside itemDialog and its mounted listeners,
    so it is a plain module-private `let`.
 */
-import {normHex} from '../canvas/draw.js';
+import {normHex} from '../core/color.js';
 import {idFolder, idLeaf, idProblem, retagItem} from '../core/ids.js';
 import {hasOpen, normOpen} from '../core/open-state.js';
 import {PALETTE, S, isCanvasMode, itemOf, uid} from '../core/state.js';

@@ -1,4 +1,4 @@
-import {PAL} from '../canvas/draw.js';
+import {PAL} from '../canvas/paint.js';
 import {bbox, polyArea} from '../core/geometry.js';
 import {S} from '../core/state.js';
 import {fmtArea, fmtLen, parseLen} from '../core/units.js';

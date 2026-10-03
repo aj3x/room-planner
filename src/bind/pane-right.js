@@ -30,7 +30,7 @@ import { $, openModal, moError } from '../ui/modal.js';
 import { esc } from '../ui/panels.js';
 import {drawState, wallDrawState} from '../canvas/interaction-state.js';
 import { fit } from '../canvas/view.js';
-import { normHex } from '../canvas/draw.js';
+import { normHex } from '../core/color.js';
 import { startCustomDraw, cancelCustomDraw } from '../canvas/room-draw.js';
 import { cancelWallDraw } from '../canvas/wall-draw.js';
 import { bindLen, setFloorColor } from '../plan/room-controls.js';

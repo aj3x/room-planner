@@ -36,7 +36,7 @@ import {wallOf} from '../model/walls.js';
 import {snapWallPoint} from './snap.js';
 import {splitDrawState, drawCursor, wallDrawShift} from './interaction-state.js';
 import {alignGuides, alignNote, roomSel, mergeClear} from '../core/selection.js';
-import {PAL, drawSquareTick} from './draw.js';
+import {PAL, drawSquareTick} from './paint.js';
 import {alignPoint, alignRadius, isSquare} from './snap.js';
 import {pointInPoly, polySimple, segHit, worldPoly} from '../core/geometry.js';
 import {floorHist, furnHist, roomHist} from '../core/history.js';

@@ -12,7 +12,7 @@
    selectListing all reach renderLibContent or renderLibAll, and are inside
    the Plan-panels/Library SCC.
 */
-import {hexA} from '../canvas/draw.js';
+import {hexA} from '../core/color.js';
 import {bbox, shapePoly} from '../core/geometry.js';
 import {idParts} from '../core/ids.js';
 import {hasOpen, openLocalBox} from '../core/open-state.js';
@@ -21,7 +21,7 @@ import {marketIndexCache} from './market-subs.js';
 import {nav} from './nav.js';
 import {svgI} from '../ui/modal.js';
 import {esc, plural} from '../ui/panels.js';
-import {sizeLabel} from '../canvas/draw.js';
+import {sizeLabel} from '../model/items.js';
 import {libFlash} from '../ui/flash.js';
 import {openMenu} from '../ui/menu.js';
 import {$, askConfirm, closeModal, moError, openModal} from '../ui/modal.js';

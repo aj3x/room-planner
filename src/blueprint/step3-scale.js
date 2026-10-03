@@ -1,4 +1,4 @@
-import {PAL} from '../canvas/draw.js';
+import {PAL} from '../canvas/paint.js';
 import {S} from '../core/state.js';
 import {fmtLen, parseLen} from '../core/units.js';
 import {$, moError, openModal, svgI} from '../ui/modal.js';

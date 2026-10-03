@@ -1,4 +1,4 @@
-import {PAL} from '../canvas/draw.js';
+import {PAL} from '../canvas/paint.js';
 import {$, moError, openModal} from '../ui/modal.js';
 import {bpCropCanvas, bpFitCanvas, bpLoadImage} from './image.js';
 import {bpAutoCropRect} from './pixels.js';
