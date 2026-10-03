@@ -1,5 +1,5 @@
-/* Side panels: escaping text for the render* functions, and collapsing a
-   section of a pane or a whole pane.
+/* Side panels: text helpers for the render* functions (esc is ui/dom.js's,
+   re-exported here), and collapsing a section of a pane or a whole pane.
 
    Which sections are shut is an effect on the settings (mountSections), so
    toggleSection only commits the change. Collapsing a whole pane is driven
@@ -7,11 +7,10 @@
    and setMode/togglePane resize the canvas after it. */
 import {S} from '../core/state.js';
 import {transact} from '../core/tx.js';
-import {$, svgI} from './modal.js';
+import {$, esc, svgI} from './dom.js';
 import {rev} from '../core/signals.js';
 import {mountPanel} from './mount.js';
 
-function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const plural = (n,w) => n+' '+w+(n===1?'':'s');
 /* strip diacritics so "a" also finds "ä", "café" also finds "cafe", etc. */
 function normSearch(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }

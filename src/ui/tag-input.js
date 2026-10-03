@@ -1,13 +1,7 @@
-/* Tag input: chips plus autocomplete.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. See the note in ui/modal.js about the cycle between the two
-   — it is why they landed in one commit. */
+/* Tag input: chips plus autocomplete. */
 
 import {S} from '../core/state.js';
-import {esc} from './panels.js';
-import {$} from './modal.js';
+import {$, esc} from './dom.js';
 
 /* ------------------------- tag input: chips + autocomplete -------------------------
    Tags are shown as chips, the way they read elsewhere in the app. Tab or comma

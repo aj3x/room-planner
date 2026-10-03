@@ -2,31 +2,18 @@
    the sandboxed iframes this app may run in, which is what the banner below
    records.
 
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added.
-
-   Two things stayed behind in index.html:
-
-     the four addEventListener calls on #moCancel / #moOk / #modal — top-level
-       side effects, which only boot.js may have (plan §4 rule 6). They read
-       moBackFn / moOkFn / mo as live imported bindings.
-     readTime — it belongs to ui/flash.js per §3, and goes there next.
-
    `const mo = $('modal')` is the one piece of top-level DOM access in this
-   module. It is a lookup, not a mutation and not a listener; the bundle still
-   runs after the document is parsed, so it resolves exactly as it did inline.
+   module. It is a lookup, not a mutation and not a listener; the bundle runs
+   after the document is parsed, so it resolves. The listeners on #moCancel,
+   #moOk and #modal are bindModal()'s.
 
-   This module and ui/tag-input.js import each other — openModal() clears
-   tagInputs, mountTagField() calls $(). Both uses are inside function bodies,
-   so neither is read during module evaluation and the cycle is safe. They had
-   to be extracted in the same commit for that reason. */
+   `$` and `svgI` live in ui/dom.js and are re-exported here, which is where
+   most of the app imports them from. */
 
-import {esc} from './panels.js';
+import {$, esc, svgI} from './dom.js';
 import {tagInputs} from './tag-input.js';
 
 /* ------------------------- modal (no <dialog>, no <form>) ------------------------- */
-const $ = id => document.getElementById(id);
 const mo=$('modal');
 let moOkFn=null, moCloseFn=null;
 /* opts.danger styles the action as destructive, so a delete never wears the encouraging primary look.
@@ -91,8 +78,5 @@ function showShortcuts(){
       <dt>This list</dt><dd><kbd>?</kbd></dd>
     </dl>`, 'Close', null);
 }
-/* icons come from the <symbol> sprite at the top of <body> */
-const svgI = name => `<svg class="i" aria-hidden="true"><use href="#i-${name}"/></svg>`;
-
 export {$, mo, moOkFn, moBackFn, openModal, closeModal, moError,
         askText, askConfirm, showShortcuts, svgI};
