@@ -20,6 +20,21 @@ test.describe('smoke', () => {
       await app.evaluate((m) => window.setMode(m), mode);
       await settle(app);
     }
+    /* Each drawing tool, with the pointer moving over the canvas: the rubber
+       band follows mousemove, which once threw on every move for the
+       interior-wall and split tools while nothing else noticed. */
+    const box = await app.locator('#cv').boundingBox();
+    const sweep = async () => { for (const f of [0.4, 0.5, 0.6]) await app.mouse.move(box.x + box.width * f, box.y + box.height * f); await settle(app); };
+    await app.evaluate(() => window.setMode('room'));
+    await app.click('#btnAddStruct');
+    await app.getByRole('button', { name: 'Interior wall', exact: true }).click();
+    await sweep();
+    await app.keyboard.press('Escape');
+    await app.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
+    await app.getByText('Split room…').click();
+    await sweep();
+    await app.keyboard.press('Escape');
+    await app.evaluate(() => window.setMode('furniture'));
     expect(errors).toEqual([]);
     expect((await readS(app)).mode).toBe('furniture');
   });
