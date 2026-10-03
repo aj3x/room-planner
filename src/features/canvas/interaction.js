@@ -1,3 +1,4 @@
+// @ts-check
 /* The canvas's pointer dispatcher. What a press, a drag or a key on the
    canvas does is decided by tools (`*-tool.js`, in their features), not here.
 
@@ -45,47 +46,64 @@ import {zoomAt} from './camera.js';
 import {H, W, cv, view} from './view.js';
 import {panTool, spaceDown} from './pan-tool.js';
 
+/** @typedef {import('./types.js').Tool} Tool */
+/** @typedef {import('./types.js').HeldTool} HeldTool */
+
+/** @type {Tool[]} */
 const tools=[];
+/** @param {Tool} t */
 function registerTool(t){
   tools.push(t);
   if(t.overlay) addLayer(t.overlay);
 }
+/** @returns {Tool|null} */
 function activeTool(){
   for(const t of tools) if(t.active()) return t;
   return null;
 }
 /* Stop every tool that is on and can be stopped, except the ones `keep`
    holds on to. */
+/** @param {(t: Tool) => boolean} keep */
 function stopTools(keep){
   for(const t of tools) if(t.stop && t.active() && !keep(t)) t.stop();
 }
 /* Turning one tool on turns every other live one off: each start command
    calls this with its own tool's id. So a new tool needs no edit to the
    existing ones. */
+/** @param {string} id */
 function stopOtherTools(id){ stopTools(t => t.id===id); }
 /* Drop whatever is half drawn (an outline, a wall, a divider: the tools
    with onCursor), before a command that edits the room directly. */
 function stopDrawing(){ stopTools(t => !t.onCursor); }
 /* Entering mode `m`: stop each tool that declares the modes it can stay on
    in, and `m` is not one of them. */
+/** @param {import('../../kernel/types.js').CanvasMode} m */
 function stopToolsFor(m){ stopTools(t => !t.modes || t.modes.includes(m)); }
 /* A different room became the active one. */
 function resetTools(){
   for(const t of tools) if(t.reset) t.reset();
 }
 
+/** @type {HeldTool|null} */
 let captured=null;   // the tool holding the pointer, between its press and release
 const isGesturing = () => !!captured;
 const gestureTool = () => captured;
 
-let lastPX=null, lastPY=null, lastMods={shiftKey:false,altKey:false};
+/** @type {number|null} */
+let lastPX=null;
+/** @type {number|null} */
+let lastPY=null;
+let lastMods={shiftKey:false,altKey:false};
+/** @param {MouseEvent} e */
 function track(e){ lastPX=e.offsetX; lastPY=e.offsetY; lastMods={shiftKey:e.shiftKey,altKey:e.altKey}; }
 
+/** @param {PointerEvent} e */
 function onCanvasPointerDown(e){
   try{ cv.setPointerCapture(e.pointerId); }catch(err){}
   const t = spaceDown ? panTool : activeTool();
   if(t) captured = t.onDown(e, e.offsetX, e.offsetY) || null;
 }
+/** @param {PointerEvent} e */
 function onCanvasPointerMove(e){
   if(!captured){
     const t=activeTool();
@@ -93,14 +111,16 @@ function onCanvasPointerMove(e){
     return;
   }
   track(e);
-  captured.onMove(lastPX, lastPY, lastMods);
+  captured.onMove(/** @type {number} */(lastPX), /** @type {number} */(lastPY), lastMods);   // track() just set them
 }
+/** @param {MouseEvent} e */
 function onCanvasMouseMove(e){
   const t=activeTool();
   if(!t || !t.onCursor) return;
   track(e);
-  t.onCursor(lastPX, lastPY, lastMods);
+  t.onCursor(/** @type {number} */(lastPX), /** @type {number} */(lastPY), lastMods);   // track() just set them
 }
+/** @param {PointerEvent} e */
 function onCanvasPointerUp(e){
   const t=captured;
   captured=null;
@@ -119,6 +139,7 @@ function cancelGesture(){
   if(t) t.onCancel();
 }
 /* the active tool's claim on a key, before the app's shortcuts get it */
+/** @param {KeyboardEvent} e */
 function onCanvasKey(e){
   const t=activeTool();
   return !!(t && t.onKey && t.onKey(e));
@@ -128,6 +149,7 @@ function onCanvasKey(e){
    edge and the cursor stops moving — event-driven pointermove alone can't do
    this since no new events fire while the cursor is still */
 const EDGE_PAN_ZONE=40, EDGE_PAN_MAXSPD=18;
+/** @param {number} px @param {number} py */
 function edgePanVel(px,py){
   let vx=0, vy=0;
   if(px<EDGE_PAN_ZONE) vx=-EDGE_PAN_MAXSPD*(1-px/EDGE_PAN_ZONE);
@@ -138,14 +160,16 @@ function edgePanVel(px,py){
 }
 function edgePanTick(){
   const dragging = !!(captured && captured.autoPan);
-  const t = dragging ? captured : activeTool();
+  /* used below only when dragging (it is the held tool) or drawing (it has onCursor) */
+  const t = /** @type {HeldTool & {onCursor: NonNullable<import('./types.js').Tool['onCursor']>}} */(dragging ? captured : activeTool());
   const drawing = !dragging && !!(t && t.onCursor);
   if((dragging||drawing) && lastPX!=null){
-    const {vx,vy}=edgePanVel(lastPX,lastPY);
+    const lastPYn = /** @type {number} */(lastPY);   // set with lastPX
+    const {vx,vy}=edgePanVel(lastPX,lastPYn);
     if(vx||vy){
       view.ox-=vx; view.oy-=vy;
-      if(dragging) t.onMove(lastPX,lastPY,lastMods);
-      else t.onCursor(lastPX,lastPY,lastMods);
+      if(dragging) t.onMove(lastPX,lastPYn,lastMods);
+      else t.onCursor(lastPX,lastPYn,lastMods);
       scheduleDraw();
     }
   }
@@ -155,6 +179,7 @@ function edgePanTick(){
 const ZOOM_FACTOR = 1.02;
 const ZOOM_ACCEL_K = 0.03; // tuned by feel: higher = faster flicks jump further
 let wheelLast = 0;
+/** @param {WheelEvent} e */
 function onCanvasWheel(e){
   e.preventDefault();
   const now = performance.now();

@@ -1,3 +1,4 @@
+// @ts-check
 /* The status corner under the plan: what is true of this room right now,
    and what is wrong with it. Not paint — it writes #readout — but it says
    what this frame shows, so it runs with the frame, last. */
@@ -10,6 +11,7 @@ import {L, RP, S, itemOf, roomMode} from '../../kernel/state.js';
 import {fmtArea} from '../../kernel/units.js';
 
 /* the status corner: what is true of this room right now, and what's wrong with it */
+/** @param {Set<string>} [bad] @param {Map<string, string>} [openBad] */
 function updateReadout(bad,openBad){
   const el=$('readout'), n=bad?bad.size:0, no=openBad?openBad.size:0;
   const bits=[];
@@ -31,6 +33,7 @@ function updateReadout(bad,openBad){
   el.innerHTML=html;
 }
 
+/** @satisfies {import('./types.js').Layer} */
 const readoutLayer = {
   id:'readout', z:1000, scene:'room',
   deps(){ alignNote.value; },

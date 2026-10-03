@@ -1,8 +1,10 @@
+// @ts-check
 /* The stage: the canvas cleared to the background colour. Under everything,
    in both scenes. */
 
 import {H, W} from './view.js';
 
+/** @satisfies {import('./types.js').Layer} */
 const stageLayer = {
   id:'stage', z:0,
   draw(ctx, view, f){

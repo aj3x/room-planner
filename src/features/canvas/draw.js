@@ -1,3 +1,4 @@
+// @ts-check
 /* The canvas compositor. The plan is painted by layers, each one concern
    (the walls, the items, the measurements, the floor's wall bands, …) in its
    own module (`*-layer.js`, in the feature that owns the concern), plus the
@@ -31,8 +32,13 @@ import {effect, planRev} from '../../kernel/signals.js';
 import {floorEdgeDepths, floorMembers} from '../../kernel/floor-place.js';
 import {getConflicts} from '../../kernel/validity.js';
 
+/** @typedef {import('./types.js').Layer} Layer */
+
+/** @type {Layer[]} */
 const layers = [];
+/** @type {Layer[]|null} */
 let sorted = null;
+/** @param {Layer} layer */
 function addLayer(layer){ layers.push(layer); sorted = null; }
 function stack(){
   if(!sorted) sorted = layers.slice().sort((a,b) => a.z-b.z);
@@ -40,6 +46,7 @@ function stack(){
 }
 
 /* What several layers of this frame would otherwise each work out. */
+/** @returns {import('./types.js').Frame} */
 function frame(){
   const C=PAL();
   if(!floorMode()){ const {bad,openBad}=getConflicts(); return {scene:'room', C, bad, openBad}; }
@@ -53,7 +60,7 @@ function draw(){
   for(const l of stack()){
     if(l.scene && l.scene!==f.scene) continue;
     ctx.save();
-    try{ l.draw(ctx, view, f); }
+    try{ /** @type {import('./types.js').AnyLayer} */(l).draw(ctx, view, f); }   // l.scene matched f.scene above
     finally{ ctx.restore(); }
   }
 }

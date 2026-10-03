@@ -1,3 +1,4 @@
+// @ts-check
 /* Room mode: the dashed lines saying which alignment is holding a dragged
    corner or the next corner of an outline being drawn. */
 
@@ -18,6 +19,7 @@ function drawAlignGuides(){
   ctx.restore();
 }
 
+/** @satisfies {import('./types.js').Layer} */
 const alignGuidesLayer = {
   id:'align-guides', z:110, scene:'room',
   deps(){ alignGuides.value; },

@@ -1,3 +1,4 @@
+// @ts-check
 /* The alignment magnet: pulling a dragged point onto the lines the rest of the
    room already lies on.
 
@@ -21,6 +22,14 @@ import {transact} from '../../kernel/tx.js';
 import {tryRoomEdit} from '../../kernel/walls.js';
 import {flash} from '../../ui-kit/flash.js';
 
+/** @typedef {import('../../kernel/types.js').Pt} Pt */
+/** A line a dragged point can latch onto: through p along dir, hanging off pin; bias makes it reluctant.
+    @typedef {{pin: Pt, p: Pt, dir: Pt, bias?: number}} AlignLine */
+/** A point to line up with: bias as above, edge the wall arriving at it.
+    @typedef {{p: Pt, bias?: number, edge?: Pt}} AlignRef */
+/** What is under the pointer in Room mode: a RoomSel, and for an interior wall which end, if either.
+    @typedef {import('../../kernel/types.js').RoomSel & {end?: 'a'|'b'|null}} RoomPick */
+
 /* ---- where a dragged wall end lands ----
    These two were in model/walls.js until the decoupling pass
    (.claude/plans/decoupling.md §4, step 3). Both are view-dependent — one
@@ -35,6 +44,7 @@ const snapRadius = () => 14/Math.max(view.scale,1e-6);
 /* magnetic onto a room corner, a room wall's face, or another interior wall's
    end or run (so two walls "connect" by simply sharing a point) — falling back
    to the ordinary grid snap */
+/** @param {Pt} raw @param {string|null} excludeId @param {boolean} magnetic @returns {Pt} */
 function snapWallPoint(raw, excludeId, magnetic){
   if(magnetic){
     const hit=magneticWallPoint(raw, excludeId, snapRadius());
@@ -61,6 +71,7 @@ const alignRadius = () => 18/Math.max(view.scale,1e-6);
    one corner and a y from another is a square corner. Two lines only pair up if they
    actually cross and hang off different points — both from one point would just land
    on top of it. An axis with nothing to line up with falls back to the ordinary grid. */
+/** @param {Pt} raw @param {AlignLine[]} lines @param {number} reach @returns {{pt: Pt, guides: import('../../kernel/types.js').Seg[]}} */
 function snapToLines(raw, lines, reach){
   const unit=alignRadius();
   const near=lines.map(l=>{
@@ -75,11 +86,13 @@ function snapToLines(raw, lines, reach){
   const took = second ? [first.l, second.l] : [first.l];
   return {pt, guides:took.map(l=>guideSeg(l,pt))};
 }
+/** @param {AlignLine} l @param {Pt} q @returns {Pt} */
 function lineProject(l,q){
   const nx=-l.dir[1], ny=l.dir[0];
   const d=(q[0]-l.p[0])*nx + (q[1]-l.p[1])*ny;
   return [q[0]-nx*d, q[1]-ny*d];
 }
+/** @param {AlignLine} a @param {AlignLine} b @returns {Pt} */
 function lineCross(a,b){
   const det=a.dir[0]*b.dir[1]-a.dir[1]*b.dir[0];
   if(Math.abs(det)<1e-9) return a.p.slice();
@@ -88,6 +101,7 @@ function lineCross(a,b){
 }
 /* the dashed line shown while a magnet holds: from the point it hangs off to where the
    dragged point landed, run on a little past both ends so it reads as a guide, not a wall */
+/** @param {AlignLine} l @param {Pt} pt @returns {import('../../kernel/types.js').Seg} */
 function guideSeg(l,pt){
   const over=10/Math.max(view.scale,1e-6);
   const vx=pt[0]-l.pin[0], vy=pt[1]-l.pin[1], len=Math.hypot(vx,vy);
@@ -100,18 +114,21 @@ function guideSeg(l,pt){
    fraction of the magnet's radius, so a corner across the room yields to a neighbour),
    and `edge` the wall arriving at it, which adds a line square to that wall — the one
    thing that gives a room sitting at an angle its right angles too. */
+/** @param {Pt} raw @param {AlignRef[]} refs @param {number} reach */
 function alignPoint(raw, refs, reach){
+  /** @type {AlignLine[]} */
   const lines=[];
   for(const r of refs){
     const bias=r.bias||0;
     lines.push({pin:r.p, p:r.p, dir:[0,1], bias});
     lines.push({pin:r.p, p:r.p, dir:[1,0], bias});
     const e=r.edge, L=e&&Math.hypot(e[0],e[1]);
-    if(L>1) lines.push({pin:r.p, p:r.p, dir:[-e[1]/L, e[0]/L], bias:bias+0.35});
+    if(e && L && L>1) lines.push({pin:r.p, p:r.p, dir:[-e[1]/L, e[0]/L], bias:bias+0.35});
   }
   return snapToLines(raw, lines, reach);
 }
 /* is the corner at b square? */
+/** is the corner at b square? @param {Pt} a @param {Pt} b @param {Pt} c */
 function isSquare(a,b,c){
   const ux=a[0]-b[0], uy=a[1]-b[1], vx=c[0]-b[0], vy=c[1]-b[1];
   const lu=Math.hypot(ux,uy), lv=Math.hypot(vx,vy);
@@ -119,8 +136,10 @@ function isSquare(a,b,c){
   return Math.abs((ux*vx+uy*vy)/(lu*lv)) < 0.002;   // inside about a tenth of a degree
 }
 /* dragging corner i: the corners either side pull hardest, then every other corner */
+/** @param {number} i @param {Pt} raw @param {number} reach */
 function snapCorner(i, raw, reach){
   const P=RP(), n=P.length, prev=(i-1+n)%n, next=(i+1)%n;
+  /** @type {AlignRef[]} */
   const refs=[];
   for(let k=0;k<n;k++){
     if(k===i) continue;
@@ -137,6 +156,7 @@ function snapCorner(i, raw, reach){
 
 /* Hit-testing: what is under the pointer, and the draw/hit order within a
    room. */
+/** The placed item under world point (x, y), topmost first. @param {number} x @param {number} y */
 function pickAt(x,y){
   const ps=L().placed;
   // Match visual stacking: non-pass-through items (drawn on top) win clicks
@@ -155,6 +175,7 @@ function pickAt(x,y){
 /* moves the given placed-item ids to the end of the array (drawn/hit-tested on
    top within their pass-through tier) without touching undo history — this is
    a view-order change, not an edit, so it must never go through transact() */
+/** @param {string[]} ids */
 function bringToFront(ids){
   const idSet=new Set(ids);
   const arr=L().placed;
@@ -162,6 +183,7 @@ function bringToFront(ids){
   if(!moved.length) return;
   L().placed=arr.filter(p=>!idSet.has(p.id)).concat(moved);
 }
+/** What is under screen point (px, py) in Room mode. @param {number} px @param {number} py @returns {RoomPick|null} */
 function pickRoom(px,py){
   const P=RP(), pt=[wx(px),wy(py)];
   for(let i=L().room.pillars.length-1;i>=0;i--){
@@ -191,6 +213,7 @@ function pickRoom(px,py){
 /* Put the corner at exactly 90° without dragging for it. Every point that squares this
    corner sits on the circle with its two neighbours as diameter, so the nearest point on
    that circle is the smallest move that does it. */
+/** @param {number} i */
 function squareCorner(i){
   const P=RP(), n=P.length;
   if(n<3) return;

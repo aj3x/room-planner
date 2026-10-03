@@ -1,3 +1,4 @@
+// @ts-check
 /* The View section's settings and the snap-size picker, each an effect on
    the settings it shows (ui-kit/mount.js).
 

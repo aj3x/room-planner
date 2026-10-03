@@ -1,3 +1,4 @@
+// @ts-check
 /* Paint primitives every canvas layer and tool overlay shares: the palette,
    the two path helpers, label clipping, the 90° tick and the dimension line.
 
@@ -8,6 +9,8 @@
 import {ctx, sx, sy} from './view.js';
 import {S} from '../../kernel/state.js';
 import {fmtLen} from '../../kernel/units.js';
+
+/** @typedef {import('../../kernel/types.js').Pt} Pt */
 
 /* canvas colours mirror the CSS tokens (DESIGN.md §3.10); saved images always use `light`.
    Only what sits on the stage (background, walls, wall labels) changes in dark mode — selection,
@@ -24,23 +27,28 @@ const CANVAS={
 };
 const darkMQ=window.matchMedia('(prefers-color-scheme: dark)');
 let forceLightCanvas=false;
+/** @param {boolean} v */
 function setForceLightCanvas(v){ forceLightCanvas = v; }
 const PAL = () => (!forceLightCanvas && darkMQ.matches) ? CANVAS.dark : CANVAS.light;
 
+/** Add polygon p (world mm) to the current path. @param {Pt[]} p */
 function addPoly(p){
   ctx.moveTo(sx(p[0][0]),sy(p[0][1]));
   for(let i=1;i<p.length;i++) ctx.lineTo(sx(p[i][0]),sy(p[i][1]));
   ctx.closePath();
 }
+/** @param {Pt[]} p */
 function pathPoly(p){ ctx.beginPath(); addPoly(p); }
 
+/** txt cut down to fit about wpx pixels. @param {string} txt @param {number} wpx */
 function clip(txt,wpx){ const max=Math.floor(wpx/7.2); return txt.length>max?txt.slice(0,Math.max(1,max-1))+'…':txt; }
 /* The square in the corner, the way a plan marks 90°. On a corner that turns the other
    way it lands on the wall band, so it is drawn twice — a pale line first, then the
    accent over it — to stay legible whatever is underneath. */
+/** @param {Pt} a @param {Pt} b the corner @param {Pt} c */
 function drawSquareTick(a,b,c){
   const C=PAL(), bx=sx(b[0]), by=sy(b[1]);
-  const dir=(q)=>{ const dx=sx(q[0])-bx, dy=sy(q[1])-by, l=Math.hypot(dx,dy); return l<1?null:[dx/l,dy/l]; };
+  const dir=(/** @type {Pt} */q)=>{ const dx=sx(q[0])-bx, dy=sy(q[1])-by, l=Math.hypot(dx,dy); return l<1?null:[dx/l,dy/l]; };
   const u=dir(a), v=dir(c);
   if(!u||!v) return;
   const s=16;
@@ -56,6 +64,8 @@ function drawSquareTick(a,b,c){
   ctx.restore();
 }
 /* a dimension line with end ticks and its length on a label; returns where it was drawn */
+/** @param {{p: Pt, q: Pt, d: number}} r the two ends and the distance to print
+    @param {string} color @param {import('./types.js').Palette} C @param {boolean} [dashed] */
 function drawDimension(r,color,C,dashed){
   const p=[sx(r.p[0]),sy(r.p[1])], q=[sx(r.q[0]),sy(r.q[1])];
   const len=Math.hypot(q[0]-p[0],q[1]-p[1]);
