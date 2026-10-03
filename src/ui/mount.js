@@ -19,11 +19,15 @@
      - a click inside `root` on anything but the focused field (a button in
        the panel: Safari does not move focus to a clicked button);
      - focus leaving `root`.
-   Moving focus between fields inside `root` keeps a hold, so tabbing through
-   a form does not tear it down under the next field. When a render rebuilds
-   the field that had focus, focus goes back to its replacement (same id), so
-   Enter in a field, or stepping a select with the arrow keys, keeps your
-   place. A checkbox, colour swatch or button never holds.
+   Enter on a field that was not edited fires no `change`, so it does not end
+   a hold; the next click or focus change does. When a render rebuilds the
+   field that had focus, focus goes back to its replacement (same id), with a
+   text field's value selected, so Enter in a field or stepping a select with
+   the arrow keys keeps your place. Tabbing out of an *edited* field is the
+   exception: the browser fires `change` after focus has left, the commit
+   rebuilds the form, and the field Tab was heading for is gone, so focus
+   lands on the page (as it did before panels were effects). A checkbox,
+   colour swatch or button never holds.
 
    `root` is the smallest element whose fields the render rewrites — the list
    for a list, the section for a form — and not the whole pane: the item
@@ -62,7 +66,13 @@ function mountPanel(root, deps, render){
     render();
     if(id && !el.contains(document.activeElement)){
       const n = document.getElementById(id);
-      if(n && el.contains(n)) n.focus();
+      if(n && el.contains(n)){
+        n.focus();
+        /* The value under the caret was just replaced (normalised, or put
+           back after a refusal); select it so the next keystroke retypes it
+           rather than landing at position 0 in front of it. */
+        if(n.matches('input[type=text], input:not([type]), textarea')) n.select();
+      }
     }
   });
 }
