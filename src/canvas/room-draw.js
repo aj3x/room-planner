@@ -66,7 +66,7 @@ function drawSnapPoint(raw,shift){
 }
 function applyDrawCursorAt(px,py,shift){
   const raw=[wx(px),wy(py)];
-  drawCursor.value = drawState ? drawSnapPoint(raw, shift) : raw;
+  drawCursor.value = drawState.value ? drawSnapPoint(raw, shift) : raw;
   wallDrawShift.value = shift;
   scheduleDraw();
 }
