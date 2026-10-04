@@ -54,12 +54,15 @@ src/kernel/            the document and its rules: state, transact(), signals,
                        undo, storage, migrations, units, geometry; model/ is the
                        shared model (walls, openings, validity, …). No DOM.
 src/ui-kit/            generic UI: modal, menus, panels, inline edit, drag and
-                       drop, toasts, tag input, mountPanel
+                       drop, toasts, tag input, mountPanel, and the pieces
+                       components share (parts.jsx, component.js)
 src/features/<name>/   one feature each: canvas, mode, walls, openings, room,
                        furniture, floors, measure, walkpaths, layouts, library,
                        marketplace, io, blueprint. Its index.js is its public API.
 src/app/               composition: boot(), the canvas's list of layers and
-                       tools, global shortcuts, the pane partials, main.scss
+                       tools, global shortcuts, the pane partials (the side
+                       panes are lists of slots features fill, slots.js),
+                       main.scss
 ```
 
 A feature imports `kernel/`, `ui-kit/`, its own files, and other features
@@ -102,7 +105,7 @@ anything with a visible surface — read it *before* adding UI, not after.
   [`BACKLOG.md`](BACKLOG.md) and move on. A behaviour change belongs in its own
   commit, stated in its message.
 - **The test suite has a budget: under 20% of the codebase, ideally under
-  10%.** It is at 12% of the app. A new test needs an argument about what it catches
+  10%.** It is at 11% of the app. A new test needs an argument about what it catches
   that nothing else does — "it covers a function" is not one; "a silent break
   here corrupts a user's saved project" is. Read
   [`test/README.md`](test/README.md) before touching `test/`; it also lists
@@ -117,15 +120,18 @@ anything with a visible surface — read it *before* adding UI, not after.
 - **`function` declarations stay `function` declarations** — never rewritten as
   `const f = () => {}`. It keeps the house style, and it is what made the
   cycles this codebase used to have survivable.
-- ES2017-ish, `"use strict"`, no framework. JS with JSDoc types checked by
-  `tsc` — no `.ts` source files; shared types live in `src/kernel/types.d.ts`
-  and `src/features/canvas/types.d.ts`. `kernel/`, `ui-kit/` and every
-  feature's public API are strict (first line `// @ts-check`), and
-  `npm run typecheck` fails if one stops being. Side panels are
-  rebuilt by `render*()` functions that re-set `innerHTML`, each run as an
-  effect over the signals it shows (`mountPanel` in `src/ui-kit/mount.js`); a
-  change commits through `transact()` and never calls a render function.
-  Follow that pattern rather than introducing a renderer.
+- ES2017-ish, `"use strict"`. JS with JSDoc types checked by `tsc` — no
+  `.ts` source files; shared types live in `src/kernel/types.d.ts` and
+  `src/features/canvas/types.d.ts`. `kernel/`, `ui-kit/`, every feature's
+  public API and every `.jsx` component are strict (first line
+  `// @ts-check`), and `npm run typecheck` fails if one stops being.
+- **Panels are Preact components** (`.jsx`) that read the signals they show
+  while rendering and re-render on their own; a pane section is a slot its
+  feature fills (`sections` in the feature's `index.js`, one line in the pane
+  partial). A change commits through `transact()` and never calls a render
+  function or names a panel. Some panels are still `render*()` functions
+  that re-set `innerHTML` under `mountPanel` (`src/ui-kit/mount.js`); new
+  ones are components. AGENTS.md's *Adding things* has the recipe.
 
 ## What review will look at
 

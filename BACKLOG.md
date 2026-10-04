@@ -241,9 +241,9 @@ layouts are both currently active).
   sits on a floor — the normal case once floors are used at all — the left pane
   opens with no row for the room the canvas is showing, no `.active` row
   anywhere, and nothing that reveals it short of finding and expanding the
-  right floor by hand. `renderTree` (**`src/features/layouts/layout-tree.js`**) has all it needs to auto-expand
+  right floor by hand. The tree (**`src/features/layouts/tree-section.jsx`**) has all it needs to auto-expand
   the ancestors of `S.active`; it does not. The fix is to seed `treeOpen` with
-  those ancestors at boot, or to expand them in `renderTree` when nothing else
+  those ancestors at boot, or to expand them in the tree when nothing else
   has. **No longer pinned by a test** — `panel-tree.spec.js` was scaffolding
   for the SCC move and went with it.
 
@@ -408,12 +408,12 @@ layouts are both currently active).
   `index.html` and is no longer flagged. The rest came through the split
   untouched, which is what move-only means, and they now report against the
   module they landed in:
-  - `walkTrace` (`src/features/walkpaths/walkpaths.js:181`): a top-level function with no
+  - `walkTrace` (`src/features/walkpaths/walkpaths.js:168`): a top-level function with no
     caller anywhere.
-  - unused parameters: `len` (`src/features/room/merge-rooms.js:72`), `tPart`
+  - unused parameters: `len` (`src/features/room/merge-rooms.js:64`), `tPart`
     (`src/features/blueprint/openings.js:12`).
   - dead stores: `a` (`src/features/blueprint/walls.js:50`), `raw`
-    (`src/features/library/adhoc-listings.js:120`), `inc` (`index.html:918`) — each
+    (`src/features/library/adhoc-listings.js:78`), `inc` (`src/app/bind/header.js:44`) — each
     assigned and then overwritten or never read.
   They are reported as ESLint **warnings** rather than errors, deliberately:
   Phase 2 may not edit application code, and a lint that fails the build over

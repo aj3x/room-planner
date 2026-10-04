@@ -68,13 +68,14 @@ cover is written down rather than left to be discovered. See
 
 The app was a single 10,893-line `index.html`. It has been taken apart into
 modules so several people can work on it without colliding, and that is
-finished: `index.html` is now a 109-line shell — a `<head>`, a stylesheet
+finished: `index.html` is now a 112-line shell — a `<head>`, a stylesheet
 link, seven include directives for the static markup, and a short script
 holding the dozen listeners that belong to no single pane, plus the call to
-`boot()`. Each pane's own wiring sits with its markup: every HTML partial
-ends with a module script that calls one `bind*()` from the module beside it.
-Everything else is **150 JS modules, 15 SCSS partials and 7 HTML partials**
-under `src/`:
+`boot()`. The header, stage, Library and modal partials end with a module
+script that calls one `bind*()` from the module beside it; the two side panes
+are lists of empty sections that the owning features fill, mostly with Preact
+components. Everything else is **153 JS modules, 9 JSX component modules,
+15 SCSS partials and 7 HTML partials** under `src/`:
 
 ```
 src/kernel/            the document and its rules: state, transact(), signals,
