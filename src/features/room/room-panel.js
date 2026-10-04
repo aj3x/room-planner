@@ -3,7 +3,7 @@
    thickness, floor colour, trim, area) and the Selection panel, which shows
    whichever part of the room is selected through that part's own renderer
    (walls-panel.js, openings-panel.js). Each is an effect on what it shows
-   (mountRoomPanels). */
+   (mountRoomPanel, mountRoomSelPanel). */
 import {S, L, RP, roomMode} from '../../kernel/state.js';
 import {roomSel} from '../../kernel/selection.js';
 import {fmtArea, fmtLen, parseLen} from '../../kernel/units.js';
@@ -57,10 +57,11 @@ function renderRoomSel(){
               : k==='iwall' ? renderIWallProps() : renderOpeningProps();
   if(shown===false){ roomSel.value = null; return renderRoomSel(); }
 }
-/* The room's properties and the Selection panel, as effects (ui-kit/mount.js). */
-function mountRoomPanels(){
-  const geometry = () => { rev.room.value; rev.project.value; pref('unit'); };
-  mountPanel($('rectDims').closest('section'), geometry, renderRoom);
-  mountPanel($('roomSelBox').closest('section'), () => { geometry(); pref('mode'); roomSel.value; }, renderRoomSel);
-}
-export {mountRoomPanels, renderRoom, renderRoomSel};
+/* The room's properties and the Selection panel, each as an effect on what
+   it shows (ui-kit/mount.js), mounted by its section's fill (sections.jsx). */
+const geometry = () => { rev.room.value; rev.project.value; pref('unit'); };
+/** @param {HTMLElement} section */
+function mountRoomPanel(section){ mountPanel(section, geometry, renderRoom); }
+/** @param {HTMLElement} section */
+function mountRoomSelPanel(section){ mountPanel(section, () => { geometry(); pref('mode'); roomSel.value; }, renderRoomSel); }
+export {mountRoomPanel, mountRoomSelPanel, renderRoom, renderRoomSel};

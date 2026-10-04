@@ -168,9 +168,11 @@ function renderSel(){
   $('sDup').addEventListener('click',()=>place(inst.itemId));
 }
 /* The Selection panel, as an effect on the furniture, the items and the
-   selection it shows (ui-kit/mount.js). */
-function mountSelPanel(){
-  mountPanel($('selBox').closest('section'), () => {
+   selection it shows (ui-kit/mount.js), mounted by its section's fill
+   (sections.jsx). */
+/** @param {HTMLElement} section */
+function mountSelPanel(section){
+  mountPanel(section, () => {
     rev.furn.value; rev.lib.value; rev.room.value; rev.project.value;
     pref('unit'); pref('mode'); sel.value; selSet.value;
   }, renderSel);

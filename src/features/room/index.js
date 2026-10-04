@@ -13,7 +13,7 @@ export {mergeGeometry} from './merge-rooms.js';
 /** @typedef {import('./merge-rooms.js').MergeOk} MergeOk */
 export {drawRoomFloor, roomFloorLayer} from './room-floor-layer.js';
 export {roomHandlesLayer} from './room-handles-layer.js';
-export {mountRoomPanels} from './room-panel.js';
+export {sections} from './sections.jsx';
 export {roomTool} from './room-tool.js';
 export {lastSplit, splitUndo, startSplitRoom} from './split-room.js';
 export {splitTool} from './split-tool.js';

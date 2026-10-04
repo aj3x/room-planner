@@ -3,7 +3,7 @@
    floor itself, and merging or deleting two picked rooms; and the floor
    commands the layout tree's menus reach (its floor menu is layout-tree.js's).
 
-   The two Properties sections are effects (mountFloorPanels, at the end);
+   The two Properties sections are effects (mountFloorSelPanel, mountFloorPropsPanel, at the end);
    every command here commits through transact() and leaves the repainting
    to them, the tree and the canvas.
 */
@@ -297,11 +297,13 @@ function openFloorMergeMenu(ids, clientX, clientY){
   ], a.name+' + '+b.name);
 }
 /* Floor mode's two Properties sections, each an effect on what it shows
-   (ui-kit/mount.js). */
-function mountFloorPanels(){
-  mountPanel($('floorSelBox').closest('section'), () => {
+   (ui-kit/mount.js), mounted by its section's fill (sections.jsx). */
+/** @param {HTMLElement} section */
+function mountFloorSelPanel(section){
+  mountPanel(section, () => {
     rev.floor.value; rev.room.value; rev.project.value; pref('unit'); pref('mode'); floorSel.value; mergeSel.value;
   }, renderFloorSel);
-  mountPanel($('floorPropsBox').closest('section'), () => { rev.project.value; pref('unit'); }, renderFloorProps);
 }
-export {mountFloorPanels, lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, renderFloorProps, turnFloorRoom, newFloor, floorRoomsDialog, deleteFloor, putOnFloor, newFloorWith, putOnFloorDialog, mergeUndo, openFloorMergeMenu};
+/** @param {HTMLElement} section */
+function mountFloorPropsPanel(section){ mountPanel(section, () => { rev.project.value; pref('unit'); }, renderFloorProps); }
+export {mountFloorSelPanel, mountFloorPropsPanel, lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, renderFloorSel, renderFloorProps, turnFloorRoom, newFloor, floorRoomsDialog, deleteFloor, putOnFloor, newFloorWith, putOnFloorDialog, mergeUndo, openFloorMergeMenu};

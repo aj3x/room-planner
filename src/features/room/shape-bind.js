@@ -1,22 +1,9 @@
-/* The right-hand Room pane's wiring: the inventory scope select, the two
-   length boxes, the floor colour swatch and its hex field, the trim toggle,
-   the three outline presets, and the view/appearance switches.
-
-   One of the per-pane bind modules; src/app/bind/header.js carries the full
-   rationale for the pattern. The short version: each HTML partial ends
-   with a module script that imports its bind function and calls it, so a pane's
-   markup and the list of things listening to it sit in the same file, and it is
-   a function rather than registrations at import time because nothing in src/
-   may have a top-level side effect.
-
-   The two bindLen() calls came with the seventeen addEventListener calls.
-   bindLen registers a change listener on #wallT and #trimD, so it is this
-   pane's wiring by any reading, and leaving it in the shell would have left
-   the file claiming to hold nothing but app-global listeners while holding two
-   that are not.
+/* The Room section's controls: the two length boxes, the floor colour swatch
+   and its hex field, the trim toggle and the three outline presets. Bound by
+   the section's fill (sections.jsx) once its markup is on the page.
 
    Ordering: floorCol has two listeners and floorHex three, and each group is
-   whole and in index.html's order. Do not reorder them — floorHex's change
+   whole and in its original order. Do not reorder them — floorHex's change
    and blur both snap the box back, and its input handler must keep running
    ahead of neither. */
 
@@ -28,13 +15,12 @@ import { transact } from '../../kernel/tx.js';
 import { syncWallOff, clampOpenings } from '../../kernel/model/walls.js';
 import { $, openModal, moError } from '../../ui-kit/modal.js';
 import { esc } from '../../ui-kit/panels.js';
-import {drawState, fit} from '../../features/canvas/index.js';
+import {drawState, fit} from '../canvas/index.js';
 import { normHex } from '../../kernel/color.js';
-import { startCustomDraw, cancelCustomDraw, bindLen, setFloorColor } from '../../features/room/index.js';
+import { startCustomDraw, cancelCustomDraw } from './room-draw.js';
+import { bindLen, setFloorColor } from './room-controls.js';
 
-function bindPaneRight(){
-  $('invScope').addEventListener('change', e=>transact('prefs', ()=>{ S.invScope=e.target.value; }, {canvas:false}));
-
+function bindShapeSection(){
   bindLen('wallT', v=>{ L().room.wall=v; });
   bindLen('trimD', v=>{ L().room.trim=v; });
   $('floorCol').addEventListener('input', e=>{ setFloorColor(e.target.value); $('floorHex').value=e.target.value; $('floorHex').classList.remove('bad'); });
@@ -93,14 +79,6 @@ function bindPaneRight(){
   $('btnDrawCustom').addEventListener('click', ()=>{
     if(drawState.value) cancelCustomDraw(); else startCustomDraw();   // starting stops every other tool
   });
-
-  $('snapSel').addEventListener('change', e=>transact('prefs', ()=>{ S.snap=e.target.value; }, {canvas:false}));
-  $('zoomSpeedSel').addEventListener('change', e=>transact('prefs', ()=>{ S.zoomSpeed=parseFloat(e.target.value)||1; }, {canvas:false}));
-  $('showSwing').addEventListener('change', e=>transact('prefs', ()=>{ S.showSwing=e.target.checked; }));
-  $('showWalk').addEventListener('change', e=>transact('prefs', ()=>{ S.showWalk=e.target.checked; }));
-  $('showMeasure').addEventListener('change', e=>transact('prefs', ()=>{ S.showMeasure=e.target.checked; }));
-  $('showDims').addEventListener('change', e=>transact('prefs', ()=>{ S.showDims=e.target.checked; }));
-  $('showOpen').addEventListener('change', e=>transact('prefs', ()=>{ S.showOpen=e.target.checked; }));
 }
 
-export {bindPaneRight};
+export {bindShapeSection};

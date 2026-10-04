@@ -9,32 +9,31 @@ import {S, isCanvasMode, setS} from '../kernel/state.js';
 import {KEY, Store} from '../kernel/store.js';
 import {marketFolderOf, ensureDefaultMarket} from '../features/marketplace/index.js';
 import {itemFolderOf, nav, mountLibrary} from '../features/library/index.js';
-import {mountFloorPanels} from '../features/floors/index.js';
-import {mountItemList, mountSelPanel} from '../features/furniture/index.js';
+import {mountItemList} from '../features/furniture/index.js';
 import {mountTree} from '../features/layouts/index.js';
 import {mountMode, paramMode, setPendingFit, syncModeParam} from '../features/mode/index.js';
-import {mountRoomPanels} from '../features/room/index.js';
 import {mountWallList} from '../features/walls/index.js';
 import {mountOpeningList} from '../features/openings/index.js';
 import {effect, notice, untracked} from '../kernel/signals.js';
 import {flash} from '../ui-kit/flash.js';
 import {mountSections} from '../ui-kit/panels.js';
+import {fillSlots} from './slots.js';
 
 /* Every view, as an effect on the signals it shows. Each one renders once
    here, from the loaded project, and again whenever what it reads changes —
    which is why nothing that changes the project names a view. Order is only
-   the order of that first paint. */
+   the order of that first paint, except that the pane sections are filled
+   (app/slots.js, which mounts each section's own views) before the section
+   toggles are applied to their headings. */
 function mount(){
   mountMode();
+  fillSlots();
   mountSections();
   mountViewPrefs();
-  mountRoomPanels();
   mountWallList();
   mountOpeningList();
   mountTree();
   mountItemList();
-  mountSelPanel();
-  mountFloorPanels();
   mountMeasureBar();
   mountLibrary();
   mountCanvas();

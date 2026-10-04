@@ -11,4 +11,5 @@ export {dragInv, invBox, itemMenu, mountItemList, placeItem, renameItem, setDrag
 export {itemToolsLayer} from './item-tools-layer.js';
 export {drawItem, itemsLayer} from './items-layer.js';
 export {openRegionsLayer} from './open-regions-layer.js';
-export {mountSelPanel, removeSel, rotate} from './selection-panel.js';
+export {removeSel, rotate} from './selection-panel.js';
+export {sections} from './sections.jsx';

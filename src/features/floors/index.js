@@ -15,4 +15,5 @@ export {floorSelectionLayer} from './floor-selection-layer.js';
 export {floorTool, pickFloorRoom} from './floor-tool.js';
 export {floorUnderlayLayer} from './floor-underlay-layer.js';
 export {floorWallsLayer} from './floor-walls-layer.js';
-export {deleteFloor, floorRoomsDialog, lastMerge, mergeUndo, mountFloorPanels, newFloor, newFloorWith, openFloorMergeMenu, putOnFloor, putOnFloorDialog, setLastMerge, turnFloorRoom} from './floors.js';
+export {deleteFloor, floorRoomsDialog, lastMerge, mergeUndo, newFloor, newFloorWith, openFloorMergeMenu, putOnFloor, putOnFloorDialog, setLastMerge, turnFloorRoom} from './floors.js';
+export {sections} from './sections.jsx';

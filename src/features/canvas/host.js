@@ -2,7 +2,8 @@
 /* The canvas as the app shell hosts it: the pointer, wheel and key handlers
    the stage and the document route to it, the layer and tool registry
    app/canvas-setup.js fills, the effects boot() mounts, the edge-pan loop and
-   colour-scheme query index.html starts, and the three stock layers.
+   colour-scheme query index.html starts, the three stock layers, and the
+   View section the Properties pane's slot is filled with.
 
    Only app/ (and index.html) may import this file; a feature uses the canvas
    through index.js, which is what features draw and gesture with. Splitting
@@ -16,5 +17,6 @@ export {activeTool, cancelGesture, edgePanTick, gestureTool, isGesturing, onCanv
 export {darkMQ} from './paint.js';
 export {panTool, setSpaceDown} from './pan-tool.js';
 export {readoutLayer} from './readout-layer.js';
+export {sections} from './sections.jsx';
 export {stageLayer} from './stage-layer.js';
 export {mountViewPrefs} from './view-prefs.js';
