@@ -1,5 +1,6 @@
 /* The header's wiring: the section nav, the unit select, and the two
-   import/export buttons with the hidden file input they drive.
+   import/export buttons with the hidden file input they drive; and
+   mountHeader(), which boot() calls to keep the unit select showing S.
 
    One of the per-pane bind modules. Each HTML partial ends with a module
    script that imports its bind function and calls it, so a pane's markup and
@@ -23,6 +24,7 @@ import { S, isCanvasMode } from '../../kernel/state.js';
 import { setMode } from '../../features/mode/index.js';
 import { flash } from '../../ui-kit/flash.js';
 import { $ } from '../../ui-kit/modal.js';
+import { effect, rev } from '../../kernel/signals.js';
 
 function bindHeader(){
   $('navSeg').addEventListener('click', e=>{
@@ -51,4 +53,10 @@ function bindHeader(){
   });
 }
 
-export {bindHeader};
+/* The unit select, set from S: on load, on import, and whenever a setting
+   is committed. */
+function mountHeader(){
+  effect(() => { rev.prefs.value; rev.project.value; $('unitSel').value=S.unit; });
+}
+
+export {bindHeader, mountHeader};

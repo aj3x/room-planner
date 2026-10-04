@@ -16,11 +16,10 @@
 import {fit, resize, resetTools, stopToolsFor} from '../canvas/index.js';
 import {floorEntry, histAvail, histRev, seedHistFor} from '../../kernel/history.js';
 import {selectClear, alignGuides, alignNote, floorGuides, floorSel, floorSnapNote, roomSel, sel} from '../../kernel/selection.js';
-import {batch, pref, rev} from '../../kernel/signals.js';
+import {batch, effect, pref, rev} from '../../kernel/signals.js';
 import {L, S, folderOf, isCanvasMode} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {$} from '../../ui-kit/modal.js';
-import {mountPanel} from '../../ui-kit/mount.js';
 import {applyPanes} from '../../ui-kit/panels.js';
 import {closeMenu} from '../../ui-kit/menu.js';
 import {wideLayout} from '../../ui-kit/panels.js';
@@ -88,10 +87,10 @@ function renderHistButtons(){
   $('btnUndo').disabled=!canUndo; $('btnRedo').disabled=!canRedo;
 }
 
-/* The mode's own views, as effects (ui-kit/mount.js). */
+/* The mode's own views, as effects on what they show. */
 function mountMode(){
-  mountPanel(null, () => { pref('mode'); pref('leftOpen'); pref('rightOpen'); }, () => { renderMode(); applyLayoutMode(); });
-  mountPanel(null, () => { histRev.value; pref('mode'); rev.project.value; rev.floor.value; }, renderHistButtons);
+  effect(() => { pref('mode'); pref('leftOpen'); pref('rightOpen'); renderMode(); applyLayoutMode(); });
+  effect(() => { histRev.value; pref('mode'); rev.project.value; rev.floor.value; renderHistButtons(); });
 }
 
 /** @param {'left'|'right'} side */

@@ -19,8 +19,7 @@ import {measuresLayer} from './measures-layer.js';
 import {roomSel, sel} from '../../kernel/selection.js';
 import {isCanvasMode} from '../../kernel/state.js';
 
-import {batch, rev} from '../../kernel/signals.js';
-import {mountPanel} from '../../ui-kit/mount.js';
+import {batch, effect, rev} from '../../kernel/signals.js';
 
 
 /* the anchor under a screen point: a corner or centre point beats a side, which beats the
@@ -107,8 +106,8 @@ function setMeasure(on){
   batch(()=>{ measureOn.value = !!on; resetMeasureState(); });
 }
 /* The bar over the canvas, as an effect on the tool's state and the room's
-   measurements (ui-kit/mount.js). */
+   measurements. */
 function mountMeasureBar(){
-  mountPanel(null, () => { rev.room.value; rev.project.value; measureOn.value; measureStart.value; measureSel.value; }, renderMeasureBar);
+  effect(() => { rev.room.value; rev.project.value; measureOn.value; measureStart.value; measureSel.value; renderMeasureBar(); });
 }
 export {mountMeasureBar, measurePick, pickMeasure, measureTargetAt, liveMeasures, renderMeasureBar, resetMeasureState, removeMeasure, setMeasure};

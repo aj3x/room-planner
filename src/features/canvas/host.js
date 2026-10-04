@@ -19,4 +19,3 @@ export {panTool, setSpaceDown} from './pan-tool.js';
 export {readoutLayer} from './readout-layer.js';
 export {sections} from './sections.jsx';
 export {stageLayer} from './stage-layer.js';
-export {mountViewPrefs} from './view-prefs.js';

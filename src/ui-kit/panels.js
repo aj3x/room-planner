@@ -9,8 +9,7 @@
 import {S} from '../kernel/state.js';
 import {transact} from '../kernel/tx.js';
 import {$, esc, svgI} from './dom.js';
-import {rev} from '../kernel/signals.js';
-import {mountPanel} from './mount.js';
+import {effect, rev} from '../kernel/signals.js';
 
 /** @param {number} n @param {string} w */
 const plural = (n,w) => n+' '+w+(n===1?'':'s');
@@ -34,9 +33,9 @@ function toggleSection(h){
   const k=/** @type {string} */(/** @type {HTMLElement} */(h.closest('section[data-sec]')).dataset.sec);   // every heading is in one
   transact('prefs', ()=>{ S.secClosed = S.secClosed.includes(k) ? S.secClosed.filter(x=>x!==k) : S.secClosed.concat(k); }, {canvas:false});
 }
-/* Which sections are shut, as an effect on the settings (ui-kit/mount.js). */
+/* Which sections are shut, as an effect on the settings. */
 function mountSections(){
-  mountPanel(null, () => { rev.prefs.value; rev.project.value; }, applySections);
+  effect(() => { rev.prefs.value; rev.project.value; applySections(); });
 }
 
 /* ------------------------- collapsing the side panels -------------------------

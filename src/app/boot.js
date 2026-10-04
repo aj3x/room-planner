@@ -1,5 +1,5 @@
 // @ts-check
-import {mountCanvas, mountViewPrefs} from '../features/canvas/host.js';
+import {mountCanvas} from '../features/canvas/host.js';
 import {fit, resize} from '../features/canvas/index.js';
 import {setupCanvas} from './canvas-setup.js';
 import {mountMeasureBar} from '../features/measure/index.js';
@@ -14,6 +14,7 @@ import {effect, loaded, notice, untracked} from '../kernel/signals.js';
 import {flash} from '../ui-kit/flash.js';
 import {mountSections} from '../ui-kit/panels.js';
 import {fillSlots} from './slots.js';
+import {mountHeader} from './bind/header.js';
 
 /* Every view, as an effect on the signals it shows. Each one renders once
    here, from the loaded project, and again whenever what it reads changes —
@@ -26,7 +27,7 @@ function mount(mountFills){
   mountMode();
   mountFills();
   mountSections();
-  mountViewPrefs();
+  mountHeader();
   mountMeasureBar();
   mountLibrary();
   mountCanvas();
