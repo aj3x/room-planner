@@ -7,3 +7,5 @@
 
 export {adhocCache, childMarketFolders, listingsInFolder, loadListing, marketFolderDescendant, marketFolderOf, marketFolderPath} from './adhoc-folders.js';
 export {ensureDefaultMarket, fetchMarketItem, loadRegistry, marketIndexCache, reloadMarketSub, removeMarketSub, subscribeMarket} from './market-subs.js';
+/** @typedef {import('./market-subs.js').MarketEntry} MarketEntry */
+/** @typedef {import('./adhoc-folders.js').ListingLoad} ListingLoad */

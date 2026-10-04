@@ -9,12 +9,10 @@ import {adhocCache, childMarketFolders, listingsInFolder, marketFolderDescendant
 import {childItemFolders, itemFolderOf, moveItemToFolder, recomputeFolderSubtree} from './item-folders.js';
 import {libTreeOpen} from './nav.js';
 import {S, uid} from '../../kernel/state.js';
-import {inlineEdit} from '../../ui-kit/inline-edit.js';
 import {openMenu} from '../../ui-kit/menu.js';
 import {askConfirm, askText} from '../../ui-kit/modal.js';
 import {applyTags, itemFolderDescendant, itemsInFolder, purgeItem} from './item-folders.js';
-import {goLibFolder, nav, selectListing} from './nav.js';
-import {libTreeBox} from './tree.js';
+import {goLibFolder, libRenaming, nav, selectListing} from './nav.js';
 
 /* ------------------------- folder menus & dialogs ------------------------- */
 /** @param {string} title @param {(name: string, tags: string[]) => void} onOk */
@@ -68,15 +66,15 @@ function moveLibItemDialog(item){
 }
 
 /* ---- Phase 3: the rest of this file's region, move-only. ---- */
-function renameLibFolder(id){
-  const f=itemFolderOf(id), row=libTreeBox.querySelector('[data-folder="'+id+'"]');
-  if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('lib', ()=>{ f.name=v; }); });
-}
-function renameAdhocFolder(id){
-  const f=marketFolderOf(id), row=libTreeBox.querySelector('[data-mfolder="'+id+'"]');
-  if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('lib', ()=>{ f.name=v; }); });
+/* Renaming in place: the tree (tree.jsx) shows a rename box on the row
+   libRenaming names, and hands what was typed to renamedFolder. */
+function renameLibFolder(id){ if(itemFolderOf(id)) libRenaming.value=id; }
+function renameAdhocFolder(id){ if(marketFolderOf(id)) libRenaming.value='m:'+id; }
+/** @param {string} key a libRenaming value @param {string|null} v the new name, or null to leave it */
+function renamedFolder(key, v){
+  if(libRenaming.value===key) libRenaming.value=null;   // not if another row's rename has started since
+  const f = key.startsWith('m:') ? marketFolderOf(key.slice(2)) : itemFolderOf(key);
+  if(v && f) transact('lib', ()=>{ f.name=v; });
 }
 
 function libFolderMenu(id, anchor){
@@ -247,4 +245,4 @@ function moveListingDialog(l){
       transact('lib', ()=>{ l.parentId=$('moFolder').value||null; });
     });
 }
-export {askNewLibFolder, libFolderTagsDialog, adhocFolderContents, moveLibItemDialog, renameLibFolder, renameAdhocFolder, itemFolderContents, deleteLibFolder, deleteAdhocFolder, moveLibFolderDialog, moveAdhocFolderDialog, libFolderMenu, adhocFolderMenu, listingMenu, moveListingDialog};
+export {askNewLibFolder, libFolderTagsDialog, adhocFolderContents, moveLibItemDialog, renameLibFolder, renameAdhocFolder, renamedFolder, itemFolderContents, deleteLibFolder, deleteAdhocFolder, moveLibFolderDialog, moveAdhocFolderDialog, libFolderMenu, adhocFolderMenu, listingMenu, moveListingDialog};

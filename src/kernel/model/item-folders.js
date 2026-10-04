@@ -35,10 +35,10 @@ function itemFolderPath(id){
   while(f){ out.unshift(f); f=itemFolderOf(f.parentId); }
   return out;
 }
-/** @param {string} id @returns {Set<string>} */
+/** @param {FolderId} id @returns {Set<FolderId>} the folder and every folder under it (null: the top level, and everything) */
 function itemFolderSubtreeIds(id){
   const out=new Set([id]);
-  (function walk(/** @type {string} */pid){ for(const f of childItemFolders(pid)){ out.add(f.id); walk(f.id); } })(id);
+  (function walk(/** @type {FolderId} */pid){ for(const f of childItemFolders(pid)){ out.add(f.id); walk(f.id); } })(id);
   return out;
 }
 /** @param {FolderId} fid @returns {number} */

@@ -11,5 +11,4 @@ export {itemDialog} from './item-dialog.js';
 export {itemFolderOf} from './item-folders.js';
 export {sizeLabel} from './items.js';
 export {nav} from './nav.js';
-export {bindPaneLibrary} from './pane-library-bind.js';
-export {mountLibrary} from './shell.js';
+export {mountLibraryPage} from './page.jsx';

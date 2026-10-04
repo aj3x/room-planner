@@ -55,7 +55,7 @@ ul.list li.off .nm{color:var(--ink-3)}
 .search input{padding-left:30px}
 
 /* tree (rooms + library folders) */
-.layout-tree,#tree{display:flex;flex-direction:column;gap:2px;min-height:32px}
+.layout-tree,.lib-tree{display:flex;flex-direction:column;gap:2px;min-height:32px}
 .tree-row{position:relative;display:flex;align-items:center;gap:6px;min-height:var(--h-ctl);padding:0 4px;border-radius:var(--r-md);cursor:pointer;min-width:0;transition:background var(--dur-fast) var(--ease)}
 .tree-row:hover{background:var(--surface-2)}
 .tree-row.active{background:var(--surface-3)}

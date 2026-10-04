@@ -8,7 +8,7 @@ import {migrate} from '../kernel/migrate.js';
 import {S, isCanvasMode, setS} from '../kernel/state.js';
 import {KEY, Store} from '../kernel/store.js';
 import {marketFolderOf, ensureDefaultMarket} from '../features/marketplace/index.js';
-import {itemFolderOf, nav, mountLibrary} from '../features/library/index.js';
+import {itemFolderOf, nav} from '../features/library/index.js';
 import {mountMode, paramMode, setPendingFit, syncModeParam} from '../features/mode/index.js';
 import {effect, loaded, notice, untracked} from '../kernel/signals.js';
 import {flash} from '../ui-kit/flash.js';
@@ -29,7 +29,6 @@ function mount(mountFills){
   mountSections();
   mountHeader();
   mountMeasureBar();
-  mountLibrary();
   mountCanvas();
   /* what the domain layer reports (a refused edit), as a toast */
   effect(() => { const n=notice.value; if(n) untracked(() => flash(n.msg)); });

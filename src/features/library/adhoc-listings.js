@@ -1,54 +1,11 @@
-/* Ad hoc listings: their tiles, an ad hoc folder's view, a listing's detail
-   view and the add-a-listing dialog. Their menus are in folder-menus.js. */
-import {childMarketFolders, listingsInFolder, loadListing} from '../marketplace/index.js';
-import {svgI} from '../../ui-kit/modal.js';
-import {esc, plural} from '../../ui-kit/panels.js';
-import {sizeLabel} from './items.js';
+/* Ad hoc listings: the add-a-listing dialog. Their views are
+   market-views.jsx, their menus folder-menus.js. */
 import {normItem} from '../../kernel/migrate.js';
 import {S, clone, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
-import {libFlash} from '../../ui-kit/flash.js';
-import {$, askConfirm, moError, openModal} from '../../ui-kit/modal.js';
-import {addMarketItemToInventory} from './add-to-inventory.js';
-import {bindCrumbs, bindLibGrid, crumbsHTML} from './grid.js';
+import {$, moError, openModal} from '../../ui-kit/modal.js';
 import {nav} from './nav.js';
-import {drawPreview} from './preview.js';
 
-function listingTile(l){
-  const sub = l.kind==='link' ? 'Link' : (l.content&&Array.isArray(l.content.inventory) ? plural(l.content.inventory.length,'item') : 'File');
-  return `<button type="button" class="tile" data-listing="${l.id}">
-    <span class="more" data-act="more" title="More actions" aria-label="More actions">${svgI('more')}</span>
-    <div class="thumb">${svgI(l.kind==='link'?'link':'box')}</div>
-    <div class="body"><div class="nm" title="${esc(l.name)}">${esc(l.name)}</div><div class="dim">${esc(sub)}</div></div>
-  </button>`;
-}
-function adhocFolderTile(f){
-  const n=childMarketFolders(f.id).length, m=listingsInFolder(f.id).length;
-  const bits=[]; if(n) bits.push(n+' folder'+(n>1?'s':'')); if(m) bits.push(m+' listing'+(m>1?'s':''));
-  return `<button type="button" class="tile folder" data-openfolder="${f.id}">
-    <div class="thumb">${svgI('folder')}</div>
-    <div class="body"><div class="nm">${esc(f.name)}</div><div class="dim">${bits.length?esc(bits.join(', ')):'Empty'}</div></div>
-  </button>`;
-}
-
-/* ---- Phase 3, the SCC commit: the rest of this file's region, which could
-   not move until the whole 49-name component could. Move-only. ---- */
-function renderAdhocFolder(box, folderId, standalone){
-  const subs=childMarketFolders(folderId), listings=listingsInFolder(folderId);
-  let html=standalone ? crumbsHTML('market', folderId) : `<div class="lib-section">Listings — one-off bundles from a file, link or pasted JSON</div>`;
-  if(!subs.length && !listings.length){
-    html+=`<div class="grid"><div class="empty">No listings yet.
-      <div class="row"><button class="btn sm" data-addlisting-empty>Add listing…</button></div></div></div>`;
-  } else {
-    html+=`<div class="grid">${subs.map(adhocFolderTile).join('')}${listings.map(listingTile).join('')}</div>`;
-  }
-  let target=box;
-  if(standalone){ box.innerHTML=html; }
-  else { target=document.createElement('div'); target.innerHTML=html; box.appendChild(target); }
-  bindCrumbs(target,'market');
-  bindLibGrid(target,'market');
-  const al=target.querySelector('[data-addlisting-empty]'); if(al) al.addEventListener('click', addListingDialog);
-}
 let pendingFile=null;
 function addListingDialog(){
   pendingFile=null;
@@ -107,50 +64,4 @@ function addListingDialog(){
       dz.addEventListener('drop', e=>{ e.preventDefault(); dz.classList.remove('over'); readFile(e.dataTransfer.files[0]); });
     });
 }
-function renderListingDetail(box, id){
-  const l=S.marketListings.find(x=>x.id===id);
-  if(!l){ nav.marketSelListingId=null; return; }
-  box.innerHTML = crumbsHTML('market', l.parentId) + `
-    <div class="detail wide">
-      <div class="dhead"><div class="grow"><h1>${esc(l.name)}</h1>
-        <div class="dim">${l.kind==='link'?esc(l.url):'Uploaded file'}</div></div>
-        <div class="row">
-          <button class="btn sm danger" id="btnDelListing">Delete listing…</button>
-          <button class="btn sm primary" id="btnAddAllListing">Add all to library</button>
-        </div></div>
-      <div id="listingBody"><div class="listing-status">Loading…</div></div>
-    </div>`;
-  bindCrumbs(box,'market');
-  $('btnDelListing').addEventListener('click', ()=>{
-    askConfirm('Delete this listing?', '“'+l.name+'” will be removed.', 'Delete', ()=>{
-      transact('lib', ()=>{ S.marketListings=S.marketListings.filter(x=>x.id!==id); nav.marketSelListingId=null; });
-    });
-  });
-  loadListing(l).then(res=>{
-    if(nav.marketSelListingId!==id) return;
-    const body=$('listingBody'); if(!body) return;
-    if(res.error){ body.innerHTML=`<p class="hint warn">${esc(res.error)}</p>`; return; }
-    if(!res.items.length){ body.innerHTML=`<div class="empty">This listing has no items.</div>`; return; }
-    body.innerHTML=`<div class="grid flush">${res.items.map(it=>`
-      <div class="tile static">
-        <div class="thumb"><canvas data-lprev="${esc(it.id)}"></canvas></div>
-        <div class="body"><div class="nm" title="${esc(it.name)}">${esc(it.name)}</div>
-          <div class="tile-foot"><span class="dim">${esc(sizeLabel(it))}</span>
-          <button class="btn sm" data-addlisting="${esc(it.id)}">Add</button></div></div>
-      </div>`).join('')}</div>`;
-    body.querySelectorAll('canvas[data-lprev]').forEach(c=>{ const it=res.items.find(x=>x.id===c.dataset.lprev); if(it) drawPreview(c,it); });
-    body.querySelectorAll('[data-addlisting]').forEach(b=>{
-      b.addEventListener('click', ()=>{
-        const it=res.items.find(x=>x.id===b.dataset.addlisting);
-        addMarketItemToInventory(it);
-        b.textContent='Added'; b.classList.add('quiet'); b.disabled=true;
-      });
-    });
-    $('btnAddAllListing').addEventListener('click', ()=>{
-      for(const it of res.items) addMarketItemToInventory(it);
-      libFlash('Added '+res.items.length+' item'+(res.items.length===1?'':'s')+' to your library');
-      body.querySelectorAll('[data-addlisting]').forEach(b=>{ b.textContent='Added'; b.disabled=true; });
-    });
-  });
-}
-export {listingTile, adhocFolderTile, renderAdhocFolder, addListingDialog, renderListingDetail};
+export {addListingDialog};
