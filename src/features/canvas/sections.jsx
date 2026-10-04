@@ -13,9 +13,12 @@ import {SNAPS} from '../../kernel/units.js';
 import {mountComponent} from '../../ui-kit/component.js';
 import {Check, SecHead, Select} from '../../ui-kit/parts.jsx';
 
-function SnapSelect(){
-  pref('unit');
-  const list = !loaded.value ? [] : (S.unit==='ftin'||S.unit==='in') ? SNAPS.imperial : SNAPS.metric;
+/* No signal reads of its own: @preact/signals would then skip it when the
+   section re-renders with the same props, and a committed snap would show
+   the one it replaced. */
+/** @param {{ready: boolean}} p */
+function SnapSelect({ready}){
+  const list = !ready ? [] : (S.unit==='ftin'||S.unit==='in') ? SNAPS.imperial : SNAPS.metric;
   if(list.length && !list.some(([v])=>v===S.snap)) S.snap=list[2][0];
   return <Select id="snapSel" value={S.snap} onCommit={v=>transact('prefs', ()=>{ S.snap=v; }, {canvas:false})}>
     {list.map(([v,t])=><option key={v} value={v}>{t}</option>)}
@@ -29,10 +32,11 @@ function Show({k, children}){
 }
 
 function ViewSection(){
-  rev.prefs.value; rev.project.value; loaded.value;   // S is the saved one once loaded
+  rev.prefs.value; rev.project.value; pref('unit');
+  const ready=loaded.value;   // S is the saved one once loaded
   return <>
     <SecHead title="View"/>
-    <div class="field"><label for="snapSel">Snap to</label><SnapSelect/></div>
+    <div class="field"><label for="snapSel">Snap to</label><SnapSelect ready={ready}/></div>
     <div class="field"><label for="zoomSpeedSel">Zoom speed</label>
       <Select id="zoomSpeedSel" value={String(S.zoomSpeed)} onCommit={v=>transact('prefs', ()=>{ S.zoomSpeed=parseFloat(v)||1; }, {canvas:false})}>
         <option value="0.5">Slow</option>
