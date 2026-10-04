@@ -10,10 +10,10 @@
    does — rehoming ids, moving items between folders, purging — stayed behind
    in features/library/item-folders.js, which imports this file.
 */
-import {S} from './state.js';
+import {S} from '../state.js';
 
-/** @typedef {import('./types.js').Folder} Folder */
-/** @typedef {import('./types.js').Item} Item */
+/** @typedef {import('../types.js').Folder} Folder */
+/** @typedef {import('../types.js').Item} Item */
 /** @typedef {string|null|undefined} FolderId */
 
 /** @param {FolderId} pid */

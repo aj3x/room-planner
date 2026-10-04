@@ -6,7 +6,7 @@ import {bbox, centroid, pointInPoly} from '../../kernel/geometry.js';
 import {S} from '../../kernel/state.js';
 import {fmtLen} from '../../kernel/units.js';
 
-/** @param {import('../../kernel/floor-place.js').Member} m */
+/** @param {import('../../kernel/model/floor-place.js').Member} m */
 function drawFloorLabel(m){
   const C=PAL(), b=bbox(m.P), wpx=b.w*view.scale, hpx=b.h*view.scale;
   if(wpx<56 || hpx<34) return;

@@ -7,7 +7,7 @@ import {ctx, sx, sy, pathPoly} from '../canvas/index.js';
 import {bbox} from '../../kernel/geometry.js';
 import {floorSel, mergeSel} from '../../kernel/selection.js';
 import {L, floorOf} from '../../kernel/state.js';
-import {floorMembers} from '../../kernel/floor-place.js';
+import {floorMembers} from '../../kernel/model/floor-place.js';
 
 /** where the rotate handle sits over outline P, screen px @param {import('../../kernel/types.js').Pt[]} P */
 const floorRotHandle = P => { const b=bbox(P); return {x:sx((b.x0+b.x1)/2), y:sy(b.y0)-26}; };

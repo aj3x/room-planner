@@ -10,7 +10,7 @@ import {fmtArea, fmtLen, parseLen} from '../../kernel/units.js';
 import {bbox, polyArea} from '../../kernel/geometry.js';
 import {transact} from '../../kernel/tx.js';
 import {pref, rev} from '../../kernel/signals.js';
-import {isRectRoom, setRectSize} from '../../kernel/walls.js';
+import {isRectRoom, setRectSize} from '../../kernel/model/walls.js';
 import {$} from '../../ui-kit/modal.js';
 import {mountPanel} from '../../ui-kit/mount.js';
 import {esc} from '../../ui-kit/panels.js';

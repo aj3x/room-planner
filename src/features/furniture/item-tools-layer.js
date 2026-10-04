@@ -7,7 +7,7 @@ import {ctx, sx, sy, view, PAL, drawDimension, pathPoly} from '../canvas/index.j
 import {bbox, shapePoly, worldPoly} from '../../kernel/geometry.js';
 import {sel, selSet} from '../../kernel/selection.js';
 import {L, S, furnMode, instOf, itemOf} from '../../kernel/state.js';
-import {getConflicts} from '../../kernel/validity.js';
+import {getConflicts} from '../../kernel/model/validity.js';
 
 /* the selected item's outline and rotate handle, drawn after everything else so nothing covers them */
 function drawItemTools(){

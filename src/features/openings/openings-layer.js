@@ -4,14 +4,14 @@
 
 import {ctx, sx, sy, view, PAL, pathPoly} from '../canvas/index.js';
 import {L, S} from '../../kernel/state.js';
-import {blockedOpenings, openGeom, swingPoly} from '../../kernel/openings.js';
-import {wallIsOff} from '../../kernel/walls.js';
+import {blockedOpenings, openGeom, swingPoly} from '../../kernel/model/openings.js';
+import {wallIsOff} from '../../kernel/model/walls.js';
 
 /* `room`/`poly` let a floor draw a door on a room other than the active one */
 /** @param {import('../../kernel/types.js').Opening} o @param {string[]} blocked ids of doors something stands in @param {import('../../kernel/types.js').Room} [room] @param {import('../../kernel/types.js').Pt[]} [poly] */
 function drawOpening(o,blocked,room,poly){
   /* each branch below reads the door fields openGeom sets for that dtype */
-  const r=room||L().room, g=/** @type {Required<import('../../kernel/openings.js').OpenGeom>} */(openGeom(o,poly,r)), t=Math.max(2,r.wall*view.scale);
+  const r=room||L().room, g=/** @type {Required<import('../../kernel/model/openings.js').OpenGeom>} */(openGeom(o,poly,r)), t=Math.max(2,r.wall*view.scale);
   const C=PAL();
   // jambs
   ctx.strokeStyle=C.ink; ctx.lineWidth=Math.max(1.5,t*.35);

@@ -2,13 +2,13 @@
 /* Merging two rooms into one: the polygon weld, and the helpers that cut the
    two outlines so they can be welded. PARALLEL_TOL, the "do these two edges
    face each other" tolerance edgeFacing shares with the floor magnet, is
-   kernel/floor-place.js's. */
+   kernel/model/floor-place.js's. */
 
 import {clone} from '../../kernel/state.js';
 import {polySimple, signedArea} from '../../kernel/geometry.js';
-import {syncWallOff} from '../../kernel/walls.js';
-import {floorPt, floorXf} from '../../kernel/floor-space.js';
-import {PARALLEL_TOL} from '../../kernel/floor-place.js';
+import {syncWallOff} from '../../kernel/model/walls.js';
+import {floorPt, floorXf} from '../../kernel/model/floor-space.js';
+import {PARALLEL_TOL} from '../../kernel/model/floor-place.js';
 
 /** @typedef {import('../../kernel/types.js').Pt} Pt */
 /** A detached copy of one room's outline and what is numbered by its walls.

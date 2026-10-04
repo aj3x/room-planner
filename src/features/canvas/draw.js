@@ -29,8 +29,8 @@ import {ctx, view} from './view.js';
 import {PAL} from './paint.js';
 import {L, S, floorMode, floorOf, isCanvasMode} from '../../kernel/state.js';
 import {effect, planRev} from '../../kernel/signals.js';
-import {floorEdgeDepths, floorMembers} from '../../kernel/floor-place.js';
-import {getConflicts} from '../../kernel/validity.js';
+import {floorEdgeDepths, floorMembers} from '../../kernel/model/floor-place.js';
+import {getConflicts} from '../../kernel/model/validity.js';
 
 /** @typedef {import('./types.js').Layer} Layer */
 

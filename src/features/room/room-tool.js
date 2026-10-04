@@ -14,7 +14,7 @@ import {alignGuides, alignNote, roomSel, selectClear} from '../../kernel/selecti
 import {signal} from '../../kernel/signals.js';
 import {L, RP, openOf, roomMode} from '../../kernel/state.js';
 import {preview, transact} from '../../kernel/tx.js';
-import {clampOpenings, iwallOf, nearestOnWalls, pillarOf, wallOf} from '../../kernel/walls.js';
+import {clampOpenings, iwallOf, nearestOnWalls, pillarOf, wallOf} from '../../kernel/model/walls.js';
 import {drawSquareTick, alignRadius, pickRoom, snapCorner, snapWallPoint, axisLockFrom, snapPt, wx, wy, startPan} from '../canvas/index.js';
 
 const DEADZONE_PX=4;

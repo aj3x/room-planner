@@ -3,8 +3,8 @@
 
 import {H, W, ctx, sx, sy, view, PAL, addPoly, pathPoly} from '../canvas/index.js';
 import {L, RP} from '../../kernel/state.js';
-import {openGeom} from '../../kernel/openings.js';
-import {wallIsOff, wallRuns} from '../../kernel/walls.js';
+import {openGeom} from '../../kernel/model/openings.js';
+import {wallIsOff, wallRuns} from '../../kernel/model/walls.js';
 
 /* walls sit outside the measured face: stroke double width, clipped to outside the polygon */
 function drawWalls(){

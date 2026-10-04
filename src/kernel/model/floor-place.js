@@ -8,16 +8,16 @@
    return. */
 
 import {floorPt, floorPts, floorXf, ptsAt} from './floor-space.js';
-import {floorLayouts} from './state.js';
-import {pointInPoly} from './geometry.js';
+import {floorLayouts} from '../state.js';
+import {pointInPoly} from '../geometry.js';
 import {wallIsOff, wallOf} from './walls.js';
 
-/** @typedef {import('./types.js').Pt} Pt */
-/** @typedef {import('./types.js').Layout} Layout */
+/** @typedef {import('../types.js').Pt} Pt */
+/** @typedef {import('../types.js').Layout} Layout */
 /** A room on a floor: its layout, its floor transform and its outline in floor space.
     @typedef {{l: Layout, t: import('./floor-space.js').FloorXf, P: Pt[]}} Member */
 /** One way a dragged room could line up with a neighbour edge: move it by dir*delta.
-    @typedef {{dir: Pt, delta: number, cost: number, kind: 'wall'|'open'|'line'|'end', guide: import('./types.js').Seg, gap?: number}} SnapCand */
+    @typedef {{dir: Pt, delta: number, cost: number, kind: 'wall'|'open'|'line'|'end', guide: import('../types.js').Seg, gap?: number}} SnapCand */
 /** A run of consecutive edges sharing one wall depth.
     @typedef {{depth: number, pts: Pt[], first: number, last: number}} DepthRun */
 
@@ -26,7 +26,7 @@ const PARALLEL_TOL = Math.sin(2*Math.PI/180);
 
 /* every room standing on floor `fl`, each with its floor transform and its
    outline in floor space */
-/** @param {import('./types.js').Floor|null|undefined} fl @returns {Member[]} */
+/** @param {import('../types.js').Floor|null|undefined} fl @returns {Member[]} */
 function floorMembers(fl){
   return fl ? floorLayouts(fl.id).map(l=>{ const t=floorXf(l); return {l, t, P:l.room.points.map(p=>floorPt(t,p))}; }) : [];
 }
@@ -88,13 +88,13 @@ function floorSnapCandidates(l, P, others, rad){
 /* Solve one axis, then the other. Taking the single best correction overall used to mean
    a room could meet its left neighbour or line up with the one above it, never both. */
 /** @param {Layout} l @param {number} x @param {number} y @param {number} rad @param {(p: Pt) => Pt} snap
-    @returns {{x: number, y: number, guides: import('./types.js').Seg[], note: string}} */
+    @returns {{x: number, y: number, guides: import('../types.js').Seg[], note: string}} */
 function snapFloorPlace(l, x, y, rad, snap){
   const others=floorLayouts(l.floorId).filter(o=>o.id!==l.id).map(o=>({l:o, P:floorPts(o)}));
   if(!others.length){ const p=snap([x,y]); return {x:p[0], y:p[1], guides:[], note:'' }; }
   const rot=l.floorPlace.rot||0;
   let px=x, py=y, took=/** @type {Pt|null} */(null);
-  const guides=/** @type {import('./types.js').Seg[]} */([]), kinds=/** @type {SnapCand['kind'][]} */([]);
+  const guides=/** @type {import('../types.js').Seg[]} */([]), kinds=/** @type {SnapCand['kind'][]} */([]);
   for(let pass=0; pass<2; pass++){
     const cands=floorSnapCandidates(l, ptsAt(l,{x:px,y:py,rot}), others, rad);
     /** @type {SnapCand|null} */
@@ -185,7 +185,7 @@ function depthRuns(P, depths){
   return runs;
 }
 /* the topmost room on floor `fl` whose outline holds floor-space point `pt` */
-/** @param {import('./types.js').Floor|null|undefined} fl @param {Pt} pt @returns {string|null} */
+/** @param {import('../types.js').Floor|null|undefined} fl @param {Pt} pt @returns {string|null} */
 function floorRoomAt(fl, pt){
   const ms=floorMembers(fl);
   for(let i=ms.length-1;i>=0;i--) if(pointInPoly(pt, ms[i].P)) return ms[i].l.id;

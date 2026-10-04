@@ -7,8 +7,8 @@ import {ctx, sx, sy, PAL, pathPoly} from '../canvas/index.js';
 import {worldPoly} from '../../kernel/geometry.js';
 import {roomSel} from '../../kernel/selection.js';
 import {L, RP, roomMode} from '../../kernel/state.js';
-import {openGeom} from '../../kernel/openings.js';
-import {iwallPoly, wallOf} from '../../kernel/walls.js';
+import {openGeom} from '../../kernel/model/openings.js';
+import {iwallPoly, wallOf} from '../../kernel/model/walls.js';
 
 function drawHandles(){
   const P=RP(), C=PAL(), r=L().room;

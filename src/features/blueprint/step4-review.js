@@ -2,7 +2,7 @@ import {PAL} from '../canvas/index.js';
 import {bbox, polyArea} from '../../kernel/geometry.js';
 import {S} from '../../kernel/state.js';
 import {fmtArea, fmtLen, parseLen} from '../../kernel/units.js';
-import {KIND} from '../../kernel/openings.js';
+import {KIND} from '../../kernel/model/openings.js';
 import {flash} from '../../ui-kit/flash.js';
 import {$, openModal, svgI} from '../../ui-kit/modal.js';
 import {esc, plural} from '../../ui-kit/panels.js';

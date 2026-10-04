@@ -4,7 +4,7 @@
    of. Faded in Room mode, like the items. */
 
 import {ctx, PAL, pathPoly} from '../canvas/index.js';
-import {openPoly} from '../../kernel/open-state.js';
+import {openPoly} from '../../kernel/model/open-state.js';
 import {hexA} from '../../kernel/color.js';
 import {selSet} from '../../kernel/selection.js';
 import {L, S, furnMode, itemOf, roomMode} from '../../kernel/state.js';

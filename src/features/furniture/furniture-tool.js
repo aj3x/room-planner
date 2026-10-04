@@ -11,7 +11,7 @@ import {alignGuides, alignNote, sel, selSet, selectAdd, selectOnly, selectSet, s
 import {signal} from '../../kernel/signals.js';
 import {L, furnMode, instOf, itemOf, uid} from '../../kernel/state.js';
 import {preview, transact} from '../../kernel/tx.js';
-import {centreInside, isBad, slideToValid, validate} from '../../kernel/validity.js';
+import {centreInside, isBad, slideToValid, validate} from '../../kernel/model/validity.js';
 import {flash} from '../../ui-kit/flash.js';
 import {draw, scheduleDraw, PAL, bringToFront, pickAt, ctx, snapMM, wx, wy} from '../canvas/index.js';
 import {itemToolsLayer} from './item-tools-layer.js';

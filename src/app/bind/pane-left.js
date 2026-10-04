@@ -31,7 +31,7 @@ import { activateLayout, setMode } from '../../features/mode/index.js';
 import { folderDescendant, enterFloor, floorMenu, folderMenu, layoutMenu, newFolder, treeBox, renameFolder, renameLayout, renameFloor, dragTree, setDragTree, treeDropSpot } from '../../features/layouts/index.js';
 import { newFloor, putOnFloor, openFloorMergeMenu } from '../../features/floors/index.js';
 import { deleteOpening, openingDialog } from '../../features/openings/index.js';
-import { KIND } from '../../kernel/openings.js';
+import { KIND } from '../../kernel/model/openings.js';
 import { invBox, placeItem, renameItem, itemMenu, dragInv, setDragInv } from '../../features/furniture/index.js';
 import { itemDialog } from '../../features/library/index.js';
 import { bpUploadDialog } from '../../features/blueprint/index.js';

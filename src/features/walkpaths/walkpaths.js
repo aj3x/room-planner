@@ -9,8 +9,8 @@
 
 import {L, RP, itemOf} from '../../kernel/state.js';
 import {bbox, worldPoly, pointInPoly, segHit, ptSegDist, segDist} from '../../kernel/geometry.js';
-import {obstaclePolys} from '../../kernel/walls.js';
-import {openGeom} from '../../kernel/openings.js';
+import {obstaclePolys} from '../../kernel/model/walls.js';
+import {openGeom} from '../../kernel/model/openings.js';
 
 /* ------------------------- walk paths -------------------------
    An advisory overlay, off by default: how much floor a person actually has

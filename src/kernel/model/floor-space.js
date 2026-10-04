@@ -5,11 +5,11 @@
    byte-identical to what stood there, and the `export` block at the end is the
    only line added. */
 
-import {bbox} from './geometry.js';
-import {S, L, blankFloorPlace, floorLayouts} from './state.js';
+import {bbox} from '../geometry.js';
+import {S, L, blankFloorPlace, floorLayouts} from '../state.js';
 
-/** @typedef {import('./types.js').Pt} Pt */
-/** @typedef {import('./types.js').Layout} Layout */
+/** @typedef {import('../types.js').Pt} Pt */
+/** @typedef {import('../types.js').Layout} Layout */
 /** A room's rigid move onto its floor: spin about (cx, cy) by rot (c, s are its cos and sin), then shift by (dx, dy).
     @typedef {{cx: number, cy: number, c: number, s: number, dx: number, dy: number, rot: number}} FloorXf */
 
@@ -18,13 +18,13 @@ import {S, L, blankFloorPlace, floorLayouts} from './state.js';
    rigid move: spin about its own bbox centre, then shift. The matrix is worldPoly's,
    so turning a room reads exactly like turning an item, and because the points come
    out already in floor space every sx()/sy() call downstream works untouched. */
-/** @param {Layout} l @param {import('./types.js').FloorPlace} [place] @returns {FloorXf} */
+/** @param {Layout} l @param {import('../types.js').FloorPlace} [place] @returns {FloorXf} */
 function floorXf(l, place){
   const b=bbox(l.room.points), pl=place||l.floorPlace||blankFloorPlace(), r=(pl.rot||0)*Math.PI/180;
   return {cx:(b.x0+b.x1)/2, cy:(b.y0+b.y1)/2, c:Math.cos(r), s:Math.sin(r), dx:pl.x||0, dy:pl.y||0, rot:pl.rot||0};
 }
 /* the room's outline as it WOULD sit at some placement, for testing a drag before committing it */
-/** @param {Layout} l @param {import('./types.js').FloorPlace} place @returns {Pt[]} */
+/** @param {Layout} l @param {import('../types.js').FloorPlace} place @returns {Pt[]} */
 const ptsAt = (l,place) => { const t=floorXf(l,place); return l.room.points.map(p=>floorPt(t,p)); };
 /* floor space back into one room's own space — how a neighbour is shown while you edit */
 /** @param {FloorXf} t @param {Pt} q @returns {Pt} */
@@ -87,7 +87,7 @@ function usedCount(itemId){
   for(const l of scopeLayouts()) for(const p of l.placed) if(p.itemId===itemId) n++;
   return n;
 }
-/** @param {import('./types.js').Item} it */
+/** @param {import('../types.js').Item} it */
 const availableCount = it => Math.max(0, (it.count==null?1:it.count) - usedCount(it.id));
 
 export {floorXf, ptsAt, floorPtInv, floorPt, floorPts, floorInst, floorIWall,

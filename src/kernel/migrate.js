@@ -5,12 +5,12 @@
    measurement's ends pointing at things that exist. Pure kernel: it reads
    nothing but the state shape and its own siblings. */
 import {normHex} from './color.js';
-import {INV_SCOPES} from './floor-space.js';
+import {INV_SCOPES} from './model/floor-space.js';
 import {norm360} from './geometry.js';
-import {normOpen} from './open-state.js';
+import {normOpen} from './model/open-state.js';
 import {PALETTE, isCanvasMode, rectPts, setS, uid} from './state.js';
-import {reconcileTags} from './item-folders.js';
-import {syncWallOff} from './walls.js';
+import {reconcileTags} from './model/item-folders.js';
+import {syncWallOff} from './model/walls.js';
 
 /* older saves used a width/depth rectangle, N/E/S/W doors, tagless/countless items, and no folders.
    normLayout/normItem are split out so the importer can clean up one room or one thing

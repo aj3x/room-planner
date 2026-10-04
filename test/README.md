@@ -93,7 +93,7 @@ harness; a file evaluates the modules it names and calls them.
   the envelope, a lossless replace-mode round trip asserted down to the
   geometry, all three id-collision rules (keep mine / overwrite mine / add as a
   copy), dropped placements and folder-id identity.
-- **`floor-place.test.js`** — `kernel/floor-place.js` on two rooms side by
+- **`floor-place.test.js`** — `kernel/model/floor-place.js` on two rooms side by
   side: how deep each wall band is drawn (shared, exterior, taken away),
   `depthRuns`' joins, the floor magnet closing to one wall-thickness of gap,
   and `floorRoomAt`. Every wall on a floor is drawn from these numbers and the

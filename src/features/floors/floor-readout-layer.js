@@ -9,7 +9,7 @@ import {floorSnapNote} from '../../kernel/selection.js';
 import {S} from '../../kernel/state.js';
 import {fmtArea} from '../../kernel/units.js';
 
-/** @param {import('../../kernel/types.js').Floor|null|undefined} fl @param {import('../../kernel/floor-place.js').Member[]} members */
+/** @param {import('../../kernel/types.js').Floor|null|undefined} fl @param {import('../../kernel/model/floor-place.js').Member[]} members */
 function updateFloorReadout(fl, members){
   const el=$('readout'); if(!el) return;
   if(!fl || !members.length){ el.textContent = fl ? 'No rooms on this floor' : 'Not on a floor'; return; }

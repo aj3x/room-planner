@@ -1,18 +1,18 @@
 // @ts-check
 /* Floor mode: picking rooms up and arranging them. A press on the picked
    room's rotate handle turns it (in 15° steps; Alt turns freely), a press
-   on a room drags it under the floor magnet (kernel/floor-place.js; Alt
+   on a room drags it under the floor magnet (kernel/model/floor-place.js; Alt
    drops the magnet), Shift+click marks rooms for merge/delete instead, and
    a press on nothing pans. Every frame is a preview('floor'); the pointerup
    commits once, so one drag is one undo step. */
 
-import {floorPts} from '../../kernel/floor-space.js';
+import {floorPts} from '../../kernel/model/floor-space.js';
 import {bbox, norm360} from '../../kernel/geometry.js';
 import {floorEntry, snapFloor} from '../../kernel/history.js';
 import {alignGuides, alignNote, floorGuides, floorSel, floorSnapNote, mergeClear, mergeSel, mergeToggle} from '../../kernel/selection.js';
 import {L, S, floorMode, floorOf} from '../../kernel/state.js';
 import {preview, transact} from '../../kernel/tx.js';
-import {floorRoomAt, snapFloorPlace} from '../../kernel/floor-place.js';
+import {floorRoomAt, snapFloorPlace} from '../../kernel/model/floor-place.js';
 import {floorSelectionLayer} from './floor-selection-layer.js';
 import {snapPt, view, wx, wy, startPan} from '../canvas/index.js';
 

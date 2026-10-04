@@ -3,7 +3,7 @@
    all use it. It takes the canvas as an argument and reads nothing else. */
 import {hexA} from '../../kernel/color.js';
 import {bbox, shapePoly} from '../../kernel/geometry.js';
-import {hasOpen, openLocalBox} from '../../kernel/open-state.js';
+import {hasOpen, openLocalBox} from '../../kernel/model/open-state.js';
 
 function drawPreview(cv,it){
   const ctx=cv.getContext('2d');

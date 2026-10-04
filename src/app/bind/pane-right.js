@@ -25,7 +25,7 @@ import { shapePoly, bbox } from '../../kernel/geometry.js';
 import { rectPts, S, L, RP } from '../../kernel/state.js';
 import {roomSel} from '../../kernel/selection.js';
 import { transact } from '../../kernel/tx.js';
-import { syncWallOff, clampOpenings } from '../../kernel/walls.js';
+import { syncWallOff, clampOpenings } from '../../kernel/model/walls.js';
 import { $, openModal, moError } from '../../ui-kit/modal.js';
 import { esc } from '../../ui-kit/panels.js';
 import {drawState, fit} from '../../features/canvas/index.js';

@@ -11,7 +11,7 @@ import {fmtLen, parseLen, unitWord} from '../../kernel/units.js';
 import {bbox, centroid, norm360} from '../../kernel/geometry.js';
 import {transact} from '../../kernel/tx.js';
 import {pref, rev} from '../../kernel/signals.js';
-import {iwallAngle, iwallLen, iwallOf, nearestOnWalls, pillarOf, setIWallAngle, setIWallEndDist, setIWallLen, setWallAngle, setWallLen, syncWallOff, tryRoomEdit, wallAngle, wallIsOff, wallOf} from '../../kernel/walls.js';
+import {iwallAngle, iwallLen, iwallOf, nearestOnWalls, pillarOf, setIWallAngle, setIWallEndDist, setIWallLen, setWallAngle, setWallLen, syncWallOff, tryRoomEdit, wallAngle, wallIsOff, wallOf} from '../../kernel/model/walls.js';
 import {deleteCorner, splitWall} from './corners.js';
 import {stopDrawing, squareCorner} from '../canvas/index.js';
 import {flash} from '../../ui-kit/flash.js';

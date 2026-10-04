@@ -9,7 +9,7 @@
 */
 import {normHex} from '../../kernel/color.js';
 import {idFolder, idLeaf, idProblem, retagItem} from '../../kernel/ids.js';
-import {hasOpen, normOpen} from '../../kernel/open-state.js';
+import {hasOpen, normOpen} from '../../kernel/model/open-state.js';
 import {PALETTE, S, isCanvasMode, itemOf, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {fmtLen, parseLen, unitWord} from '../../kernel/units.js';

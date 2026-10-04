@@ -2,7 +2,7 @@
 /* Room mode's tracing aid: the other rooms on this room's floor, faint. */
 
 import {ctx, sx, sy, view, PAL, clip, pathPoly} from '../canvas/index.js';
-import {floorPt, floorPtInv, floorXf} from '../../kernel/floor-space.js';
+import {floorPt, floorPtInv, floorXf} from '../../kernel/model/floor-space.js';
 import {bbox} from '../../kernel/geometry.js';
 import {L, floorLayouts, floorOf, roomMode} from '../../kernel/state.js';
 

@@ -1,4 +1,4 @@
-/* kernel/floor-place.js decides how thick every wall on a floor is drawn and
+/* kernel/model/floor-place.js decides how thick every wall on a floor is drawn and
    where the floor magnet puts a dragged room. It is pure geometry over the
    saved layouts, and nothing else checks it: the e2e suite never opens Floor
    mode, and a wrong depth or snap only shows up as a plan that looks a
@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { S, setS } from '../../src/kernel/state.js';
 import { migrate } from '../../src/kernel/migrate.js';
-import { floorMembers, floorEdgeDepths, depthRuns, snapFloorPlace, floorRoomAt } from '../../src/kernel/floor-place.js';
+import { floorMembers, floorEdgeDepths, depthRuns, snapFloorPlace, floorRoomAt } from '../../src/kernel/model/floor-place.js';
 
 const rect = [[0,0],[4000,0],[4000,3000],[0,3000]];
 const room = (id, x) => ({ id, name: id, floorId: 'F', floorPlace: { x, y: 0, rot: 0 },

@@ -29,7 +29,7 @@ import {floorSel, roomSel, selSet, selectClear, mergeClear} from '../kernel/sele
 import {S, floorMode, instOf, isCanvasMode, itemOf, roomMode} from '../kernel/state.js';
 import {transact} from '../kernel/tx.js';
 import {batch} from '../kernel/signals.js';
-import {bisectToValid, centreInside, isBad, validate} from '../kernel/validity.js';
+import {bisectToValid, centreInside, isBad, validate} from '../kernel/model/validity.js';
 import {deleteCorner, deleteIWall, deletePillar} from '../features/walls/index.js';
 import {cancelGesture, gestureTool, isGesturing, onCanvasKey, panTool, setSpaceDown, cv, snapMM} from '../features/canvas/index.js';
 import {measureOn, setMeasure} from '../features/measure/index.js';

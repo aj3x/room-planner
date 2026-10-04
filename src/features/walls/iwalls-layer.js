@@ -3,7 +3,7 @@
 
 import {ctx, PAL, pathPoly} from '../canvas/index.js';
 import {L} from '../../kernel/state.js';
-import {iwallPoly} from '../../kernel/walls.js';
+import {iwallPoly} from '../../kernel/model/walls.js';
 
 function drawIWalls(){
   for(const w of L().room.iwalls){

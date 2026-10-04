@@ -1,6 +1,6 @@
 import {bbox, polyArea, polySimple, ptSegDist} from '../../kernel/geometry.js';
 import {blankLayout, uid} from '../../kernel/state.js';
-import {clampOpenings, syncWallOff, wallIsOff, wallOf} from '../../kernel/walls.js';
+import {clampOpenings, syncWallOff, wallIsOff, wallOf} from '../../kernel/model/walls.js';
 import {bpCleanPoly} from './poly.js';
 import {bpState} from './state.js';
 

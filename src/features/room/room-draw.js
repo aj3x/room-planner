@@ -6,7 +6,7 @@
 import {alignGuides, alignNote, roomSel} from '../../kernel/selection.js';
 import {L} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
-import {clampOpenings, syncWallOff} from '../../kernel/walls.js';
+import {clampOpenings, syncWallOff} from '../../kernel/model/walls.js';
 import {batch} from '../../kernel/signals.js';
 import {flash} from '../../ui-kit/flash.js';
 import {$} from '../../ui-kit/modal.js';

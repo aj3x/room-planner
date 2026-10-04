@@ -21,7 +21,7 @@ import {idLeaf, retagItem, uniqueId} from '../../kernel/ids.js';
    module is still the one place the rest of the app asks about item folders. */
 import {ancestorTags, applyTags, childItemFolders, itemCountInSubtree, itemFolderDescendant,
         itemFolderOf, itemFolderPath, itemFolderSubtreeIds, itemsInFolder, reconcileTags,
-        recomputeFolderSubtree} from '../../kernel/item-folders.js';
+        recomputeFolderSubtree} from '../../kernel/model/item-folders.js';
 import {S, uid} from '../../kernel/state.js';
 
 /** @param {unknown} s */

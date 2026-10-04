@@ -6,7 +6,7 @@ import {ctx, sx, sy, view, PAL} from '../canvas/index.js';
 import {roomSel} from '../../kernel/selection.js';
 import {L, RP, S} from '../../kernel/state.js';
 import {fmtLen} from '../../kernel/units.js';
-import {wallOf} from '../../kernel/walls.js';
+import {wallOf} from '../../kernel/model/walls.js';
 
 function drawWallLabels(){
   const P=RP(), C=PAL();

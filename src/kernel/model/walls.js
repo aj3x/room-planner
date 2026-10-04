@@ -6,13 +6,13 @@
    (kernel/signals.js) rather than a toast it would have to import. The message
    belongs next to the rule that produced it; the toast does not. */
 
-import {norm360, pointInPoly, ptSegDist, worldPoly, bbox, polySimple} from './geometry.js';
-import {L, RP} from './state.js';
-import {report} from './signals.js';
+import {norm360, pointInPoly, ptSegDist, worldPoly, bbox, polySimple} from '../geometry.js';
+import {L, RP} from '../state.js';
+import {report} from '../signals.js';
 
-/** @typedef {import('./types.js').Pt} Pt */
-/** @typedef {import('./types.js').Room} Room */
-/** @typedef {import('./types.js').IWall} IWall */
+/** @typedef {import('../types.js').Pt} Pt */
+/** @typedef {import('../types.js').Room} Room */
+/** @typedef {import('../types.js').IWall} IWall */
 /** A room wall's geometry: its ends, unit direction, unit inward normal, length and midpoint.
     @typedef {{a: Pt, b: Pt, dir: Pt, nrm: Pt, len: number, mid: Pt}} WallGeom */
 
@@ -70,7 +70,7 @@ function wallOf(i, poly){
 const wallAngle = i => { const w=wallOf(i); return norm360(-Math.atan2(w.dir[1],w.dir[0])*180/Math.PI); };
 /* defaults to the active room, but takes any layout so a freshly built one can be
    clamped before it is ever activated */
-/** @param {import('./types.js').Layout} [l] */
+/** @param {import('../types.js').Layout} [l] */
 function clampOpenings(l){
   l = l || L();
   const P = l.room.points, n = P.length;

@@ -6,12 +6,12 @@
    byte-identical to what stood there, and the `export` block at the end is the
    only line added. */
 
-import {EPS, shrink, polyHit, worldPoly} from './geometry.js';
-import {L, itemOf} from './state.js';
+import {EPS, shrink, polyHit, worldPoly} from '../geometry.js';
+import {L, itemOf} from '../state.js';
 import {wallOf} from './walls.js';
 
-/** @typedef {import('./types.js').Pt} Pt */
-/** @typedef {import('./types.js').Opening} Opening */
+/** @typedef {import('../types.js').Pt} Pt */
+/** @typedef {import('../types.js').Opening} Opening */
 /** Where an opening sits on its wall, and how a door's leaf moves. The optional
     fields are a bi-fold's (pivot, railEnd, apex, leafN) or a hinged door's (hinge, a0, a1, open, r).
     @typedef {{p0: Pt, p1: Pt, dir: Pt, nrm: Pt, mid: Pt,
@@ -32,7 +32,7 @@ function setOpeningDispOffset(o,len,val){
 /* How much of the opening a bi-fold's folded panels cover, as drawn. 0.5 is half open,
    1 would be shut flat. Three-quarters reads as a closet door standing ajar. */
 const BP_BIFOLD_SHUT=0.75;
-/** @param {Opening} o @param {Pt[]} [poly] @param {import('./types.js').Room} [room] @returns {OpenGeom} */
+/** @param {Opening} o @param {Pt[]} [poly] @param {import('../types.js').Room} [room] @returns {OpenGeom} */
 function openGeom(o, poly, room){
   const w = wallOf(o.wall, poly);
   const p0=[w.a[0]+w.dir[0]*o.offset, w.a[1]+w.dir[1]*o.offset];
@@ -81,7 +81,7 @@ function openGeom(o, poly, room){
   return g;
 }
 /** The floor a door's leaf sweeps, or null for anything that does not swing.
-    @param {Opening} o @param {Pt[]} [poly] @param {import('./types.js').Room} [room] @returns {Pt[]|null} */
+    @param {Opening} o @param {Pt[]} [poly] @param {import('../types.js').Room} [room] @returns {Pt[]|null} */
 function swingPoly(o, poly, room){
   if(o.kind!=='door') return null;
   if(o.dtype==='bifold'){

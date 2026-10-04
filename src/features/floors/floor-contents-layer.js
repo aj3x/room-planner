@@ -4,9 +4,9 @@
    stack over the last room's exactly as they always have. */
 
 import {ctx, pathPoly} from '../canvas/index.js';
-import {floorIWall, floorInst} from '../../kernel/floor-space.js';
+import {floorIWall, floorInst} from '../../kernel/model/floor-space.js';
 import {worldPoly} from '../../kernel/geometry.js';
-import {iwallPoly, wallIsOff} from '../../kernel/walls.js';
+import {iwallPoly, wallIsOff} from '../../kernel/model/walls.js';
 import {drawOpening} from '../openings/index.js';
 import {drawItem} from '../furniture/index.js';
 

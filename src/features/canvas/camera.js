@@ -5,7 +5,7 @@
    and these import the compositor. */
 
 import {L, RP, floorMode, floorOf, floorLayouts} from '../../kernel/state.js';
-import {floorBBox} from '../../kernel/floor-space.js';
+import {floorBBox} from '../../kernel/model/floor-space.js';
 import {bbox} from '../../kernel/geometry.js';
 import {draw, scheduleDraw} from './draw.js';
 import {H, W, cv, ctx, setH, setW, view, wx, wy} from './view.js';

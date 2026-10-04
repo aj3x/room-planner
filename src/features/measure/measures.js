@@ -5,8 +5,8 @@
 
 import {pointInPoly, ptSegDist, worldPoly} from '../../kernel/geometry.js';
 import {L, itemOf} from '../../kernel/state.js';
-import {wallOf, iwallGeom, iwallPoly} from '../../kernel/walls.js';
-import {openGeom, swingPoly} from '../../kernel/openings.js';
+import {wallOf, iwallGeom, iwallPoly} from '../../kernel/model/walls.js';
+import {openGeom, swingPoly} from '../../kernel/model/openings.js';
 
 /** @typedef {import('../../kernel/types.js').Pt} Pt */
 /** @typedef {import('../../kernel/types.js').Anchor} Anchor */

@@ -15,11 +15,11 @@ import {view} from './view.js';
 import {RP, L, itemOf} from '../../kernel/state.js';
 import {sx, sy, wx, wy} from './view.js';
 import {pointInPoly, worldPoly} from '../../kernel/geometry.js';
-import {openGeom} from '../../kernel/openings.js';
-import {iwallPoly, magneticWallPoint, nearestOnWalls} from '../../kernel/walls.js';
+import {openGeom} from '../../kernel/model/openings.js';
+import {iwallPoly, magneticWallPoint, nearestOnWalls} from '../../kernel/model/walls.js';
 import {snapPt} from './view.js';
 import {transact} from '../../kernel/tx.js';
-import {tryRoomEdit} from '../../kernel/walls.js';
+import {tryRoomEdit} from '../../kernel/model/walls.js';
 import {flash} from '../../ui-kit/flash.js';
 
 /** @typedef {import('../../kernel/types.js').Pt} Pt */
@@ -35,7 +35,7 @@ import {flash} from '../../ui-kit/flash.js';
    (.claude/plans/decoupling.md §4, step 3). Both are view-dependent — one
    reads the camera scale, the other falls back to the grid snap — so they
    could not stay in the domain layer once it stopped importing canvas/.
-   The wall-shaped half of the decision is still kernel/walls.js's
+   The wall-shaped half of the decision is still kernel/model/walls.js's
    magneticWallPoint; this is the camera's half. */
 
 /* world-space radius a drag should snap within, so pillars/wall ends catch

@@ -4,7 +4,7 @@
    canvas follows it; committing the split is a transact('project'). */
 
 import {batch} from '../../kernel/signals.js';
-import {nearestOnWalls} from '../../kernel/walls.js';
+import {nearestOnWalls} from '../../kernel/model/walls.js';
 
 /* is `pt` (already snapped) essentially exactly on the room's own outline? Returns
    the room-wall hit {i,t,len,pt} if so, else null — used to accept/reject each click. */
@@ -48,7 +48,7 @@ function splitAngleSnap(prev, raw, hard){
    corner drag). The cut in progress is drawn by the split tool's overlay,
    features/room/split-tool.js. */
 import {RP} from '../../kernel/state.js';
-import {wallOf} from '../../kernel/walls.js';
+import {wallOf} from '../../kernel/model/walls.js';
 import {splitDrawState, drawCursor, alignPoint, alignRadius, isSquare, fit, stopOtherTools} from '../canvas/index.js';
 import {alignGuides, alignNote, roomSel, mergeClear} from '../../kernel/selection.js';
 import {pointInPoly, polySimple, segHit, worldPoly} from '../../kernel/geometry.js';
@@ -56,7 +56,7 @@ import {floorHist, furnHist, roomHist} from '../../kernel/history.js';
 import {pruneMeasures} from '../../kernel/migrate.js';
 import {L, S, clone, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
-import {clampOpenings, syncWallOff} from '../../kernel/walls.js';
+import {clampOpenings, syncWallOff} from '../../kernel/model/walls.js';
 import {flash} from '../../ui-kit/flash.js';
 import {$, askConfirm, closeModal, openModal} from '../../ui-kit/modal.js';
 import {plural} from '../../ui-kit/panels.js';

@@ -10,7 +10,7 @@ import {polySimple} from '../../kernel/geometry.js';
 import {roomSel} from '../../kernel/selection.js';
 import {L, RP} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
-import {clampOpenings, syncWallOff, wallIsOff, wallOf} from '../../kernel/walls.js';
+import {clampOpenings, syncWallOff, wallIsOff, wallOf} from '../../kernel/model/walls.js';
 import {flash} from '../../ui-kit/flash.js';
 
 /* ------------------------- adding and taking away a corner -------------------------

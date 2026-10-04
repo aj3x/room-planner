@@ -12,7 +12,7 @@
 
 import type {Floor, Mode} from '../../kernel/types.js';
 import type {PAL} from './paint.js';
-import type {Member} from '../../kernel/floor-place.js';
+import type {Member} from '../../kernel/model/floor-place.js';
 
 /** The camera: world mm × scale + offset = screen px. */
 export interface View { scale: number; ox: number; oy: number }

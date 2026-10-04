@@ -51,8 +51,8 @@ run means something is wrong, so investigate it rather than re-running it.
 
 ```
 src/kernel/            the document and its rules: state, transact(), signals,
-                       undo, storage, migrations, units, geometry, the shared
-                       model (walls, openings, validity, …). No DOM.
+                       undo, storage, migrations, units, geometry; model/ is the
+                       shared model (walls, openings, validity, …). No DOM.
 src/ui-kit/            generic UI: modal, menus, panels, inline edit, drag and
                        drop, toasts, tag input, mountPanel
 src/features/<name>/   one feature each: canvas, mode, walls, openings, room,

@@ -8,14 +8,14 @@
    canvas/. */
 
 import {EPS, bbox, bbHit, shrink, pointInPoly, segHit, polyHit, segDist,
-        centroid, worldPoly} from './geometry.js';
+        centroid, worldPoly} from '../geometry.js';
 import {openPoly} from './open-state.js';
-import {L, RP, itemOf} from './state.js';
+import {L, RP, itemOf} from '../state.js';
 import {obstaclePolys} from './walls.js';
 
-/** @typedef {import('./types.js').Pt} Pt */
-/** @typedef {import('./types.js').Item} Item */
-/** @typedef {import('./types.js').Placed} Placed */
+/** @typedef {import('../types.js').Pt} Pt */
+/** @typedef {import('../types.js').Item} Item */
+/** @typedef {import('../types.js').Placed} Placed */
 
 /* ------------------------- validity ------------------------- */
 /** @param {Pt[]} poly */
@@ -62,11 +62,11 @@ function validate(inst,poly){
 function conflictSet(){
   /* polys[i] and bbs[i] are null where the item is gone; typed without it
      because every read below is behind the `!polys[i]` guard */
-  const ps=L().placed, polys=/** @type {Pt[][]} */([]), bbs=/** @type {import('./types.js').BBox[]} */([]), out=/** @type {Set<string>} */(new Set());
+  const ps=L().placed, polys=/** @type {Pt[][]} */([]), bbs=/** @type {import('../types.js').BBox[]} */([]), out=/** @type {Set<string>} */(new Set());
   const obs=obstaclePolys();
   for(const p of ps){
     const it=itemOf(p.itemId), w=it?worldPoly(p,it):null;
-    polys.push(/** @type {Pt[]} */(w)); bbs.push(/** @type {import('./types.js').BBox} */(w?bbox(w):null));
+    polys.push(/** @type {Pt[]} */(w)); bbs.push(/** @type {import('../types.js').BBox} */(w?bbox(w):null));
   }
   for(let i=0;i<ps.length;i++){
     if(!polys[i]) continue;

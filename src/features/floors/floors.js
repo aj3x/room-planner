@@ -9,7 +9,7 @@
 */
 import {mergeGeometry} from '../room/index.js';
 import {fit} from '../canvas/index.js';
-import {floorIWall, floorInst, floorXf} from '../../kernel/floor-space.js';
+import {floorIWall, floorInst, floorXf} from '../../kernel/model/floor-space.js';
 import {bbox, norm360} from '../../kernel/geometry.js';
 import {floorHist, furnHist, roomHist} from '../../kernel/history.js';
 import {pruneMeasures} from '../../kernel/migrate.js';
@@ -17,12 +17,12 @@ import {floorSel, mergeSel, mergeClear, treeExpand, treeCollapse} from '../../ke
 import {L, S, blankFloorPlace, clone, floorLayouts, floorMode, floorOf} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {fmtLen, parseLen, trimNum} from '../../kernel/units.js';
-import {clampOpenings, syncWallOff} from '../../kernel/walls.js';
+import {clampOpenings, syncWallOff} from '../../kernel/model/walls.js';
 import {flash} from '../../ui-kit/flash.js';
 import {$, askConfirm, svgI} from '../../ui-kit/modal.js';
 import {esc, plural} from '../../ui-kit/panels.js';
 import {activateLayout, setMode} from '../mode/index.js';
-import {placeOnFloor} from '../../kernel/floor-space.js';
+import {placeOnFloor} from '../../kernel/model/floor-space.js';
 import {uid} from '../../kernel/state.js';
 import {folderLine, pickValues, pickerHTML} from '../io/index.js';
 import {menuAtPoint} from '../../ui-kit/menu.js';
