@@ -10,7 +10,7 @@ import {transact} from '../../kernel/tx.js';
 import {fileSlug} from '../io/index.js';
 import {libFlash} from '../../ui-kit/flash.js';
 import {openMenu} from '../../ui-kit/menu.js';
-import {askConfirm} from '../../ui-kit/modal.js';
+import {askConfirm} from '../../ui-kit/modal.jsx';
 import {exportLibItems} from './export.js';
 import {moveLibItemDialog} from './folder-menus.js';
 import {purgeItem} from './item-folders.js';

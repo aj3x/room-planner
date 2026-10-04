@@ -12,15 +12,14 @@
    On the top-level DOM work in the first line, and why it is here rather than
    in app/boot.js, see the note above it. */
 
-import {$} from '../../ui-kit/modal.js';
+import {$} from '../../ui-kit/dom.js';
 import {S} from '../../kernel/state.js';
 
 /* ------------------------- view ------------------------- */
 /* Top-level DOM, and the one place in src/ that takes a rendering context at
    import time. It is here rather than in boot.js because every canvas module
    needs ctx, and leaving it in index.html would pin all of canvas/ there with
-   it. $('cv') is the same kind of lookup as ui-kit/modal.js's `const mo =
-   $('modal')`; getContext('2d') goes one step further, but it is a lazy
+   it. $('cv') is a lookup, not a mutation; getContext('2d') goes one step further, but it is a lazy
    accessor rather than a mutation -- it allocates the element's 2D context,
    memoises it, and returns the same object on every later call. It registers
    no listener, schedules no work, paints nothing and reads no app state. What

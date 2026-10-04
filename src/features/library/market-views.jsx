@@ -17,7 +17,7 @@ import {idParts} from '../../kernel/ids.js';
 import {S} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {libFlash} from '../../ui-kit/flash.js';
-import {askConfirm} from '../../ui-kit/modal.js';
+import {askConfirm} from '../../ui-kit/modal.jsx';
 import {normSearch, plural} from '../../ui-kit/panels.js';
 import {Icon} from '../../ui-kit/parts.jsx';
 import {childMarketFolders, fetchMarketItem, listingsInFolder, loadListing, marketIndexCache, reloadMarketSub} from '../marketplace/index.js';

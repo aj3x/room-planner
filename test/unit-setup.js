@@ -38,7 +38,7 @@ document.documentElement.innerHTML = src.replace(SCRIPTS, '');
 /* Fail loudly and here, rather than as a null dereference deep inside a
    module. One id per partial: if a future change to the stripping above, or
    to the include expansion, drops a pane again, this names the pane. */
-for (const [id, partial] of [['modal', 'ui-kit/modal'], ['cv', 'app/html/stage'],
+for (const [id, partial] of [['dialog', 'ui-kit/modal'], ['cv', 'app/html/stage'],
   ['paneRoom', 'app/html/pane-left'], ['paneStuff', 'app/html/pane-right'],
   ['paneLibrary', 'features/library/pane-library']]) {
   if (!document.getElementById(id))

@@ -1,5 +1,6 @@
 import {PAL} from '../canvas/index.js';
-import {$, moError, openModal} from '../../ui-kit/modal.js';
+import {moError, openModal} from '../../ui-kit/modal.jsx';
+import {$} from '../../ui-kit/dom.js';
 import {bpCropCanvas, bpFitCanvas, bpLoadImage} from './image.js';
 import {bpAutoCropRect} from './pixels.js';
 import {bpClamp, bpDispose, bpState, bpUnbindPaste} from './state.js';

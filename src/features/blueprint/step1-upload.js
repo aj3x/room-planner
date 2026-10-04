@@ -1,4 +1,5 @@
-import {$, moError, openModal} from '../../ui-kit/modal.js';
+import {moError, openModal} from '../../ui-kit/modal.jsx';
+import {$} from '../../ui-kit/dom.js';
 import {bpFitCanvas, bpLoadImage} from './image.js';
 import {bpDispose, bpPasteFn, bpState, bpUnbindPaste, setBpPasteFn, setBpState} from './state.js';
 import {bpStepperHTML} from './wizard.js';

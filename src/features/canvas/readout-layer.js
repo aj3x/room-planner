@@ -3,7 +3,7 @@
    and what is wrong with it. Not paint — it writes #readout — but it says
    what this frame shows, so it runs with the frame, last. */
 
-import {$} from '../../ui-kit/modal.js';
+import {$} from '../../ui-kit/dom.js';
 import {esc, plural} from '../../ui-kit/panels.js';
 import {polyArea, shapePoly} from '../../kernel/geometry.js';
 import {alignNote} from '../../kernel/selection.js';

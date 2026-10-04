@@ -16,7 +16,7 @@
    call sites outside this range still need it, so it stays where it was.
 */
 import {esc} from '../../ui-kit/panels.js';
-import {$} from '../../ui-kit/modal.js';
+import {$} from '../../ui-kit/dom.js';
 import {S} from '../../kernel/state.js';
 
 /* ---- tick-box lists ----

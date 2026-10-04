@@ -15,7 +15,8 @@ import {transact} from '../../kernel/tx.js';
 import {fmtLen, parseLen, unitWord} from '../../kernel/units.js';
 import {applyTags, rehomeItemId} from './item-folders.js';
 import {nav} from './nav.js';
-import {$, moError, openModal} from '../../ui-kit/modal.js';
+import {moError, openModal} from '../../ui-kit/modal.jsx';
+import {$} from '../../ui-kit/dom.js';
 import {esc} from '../../ui-kit/panels.js';
 import {mountTagField, tagFieldHTML, tagFieldValue} from '../../ui-kit/tag-input.js';
 

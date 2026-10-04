@@ -23,7 +23,7 @@ import { transact } from '../../kernel/tx.js';
 import { S, isCanvasMode } from '../../kernel/state.js';
 import { setMode } from '../../features/mode/index.js';
 import { flash } from '../../ui-kit/flash.js';
-import { $ } from '../../ui-kit/modal.js';
+import { $ } from '../../ui-kit/dom.js';
 import { effect, rev } from '../../kernel/signals.js';
 
 function bindHeader(){

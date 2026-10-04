@@ -9,7 +9,7 @@ import {normItem} from '../../kernel/migrate.js';
 import {S, clone} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {libFlash} from '../../ui-kit/flash.js';
-import {openModal} from '../../ui-kit/modal.js';
+import {openModal} from '../../ui-kit/modal.jsx';
 import {esc} from '../../ui-kit/panels.js';
 import {applyTags, ensureItemFolderPath} from './item-folders.js';
 

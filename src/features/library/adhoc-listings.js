@@ -3,7 +3,8 @@
 import {normItem} from '../../kernel/migrate.js';
 import {S, clone, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
-import {$, moError, openModal} from '../../ui-kit/modal.js';
+import {moError, openModal} from '../../ui-kit/modal.jsx';
+import {$} from '../../ui-kit/dom.js';
 import {nav} from './nav.js';
 
 let pendingFile=null;

@@ -2,7 +2,7 @@
 /* The floor scene's status corner: how many rooms, their total area, or
    what the magnet is doing while a room is dragged. */
 
-import {$} from '../../ui-kit/modal.js';
+import {$} from '../../ui-kit/dom.js';
 import {plural} from '../../ui-kit/panels.js';
 import {polyArea} from '../../kernel/geometry.js';
 import {floorSnapNote} from '../../kernel/selection.js';

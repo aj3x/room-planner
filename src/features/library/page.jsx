@@ -19,7 +19,7 @@ import {S, isCanvasMode, uid} from '../../kernel/state.js';
 import {loaded, rev} from '../../kernel/signals.js';
 import {transact} from '../../kernel/tx.js';
 import {mountComponent} from '../../ui-kit/component.js';
-import {askText} from '../../ui-kit/modal.js';
+import {askText} from '../../ui-kit/modal.jsx';
 import {Icon} from '../../ui-kit/parts.jsx';
 import {addListingDialog} from './adhoc-listings.js';
 import {askNewLibFolder} from './folder-menus.js';

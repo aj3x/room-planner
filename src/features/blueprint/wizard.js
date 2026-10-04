@@ -1,4 +1,4 @@
-import {svgI} from '../../ui-kit/modal.js';
+import {svgI} from '../../ui-kit/dom.js';
 import {esc} from '../../ui-kit/panels.js';
 
 /* ---- blueprint: wizard shell ----

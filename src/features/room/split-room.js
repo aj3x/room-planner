@@ -58,7 +58,8 @@ import {L, S, clone, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {clampOpenings, syncWallOff} from '../../kernel/model/walls.js';
 import {flash} from '../../ui-kit/flash.js';
-import {$, askConfirm, closeModal, openModal} from '../../ui-kit/modal.js';
+import {askConfirm, closeModal, openModal} from '../../ui-kit/modal.jsx';
+import {$} from '../../ui-kit/dom.js';
 import {plural} from '../../ui-kit/panels.js';
 
 import {mergeSplice} from './merge-rooms.js';

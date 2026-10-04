@@ -19,7 +19,7 @@ import {selectClear, alignGuides, alignNote, floorGuides, floorSel, floorSnapNot
 import {batch, effect, pref, rev} from '../../kernel/signals.js';
 import {L, S, folderOf, isCanvasMode} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
-import {$} from '../../ui-kit/modal.js';
+import {$} from '../../ui-kit/dom.js';
 import {applyPanes} from '../../ui-kit/panels.js';
 import {closeMenu} from '../../ui-kit/menu.js';
 import {wideLayout} from '../../ui-kit/panels.js';

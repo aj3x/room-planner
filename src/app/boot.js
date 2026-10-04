@@ -13,6 +13,7 @@ import {mountMode, paramMode, setPendingFit, syncModeParam} from '../features/mo
 import {effect, loaded, notice, untracked} from '../kernel/signals.js';
 import {flash} from '../ui-kit/flash.js';
 import {mountSections} from '../ui-kit/panels.js';
+import {mountModal} from '../ui-kit/modal.jsx';
 import {fillSlots} from './slots.js';
 import {mountHeader} from './bind/header.js';
 
@@ -35,6 +36,7 @@ function mount(mountFills){
 }
 
 async function boot(){
+  mountModal(/** @type {HTMLElement} */(document.getElementById('dialog')));   // the shell's
   setupCanvas();
   const mountFills = fillSlots();   // the panes' headings, before the (maybe slow) storage read
   try{

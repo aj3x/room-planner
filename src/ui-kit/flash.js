@@ -18,8 +18,7 @@
    calls flash) and setWallAngle / setWallLen / setRectSize (they call
    tryRoomEdit). */
 
-import {$} from './modal.js';
-
+import {$} from './dom.js';
 /* long enough to read: ~60ms a character, never under 1.6s or over 5s */
 /** @param {unknown} msg */
 const readTime = msg => Math.max(1600, Math.min(5000, String(msg).length*60));

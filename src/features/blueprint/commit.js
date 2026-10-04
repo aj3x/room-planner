@@ -8,7 +8,7 @@ import {transact} from '../../kernel/tx.js';
 import {clampOpenings} from '../../kernel/model/walls.js';
 import {activateLayout, setMode} from '../mode/index.js';
 import {flash} from '../../ui-kit/flash.js';
-import {askConfirm, moError} from '../../ui-kit/modal.js';
+import {askConfirm, moError} from '../../ui-kit/modal.jsx';
 import {plural} from '../../ui-kit/panels.js';
 import {bpEffExtWall, bpRebuild} from './draft.js';
 import {bpDispose, bpState} from './state.js';

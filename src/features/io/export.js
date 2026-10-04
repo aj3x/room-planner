@@ -11,7 +11,8 @@
 import {draw, setForceLightCanvas, cv} from '../canvas/index.js';
 import {L, S, clone, isCanvasMode} from '../../kernel/state.js';
 import {ancestorFolderIds, fileSlug, folderLine, pickValues, pickerHTML, pickerMount} from './pickers.js';
-import {$, closeModal, moError, openModal, svgI} from '../../ui-kit/modal.js';
+import {closeModal, moError, openModal} from '../../ui-kit/modal.jsx';
+import {$, svgI} from '../../ui-kit/dom.js';
 import {esc} from '../../ui-kit/panels.js';
 
 /* a saved image is for printing and sharing, so it is always drawn in the light palette */

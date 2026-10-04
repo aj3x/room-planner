@@ -10,8 +10,7 @@ import {S, clone} from '../../kernel/state.js';
 import {downloadJSON, fileSlug, pickValues, pickerHTML, pickerMount} from '../io/index.js';
 import {itemFolderOf, itemFolderPath, itemFolderSubtreeIds} from './item-folders.js';
 import {libFlash} from '../../ui-kit/flash.js';
-import {moError, openModal} from '../../ui-kit/modal.js';
-
+import {moError, openModal} from '../../ui-kit/modal.jsx';
 /* ------------------------- library export ------------------------- */
 function itemsExportPayload(items){
   return {app:'room-planner', version:2, exported:new Date().toISOString(), inventory:items.map(clone)};

@@ -2,7 +2,8 @@
    delete), an ad hoc listing's menu, and the "what is inside this folder"
    counts the delete confirmations read. */
 import {transact} from '../../kernel/tx.js';
-import {$, moError, openModal} from '../../ui-kit/modal.js';
+import {moError, openModal} from '../../ui-kit/modal.jsx';
+import {$} from '../../ui-kit/dom.js';
 import {esc} from '../../ui-kit/panels.js';
 import {mountTagField, tagFieldHTML, tagFieldValue} from '../../ui-kit/tag-input.js';
 import {adhocCache, childMarketFolders, listingsInFolder, marketFolderDescendant, marketFolderOf} from '../marketplace/index.js';
@@ -10,7 +11,7 @@ import {childItemFolders, itemFolderOf, moveItemToFolder, recomputeFolderSubtree
 import {libTreeOpen} from './nav.js';
 import {S, uid} from '../../kernel/state.js';
 import {openMenu} from '../../ui-kit/menu.js';
-import {askConfirm, askText} from '../../ui-kit/modal.js';
+import {askConfirm, askText} from '../../ui-kit/modal.jsx';
 import {applyTags, itemFolderDescendant, itemsInFolder, purgeItem} from './item-folders.js';
 import {goLibFolder, libRenaming, nav, selectListing} from './nav.js';
 

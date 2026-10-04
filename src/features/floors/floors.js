@@ -16,15 +16,15 @@ import {S, blankFloorPlace, clone, floorLayouts, floorOf} from '../../kernel/sta
 import {transact} from '../../kernel/tx.js';
 import {clampOpenings, syncWallOff} from '../../kernel/model/walls.js';
 import {flash} from '../../ui-kit/flash.js';
-import {$, askConfirm} from '../../ui-kit/modal.js';
+import {askConfirm} from '../../ui-kit/modal.jsx';
+import {$} from '../../ui-kit/dom.js';
 import {esc, plural} from '../../ui-kit/panels.js';
 import {activateLayout} from '../mode/index.js';
 import {placeOnFloor} from '../../kernel/model/floor-space.js';
 import {uid} from '../../kernel/state.js';
 import {folderLine, pickValues, pickerHTML} from '../io/index.js';
 import {menuAtPoint} from '../../ui-kit/menu.js';
-import {askText, openModal} from '../../ui-kit/modal.js';
-
+import {askText, openModal} from '../../ui-kit/modal.jsx';
 /* one slot, not a stack \u2014 mirrors bpLastImport's own "undo the last thing" precedent */
 /** Enough to put two merged rooms back: each one before, B's place in the list, their undo stacks.
     @typedef {{floorId: string|null, aId: string, aBefore: Layout, bId: string, bBefore: Layout, bIndex: number,

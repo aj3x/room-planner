@@ -35,7 +35,7 @@ import {cancelGesture, gestureTool, isGesturing, onCanvasKey, panTool, setSpaceD
 import {cv, snapMM} from '../features/canvas/index.js';
 import {measureOn, setMeasure} from '../features/measure/index.js';
 import {flash} from '../ui-kit/flash.js';
-import {closeModal, mo, showShortcuts} from '../ui-kit/modal.js';
+import {closeModal, isModalOpen, showShortcuts} from '../ui-kit/modal.jsx';
 import {turnFloorRoom} from '../features/floors/index.js';
 import {deleteOpening} from '../features/openings/index.js';
 import {removeSel, rotate} from '../features/furniture/index.js';
@@ -50,31 +50,31 @@ function onDocumentKeyDown(e){
   }
   // a canvas tool that is live (drawing an outline, a wall or a split line; measuring) claims its keys first
   if(onCanvasKey(e)) return;
-  if(mo.hidden && (e.key==='m'||e.key==='M') && !e.ctrlKey && !e.metaKey && !e.altKey && isCanvasMode(S.mode) && !floorMode()){
+  if(!isModalOpen() && (e.key==='m'||e.key==='M') && !e.ctrlKey && !e.metaKey && !e.altKey && isCanvasMode(S.mode) && !floorMode()){
     setMeasure(!measureOn.value); return;
   }
-  if(mo.hidden && !isGesturing() && e.key==='?' && isCanvasMode(S.mode)){
+  if(!isModalOpen() && !isGesturing() && e.key==='?' && isCanvasMode(S.mode)){
     e.preventDefault(); showShortcuts(); return;
   }
   if(e.key==='Escape'){
-    if(!mo.hidden){ closeModal(); return; }
+    if(isModalOpen()){ closeModal(); return; }
     batch(()=>{ selectClear(); roomSel.value = null; floorSel.value = null; mergeClear(); });
     return;
   }
-  if(mo.hidden && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){
+  if(!isModalOpen() && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){
     e.preventDefault();
     const redo=e.shiftKey;
     if(floorMode()){ redo?redoFloor():undoFloor(); }
     else if(roomMode()){ redo?redoRoom():undoRoom(); } else { redo?redoFurn():undoFurn(); }
     return;
   }
-  if(mo.hidden && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y'){
+  if(!isModalOpen() && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y'){
     e.preventDefault();
     floorMode() ? redoFloor() : roomMode() ? redoRoom() : redoFurn();
     return;
   }
   /* turning the picked room a quarter at a time is what an arrangement actually needs */
-  if(mo.hidden && floorMode() && floorSel.value && (e.key==='['||e.key===']') && !e.ctrlKey && !e.metaKey){
+  if(!isModalOpen() && floorMode() && floorSel.value && (e.key==='['||e.key===']') && !e.ctrlKey && !e.metaKey){
     const l=S.layouts.find(x=>x.id===floorSel.value);
     if(l){ e.preventDefault(); turnFloorRoom(l, e.key==='[' ? -90 : 90); }
     return;

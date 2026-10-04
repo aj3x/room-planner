@@ -27,7 +27,7 @@ import {moveBefore} from '../../ui-kit/dnd.js';
 import {flash} from '../../ui-kit/flash.js';
 import {cancelSingleClick, singleClick} from '../../ui-kit/inline-edit.js';
 import {closeMenu, menuAtPoint, openMenu} from '../../ui-kit/menu.js';
-import {askText} from '../../ui-kit/modal.js';
+import {askText} from '../../ui-kit/modal.jsx';
 import {mountComponent} from '../../ui-kit/component.js';
 import {ActButton, Icon, MoreButton, RenameField, SecHead} from '../../ui-kit/parts.jsx';
 import {fit} from '../canvas/index.js';

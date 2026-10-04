@@ -10,7 +10,8 @@ import {transact} from '../../kernel/tx.js';
 import {fmtLen, parseLen} from '../../kernel/units.js';
 import {KIND, openingDispOffset} from '../../kernel/model/openings.js';
 import {wallIsOff, wallOf} from '../../kernel/model/walls.js';
-import {$, moError, openModal} from '../../ui-kit/modal.js';
+import {moError, openModal} from '../../ui-kit/modal.jsx';
+import {$} from '../../ui-kit/dom.js';
 import {esc} from '../../ui-kit/panels.js';
 import {setMode} from '../mode/index.js';
 

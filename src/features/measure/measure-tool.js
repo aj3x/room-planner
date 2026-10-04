@@ -8,7 +8,7 @@
 import {uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {anchorKey, measuresOf} from './measures.js';
-import {mo} from '../../ui-kit/modal.js';
+import {isModalOpen} from '../../ui-kit/modal.jsx';
 import {draw, scheduleDraw, cv, wx, wy, startPan} from '../canvas/index.js';
 import {measureCursor, measureHover, measureHoverId, measureOn, measureSel, measureStart} from './measure-state.js';
 import {measureTargetAt, removeMeasure, resetMeasureState, setMeasure} from './measure.js';
@@ -43,7 +43,7 @@ function measureLeave(){
 }
 /** @type {NonNullable<import('../canvas/types.js').Tool['onKey']>} */
 function measureKey(e){
-  if(!mo.hidden) return false;
+  if(isModalOpen()) return false;
   // Escape backs out one step at a time: the first end, then the selection, then the tool
   if(e.key==='Escape'){
     if(measureStart.value) measureStart.value = null;

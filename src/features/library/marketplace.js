@@ -12,7 +12,8 @@ import {esc} from '../../ui-kit/panels.js';
 import {sizeLabel} from './items.js';
 import {libFlash} from '../../ui-kit/flash.js';
 import {openMenu} from '../../ui-kit/menu.js';
-import {$, askConfirm, closeModal, moError, openModal} from '../../ui-kit/modal.js';
+import {askConfirm, closeModal, moError, openModal} from '../../ui-kit/modal.jsx';
+import {$} from '../../ui-kit/dom.js';
 import {addMarketItemToInventory} from './add-to-inventory.js';
 
 function marketPathChildren(items, prefix){

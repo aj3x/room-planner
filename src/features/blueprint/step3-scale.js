@@ -1,7 +1,8 @@
 import {PAL} from '../canvas/index.js';
 import {S} from '../../kernel/state.js';
 import {fmtLen, parseLen} from '../../kernel/units.js';
-import {$, moError, openModal, svgI} from '../../ui-kit/modal.js';
+import {moError, openModal} from '../../ui-kit/modal.jsx';
+import {$, svgI} from '../../ui-kit/dom.js';
 import {esc, plural} from '../../ui-kit/panels.js';
 import {bpAnalyse} from './detect.js';
 import {bpEffExtWall, bpEffWall, bpRebuild, bpScaleSanity, bpScaleXY} from './draft.js';

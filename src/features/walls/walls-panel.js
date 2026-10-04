@@ -9,7 +9,8 @@ import {bbox, centroid} from '../../kernel/geometry.js';
 import {transact} from '../../kernel/tx.js';
 import {setWallAngle, setWallLen, syncWallOff, wallAngle, wallIsOff, wallOf} from '../../kernel/model/walls.js';
 import {stopDrawing} from '../canvas/index.js';
-import {$, askConfirm, moError, openModal} from '../../ui-kit/modal.js';
+import {askConfirm, moError, openModal} from '../../ui-kit/modal.jsx';
+import {$} from '../../ui-kit/dom.js';
 import {esc, plural} from '../../ui-kit/panels.js';
 import {setMode} from '../mode/index.js';
 

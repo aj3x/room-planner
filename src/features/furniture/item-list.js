@@ -11,7 +11,7 @@ import {signal} from '../../kernel/signals.js';
 import {transact} from '../../kernel/tx.js';
 import {flash} from '../../ui-kit/flash.js';
 import {openMenu} from '../../ui-kit/menu.js';
-import {askConfirm} from '../../ui-kit/modal.js';
+import {askConfirm} from '../../ui-kit/modal.jsx';
 import {itemDialog} from '../library/index.js';
 import {place} from './selection-panel.js';
 

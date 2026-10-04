@@ -5,7 +5,7 @@
    through transact() and the tree, the panels and the canvas follow on
    their own. */
 import {esc} from '../../ui-kit/panels.js';
-import {$} from '../../ui-kit/modal.js';
+import {$} from '../../ui-kit/dom.js';
 import {S, floorLayouts, childFolders, childLayouts,
         folderOf, floorOf} from '../../kernel/state.js';
 import {treeExpand, treeCollapse} from '../../kernel/selection.js';
@@ -18,7 +18,7 @@ import {remapMeasures} from '../../kernel/migrate.js';
 import {blankLayout, uid} from '../../kernel/state.js';
 import {flash} from '../../ui-kit/flash.js';
 import {openMenu} from '../../ui-kit/menu.js';
-import {askConfirm, askText, openModal} from '../../ui-kit/modal.js';
+import {askConfirm, askText, openModal} from '../../ui-kit/modal.jsx';
 import {mountTagField, tagFieldHTML, tagFieldValue} from '../../ui-kit/tag-input.js';
 import {deleteFloor, floorRoomsDialog, lastMerge, mergeUndo, newFloorWith, putOnFloorDialog, setLastMerge} from '../floors/index.js';
 import {bpLastImport, bpUndoImport, bpUploadDialog} from '../blueprint/index.js';

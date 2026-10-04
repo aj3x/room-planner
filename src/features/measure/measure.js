@@ -8,7 +8,7 @@
    (renderMeasureBar) is an effect on those signals and on the room's
    measurements (mountMeasureBar), so nothing here repaints it by hand.
 */
-import {$} from '../../ui-kit/modal.js';
+import {$} from '../../ui-kit/dom.js';
 import {S, L} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {pointInPoly, ptSegDist} from '../../kernel/geometry.js';
