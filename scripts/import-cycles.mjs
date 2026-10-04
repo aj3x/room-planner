@@ -22,7 +22,7 @@ const files = [];
 (function walk(d){
   for(const e of fs.readdirSync(d, {withFileTypes:true})){
     const p = path.join(d, e.name);
-    if(e.isDirectory()) walk(p); else if(p.endsWith('.js')) files.push(p);
+    if(e.isDirectory()) walk(p); else if(/\.jsx?$/.test(p)) files.push(p);
   }
 })(ROOT);
 
@@ -34,7 +34,7 @@ for(const f of files){
      `import('./x.js')`; relative, or root-absolute ('/src/...'). */
   for(const m of src.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)['"]((?:\.|\/src\/)[^'"]+)['"]/g)){
     let t = m[1].startsWith('/') ? path.normalize(m[1].slice(1)) : path.normalize(path.join(path.dirname(f), m[1]));
-    if(!t.endsWith('.js')) t += '.js';
+    if(!/\.jsx?$/.test(t)) t += '.js';
     if(fs.existsSync(t)) out.push(t);
   }
   deps.set(f, out);

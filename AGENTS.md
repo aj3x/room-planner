@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## What this is
-Room Planner is a client-only web app with **one small runtime dependency** (`@preact/signals-core`, bundled in). What ships is one self-contained HTML file you can open off disk — that deployment model is not negotiable — but it is *built* rather than hand-maintained:
+Room Planner is a client-only web app with **three small runtime dependencies** (`preact`, `@preact/signals` and the `@preact/signals-core` it builds on, all bundled in). What ships is one self-contained HTML file you can open off disk — that deployment model is not negotiable — but it is *built* rather than hand-maintained:
 
 ```sh
 npm install && npx playwright install chromium   # once
@@ -17,7 +17,10 @@ npm run typecheck  # tsc over the JSDoc types: kernel/, ui-kit/ and every featur
 Two consequences worth knowing before you touch anything:
 
 - **`index.html`'s `<script>` blocks are `type="module"`** (Vite entry points; each HTML partial carries one too), so the source file does **not** run from `file://` — module scripts are fetched under CORS rules an opaque `file://` origin cannot satisfy. Open `dist/index.html` for that, which is what actually ships.
-- **All tooling is a devDependency.** A runtime `dependency` must be small, must bundle into the single `dist/index.html` (so the `file://` contract is untouched), and needs a stated reason. Today there is one: `@preact/signals-core` (~4 kB min), the reactive core the side panels and the canvas subscribe through — see *Committing a change* below.
+- **All tooling is a devDependency.** A runtime `dependency` must be small, must bundle into the single `dist/index.html` (so the `file://` contract is untouched), and needs a stated reason. Today there are three, one family:
+  - `@preact/signals-core` (~4 kB min) — the reactive core the side panels and the canvas subscribe through; see *Committing a change* below. `kernel/` imports only this one.
+  - `preact` (~11 kB min) — the side panels' components (`.jsx`, compiled with Preact's automatic JSX runtime); it diffs what a panel shows against what is on screen, so a list keeps its rows, its focus and its scroll position across a repaint, which a re-set `innerHTML` cannot. React would be the same idea at four times the size.
+  - `@preact/signals` (~2 kB min) — Preact's binding to that same core (it imports `@preact/signals-core`, deduplicated to one copy in the bundle): a component that reads `signal.value` while rendering re-renders when it changes, so a component subscribes exactly the way an `effect` does. It installs itself as Preact options hooks when imported, which `ui-kit/mount.js` does.
 
 ## How the source is laid out
 

@@ -84,8 +84,9 @@ anything with a visible surface — read it *before* adding UI, not after.
 - **Runtime dependencies are small, bundle into the single file, and need a
   stated reason.** Everything the app needs, it ships inside `dist/index.html`
   — a dependency that cannot be inlined there breaks the `file://` contract.
-  Today the only one is `@preact/signals-core` (the reactive core; see
-  AGENTS.md). Tooling is a `devDependency`.
+  Today they are `@preact/signals-core` (the reactive core), `preact` (the
+  panels' components) and `@preact/signals` (the two joined); AGENTS.md
+  gives each one's reason. Tooling is a `devDependency`.
 - **`dist/` is never committed.** It is gitignored and CI fails if it is
   tracked. A 322 kB generated file touched by every change puts a merge
   conflict on every PR — the exact problem the module split exists to remove.

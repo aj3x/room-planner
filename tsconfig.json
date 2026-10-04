@@ -34,7 +34,12 @@
     /* no ambient @types: the app runs in a browser and nothing else */
     "types": [],
     /* our own .d.ts files are checked too */
-    "skipLibCheck": false
+    "skipLibCheck": false,
+    /* components are .jsx, compiled by Vite with Preact's automatic runtime
+       (vite.config.js); this is the same setting, so tsc reads a tag's type
+       from preact/jsx-runtime */
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
   },
-  "include": ["src/**/*.js", "src/**/*.d.ts"]
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.d.ts"]
 }

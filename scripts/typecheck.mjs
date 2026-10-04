@@ -14,6 +14,8 @@
         src/ui-kit/**          what every feature builds with
         src/features/<name>/index.js, and every module it re-exports from
                                a feature's public API, as far as callers see it
+        src/**.jsx             every component: they start strict, so there
+                               is no ratchet to climb for them
       Everything else — a feature's private modules, app/ — is the ratchet,
       listed so the number only goes one way. Making a module strict: add the
       pragma, run this, fix what it reports. */
@@ -25,7 +27,7 @@ const files = [];
 (function walk(d){
   for(const e of fs.readdirSync(d, {withFileTypes:true})){
     const p = path.join(d, e.name);
-    if(e.isDirectory()) walk(p); else if(p.endsWith('.js')) files.push(p);
+    if(e.isDirectory()) walk(p); else if(/\.jsx?$/.test(p)) files.push(p);
   }
 })('src');
 const strict = new Set(files.filter(f => fs.readFileSync(f, 'utf8').startsWith('// @ts-check')));
@@ -65,7 +67,7 @@ if(loose.length || tight.length){
   failed = true;
 }
 
-const required = new Set(files.filter(f => /^src\/(kernel|ui-kit)\//.test(f)));
+const required = new Set(files.filter(f => /^src\/(kernel|ui-kit)\//.test(f) || f.endsWith('.jsx')));
 for(const f of files){
   if(!/^src\/features\/[^/]+\/index\.js$/.test(f)) continue;
   required.add(f);

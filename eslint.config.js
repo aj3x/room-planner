@@ -133,12 +133,12 @@ const boundaries = {
 };
 const BOUNDARIES = [
   {
-    files: ['src/**/*.js'],
+    files: ['src/**/*.{js,jsx}'],
     plugins: {rp: {rules: {boundaries}}},
     rules: {'rp/boundaries': 'error'},
   },
   {
-    files: ['src/kernel/**/*.js'],
+    files: ['src/kernel/**/*.{js,jsx}'],
     rules: {
       'no-restricted-globals': ['error',
         {name: 'document', message: 'kernel/ has no DOM; write a signal and let a view (a feature or app/) render it.'}],
@@ -184,12 +184,16 @@ export default [
     rules: { ...js.configs.recommended.rules, ...RELAXED },
   },
 
-  /* ---- src/ — ready for Phase 3 ---------------------------------------- */
+  /* ---- src/ ---------------------------------------------------------------
+     Components are .jsx. ESLint's own parser reads JSX once asked to, and its
+     scope analysis tracks JSX references, so `no-undef` names a component that
+     was never imported and `no-unused-vars` counts one used only in markup. */
   {
-    files: ['src/**/*.js'],
+    files: ['src/**/*.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
+      parserOptions: { ecmaFeatures: { jsx: true } },
       globals: { ...globals.browser },
     },
     rules: { ...js.configs.recommended.rules, ...RELAXED },

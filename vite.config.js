@@ -180,6 +180,12 @@ export default defineConfig(({ mode }) => ({
        API is pinned so a Sass upgrade is a decision, not a side effect. */
     preprocessorOptions: { scss: { api: 'modern-compiler' } },
   },
+  /* Components are .jsx (Preact): the automatic runtime, so a component
+     module imports nothing to use JSX. Oxc is Vite 8's transformer (esbuild's
+     `jsx: 'automatic', jsxImportSource` under its new name); it only parses
+     JSX in .jsx files, so a stray tag in a .js module is still a syntax error.
+     vitest.config.js repeats this, since it does not read this file. */
+  oxc: { jsx: { runtime: 'automatic', importSource: 'preact' } },
   server: { host: '127.0.0.1', port: 5173, strictPort: true },
   preview: { host: '127.0.0.1', port: 4174, strictPort: true },
 }));
