@@ -54,7 +54,11 @@ function SearchCrumb({q}){
   return <><span class="sep">/</span><button>{'Search: "'+q+'"'}</button></>;
 }
 
-/** @param {{it: Item}} p */
+/* A tile has drag state (useState), so @preact/signals re-renders it with
+   its parent only when a prop changes, and the item is edited in place, so
+   `it` stays the same object: `epoch`, the page's render count, is the prop
+   that changes. */
+/** @param {{it: Item, epoch: number}} p */
 function ItemTile({it}){
   const [dragging, setDragging] = useState(false);
   const tags=it.tags||[];
@@ -86,7 +90,8 @@ function ItemTile({it}){
 }
 
 /** A library folder in the grid: opens it, and takes an item dropped on it.
-    @param {{f: Folder}} p */
+    Like ItemTile, it takes the page's `epoch`.
+    @param {{f: Folder, epoch: number}} p */
 function FolderTile({f}){
   const [over, setOver] = useState(false);
   return <button type="button" class={'tile folder'+(over?' dragover':'')} onClick={()=>goLibFolder('library', f.id)}
@@ -106,8 +111,8 @@ function FolderTile({f}){
   </button>;
 }
 
-/** @param {{folderId: string|null}} p */
-function LibraryFolder({folderId}){
+/** @param {{folderId: string|null, epoch: number}} p */
+function LibraryFolder({folderId, epoch}){
   const f=itemFolderOf(folderId);
   const subs=childItemFolders(folderId), items=itemsInFolder(folderId);
   const bits=[]; if(subs.length) bits.push(plural(subs.length,'folder')); if(items.length) bits.push(plural(items.length,'item'));
@@ -122,12 +127,12 @@ function LibraryFolder({folderId}){
     {!subs.length && !items.length
       ? <div class="grid"><div class="empty">{f?'This folder is empty. Drag items onto it in the tree, or':'Your library is empty.'}
           <div class="row"><button class="btn sm primary" onClick={createLibItem}><Icon name="plus"/>New item</button></div></div></div>
-      : <div class="grid">{subs.map(s=><FolderTile key={s.id} f={s}/>)}{items.map(it=><ItemTile key={it.id} it={it}/>)}</div>}
+      : <div class="grid">{subs.map(s=><FolderTile key={s.id} f={s} epoch={epoch}/>)}{items.map(it=><ItemTile key={it.id} it={it} epoch={epoch}/>)}</div>}
   </>;
 }
 
-/** Search, scoped to the Library folder being browsed. @param {{q: string}} p */
-function LibrarySearch({q}){
+/** Search, scoped to the Library folder being browsed. @param {{q: string, epoch: number}} p */
+function LibrarySearch({q, epoch}){
   const nq=normSearch(q);
   const ids=itemFolderSubtreeIds(nav.libFolderId);
   const scope=S.inventory.filter(it=>ids.has(it.folderId||null));
@@ -135,7 +140,7 @@ function LibrarySearch({q}){
   return <>
     <Crumbs kind="library" folderId={nav.libFolderId}><SearchCrumb q={q}/></Crumbs>
     {hits.length
-      ? <div class="grid">{hits.map(it=><ItemTile key={it.id} it={it}/>)}</div>
+      ? <div class="grid">{hits.map(it=><ItemTile key={it.id} it={it} epoch={epoch}/>)}</div>
       : <div class="grid"><div class="empty">{'Nothing matches “'+q+'” here.'}</div></div>}
   </>;
 }

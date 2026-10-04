@@ -3,9 +3,9 @@
    Library tab the item folders, on the Marketplace tab the ad hoc folders
    and the listings in them. It reads what the page does (the library, the
    project, the settings, navRev) and the rename in progress and the drop
-   mark (nav.js), and re-renders on any of them: a component that reads
-   signals is not re-rendered by its parent (@preact/signals skips it when
-   its props have not changed), so it has to say what it shows.
+   mark (nav.js), and re-renders on any of them: it reads signals and holds
+   drag state, so its parent's re-render would skip it (ui-kit/component.js),
+   and it has to say what it shows.
 
    A row's click is held back a moment (singleClick) so that a second click
    can make it a double-click, which renames a folder in place; the caret and

@@ -5,7 +5,7 @@
    panel is made of (Field, Select, Check). Icon renders what svgI in dom.js
    renders for the innerHTML that is left (dialogs), so the styles and
    DESIGN.md's component rules apply to both. */
-import {useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
+import {useEffect, useLayoutEffect, useRef} from 'preact/hooks';
 
 /** @typedef {import('preact').ComponentChildren} Children */
 
@@ -107,42 +107,45 @@ function RenameField({value, done}){
       onInput?: (e: Event & {currentTarget: HTMLInputElement}) => void, onBlur?: () => void}} p */
 function Field({value, onCommit, onInput, onBlur, type='text', ...attrs}){
   const ref = useRef(/** @type {HTMLInputElement|null} */(null));
-  const typed = useRef(false), committed = useRef(false);
-  const [, repaint] = useState(0);
+  const typed = useRef(false);
+  const shown = useRef(value);   // the model's value as of the last render
+  shown.current = value;
+  /** Show the model's value, selected while the box has focus (a number box has no selection). */
+  function show(){
+    const inp = ref.current; if(!inp) return;
+    inp.value = shown.current;
+    if(inp === document.activeElement) try{ inp.select(); }catch(e){}
+  }
   useLayoutEffect(() => {
     const inp = ref.current; if(!inp) return;
-    const focused = inp === document.activeElement;
-    if(focused && typed.current) return;
-    if(inp.value !== value) inp.value = value;
-    if(committed.current){
-      committed.current = false;
-      if(focused) try{ inp.select(); }catch(e){}   // a number box has no selection
-    }
+    if(inp === document.activeElement && typed.current) return;   // theirs while they type
+    if(inp.value !== value) show();
   });
+  /* No hook state, on purpose: a component with useState is re-rendered by
+     its parent only when a prop changes (@preact/signals), and this one has
+     to follow every render of the panel it sits in. After a commit it puts
+     the model's value back at once; if the commit changed the model, the
+     panel's re-render brings the new value through the effect above. */
   return <input type={type} ref={ref} {...attrs}
     onInput={e => { typed.current = true; if(onInput) onInput(e); }}
-    onChange={e => {
-      typed.current = false; committed.current = true;
-      onCommit(e.currentTarget.value);
-      repaint(n => n+1);   // a refused edit changes nothing the panel reads
-    }}
-    onBlur={() => { typed.current = false; if(onBlur) onBlur(); repaint(n => n+1); }}/>;
+    onChange={e => { typed.current = false; onCommit(e.currentTarget.value); show(); }}
+    onBlur={() => { typed.current = false; if(onBlur) onBlur(); if(ref.current) ref.current.value = shown.current; }}/>;
 }
 
 /** A <select> over a value the model holds; after `onCommit` it shows the
-    model's value again, so a choice the model turns down does not stay.
+    model's value again, so a choice the model turns down does not stay (a
+    choice it takes comes back with the panel's re-render).
     @param {{value: string, onCommit: (v: string) => void, id?: string, class?: string, 'aria-label'?: string, children: Children}} p */
 function Select({value, onCommit, children, ...attrs}){
-  const [, repaint] = useState(0);
-  return <select value={value} {...attrs} onChange={e => { onCommit(e.currentTarget.value); repaint(n => n+1); }}>{children}</select>;
+  return <select value={value} {...attrs} onChange={e => { const el=e.currentTarget; onCommit(el.value); el.value = value; }}>{children}</select>;
 }
 
-/** A checkbox in a label, over a flag the model holds.
+/** A checkbox in a label, over a flag the model holds; like Select, it
+    shows the model's flag again after `onCommit`.
     @param {{checked: boolean, onCommit: (on: boolean) => void, children: Children}} p */
 function Check({checked, onCommit, children}){
-  const [, repaint] = useState(0);
   return <label class="check"><input type="checkbox" checked={checked}
-    onChange={e => { onCommit(e.currentTarget.checked); repaint(n => n+1); }}/>{children}</label>;
+    onChange={e => { const el=e.currentTarget; onCommit(el.checked); el.checked = checked; }}/>{children}</label>;
 }
 
 export {Icon, SecHead, ActButton, MoreButton, EmptyRow, RenameField, Field, Select, Check};

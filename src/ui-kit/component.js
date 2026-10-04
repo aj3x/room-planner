@@ -11,10 +11,16 @@
    first. The bundle carries one copy of the signals core (kernel/signals.js
    and @preact/signals import the same @preact/signals-core).
 
-   A component that reads a signal is re-rendered by those signals, and by
-   its parent only when its props change (@preact/signals skips it
-   otherwise). So a component reads every signal it shows, or none and
-   takes what it shows as props from one that does.
+   @preact/signals memoises two kinds of component: one that reads a signal
+   while rendering, and one that holds hook state (useState/useReducer). A
+   parent's re-render reaches such a component only if one of its props has
+   changed by reference — and the model is edited in place, so the same
+   item, opening or folder object is not unchanged data. So such a
+   component either reads every revision signal its output depends on, or
+   takes a prop that changes whenever that data may have (the Library page
+   passes `epoch`, its render count). A component with neither (no signals,
+   no hook state) always re-renders with its parent; Field, Select and
+   Check are kept that way on purpose.
 
    Nothing has to be held back while someone types: Preact patches the
    elements already on screen rather than re-setting innerHTML, so a field

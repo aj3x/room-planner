@@ -13,9 +13,8 @@ import {SNAPS} from '../../kernel/units.js';
 import {mountComponent} from '../../ui-kit/component.js';
 import {Check, SecHead, Select} from '../../ui-kit/parts.jsx';
 
-/* No signal reads of its own: @preact/signals would then skip it when the
-   section re-renders with the same props, and a committed snap would show
-   the one it replaced. */
+/* No signal reads and no hook state of its own, so it re-renders whenever
+   the section does (ui-kit/component.js says why that matters). */
 /** @param {{ready: boolean}} p */
 function SnapSelect({ready}){
   const list = !ready ? [] : (S.unit==='ftin'||S.unit==='in') ? SNAPS.imperial : SNAPS.metric;

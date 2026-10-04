@@ -84,8 +84,8 @@ function Content({epoch}){
     nav.marketSubId=null;
   }
   const q=libQuery.peek().trim();
-  if(nav.searching) return nav.tab==='library' ? <LibrarySearch q={q}/> : <MarketSearch q={q}/>;
-  if(nav.tab==='library') return <LibraryFolder folderId={nav.libFolderId}/>;
+  if(nav.searching) return nav.tab==='library' ? <LibrarySearch q={q} epoch={epoch}/> : <MarketSearch q={q}/>;
+  if(nav.tab==='library') return <LibraryFolder folderId={nav.libFolderId} epoch={epoch}/>;
   if(nav.marketSelListingId){
     const l=S.marketListings.find(x=>x.id===nav.marketSelListingId);
     if(l) return <ListingDetail key={l.id} l={l} epoch={epoch}/>;

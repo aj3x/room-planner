@@ -4,8 +4,8 @@
 
 > **Test code stays under 20% of the codebase, and ideally under 10%.**
 
-Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,702 lines
-against 15,305** today — 10.0% of the two together (11.1% of the app's own
+Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,771 lines
+against 15,318** today — 10.4% of the two together (11.6% of the app's own
 size). Check it before adding a
 file:
 
@@ -98,6 +98,13 @@ harness; a file evaluates the modules it names and calls them.
   `depthRuns`' joins, the floor magnet closing to one wall-thickness of gap,
   and `floorRoomAt`. Every wall on a floor is drawn from these numbers and the
   e2e suite never opens Floor mode; a wrong depth only looks a little off.
+- **`panels-follow-edits.test.js`** — mounts every pane section and the
+  Library page in jsdom, commits one in-place edit per scope each shows, and
+  checks the text on screen changed. The model is mutated, not replaced, and
+  @preact/signals skips a component that reads signals or holds `useState`
+  when its parent re-renders it with the same props, so a panel can go stale
+  with nothing thrown (the Library's tiles once did). The one test that reads
+  panel text; it guards the re-render rule, not the panels' contents.
 
 ### `test/build` — the deployment model (6 tests)
 
@@ -144,7 +151,8 @@ delete it.
 Written down so nobody mistakes the gaps for oversights, and so the next person
 knows what they are inheriting.
 
-- **The side panels and the Library UI.** No test reads what the side-pane
+- **The side panels and the Library UI.** Beyond `panels-follow-edits.test.js`
+  checking that each one repaints after an edit, no test reads what the side-pane
   components (the Rooms tree, Items, the Selection, Room, Floor and View
   sections, the Library and Marketplace pages), `itemDialog` or
   `openingDialog` put on the page; the e2e suite only clicks two of their buttons, by accessible
