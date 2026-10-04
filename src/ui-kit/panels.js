@@ -13,8 +13,6 @@ import {effect, rev} from '../kernel/signals.js';
 
 /** @param {number} n @param {string} w */
 const plural = (n,w) => n+' '+w+(n===1?'':'s');
-/** @param {string} msg */
-const emptyRow = msg => `<li class="list-empty"><div class="empty">${msg}</div></li>`;
 /* strip diacritics so "a" also finds "ä", "café" also finds "cafe", etc. */
 /** @param {unknown} s */
 function normSearch(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
@@ -60,4 +58,4 @@ function applyPanes(){
   set('headRight', 'tglRight', rShut, false, 'the properties panel');
 }
 
-export {esc, plural, emptyRow, normSearch, applySections, mountSections, toggleSection, wideLayout, applyPanes};
+export {esc, plural, normSearch, applySections, mountSections, toggleSection, wideLayout, applyPanes};

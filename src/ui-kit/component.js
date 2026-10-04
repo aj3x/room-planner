@@ -11,13 +11,21 @@
    first. The bundle carries one copy of the signals core (kernel/signals.js
    and @preact/signals import the same @preact/signals-core).
 
-   No focus rule is needed here, unlike mountPanel (ui-kit/mount.js): Preact
-   patches the elements that are already on screen instead of re-setting
-   innerHTML, so a field someone is typing in is the same element after a
-   repaint, with its caret and selection, and a value a component does not
-   own (an uncontrolled field, a rename box) is never written to.
+   A component that reads a signal is re-rendered by those signals, and by
+   its parent only when its props change (@preact/signals skips it
+   otherwise). So a component reads every signal it shows, or none and
+   takes what it shows as props from one that does.
 
-   Called from a section's fill function at boot, never at import time. */
+   Nothing has to be held back while someone types: Preact patches the
+   elements already on screen rather than re-setting innerHTML, so a field
+   being typed in is the same element after a repaint, with its caret and
+   selection, and a value a component does not own (an uncontrolled field,
+   a rename box) is never written to. A box over a model value is a Field
+   (ui-kit/parts.jsx), which also puts the model's value back after a
+   commit, refused or not.
+
+   Called from a section's fill function at boot (or, for a whole page, from
+   its partial's script), never at import time. */
 import '@preact/signals';
 import {render} from 'preact';
 
@@ -25,8 +33,8 @@ import {render} from 'preact';
     the <section data-sec> element the shell provides. app/slots.js calls it
     before the saved project is loaded, so it must not read S; a component
     shows its contents once `loaded` (kernel/signals.js) is true, and what
-    has to wait for the project (a mountPanel effect) goes in the function
-    the filler returns, which runs once the project is in.
+    has to wait for the project goes in the function the filler returns,
+    which runs once the project is in.
     @typedef {(section: HTMLElement) => void | (() => void)} FillSection */
 /** What a feature fills, by `data-sec` name. @typedef {Record<string, FillSection>} Sections */
 

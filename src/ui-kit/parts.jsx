@@ -2,10 +2,9 @@
 /* The small pieces every pane component is built from, as components: the
    sprite icon, a section's head, the ⋯ row button, an empty list row, the
    rename box a row swaps its name for, and the form boxes a properties
-   panel is made of (Field, Select, Check). Each renders the markup its
-   string twin renders (svgI and esc in dom.js, moreBtn in menu.js, emptyRow
-   in panels.js, inlineEdit in inline-edit.js), so the styles and DESIGN.md's
-   component rules apply unchanged. */
+   panel is made of (Field, Select, Check). Icon renders what svgI in dom.js
+   renders for the innerHTML that is left (dialogs), so the styles and
+   DESIGN.md's component rules apply to both. */
 import {useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 
 /** @typedef {import('preact').ComponentChildren} Children */

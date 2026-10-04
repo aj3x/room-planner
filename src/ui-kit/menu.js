@@ -1,5 +1,5 @@
 // @ts-check
-/* Dropdown menus: the ⋯ button, the popup it opens, and the right-click
+/* Dropdown menus: the popup a ⋯ button opens, and the right-click
    variant that has no button to anchor against.
 
    Extracted from index.html in Phase 3, move-only: the code below is
@@ -10,13 +10,9 @@
    / keydown / scroll and window resize, all of which just close the menu) stay
    in index.html: registering them at import time would be a top-level side
    effect (plan §4 rule 6) and would move them ahead of every other listener in
-   the file. They read menuEl and closeMenu as live imported bindings.
+   the file. They read menuEl and closeMenu as live imported bindings. (The ⋯ button
+   they hang off is ui-kit/parts.jsx's MoreButton.) */
 
-   moreBtn is the one line here that did not come from this banner — it sits in
-   the layout-tree region — but §3 files it under ui/menu.js, and it is the ⋯
-   button every one of these menus hangs off. */
-
-import {svgI} from './modal.js';
 
 /* ------------------------- dropdown menus -------------------------
    The ⋯ buttons open a small menu pinned to the button itself. Anything that
@@ -67,6 +63,5 @@ function menuAtPoint(clientX, clientY, actions, title){
 }
 
 /** @param {string} cls @param {string} [label] */
-const moreBtn = (cls,label) => `<button type="button" class="btn quiet sm icon ${cls}" data-act="more" title="${label||'More actions'}" aria-label="${label||'More actions'}">${svgI('more')}</button>`;
 
-export {menuEl, closeMenu, openMenu, menuAtPoint, moreBtn};
+export {menuEl, closeMenu, openMenu, menuAtPoint};
