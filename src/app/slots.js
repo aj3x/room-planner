@@ -10,18 +10,25 @@
    section is one line in a pane partial (and, for a feature with no
    sections yet, one line below).
 
-   fillSlots() runs from boot(), once the project is loaded and before the
-   section toggles are applied (ui-kit/panels.js mountSections), since those
-   set attributes on the headings the fills render. It fails loudly on a
+   fillSlots() runs at the start of boot(), before the saved project is read,
+   so each section's heading and controls are on the page at once (a host's
+   storage can be slow); the fills read nothing from S then. What a fill
+   returns — the effects that show the project — runs from the function
+   fillSlots() returns, which boot() calls once the project is loaded and
+   before the section toggles are applied (ui-kit/panels.js mountSections).
+   It fails loudly on a
    section no feature fills, a key two features claim, and a key with no
    section, rather than leaving a pane silently empty. */
 import {sections as canvas} from '../features/canvas/host.js';
 import {sections as floors} from '../features/floors/index.js';
+import {sections as openings} from '../features/openings/index.js';
 import {sections as furniture} from '../features/furniture/index.js';
+import {sections as layouts} from '../features/layouts/index.js';
 import {sections as room} from '../features/room/index.js';
+import {sections as walls} from '../features/walls/index.js';
 
 /** @type {import('../ui-kit/component.js').Sections[]} */
-const FEATURES = [furniture, room, floors, canvas];
+const FEATURES = [layouts, walls, openings, furniture, room, floors, canvas];
 
 function fillSlots(){
   /** @type {import('../ui-kit/component.js').Sections} */
@@ -31,12 +38,16 @@ function fillSlots(){
     fills[k] = fill;
   }
   const filled = new Set();
+  /** @type {(() => void)[]} */
+  const later = [];
   for(const el of /** @type {NodeListOf<HTMLElement>} */(document.querySelectorAll('.pane-body > section[data-sec]'))){
     const k = /** @type {string} */(el.dataset.sec);   // the selector requires it
-    if(fills[k]){ fills[k](el); filled.add(k); }
-    else if(!el.children.length) throw new Error(`app/slots.js: no feature fills section "${k}"`);
+    if(!fills[k]) throw new Error(`app/slots.js: no feature fills section "${k}"`);
+    const then = fills[k](el); filled.add(k);
+    if(then) later.push(then);
   }
   for(const k of Object.keys(fills)) if(!filled.has(k)) throw new Error(`app/slots.js: no section[data-sec="${k}"] in a pane for its fill`);
+  return () => { for(const f of later) f(); };
 }
 
 export {fillSlots};

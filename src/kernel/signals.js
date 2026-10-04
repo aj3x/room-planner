@@ -37,6 +37,10 @@ import {S} from './state.js';
 const SCOPES = ['room','furn','floor','lib','prefs','project'];
 const rev = /** @type {Record<Scope, import('@preact/signals-core').Signal<number>>} */(Object.fromEntries(SCOPES.map(s => [s, signal(0)])));   // fromEntries cannot say its keys are exactly SCOPES
 const planRev = signal(0);
+/* Whether boot() has put the saved project into S. Views that are on the
+   page before then (the pane sections, filled ahead of the storage read so
+   their headings show at once) render their contents only once it is true. */
+const loaded = signal(false);
 
 /* Mark `scopes` changed, and the plan stale if `canvas`. One batch, so a view
    that reads several of them runs once. */
@@ -66,4 +70,4 @@ const notice = signal(null);
 /** @param {string} msg */
 function report(msg){ notice.value = {msg}; }
 
-export {SCOPES, rev, planRev, bump, pref, notice, report, batch, computed, effect, signal, untracked};
+export {SCOPES, rev, planRev, loaded, bump, pref, notice, report, batch, computed, effect, signal, untracked};

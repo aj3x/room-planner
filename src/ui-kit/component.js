@@ -21,9 +21,13 @@
 import '@preact/signals';
 import {render} from 'preact';
 
-/** A pane section's filler: renders (or binds) the section's contents into
-    the <section data-sec> element the shell provides. app/slots.js calls it.
-    @typedef {(section: HTMLElement) => void} FillSection */
+/** A pane section's filler: renders (and binds) the section's contents into
+    the <section data-sec> element the shell provides. app/slots.js calls it
+    before the saved project is loaded, so it must not read S; a component
+    shows its contents once `loaded` (kernel/signals.js) is true, and what
+    has to wait for the project (a mountPanel effect) goes in the function
+    the filler returns, which runs once the project is in.
+    @typedef {(section: HTMLElement) => void | (() => void)} FillSection */
 /** What a feature fills, by `data-sec` name. @typedef {Record<string, FillSection>} Sections */
 
 /** Render vnode into el, replacing what Preact rendered there before.

@@ -1,29 +1,15 @@
 // @ts-check
-/* The room's doors and windows in the Room pane: the list, the Selection
-   panel's view of one (called by room-panel.js's renderRoomSel; false when
-   it has gone), and deleting one. The list is an effect (mountOpeningList). */
+/* The room's doors and windows: the Selection panel's view of one (called
+   by room-panel.js's renderRoomSel; false when it has gone), and deleting
+   one. The list is openings-list.jsx. */
 import {S, L, RP, openOf} from '../../kernel/state.js';
 import {roomSel} from '../../kernel/selection.js';
 import {fmtLen, parseLen} from '../../kernel/units.js';
 import {transact} from '../../kernel/tx.js';
-import {pref, rev} from '../../kernel/signals.js';
 import {KIND, openingDispOffset, setOpeningDispOffset} from '../../kernel/model/openings.js';
 import {clampOpenings, wallIsOff, wallOf} from '../../kernel/model/walls.js';
-import {moreBtn} from '../../ui-kit/menu.js';
 import {$} from '../../ui-kit/modal.js';
-import {mountPanel} from '../../ui-kit/mount.js';
-import {emptyRow, esc} from '../../ui-kit/panels.js';
-
-function renderOpen(){
-  const ul=$('openList'), os=L().openings;
-  if(!os.length){ ul.innerHTML=emptyRow('None yet'); return; }
-  ul.innerHTML=os.map(o=>{
-    const on=roomSel.value&&roomSel.value.kind==='opening'&&roomSel.value.id===o.id;
-    return `<li data-id="${o.id}" class="${on?'on':''}">
-      <span class="lmain"><span class="nm">${KIND(o)}</span><span class="meta">Wall ${o.wall+1} · ${esc(fmtLen(o.width,S.unit))} wide</span></span>
-      <span class="lact">${moreBtn('')}</span></li>`;
-  }).join('');
-}
+import {esc} from '../../ui-kit/panels.js';
 
 /** @param {string} id */
 function deleteOpening(id){
@@ -96,8 +82,4 @@ function renderOpeningProps(){
   }
   $('oDel').addEventListener('click',()=>deleteOpening(o.id));
 }
-/* The doors and windows list, as an effect. */
-function mountOpeningList(){
-  mountPanel('openList', () => { rev.room.value; rev.project.value; pref('unit'); roomSel.value; }, renderOpen);
-}
-export {mountOpeningList, renderOpen, deleteOpening, renderOpeningProps};
+export {deleteOpening, renderOpeningProps};

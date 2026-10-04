@@ -1,23 +1,15 @@
 // @ts-check
-/* The layout tree: the folder/floor/room tree in the left pane, the HTML its
-   rows are built from, and what the rows' menus do to the project.
-
-   renderTree runs as an effect (mountTree, below): the menu actions commit
-   through transact() and the tree, the panels and the canvas follow on their
-   own.
-
-   treeBox is a top-level DOM read, the same call ui-kit/modal.js makes for `mo`
-   and features/canvas/view.js for `cv`: a lookup, not a mutation, and the bundle runs
-   after the document is parsed in all three targets.
-*/
+/* The layout tree's commands: what the rows' menus do to the project,
+   renaming (a signal the tree renders a box for), and where a drag would
+   drop. The tree itself is tree-section.jsx; the menu actions commit
+   through transact() and the tree, the panels and the canvas follow on
+   their own. */
 import {esc} from '../../ui-kit/panels.js';
-import {moreBtn} from '../../ui-kit/menu.js';
-import {$, svgI} from '../../ui-kit/modal.js';
-import {S, floorMode, floorLayouts, childFloors, childFolders, childLayouts,
+import {$} from '../../ui-kit/modal.js';
+import {S, floorLayouts, childFolders, childLayouts,
         folderOf, floorOf} from '../../kernel/state.js';
-import {mergeSel, treeOpen, treeExpand, treeCollapse} from '../../kernel/selection.js';
+import {treeExpand, treeCollapse} from '../../kernel/selection.js';
 import {curFloorId} from '../../kernel/history.js';
-import {inlineEdit} from '../../ui-kit/inline-edit.js';
 import {transact} from '../../kernel/tx.js';
 
 import {lastSplit, splitUndo, startSplitRoom} from '../room/index.js';
@@ -32,80 +24,24 @@ import {deleteFloor, floorRoomsDialog, lastMerge, mergeUndo, newFloorWith, putOn
 import {bpLastImport, bpUndoImport, bpUploadDialog} from '../blueprint/index.js';
 import {activateLayout, setMode} from '../mode/index.js';
 import {dropHalf} from '../../ui-kit/dnd.js';
-import {pref, rev} from '../../kernel/signals.js';
-import {mountPanel} from '../../ui-kit/mount.js';
+import {signal} from '../../kernel/signals.js';
 /* ------------------------- layout tree (folders + rooms) ------------------------- */
-/** @param {import('../../kernel/types.js').Folder} f */
-function folderLabel(f){
-  const tags=(f.tags&&f.tags.length) ? `<span class="tagchip" title="Tag filter: ${esc(f.tags.join(', '))}">${esc(f.tags[0])}${f.tags.length>1?' +'+(f.tags.length-1):''}</span>` : '';
-  return `<span class="nm">${esc(f.name)}</span>${tags}`;
-}
-/** @param {import('../../kernel/types.js').Layout} l @param {number} depth */
-const layoutRowHTML = (l,depth) =>
-  `<div class="tree-row layout-row ${l.id===S.active?'active':''} ${mergeSel.value.size>=2 && mergeSel.value.has(l.id)?'merge-sel':''}" draggable="true" data-layout="${l.id}" style="padding-left:${depth*12+26}px" ${l.id===S.active?'aria-current="true"':''}>
-      <span class="ico">${svgI('room')}</span><span class="nm">${esc(l.name)}</span>
-      ${moreBtn('tree-more')}
-    </div>`;
-/* a floor holds its rooms directly: a room standing on one shows up here, not
-   back under its folder, so it is only ever in the tree once */
-/** @param {import('../../kernel/types.js').Floor} fl @param {number} depth */
-function floorRowHTML(fl,depth){
-  const open=treeOpen.value.has(fl.id), rooms=floorLayouts(fl.id);
-  const active=floorMode() && curFloorId()===fl.id;
-  let html=`<div class="tree-row floor-row ${active?'active':''}" data-floor="${fl.id}" style="padding-left:${depth*12+4}px" aria-expanded="${open}" ${active?'aria-current="true"':''}>`+`
-      <button type="button" class="caret" data-act="toggle" aria-label="${open?'Collapse':'Expand'}">${svgI(open?'chev-d':'chev-r')}</button>
-      <span class="ico">${svgI('floor')}</span><span class="nm">${esc(fl.name)}</span>
-      <span class="tagchip">${rooms.length} room${rooms.length===1?'':'s'}</span>
-      ${moreBtn('tree-more')}
-    </div>`;
-  if(open){
-    for(const l of rooms) html+=layoutRowHTML(l,depth+1);
-    if(!rooms.length) html+=`<div class="tree-empty" style="padding-left:${(depth+1)*12+26}px">No rooms yet</div>`;
-  }
-  return html;
-}
-/** @param {string|null} parentId @param {number} depth @returns {string} */
-function renderTreeLevel(parentId,depth){
-  let html='';
-  if(!parentId) for(const fl of childFloors(null)) html+=floorRowHTML(fl,depth);
-  for(const f of childFolders(parentId)){
-    const open=treeOpen.value.has(f.id);
-    html+=`<div class="tree-row folder-row" draggable="true" data-folder="${f.id}" style="padding-left:${depth*12+4}px" aria-expanded="${open}">
-      <button type="button" class="caret" data-act="toggle" aria-label="${open?'Collapse':'Expand'}">${svgI(open?'chev-d':'chev-r')}</button>
-      <span class="ico">${svgI('folder')}</span>${folderLabel(f)}
-      ${moreBtn('tree-more')}
-    </div>`;
-    if(open) html+=renderTreeLevel(f.id,depth+1);
-  }
-  const loose=childLayouts(parentId).filter(l=>!l.floorId);
-  for(const l of loose) html+=layoutRowHTML(l,depth);
-  if(depth>0 && !childFolders(parentId).length && !loose.length){
-    html+=`<div class="tree-empty" style="padding-left:${depth*12+26}px">Empty</div>`;
-  }
-  return html;
-}
-function renderTree(){ $('layoutTree').innerHTML=renderTreeLevel(null,0); }
-const treeBox=$('layoutTree');
-/** @param {string} id @returns {HTMLElement|null} */
-const treeRowEl = id => treeBox.querySelector('[data-folder="'+id+'"],[data-layout="'+id+'"],[data-floor="'+id+'"]');
+/** The folder, floor or room whose name is being typed over in the tree, if any (tree-section.jsx).
+    @type {import('@preact/signals-core').Signal<string|null>} */
+const treeRenaming = signal(null);
 
 /** @param {string} id */
-function renameFolder(id){
-  const f=folderOf(id), row=treeRowEl(id);
-  if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('project', ()=>{ f.name=v; }); });
-}
+function renameFolder(id){ if(folderOf(id)) treeRenaming.value = id; }
 /** @param {string} id */
-function renameLayout(id){
-  const l=S.layouts.find(x=>x.id===id), row=treeRowEl(id);
-  if(!l||!row) return;
-  inlineEdit(row.querySelector('.nm'), l.name, v=>{ if(v) transact('project', ()=>{ l.name=v; }); });
-}
+function renameLayout(id){ if(S.layouts.some(x=>x.id===id)) treeRenaming.value = id; }
 /** @param {string} id */
-function renameFloor(id){
-  const f=floorOf(id), row=treeRowEl(id);
-  if(!f||!row) return;
-  inlineEdit(row.querySelector('.nm'), f.name, v=>{ if(v) transact('project', ()=>{ f.name=v; }); });
+function renameFloor(id){ if(floorOf(id)) treeRenaming.value = id; }
+/* What the rename box commits: the row's new name. */
+/** @param {'folder'|'floor'|'layout'} kind @param {string} id @param {string|null} v */
+function renamed(kind, id, v){
+  if(treeRenaming.value===id) treeRenaming.value = null;   // not if another row's rename has started since
+  const t = kind==='folder' ? folderOf(id) : kind==='floor' ? floorOf(id) : S.layouts.find(x=>x.id===id);
+  if(v && t) transact('project', ()=>{ t.name=v; });
 }
 
 
@@ -333,9 +269,4 @@ function treeDropSpot(e){
   return {mode:t<0.5?'before':'after',id,isFolder,row};
 }
 
-/* The tree, as an effect on the project's rooms, folders and floors and on
-   what is marked and expanded in it (ui-kit/mount.js). */
-function mountTree(){
-  mountPanel('layoutTree', () => { rev.project.value; pref('mode'); mergeSel.value; treeOpen.value; }, renderTree);
-}
-export {mountTree, folderLabel, layoutRowHTML, floorRowHTML, renderTreeLevel, renderTree, treeBox, treeRowEl, renameFolder, renameLayout, renameFloor, folderPath, folderDescendant, enterFloor, folderMenu, layoutMenu, folderTagsDialog, folderContents, deleteFolder, duplicateLayout, deleteLayout, moveDialog, floorMenu, newFolder, dragTree, setDragTree, treeDropSpot};
+export {treeRenaming, renamed, renameFolder, renameLayout, renameFloor, folderPath, folderDescendant, enterFloor, folderMenu, layoutMenu, folderTagsDialog, folderContents, deleteFolder, duplicateLayout, deleteLayout, moveDialog, floorMenu, newFolder, dragTree, setDragTree, treeDropSpot};

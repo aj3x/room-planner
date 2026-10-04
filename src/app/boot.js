@@ -9,12 +9,8 @@ import {S, isCanvasMode, setS} from '../kernel/state.js';
 import {KEY, Store} from '../kernel/store.js';
 import {marketFolderOf, ensureDefaultMarket} from '../features/marketplace/index.js';
 import {itemFolderOf, nav, mountLibrary} from '../features/library/index.js';
-import {mountItemList} from '../features/furniture/index.js';
-import {mountTree} from '../features/layouts/index.js';
 import {mountMode, paramMode, setPendingFit, syncModeParam} from '../features/mode/index.js';
-import {mountWallList} from '../features/walls/index.js';
-import {mountOpeningList} from '../features/openings/index.js';
-import {effect, notice, untracked} from '../kernel/signals.js';
+import {effect, loaded, notice, untracked} from '../kernel/signals.js';
 import {flash} from '../ui-kit/flash.js';
 import {mountSections} from '../ui-kit/panels.js';
 import {fillSlots} from './slots.js';
@@ -22,18 +18,15 @@ import {fillSlots} from './slots.js';
 /* Every view, as an effect on the signals it shows. Each one renders once
    here, from the loaded project, and again whenever what it reads changes —
    which is why nothing that changes the project names a view. Order is only
-   the order of that first paint, except that the pane sections are filled
-   (app/slots.js, which mounts each section's own views) before the section
-   toggles are applied to their headings. */
-function mount(){
+   the order of that first paint, except that the pane sections' own views
+   (mountFills, from app/slots.js) come before the section toggles are
+   applied to their headings. */
+/** @param {() => void} mountFills */
+function mount(mountFills){
   mountMode();
-  fillSlots();
+  mountFills();
   mountSections();
   mountViewPrefs();
-  mountWallList();
-  mountOpeningList();
-  mountTree();
-  mountItemList();
   mountMeasureBar();
   mountLibrary();
   mountCanvas();
@@ -43,6 +36,7 @@ function mount(){
 
 async function boot(){
   setupCanvas();
+  const mountFills = fillSlots();   // the panes' headings, before the (maybe slow) storage read
   try{
     const raw=await Store.get(KEY);
     if(raw){
@@ -57,7 +51,8 @@ async function boot(){
   nav.tab = S.mode==='marketplace' ? 'market' : 'library';
   nav.libFolderId = itemFolderOf(S.uiLib.libFolderId) ? S.uiLib.libFolderId : null;
   nav.marketFolderId = marketFolderOf(S.uiLib.marketFolderId) ? S.uiLib.marketFolderId : null;
-  mount();
+  loaded.value = true;
+  mount(mountFills);
   if(isCanvasMode(S.mode)){ resize(); fit(); } else { setPendingFit(true); }
   ensureDefaultMarket();
 }

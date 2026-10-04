@@ -39,7 +39,8 @@ function EmptyRow({children}){
 /** Rename in place: the box a row shows instead of its name. Enter keeps
     it, Esc and an empty box both leave the name alone, and leaving the box
     keeps what is in it. `done` gets the trimmed new name, or null for
-    nothing to commit; the caller stops rendering the box either way.
+    nothing to commit (also when the box is unmounted while still open); the
+    caller stops rendering the box either way.
 
     Keys stop here, so the document's shortcuts (Delete, the arrows) never
     see typing; clicks stop here too, so the row underneath does not take
@@ -54,6 +55,11 @@ function RenameField({value, done}){
     const inp = ref.current; if(!inp) return;
     inp.value = value;
     inp.focus(); try{ inp.select(); }catch(e){}
+    /* The row went away with the box still open (deleted, filtered out,
+       folded away) and no blur came: give up the rename, so whatever says
+       "renaming this row" is cleared rather than bringing the box back
+       when the row returns. */
+    return () => { if(!closed.current){ closed.current = true; done(null); } };
   }, []);
   /** @param {boolean} ok */
   function finish(ok){

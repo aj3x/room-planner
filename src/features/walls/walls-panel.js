@@ -1,63 +1,30 @@
 // @ts-check
-/* The room's walls and structures in the Room pane: the wall list, the
-   structures list (pillars and interior walls), the Selection panel's view of
-   a wall, a corner, a pillar or an interior wall, the wall dialog, and the
-   commands their controls run. Each list is an effect on what it shows
-   (mountWallList); the props renderers are called by room-panel.js's
-   renderRoomSel and return false when their part has gone. */
+/* The room's walls and structures: the Selection panel's view of a wall, a
+   corner, a pillar or an interior wall, the wall dialog, and the commands
+   their controls and the two lists (walls-list.jsx) run. The props
+   renderers are called by room-panel.js's renderRoomSel and return false
+   when their part has gone. */
 import {S, L, RP, roomMode, uid} from '../../kernel/state.js';
 import {roomSel} from '../../kernel/selection.js';
 import {fmtLen, parseLen, unitWord} from '../../kernel/units.js';
 import {bbox, centroid, norm360} from '../../kernel/geometry.js';
 import {transact} from '../../kernel/tx.js';
-import {pref, rev} from '../../kernel/signals.js';
 import {iwallAngle, iwallLen, iwallOf, nearestOnWalls, pillarOf, setIWallAngle, setIWallEndDist, setIWallLen, setWallAngle, setWallLen, syncWallOff, tryRoomEdit, wallAngle, wallIsOff, wallOf} from '../../kernel/model/walls.js';
 import {deleteCorner, splitWall} from './corners.js';
 import {stopDrawing, squareCorner} from '../canvas/index.js';
 import {flash} from '../../ui-kit/flash.js';
-import {moreBtn} from '../../ui-kit/menu.js';
 import {$, askConfirm, moError, openModal} from '../../ui-kit/modal.js';
-import {mountPanel} from '../../ui-kit/mount.js';
-import {emptyRow, esc, plural} from '../../ui-kit/panels.js';
+import {esc, plural} from '../../ui-kit/panels.js';
 import {setMode} from '../mode/index.js';
 import {openingDialog} from '../openings/index.js';
 
 /** @typedef {import('../../ui-kit/dom.js').FieldEvent} FieldEvent */
 
-function renderWalls(){
-  const ul=$('wallList'), P=RP(), room=L().room;
-  ul.innerHTML=P.map((_,i)=>{
-    const w=wallOf(i);
-    const on=roomSel.value&&roomSel.value.kind==='wall'&&roomSel.value.i===i;
-    const meta = wallIsOff(room,i) ? 'Open · '+esc(fmtLen(w.len,S.unit))
-                                   : esc(fmtLen(w.len,S.unit))+' · '+Math.round(wallAngle(i))+'°';
-    return `<li data-i="${i}" class="${on?'on':''}">
-      <span class="nm">Wall ${i+1}</span>
-      <span class="lmeta">${meta}</span></li>`;
-  }).join('');
-  renderObstacles();
-}
 /* The render*Props below run only while something of their kind is picked
    (the Selection panel chooses by roomSel.value.kind), so they read its i or
    id through a cast. */
 /** @param {{w: number, d: number}} sh */
 const sizeLabelShape = sh => fmtLen(sh.w,S.unit)+' × '+fmtLen(sh.d,S.unit);
-function renderObstacles(){
-  const ul=$('structList'), room=L().room;
-  let pn=0, wn=0;
-  const rows=[
-    ...room.pillars.map(pl=>({kind:'pillar', id:pl.id, label:'Pillar '+(++pn), dim:sizeLabelShape(pl.shape)})),
-    ...room.iwalls.map(w=>({kind:'iwall', id:w.id, label:'Interior wall '+(++wn), dim:fmtLen(iwallLen(w),S.unit)}))
-  ];
-  if(!rows.length){ ul.innerHTML=emptyRow('None yet'); return; }
-  ul.innerHTML=rows.map(r=>{
-    const on=roomSel.value&&roomSel.value.kind===r.kind&&roomSel.value.id===r.id;
-    return `<li data-kind="${r.kind}" data-id="${r.id}" class="${on?'on':''}">
-      <span class="nm">${esc(r.label)}</span><span class="lmeta">${esc(r.dim)}</span>
-      <span class="lact">${moreBtn('')}</span></li>`;
-  }).join('');
-}
-
 /** @param {string} id */
 function deletePillar(id){
   transact('room', ()=>{
@@ -247,8 +214,4 @@ function wallDialog(i){
       if(!ok) return false;   // tryRoomEdit rolled it back and flashed why — stay open
     });
 }
-/* The wall list (with the structures list it renders too), as an effect. */
-function mountWallList(){
-  mountPanel('wallList', () => { rev.room.value; rev.project.value; pref('unit'); roomSel.value; }, renderWalls);
-}
-export {mountWallList, renderWalls, sizeLabelShape, renderObstacles, deletePillar, deleteIWall, renderWallProps, renderCornerProps, toggleWallOff, renderPillarProps, renderIWallProps, addPillar, wallDialog};
+export {sizeLabelShape, deletePillar, deleteIWall, renderWallProps, renderCornerProps, toggleWallOff, renderPillarProps, renderIWallProps, addPillar, wallDialog};

@@ -26,7 +26,7 @@ test.describe('smoke', () => {
     const box = await app.locator('#cv').boundingBox();
     const sweep = async () => { for (const f of [0.4, 0.5, 0.6]) await app.mouse.move(box.x + box.width * f, box.y + box.height * f); await settle(app); };
     await app.evaluate(() => window.setMode('room'));
-    await app.click('#btnAddStruct');
+    await app.getByRole('button', { name: 'Add pillar or interior wall' }).click();
     await app.getByRole('button', { name: 'Interior wall', exact: true }).click();
     await sweep();
     await app.keyboard.press('Escape');

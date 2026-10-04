@@ -39,7 +39,7 @@ document.documentElement.innerHTML = src.replace(SCRIPTS, '');
    module. One id per partial: if a future change to the stripping above, or
    to the include expansion, drops a pane again, this names the pane. */
 for (const [id, partial] of [['modal', 'ui-kit/modal'], ['cv', 'app/html/stage'],
-  ['layoutTree', 'app/html/pane-left'], ['paneStuff', 'app/html/pane-right'],
+  ['paneRoom', 'app/html/pane-left'], ['paneStuff', 'app/html/pane-right'],
   ['tree', 'features/library/pane-library']]) {
   if (!document.getElementById(id))
     throw new Error(`unit-setup: #${id} is missing — src/${partial}.html did not survive into the harness DOM`);

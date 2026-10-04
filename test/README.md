@@ -5,13 +5,13 @@
 > **Test code stays under 20% of the codebase, and ideally under 10%.**
 
 Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,702 lines
-against 14,177** today — 10.7% of the two together (12.0% of the app's own
+against 15,396** today — 10.0% of the two together (11.1% of the app's own
 size). Check it before adding a
 file:
 
 ```sh
 find test -name '*.js' -not -path '*__screenshots__*' | xargs wc -l | tail -1
-find index.html src -type f \( -name '*.html' -o -name '*.js' -o -name '*.scss' \) | xargs wc -l | tail -1
+find index.html src -type f \( -name '*.html' -o -name '*.js' -o -name '*.jsx' -o -name '*.scss' \) | xargs wc -l | tail -1
 ```
 
 This is not an arbitrary cap. Every test here has to earn its lines **from here
@@ -144,14 +144,17 @@ delete it.
 Written down so nobody mistakes the gaps for oversights, and so the next person
 knows what they are inheriting.
 
-- **The side panels and the Library UI.** No test reads what `renderTree`,
-  `renderRoom`, `renderInv`, `renderSel`, `itemDialog`, `openingDialog` or the
-  marketplace views put on the page. A break that does not throw turns nothing
+- **The side panels and the Library UI.** No test reads what the side-pane
+  components (the Rooms tree, Items, Walls, Doors & windows, …), `renderRoom`,
+  `renderSel`, `itemDialog`, `openingDialog` or the marketplace views put on
+  the page; the e2e suite only clicks two of their buttons, by accessible
+  name. A break that does not throw turns nothing
   red. This is the largest uncovered surface in the repo, and it is uncovered on
   purpose: 135 tests' worth of DOM-text assertions cost more to maintain than
   they return once the code they guarded has stopped moving. **If you are about
   to restructure that region, write the characterization first, use it, and take
-  it out again** — that is exactly what Phase 3.6 was.
+  it out again** — that is exactly what Phase 3.6 was, and what Phase 6
+  did with screenshots and scripted clicks kept outside the repo.
 - **The canvas's pixels.** No screenshot baselines. Nothing asserts that
   `draw()`, `drawAlignGuides`, `drawOpening` or the dark palette paint what the
   state says. Screenshot baselines are per-platform, per-colour-scheme, and go

@@ -31,10 +31,11 @@
    Room Planner. All lengths are stored internally in millimetres.
    Rooms are closed polygons: room.points = [[x,y], ...] clockwise.
 
-   This file is a shell. The markup is seven @include directives above;
-   each partial ends with a module script that binds its own pane's
-   listeners, so a pane's markup and the things listening to it live in
-   one file (the partial, and the bind*() module beside it).
+   This file is a shell. The markup is seven @include directives above.
+   The header, stage, Library and modal partials end with a module script
+   that binds their own listeners (the bind*() module beside each); the
+   two side panes are lists of slots, sections their features fill at
+   boot (app/slots.js).
 
    What is left here is what belongs to no single pane: the listeners on
    `document` and `window`, the colour-scheme query, the pane-header
@@ -89,9 +90,10 @@ for(const [headId,side] of [['headLeft','left'],['headRight','right']]){
   });
 }
 
-/* Section folding is delegated from `document` because every pane has
-   sections and they are rebuilt by innerHTML on every render — a listener
-   bound to the heading itself would not survive the next repaint. */
+/* Section folding is delegated from `document`: every pane has sections,
+   each filled by a different feature (some as components, some still
+   re-set by innerHTML), and one listener serves every heading whoever
+   rendered it. */
 document.addEventListener('click', e=>{
   const h=e.target.closest('.pane-body section[data-sec] > .sec-head > h2');
   if(h) toggleSection(h);

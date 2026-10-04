@@ -5,7 +5,7 @@
    the only line added.
 
    libTreeBox is a top-level DOM read, the same call ui-kit/modal.js makes for
-   `mo` and features/furniture/item-list.js for `invBox`: a lookup, no context taken, and
+   `mo`: a lookup, no context taken, and
    nothing in ui/ or canvas/ imports this file, so it is in no cycle.
 
    The listeners that follow it in index.html stayed there, per rule 6, and

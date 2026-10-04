@@ -23,7 +23,7 @@ const DETECT_TIMEOUT = 120_000;
 
 /** Drive the real wizard as far as a finished detection proposal. */
 async function detect(page) {
-  await page.click('#btnImportBlueprint');
+  await page.getByRole('button', { name: 'Import a blueprint', exact: true }).click();
   await page.waitForSelector('#bpFile', { state: 'attached' });
   await page.setInputFiles('#bpFile', BLUEPRINT_PNG);
   await page.waitForSelector('#bpCrop', { state: 'attached' });  // the photo is the confirmation

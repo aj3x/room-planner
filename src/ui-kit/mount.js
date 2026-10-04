@@ -30,13 +30,15 @@
    lands on the page (as it did before panels were effects). A checkbox,
    colour swatch or button never holds.
 
-   `root` is the smallest element whose fields the render rewrites — the list
-   for a list, the section for a form — and not the whole pane: the item
-   search box sits outside #invList so that typing in it can still refilter
-   the list live. A null root never holds.
+   `root` is the smallest element whose fields the render rewrites — the
+   section for a form — and not the whole pane, so that a field elsewhere
+   can still repaint this one live. A null root never holds.
 
-   Mount functions call this from boot(), after the saved project is loaded
-   and the DOM exists; never at import time. */
+   This is for panels that re-set innerHTML. A Preact component
+   (ui-kit/component.js) patches its elements in place and needs none of it.
+
+   Mount functions call this from boot() or a section's fill, after the saved
+   project is loaded and the DOM exists; never at import time. */
 
 import {effect, signal} from '../kernel/signals.js';
 

@@ -7,7 +7,6 @@
    imports it only from here (eslint.config.js enforces that). */
 
 export {furnitureTool} from './furniture-tool.js';
-export {dragInv, invBox, itemMenu, mountItemList, placeItem, renameItem, setDragInv} from './item-list.js';
 export {itemToolsLayer} from './item-tools-layer.js';
 export {drawItem, itemsLayer} from './items-layer.js';
 export {openRegionsLayer} from './open-regions-layer.js';

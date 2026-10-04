@@ -1,32 +1,20 @@
 // @ts-check
-/* The Furniture pane's inventory list: the tag-filter chips, the list itself,
-   the two filter helpers behind them, and what a row's menu does.
-
-   The list is an effect (mountItemList, at the end): the commands commit
-   through transact() and the list, the Selection panel and the canvas follow.
-
-   invBox is a top-level DOM read, the same call ui-kit/modal.js makes for `mo`.
-*/
-import {emptyRow, esc} from '../../ui-kit/panels.js';
-import {moreBtn} from '../../ui-kit/menu.js';
-import {$} from '../../ui-kit/modal.js';
-import {S, L} from '../../kernel/state.js';
-import {hasOpen, openSizeLabel} from '../../kernel/model/open-state.js';
-import {INV_SCOPES, availableCount} from '../../kernel/model/floor-space.js';
-import {sizeLabel} from '../library/index.js';
-
+/* What the Furniture pane's item list (items-list.jsx) runs: the two filter
+   helpers behind its search and chips, placing, renaming, a row's menu,
+   deleting, and the samples. The commands commit through transact(); the
+   list, the Selection panel and the canvas follow on their own. */
+import {PALETTE, S, clone, itemOf, uid} from '../../kernel/state.js';
+import {availableCount} from '../../kernel/model/floor-space.js';
 import {uniqueId} from '../../kernel/ids.js';
 import {selectClear} from '../../kernel/selection.js';
-import {clone, itemOf} from '../../kernel/state.js';
+import {signal} from '../../kernel/signals.js';
 import {transact} from '../../kernel/tx.js';
 import {flash} from '../../ui-kit/flash.js';
-import {inlineEdit} from '../../ui-kit/inline-edit.js';
 import {openMenu} from '../../ui-kit/menu.js';
 import {askConfirm} from '../../ui-kit/modal.js';
 import {itemDialog} from '../library/index.js';
 import {place} from './selection-panel.js';
-import {computed, rev} from '../../kernel/signals.js';
-import {mountPanel} from '../../ui-kit/mount.js';
+
 function allTags(){
   const s=new Set();
   for(const it of S.inventory) for(const t of (it.tags||[])) s.add(t);
@@ -49,70 +37,18 @@ function itemMatchesFilter(it){
   return true;
 }
 
-function renderTagChips(){
-  const tags=allTags(), box=$('tagChips');
-  // the Untagged chip only earns its place when it actually splits the list
-  const showUntagged = tags.length && S.inventory.some(it=>!(it.tags||[]).length);
-  if(!showUntagged) S.untaggedOnly=false;
-  if(!tags.length){ box.innerHTML=''; box.hidden=true; return; }
-  box.hidden=false;
-  let html = tags.map(t=>`<button type="button" data-t="${esc(t)}" aria-pressed="${S.tagFilter.includes(t)}">${esc(t)}</button>`).join('');
-  if(showUntagged) html += `<button type="button" class="untagged" data-untagged="1" aria-pressed="${S.untaggedOnly}">Untagged</button>`;
-  if(S.tagFilter.length || S.untaggedOnly) html += `<button type="button" class="clear" data-clear="1" title="Clear the tag filter">Clear</button>`;
-  box.innerHTML=html;
-}
-
-function renderInv(){
-  $('onlyAvail').checked = S.onlyAvailable;
-  if($('invSearch').value !== (S.invSearch||'')) $('invSearch').value = S.invSearch||'';
-  const sc = INV_SCOPES[S.invScope] || INV_SCOPES.project;
-  $('invScope').value = S.invScope;
-  $('invScopeHint').textContent = sc.hint;
-  renderTagChips();
-  const ul=$('invList'), empty=!S.inventory.length;
-  $('invEmpty').hidden=!empty;
-  $('invSearch').closest('.search').hidden=empty;
-  $('onlyAvail').closest('.filters').hidden=empty;
-  if(empty){ ul.innerHTML=''; return; }
-  const shown = S.inventory.filter(itemMatchesFilter);
-  if(!shown.length){ ul.innerHTML=emptyRow('Nothing matches this filter.'); return; }
-  /** @type {Record<string, number>} */
-  const counts={};
-  for(const p of L().placed) counts[p.itemId]=(counts[p.itemId]||0)+1;
-  ul.innerHTML=shown.map(i=>{
-    const avail=availableCount(i), total=i.count==null?1:i.count;
-    const meta=[sizeLabel(i)];
-    if(total>1||avail<total) meta.push(avail+' of '+total+' free');
-    const tip=[sizeLabel(i), avail+' of '+total+' free '+sc.suffix];
-    if(hasOpen(i)) tip.push('opens to '+openSizeLabel(i));
-    if(i.passThrough) tip.push('others can overlap it');
-    if(i.tags&&i.tags.length) tip.push('tags: '+i.tags.join(', '));
-    return `<li data-id="${i.id}" draggable="true" class="${avail<=0?'off':''}" title="${esc(i.name+'\n'+tip.join('\n'))}">
-      <span class="sw" style="background:${i.color}"></span>
-      <span class="lmain"><span class="nm">${esc(i.name)}</span><span class="meta">${esc(meta.join(' \u00b7 '))}</span></span>
-      ${counts[i.id]?`<span class="count" title="${counts[i.id]} in this room">${counts[i.id]}</span>`:''}
-      <span class="lact">
-        <button class="btn quiet" data-act="place" ${avail<=0?'disabled':''} title="${avail<=0?'None left to place':'Place in this room'}">Place</button>
-        ${moreBtn('')}
-      </span></li>`;
-  }).join('');
-}
-
-const invBox=$('invList');
-
-
-/* ---- Phase 3: the rest of this file's region, move-only. ---- */
 /** @param {string} id */
 function placeItem(id){
   const it=itemOf(id); if(!it) return;
   if(availableCount(it)<=0){ flash("None left to place \u2014 edit the item to own more"); return; }
   place(id);
 }
+/** The item whose name is being typed over in the list, if any (items-list.jsx).
+    @type {import('@preact/signals-core').Signal<string|null>} */
+const renamingItem = signal(null);
 /** @param {string} id */
 function renameItem(id){
-  const it=itemOf(id), li=invBox.querySelector('li[data-id="'+id+'"]');
-  if(!it||!li) return;
-  inlineEdit(li.querySelector('.nm'), it.name, v=>{ if(v) transact('lib', ()=>{ it.name=v; }); });
+  if(itemOf(id)) renamingItem.value = id;
 }
 /** @param {string} id @param {Element} anchor */
 function itemMenu(id, anchor){
@@ -147,16 +83,20 @@ function deleteItem(id){
   if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+'. Those will be removed too.', 'Delete', kill);
   else kill();
 }
-/** @type {string|null} the item id being dragged out of the list */
-let dragInv=null;
-/** @param {string|null} v */
-function setDragInv(v){ dragInv=v; }
-
-/* The list repaints on library edits and filter changes, and on furniture
-   edits only when the set of things placed in this room changed: dragging a
-   chair about moves no count, and is no reason to rebuild every row. */
-const placedKey = computed(() => { rev.furn.value; rev.project.value; return L().placed.map(p=>p.itemId).join(); });
-function mountItemList(){
-  mountPanel('invList', () => { rev.lib.value; rev.prefs.value; rev.project.value; placedKey.value; }, renderInv);
+/* The samples behind the empty list's "Load samples". */
+function loadSamples(){
+  /** @param {string} name @param {import('../../kernel/types.js').Shape} shape @param {Partial<import('../../kernel/types.js').Item>} [extra] */
+  function add(name,shape,extra){ S.inventory.push(/** @type {import('../../kernel/types.js').Item} */(Object.assign({id:uid(),name,color:PALETTE[S.inventory.length%PALETTE.length],shape,passThrough:false},extra||{}))); }   // a whole Item: the base fields, then the extras
+  transact('lib', ()=>{
+    add('Queen bed',{type:'rect',w:1530,d:2030});
+    add('Sofa',{type:'rect',w:2130,d:910});
+    add('Round table',{type:'ellipse',w:1070,d:1070});
+    add('Desk',{type:'rect',w:1220,d:610});
+    add('Corner desk',{type:'lshape',w:1520,d:1520,cw:900,cd:900,corner:'se'});
+    add('Dresser',{type:'rect',w:1220,d:460},{open:{top:0,bottom:520,left:0,right:0}});
+    add('Extending table',{type:'rect',w:1520,d:900},{open:{top:0,bottom:0,left:0,right:460}});
+    add('Rug 5×8',{type:'rect',w:1520,d:2440},{passThrough:true});
+  });
 }
-export {mountItemList, allTags, itemMatchesFilter, renderTagChips, renderInv, invBox, placeItem, renameItem, itemMenu, deleteItem, dragInv, setDragInv};
+
+export {allTags, itemMatchesFilter, placeItem, renamingItem, renameItem, itemMenu, deleteItem, loadSamples};

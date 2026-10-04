@@ -4,8 +4,9 @@
    thickness, floor colour, baseboard, area, and replacing the outline).
 
    Each fill renders the section's markup into the <section data-sec> the
-   shell provides, binds its controls and mounts the effect that keeps it
-   showing the model (room-panel.js). app/slots.js calls them at boot. */
+   shell provides and binds its controls; the function it returns mounts the
+   effect that keeps it showing the model (room-panel.js) once the project
+   is loaded. app/slots.js calls them at boot. */
 import {mountComponent} from '../../ui-kit/component.js';
 import {SecHead} from '../../ui-kit/parts.jsx';
 import {mountRoomPanel, mountRoomSelPanel} from './room-panel.js';
@@ -39,8 +40,8 @@ function ShapeSection(){
 
 /** @type {import('../../ui-kit/component.js').Sections} */
 const sections = {
-  roomsel(el){ mountComponent(el, <RoomSelSection/>); mountRoomSelPanel(el); },
-  shape(el){ mountComponent(el, <ShapeSection/>); bindShapeSection(); mountRoomPanel(el); },
+  roomsel(el){ mountComponent(el, <RoomSelSection/>); return () => mountRoomSelPanel(el); },
+  shape(el){ mountComponent(el, <ShapeSection/>); bindShapeSection(); return () => mountRoomPanel(el); },
 };
 
 export {sections};
