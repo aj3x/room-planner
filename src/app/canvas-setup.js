@@ -5,7 +5,7 @@
    here; nothing else changes. Order among layers matters only
    between equal z; order among tools is their priority. */
 
-import {addLayer, stageLayer, alignGuidesLayer, readoutLayer, registerTool} from '../features/canvas/index.js';
+import {addLayer, stageLayer, alignGuidesLayer, readoutLayer, registerTool} from '../features/canvas/host.js';
 import {floorUnderlayLayer, floorRoomsLayer, floorWallsLayer, floorContentsLayer, floorLabelsLayer, floorOverlapsLayer, floorGuidesLayer, floorSelectionLayer, floorReadoutLayer, floorTool} from '../features/floors/index.js';
 import {roomFloorLayer, roomHandlesLayer, roomDrawTool, splitTool, roomTool} from '../features/room/index.js';
 import {walkPathsLayer} from '../features/walkpaths/index.js';

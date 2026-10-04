@@ -62,7 +62,8 @@ const RELAXED = {
      ui-kit/            -> kernel/, ui-kit/
      features/<name>/   -> kernel/, ui-kit/, its own files,
                            and another feature's index.js only
-     app/               -> kernel/, ui-kit/, app/, a feature's index.js only
+     app/               -> kernel/, ui-kit/, app/, a feature's index.js,
+                           and a feature's host.js (what only the shell needs)
 
    kernel/ is the document and its rules: it would still make sense with no
    screen attached, and it may not touch `document` either. ui-kit/ is the
@@ -95,6 +96,8 @@ function verdict(from, to){
   const any = ['kernel', 'ui-kit', 'app', 'features'];
   if(!any.includes(to.area)) return `src/${to.area}/ is not a place; code lives in app/, kernel/, ui-kit/ or features/<name>/`;
   const index = to.area === 'features' && to.file === 'index.js';
+  /* host.js: what only the app shell needs from a feature (features/canvas has one) */
+  const host = to.area === 'features' && to.file === 'host.js';
   switch(from.area){
     case 'kernel':
       return to.area === 'kernel' ? null : 'kernel/ imports only kernel/';
@@ -104,10 +107,11 @@ function verdict(from, to){
       if(to.area === 'kernel' || to.area === 'ui-kit') return null;
       if(to.area === 'app') return 'a feature may not import app/';
       if(to.feature === from.feature)
-        return index ? `import the module itself, not features/${from.feature}/index.js: the index imports this file` : null;
+        return index || host ? `import the module itself, not features/${from.feature}/${to.file}: it imports this file` : null;
+      if(host) return `features/${to.feature}/host.js is the app shell's; a feature imports its index.js`;
       return index ? null : `import features/${to.feature}/ through its index.js, not ${to.file}`;
     case 'app':
-      return to.area !== 'features' || index ? null : `import features/${to.feature}/ through its index.js, not ${to.file}`;
+      return to.area !== 'features' || index || host ? null : `import features/${to.feature}/ through its index.js, not ${to.file}`;
     default:
       return `src/${from.area}/ is not a place; code lives in app/, kernel/, ui-kit/ or features/<name>/`;
   }

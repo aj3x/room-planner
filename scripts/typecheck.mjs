@@ -12,7 +12,7 @@
    3. These must be strict, and the run fails if one is not:
         src/kernel/**          the document and its rules
         src/ui-kit/**          what every feature builds with
-        src/features/<name>/index.js, and every module it re-exports from
+        src/features/<name>/index.js (and host.js), and every module they re-export from
                                a feature's public API, as far as callers see it
         src/**.jsx             every component: they start strict, so there
                                is no ratchet to climb for them
@@ -69,7 +69,7 @@ if(loose.length || tight.length){
 
 const required = new Set(files.filter(f => /^src\/(kernel|ui-kit)\//.test(f) || f.endsWith('.jsx')));
 for(const f of files){
-  if(!/^src\/features\/[^/]+\/index\.js$/.test(f)) continue;
+  if(!/^src\/features\/[^/]+\/(index|host)\.js$/.test(f)) continue;
   required.add(f);
   for(const m of fs.readFileSync(f, 'utf8').matchAll(/\bfrom\s*['"](\.\/[^'"]+)['"]/g))
     required.add(path.join(path.dirname(f), m[1]));

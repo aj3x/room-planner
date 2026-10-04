@@ -1,5 +1,6 @@
 // @ts-check
-import {mountCanvas, fit, resize, mountViewPrefs} from '../features/canvas/index.js';
+import {mountCanvas, mountViewPrefs} from '../features/canvas/host.js';
+import {fit, resize} from '../features/canvas/index.js';
 import {setupCanvas} from './canvas-setup.js';
 import {mountMeasureBar} from '../features/measure/index.js';
 import {seedHistFor} from '../kernel/history.js';
