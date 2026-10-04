@@ -1,11 +1,12 @@
 // @ts-check
 /* The small pieces every pane component is built from, as components: the
-   sprite icon, a section's head, the ⋯ row button, an empty list row, and
-   the rename box a row swaps its name for. Each renders the markup its
+   sprite icon, a section's head, the ⋯ row button, an empty list row, the
+   rename box a row swaps its name for, and the form boxes a properties
+   panel is made of (Field, Select, Check). Each renders the markup its
    string twin renders (svgI and esc in dom.js, moreBtn in menu.js, emptyRow
    in panels.js, inlineEdit in inline-edit.js), so the styles and DESIGN.md's
    component rules apply unchanged. */
-import {useEffect, useRef} from 'preact/hooks';
+import {useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 
 /** @typedef {import('preact').ComponentChildren} Children */
 
@@ -82,4 +83,67 @@ function RenameField({value, done}){
     onClick={stop} onDblClick={stop} onPointerDown={stop}/>;
 }
 
-export {Icon, SecHead, ActButton, MoreButton, EmptyRow, RenameField};
+/** What a Field passes through to its <input>: the attributes a form box
+    in a pane uses.
+    @typedef {{id?: string, class?: string, type?: string, step?: number|string, maxLength?: number,
+      placeholder?: string, disabled?: boolean, spellcheck?: boolean, title?: string,
+      'aria-label'?: string}} FieldAttrs */
+
+/** A text or number box over a value the model holds — the shape every
+    length, angle and name box in the panes has. `value` is what the model
+    says, formatted for showing; `onCommit` gets what was typed when the box
+    commits (Enter, or leaving an edited box), and commits it through
+    transact() or turns it down. Either way the box then shows the model's
+    value again: the normalised one ("5" becomes "5 m"), or the old one when
+    the edit was refused — selected, if the box still has focus, so the next
+    keystroke retypes it.
+
+    While the box has focus and something has been typed in it, it is the
+    user's: a repaint (their own `onInput` committing, as the floor colour's
+    hex box does on every keystroke, or anything else) leaves the text, the
+    caret and the selection alone. Without typing, or once focus leaves, it
+    follows the model. The element is the same one across repaints, so Tab
+    goes on to the next box.
+    @param {FieldAttrs & {value: string, onCommit: (text: string) => void,
+      onInput?: (e: Event & {currentTarget: HTMLInputElement}) => void, onBlur?: () => void}} p */
+function Field({value, onCommit, onInput, onBlur, type='text', ...attrs}){
+  const ref = useRef(/** @type {HTMLInputElement|null} */(null));
+  const typed = useRef(false), committed = useRef(false);
+  const [, repaint] = useState(0);
+  useLayoutEffect(() => {
+    const inp = ref.current; if(!inp) return;
+    const focused = inp === document.activeElement;
+    if(focused && typed.current) return;
+    if(inp.value !== value) inp.value = value;
+    if(committed.current){
+      committed.current = false;
+      if(focused) try{ inp.select(); }catch(e){}   // a number box has no selection
+    }
+  });
+  return <input type={type} ref={ref} {...attrs}
+    onInput={e => { typed.current = true; if(onInput) onInput(e); }}
+    onChange={e => {
+      typed.current = false; committed.current = true;
+      onCommit(e.currentTarget.value);
+      repaint(n => n+1);   // a refused edit changes nothing the panel reads
+    }}
+    onBlur={() => { typed.current = false; if(onBlur) onBlur(); repaint(n => n+1); }}/>;
+}
+
+/** A <select> over a value the model holds; after `onCommit` it shows the
+    model's value again, so a choice the model turns down does not stay.
+    @param {{value: string, onCommit: (v: string) => void, id?: string, class?: string, 'aria-label'?: string, children: Children}} p */
+function Select({value, onCommit, children, ...attrs}){
+  const [, repaint] = useState(0);
+  return <select value={value} {...attrs} onChange={e => { onCommit(e.currentTarget.value); repaint(n => n+1); }}>{children}</select>;
+}
+
+/** A checkbox in a label, over a flag the model holds.
+    @param {{checked: boolean, onCommit: (on: boolean) => void, children: Children}} p */
+function Check({checked, onCommit, children}){
+  const [, repaint] = useState(0);
+  return <label class="check"><input type="checkbox" checked={checked}
+    onChange={e => { onCommit(e.currentTarget.checked); repaint(n => n+1); }}/>{children}</label>;
+}
+
+export {Icon, SecHead, ActButton, MoreButton, EmptyRow, RenameField, Field, Select, Check};

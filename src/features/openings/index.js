@@ -7,5 +7,6 @@
 
 export {openingDialog} from './opening-dialog.js';
 export {drawOpening, openingsLayer} from './openings-layer.js';
-export {deleteOpening, renderOpeningProps} from './openings-panel.js';
+export {deleteOpening} from './openings-panel.js';
+export {OpeningProps, openingTitle} from './opening-props.jsx';
 export {sections} from './openings-list.jsx';

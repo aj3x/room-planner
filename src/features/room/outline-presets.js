@@ -1,11 +1,6 @@
-/* The Room section's controls: the two length boxes, the floor colour swatch
-   and its hex field, the trim toggle and the three outline presets. Bound by
-   the section's fill (sections.jsx) once its markup is on the page.
-
-   Ordering: floorCol has two listeners and floorHex three, and each group is
-   whole and in its original order. Do not reorder them — floorHex's change
-   and blur both snap the box back, and its input handler must keep running
-   ahead of neither. */
+/* Replacing the room's outline: the Room section's three buttons (a
+   rectangle or an L-shape typed in, or drawn by hand). The two typed ones
+   are dialogs (ui-kit/modal.js). */
 
 import { parseLen, fmtLen } from '../../kernel/units.js';
 import { shapePoly, bbox } from '../../kernel/geometry.js';
@@ -16,27 +11,9 @@ import { syncWallOff, clampOpenings } from '../../kernel/model/walls.js';
 import { $, openModal, moError } from '../../ui-kit/modal.js';
 import { esc } from '../../ui-kit/panels.js';
 import {drawState, fit} from '../canvas/index.js';
-import { normHex } from '../../kernel/color.js';
 import { startCustomDraw, cancelCustomDraw } from './room-draw.js';
-import { bindLen, setFloorColor } from './room-controls.js';
 
-function bindShapeSection(){
-  bindLen('wallT', v=>{ L().room.wall=v; });
-  bindLen('trimD', v=>{ L().room.trim=v; });
-  $('floorCol').addEventListener('input', e=>{ setFloorColor(e.target.value); $('floorHex').value=e.target.value; $('floorHex').classList.remove('bad'); });
-  // the colour has been live (setFloorColor) all along; letting go of it is the undo step
-  $('floorCol').addEventListener('change', ()=>transact('room'));
-  $('floorHex').addEventListener('input', e=>{
-    const c=normHex(e.target.value);
-    e.target.classList.toggle('bad', !c);
-    if(c) setFloorColor(c);
-  });
-  /* typing an unfinished/bad code leaves the plan alone — snap the box back on the way out */
-  $('floorHex').addEventListener('change', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); transact('room'); });
-  $('floorHex').addEventListener('blur', e=>{ e.target.value=L().room.floor; e.target.classList.remove('bad'); });
-  $('trimOn').addEventListener('change', e=>transact('room', ()=>{ L().room.trimOn=e.target.checked; }));
-
-  $('btnPreRect').addEventListener('click', ()=>{
+function presetRect(){
     const b=bbox(RP());
     openModal('Rectangular room',
       `<div class="field"><label for="pW">Width</label><input type="text" class="len" id="pW" value="${esc(fmtLen(b.w,S.unit))}"></div>
@@ -52,8 +29,8 @@ function bindShapeSection(){
         });
         fit();
       });
-  });
-  $('btnPreL').addEventListener('click', ()=>{
+}
+function presetL(){
     const b=bbox(RP());
     openModal('L-shaped room',
       `<div class="field"><label for="pW">Width</label><input type="text" class="len" id="pW" value="${esc(fmtLen(b.w,S.unit))}"></div>
@@ -75,10 +52,9 @@ function bindShapeSection(){
         });
         fit();
       });
-  });
-  $('btnDrawCustom').addEventListener('click', ()=>{
-    if(drawState.value) cancelCustomDraw(); else startCustomDraw();   // starting stops every other tool
-  });
+}
+function toggleCustomDraw(){
+  if(drawState.value) cancelCustomDraw(); else startCustomDraw();   // starting stops every other tool
 }
 
-export {bindShapeSection};
+export {presetRect, presetL, toggleCustomDraw};

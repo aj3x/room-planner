@@ -12,5 +12,6 @@ export {pillarsLayer} from './pillars-layer.js';
 export {wallDrawTool} from './wall-draw-tool.js';
 export {wallLabelsLayer} from './wall-labels-layer.js';
 export {wallsLayer} from './walls-layer.js';
-export {deleteIWall, deletePillar, renderCornerProps, renderIWallProps, renderPillarProps, renderWallProps, wallDialog} from './walls-panel.js';
+export {deleteIWall, deletePillar, wallDialog} from './walls-panel.js';
+export {CornerProps, IWallProps, PillarProps, WallProps, wallPartTitle} from './wall-props.jsx';
 export {sections} from './walls-list.jsx';
