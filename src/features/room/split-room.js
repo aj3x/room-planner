@@ -61,7 +61,7 @@ import {flash} from '../../ui-kit/flash.js';
 import {$, askConfirm, closeModal, openModal} from '../../ui-kit/modal.js';
 import {plural} from '../../ui-kit/panels.js';
 
-import {mergeSplice} from '../../kernel/merge-rooms.js';
+import {mergeSplice} from './merge-rooms.js';
 
 import {activateLayout, setMode} from '../mode/index.js';
 

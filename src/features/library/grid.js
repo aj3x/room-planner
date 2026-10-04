@@ -1,7 +1,7 @@
 /* The library grid: the tiles it is built from, the breadcrumb bar above it,
    and what a tile's menu and the grid's drag-and-drop do. */
 import {itemDialog} from './item-dialog.js';
-import {sizeLabel} from '../../kernel/items.js';
+import {sizeLabel} from './items.js';
 import {marketFolderPath} from '../marketplace/index.js';
 import {childItemFolders, itemFolderPath, itemsInFolder} from './item-folders.js';
 import {svgI} from '../../ui-kit/modal.js';

@@ -3,7 +3,7 @@
 import {childMarketFolders, listingsInFolder, loadListing} from '../marketplace/index.js';
 import {svgI} from '../../ui-kit/modal.js';
 import {esc, plural} from '../../ui-kit/panels.js';
-import {sizeLabel} from '../../kernel/items.js';
+import {sizeLabel} from './items.js';
 import {normItem} from '../../kernel/migrate.js';
 import {S, clone, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';

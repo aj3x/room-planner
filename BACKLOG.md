@@ -410,7 +410,7 @@ layouts are both currently active).
   module they landed in:
   - `walkTrace` (`src/features/walkpaths/walkpaths.js:181`): a top-level function with no
     caller anywhere.
-  - unused parameters: `len` (`src/kernel/merge-rooms.js:72`), `tPart`
+  - unused parameters: `len` (`src/features/room/merge-rooms.js:72`), `tPart`
     (`src/features/blueprint/openings.js:12`).
   - dead stores: `a` (`src/features/blueprint/walls.js:50`), `raw`
     (`src/features/library/adhoc-listings.js:120`), `inc` (`index.html:918`) — each

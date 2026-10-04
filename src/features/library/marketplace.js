@@ -9,7 +9,7 @@ import {nav, navChanged} from './nav.js';
 import {drawPreview} from './preview.js';
 import {svgI} from '../../ui-kit/modal.js';
 import {esc, plural} from '../../ui-kit/panels.js';
-import {sizeLabel} from '../../kernel/items.js';
+import {sizeLabel} from './items.js';
 import {libFlash} from '../../ui-kit/flash.js';
 import {openMenu} from '../../ui-kit/menu.js';
 import {$, askConfirm, closeModal, moError, openModal} from '../../ui-kit/modal.js';

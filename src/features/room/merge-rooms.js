@@ -4,15 +4,15 @@
    face each other" tolerance edgeFacing shares with the floor magnet, is
    kernel/floor-place.js's. */
 
-import {clone} from './state.js';
-import {polySimple, signedArea} from './geometry.js';
-import {syncWallOff} from './walls.js';
-import {floorPt, floorXf} from './floor-space.js';
-import {PARALLEL_TOL} from './floor-place.js';
+import {clone} from '../../kernel/state.js';
+import {polySimple, signedArea} from '../../kernel/geometry.js';
+import {syncWallOff} from '../../kernel/walls.js';
+import {floorPt, floorXf} from '../../kernel/floor-space.js';
+import {PARALLEL_TOL} from '../../kernel/floor-place.js';
 
-/** @typedef {import('./types.js').Pt} Pt */
+/** @typedef {import('../../kernel/types.js').Pt} Pt */
 /** A detached copy of one room's outline and what is numbered by its walls.
-    @typedef {{points: Pt[], wallOff: boolean[], openings: import('./types.js').Opening[], measures: import('./types.js').Measure[]}} MergeWork */
+    @typedef {{points: Pt[], wallOff: boolean[], openings: import('../../kernel/types.js').Opening[], measures: import('../../kernel/types.js').Measure[]}} MergeWork */
 /** A merge that worked: the welded room, and how many doors/windows the shared wall took with it.
     @typedef {MergeWork & {removedOpenings: number, error?: undefined}} MergeOk */
 
@@ -71,7 +71,7 @@ function mergeInsertCuts(work, i, lo, hi, len){
    wall, in floor space (where both already sit). Returns {points, wallOff, openings,
    measures, removedOpenings} ready to drop onto the surviving room, or {error} when the
    two rooms don't share exactly one clean wall. */
-/** @param {import('./types.js').Layout} A @param {import('./types.js').Layout} B
+/** @param {import('../../kernel/types.js').Layout} A @param {import('../../kernel/types.js').Layout} B
     @returns {({error: string} & {[K in keyof MergeWork | 'removedOpenings']?: undefined})
             | MergeOk} */
 function mergeGeometry(A, B){
@@ -131,7 +131,7 @@ function mergeGeometry(A, B){
   const remapA = (/** @type {number} */w) => w===idxA ? null : (((w-(idxA+1))%nA)+nA)%nA;
   const remapB = (/** @type {number} */w) => w===idxB ? null : nA + ((((w-(idxB+1))%nB)+nB)%nB);
 
-  const openings=/** @type {import('./types.js').Opening[]} */([]); let removedOpenings=0;
+  const openings=/** @type {import('../../kernel/types.js').Opening[]} */([]); let removedOpenings=0;
   for(const o of workA.openings){ const w=remapA(o.wall); if(w===null){ removedOpenings++; continue; } o.wall=w; openings.push(o); }
   for(const o of workB.openings){ const w=remapB(o.wall); if(w===null){ removedOpenings++; continue; } o.wall=w; openings.push(o); }
 

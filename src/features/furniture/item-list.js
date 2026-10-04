@@ -13,7 +13,7 @@ import {$} from '../../ui-kit/modal.js';
 import {S, L} from '../../kernel/state.js';
 import {hasOpen, openSizeLabel} from '../../kernel/open-state.js';
 import {INV_SCOPES, availableCount} from '../../kernel/floor-space.js';
-import {sizeLabel} from '../../kernel/items.js';
+import {sizeLabel} from '../library/index.js';
 
 import {uniqueId} from '../../kernel/ids.js';
 import {selectClear} from '../../kernel/selection.js';

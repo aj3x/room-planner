@@ -7,7 +7,7 @@
    every command here commits through transact() and leaves the repainting
    to them, the tree and the canvas.
 */
-import {mergeGeometry} from '../../kernel/merge-rooms.js';
+import {mergeGeometry} from '../room/index.js';
 import {fit} from '../canvas/index.js';
 import {floorIWall, floorInst, floorXf} from '../../kernel/floor-space.js';
 import {bbox, norm360} from '../../kernel/geometry.js';
@@ -51,7 +51,7 @@ function mergeLayouts(aId, bId){
   if(!A.floorId || A.floorId!==B.floorId){ flash('Select two rooms on the same floor to merge them'); return; }
   const geo=mergeGeometry(A,B);
   if(geo.error){ flash(geo.error); return; }
-  const ok=/** @type {import('../../kernel/merge-rooms.js').MergeOk} */(geo);   // no error: it merged
+  const ok=/** @type {import('../room/index.js').MergeOk} */(geo);   // no error: it merged
   /* Not an undo step: A gets fresh stacks and mergeUndo takes it back. */
   const run=()=>{
     transact('project', ()=>{
