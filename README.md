@@ -72,10 +72,11 @@ finished: `index.html` is now a 112-line shell — a `<head>`, a stylesheet
 link, seven include directives for the static markup, and a short script
 holding the dozen listeners that belong to no single pane, plus the call to
 `boot()`. The header, stage, Library and modal partials end with a module
-script that calls one `bind*()` from the module beside it; the two side panes
-are lists of empty sections that the owning features fill, mostly with Preact
-components. Everything else is **153 JS modules, 9 JSX component modules,
-15 SCSS partials and 7 HTML partials** under `src/`:
+script that calls one `bind*()` from the module beside it (the Library's
+renders its page component instead); the two side panes are lists of empty
+sections that the owning features fill with Preact components. Everything
+else is **143 JS modules, 16 JSX component modules, 15 SCSS partials and 7
+HTML partials** under `src/`:
 
 ```
 src/kernel/            the document and its rules: state, transact(), signals,

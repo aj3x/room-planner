@@ -154,7 +154,7 @@ layouts are both currently active).
 ## Known defects
 
 - **Typing an item's position in the Selected panel is not undoable.** The
-  `sX`/`sY` fields (`move` in **`src/features/furniture/selection-panel.js`**) save but never
+  `sX`/`sY` fields (`move` in **`src/features/furniture/selection-section.jsx`**) save but never
   recorded a furniture undo step, unlike the rotate field next to them and
   every other placement edit. It is kept that way by an explicit
   `transact('furn', …, {history:false})` so the move to `transact()` changed
@@ -201,7 +201,8 @@ layouts are both currently active).
   scaffolding for the SCC move and went with it.
 
 - **"Added" never appears on a listing's Add button.** In
-  `renderListingDetail` (**`src/features/library/adhoc-listings.js`**) the per-item handler is
+  `renderListingDetail` (now `ListingDetail`, **`src/features/library/market-views.jsx`**, which keeps
+  the behaviour: its "Added" marks last until the page's next render) the per-item handler is
   `addMarketItemToInventory(it); b.textContent='Added'; b.disabled=true;` —
   but `addMarketItemToInventory` ends in `save(); renderLibAll();`, which
   re-runs `renderListingDetail` and replaces the whole of `#listingBody`. The
@@ -220,7 +221,7 @@ layouts are both currently active).
   list.** The picker is rebuilt from `SNAPS.imperial` or `SNAPS.metric`
   depending on `S.unit`, and if the saved snap size is not one of the six
   options it is reset to the list's **third** entry
-  (`src/features/room/room-panel.js`, `if(!list.some(([v])=>v===S.snap)) S.snap=list[2][0]`).
+  (`SnapSelect` in `src/features/canvas/sections.jsx`, `if(list.length && !list.some(([v])=>v===S.snap)) S.snap=list[2][0]`).
   Changing the display unit therefore changes the user's snap size, with no
   flash, no confirmation and no undo: 10 cm becomes 1 inch on the way to ft+in,
   and 1 inch becomes 5 cm on the way back — a round trip through the unit

@@ -53,9 +53,9 @@ run means something is wrong, so investigate it rather than re-running it.
 src/kernel/            the document and its rules: state, transact(), signals,
                        undo, storage, migrations, units, geometry; model/ is the
                        shared model (walls, openings, validity, …). No DOM.
-src/ui-kit/            generic UI: modal, menus, panels, inline edit, drag and
-                       drop, toasts, tag input, mountPanel, and the pieces
-                       components share (parts.jsx, component.js)
+src/ui-kit/            generic UI: modal, menus, panels, drag and drop,
+                       toasts, tag input, and the pieces components share
+                       (parts.jsx: Field, RenameField, …; component.js)
 src/features/<name>/   one feature each: canvas, mode, walls, openings, room,
                        furniture, floors, measure, walkpaths, layouts, library,
                        marketplace, io, blueprint. Its index.js is its public API.
@@ -129,9 +129,10 @@ anything with a visible surface — read it *before* adding UI, not after.
   while rendering and re-render on their own; a pane section is a slot its
   feature fills (`sections` in the feature's `index.js`, one line in the pane
   partial). A change commits through `transact()` and never calls a render
-  function or names a panel. Some panels are still `render*()` functions
-  that re-set `innerHTML` under `mountPanel` (`src/ui-kit/mount.js`); new
-  ones are components. AGENTS.md's *Adding things* has the recipe.
+  function or names a panel. A box over a model value is a `Field`
+  (`ui-kit/parts.jsx`): it keeps what is typed while the plan repaints and
+  shows the model's value after a commit, refused or not. AGENTS.md's
+  *Adding things* has the recipe.
 
 ## What review will look at
 

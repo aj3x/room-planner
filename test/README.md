@@ -5,7 +5,7 @@
 > **Test code stays under 20% of the codebase, and ideally under 10%.**
 
 Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,702 lines
-against 15,396** today — 10.0% of the two together (11.1% of the app's own
+against 15,305** today — 10.0% of the two together (11.1% of the app's own
 size). Check it before adding a
 file:
 
@@ -145,9 +145,9 @@ Written down so nobody mistakes the gaps for oversights, and so the next person
 knows what they are inheriting.
 
 - **The side panels and the Library UI.** No test reads what the side-pane
-  components (the Rooms tree, Items, Walls, Doors & windows, …), `renderRoom`,
-  `renderSel`, `itemDialog`, `openingDialog` or the marketplace views put on
-  the page; the e2e suite only clicks two of their buttons, by accessible
+  components (the Rooms tree, Items, the Selection, Room, Floor and View
+  sections, the Library and Marketplace pages), `itemDialog` or
+  `openingDialog` put on the page; the e2e suite only clicks two of their buttons, by accessible
   name. A break that does not throw turns nothing
   red. This is the largest uncovered surface in the repo, and it is uncovered on
   purpose: 135 tests' worth of DOM-text assertions cost more to maintain than
