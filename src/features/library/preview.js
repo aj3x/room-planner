@@ -1,3 +1,4 @@
+// @ts-check
 /* An item's footprint drawn into a tile's own little canvas, with its open
    state dashed around it: the Library grid, a listing and a marketplace item
    all use it. It takes the canvas as an argument and reads nothing else. */
@@ -5,8 +6,9 @@ import {hexA} from '../../kernel/color.js';
 import {bbox, shapePoly} from '../../kernel/geometry.js';
 import {hasOpen, openLocalBox} from '../../kernel/model/open-state.js';
 
+/** @param {HTMLCanvasElement} cv @param {import('../../kernel/types.js').Item} it */
 function drawPreview(cv,it){
-  const ctx=cv.getContext('2d');
+  const ctx=/** @type {CanvasRenderingContext2D} */(cv.getContext('2d'));   // a 2D context is always available
   const dpr=Math.min(window.devicePixelRatio||1,2.5);
   const W=cv.clientWidth||260, H=cv.clientHeight||150;
   cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);

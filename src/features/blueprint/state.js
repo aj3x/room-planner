@@ -1,3 +1,4 @@
+// @ts-check
 /* ------------------------- blueprint import -------------------------
    Trace a photo of a floor plan into rooms on a floor.
 
@@ -21,8 +22,11 @@ let bpState=null;
 let bpRunSeq=0;
 /* these two are written by the wizard's stages, which are modules of their
    own — and you cannot assign to an imported binding */
+/** @param {any} v */
 function setBpState(v){ bpState=v; }
+/** @param {number} v */
 function setBpRunSeq(v){ bpRunSeq=v; return v; }
+/** @param {number} v @param {number} a @param {number} b */
 const bpClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function bpDispose(){
   bpRunSeq++;

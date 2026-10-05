@@ -63,7 +63,7 @@ function ItemTile({it}){
   const [dragging, setDragging] = useState(false);
   const tags=it.tags||[];
   /** @param {Event} e */
-  const menu = e => { e.stopPropagation(); libItemMenu(it.id, e.currentTarget); };
+  const menu = e => { e.stopPropagation(); libItemMenu(it.id, /** @type {Element} */(e.currentTarget)); };   // the ⋯ button the handler is on
   return <div class={'tile'+(dragging?' dragging':'')} role="button" tabIndex={0} draggable={true} aria-label={'Edit '+it.name}
     onClick={()=>itemDialog(it.id)}
     onKeyDown={e=>{

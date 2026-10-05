@@ -1,3 +1,4 @@
+// @ts-check
 import {bpState} from './state.js';
 
 /* ---- blueprint: debug mask viewer ----
@@ -8,6 +9,7 @@ import {bpState} from './state.js';
    what the pipeline saw, not guessed at from the final polygon. */
 function bpDebugOn(){ return true; } // TODO: revert to `location.hash.indexOf('bpdebug')>=0` when asked to hide debug mode again
 const BP_DEBUG_MASKS=['none','structure','wall','skin','cavity','barrier'];
+/** @param {string} name */
 function bpDebugMaskArr(name){
   const p=bpState&&bpState.proposal; if(!p) return null;
   if(name==='barrier') return p.barrier||null;

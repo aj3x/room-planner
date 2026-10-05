@@ -1,3 +1,4 @@
+// @ts-check
 /* What the library grid's tiles do (grid.jsx renders them): create, edit,
    duplicate, delete an item, and an item tile's menu; and what a folder
    tile says it holds. */
@@ -15,6 +16,7 @@ import {exportLibItems} from './export.jsx';
 import {moveLibItemDialog} from './folder-menus.jsx';
 import {purgeItem} from './item-folders.js';
 
+/** @param {string|null} fid */
 function folderCountLabel(fid){
   const n=childItemFolders(fid).length, m=itemsInFolder(fid).length;
   const bits=[];
@@ -26,6 +28,7 @@ function folderCountLabel(fid){
 /* ------------------------- library: item/folder tiles + grid ------------------------- */
 /* nothing is created until Save, so cancelling a new item leaves no "Untitled" behind */
 function createLibItem(){ itemDialog(null); }
+/** @param {string} id */
 function duplicateLibItem(id){
   const it=S.inventory.find(x=>x.id===id); if(!it) return;
   const c=clone(it);
@@ -34,6 +37,7 @@ function duplicateLibItem(id){
   transact('lib', ()=>{ S.inventory.push(c); });
   libFlash('Duplicated');
 }
+/** @param {string} id */
 function deleteLibItem(id){
   const it=S.inventory.find(x=>x.id===id); if(!it) return;
   const n=S.layouts.reduce((a,l)=>a+l.placed.filter(p=>p.itemId===id).length,0);
@@ -43,6 +47,7 @@ function deleteLibItem(id){
   if(n) askConfirm('Delete this item?', 'It is placed in '+n+' spot'+(n>1?'s':'')+' across your rooms. Those will be removed too.', 'Delete', kill);
   else askConfirm('Delete this item?', '“'+it.name+'” will be removed for good.', 'Delete', kill);
 }
+/** @param {string} id @param {Element} anchor */
 function libItemMenu(id, anchor){
   const it=S.inventory.find(x=>x.id===id); if(!it) return;
   openMenu(anchor, [
