@@ -43,4 +43,4 @@ function addMarketItemToInventory(raw){
   });
   libFlash(sameName ? 'Added — you also have another "'+incoming.name+'" under a different id' : 'Added to your library');
 }
-export {itemsDeepEqual, addMarketItemToInventory};
+export {addMarketItemToInventory};

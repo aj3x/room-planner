@@ -146,4 +146,4 @@ function polySimple(P){
   return polyArea(P) > 1e5;
 }
 
-export {EPS, norm360, shapePolyCache, shapePoly, shapePolyCompute, recenter, bbox, worldPoly, shrink, pointInPoly, segHit, polyHit, ptSegDist, segDist, centroid, signedArea, polyArea, bbHit, polySimple};
+export {EPS, norm360, shapePoly, bbox, worldPoly, shrink, pointInPoly, segHit, polyHit, ptSegDist, segDist, centroid, signedArea, polyArea, bbHit, polySimple};

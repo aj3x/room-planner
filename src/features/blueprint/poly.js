@@ -172,4 +172,4 @@ function bpCleanPoly(P){
   return bpNormWinding(bpUnpinch(Q));
 }
 
-export {bpNormWinding, bpDropCollinear, bpMergeShortEdges, bpUnpinch, bpDropSpikes, bpDropNoise, bpCleanPoly};
+export {bpCleanPoly};

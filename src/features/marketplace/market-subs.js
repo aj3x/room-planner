@@ -138,4 +138,4 @@ async function loadRegistry(url){
     throw new Error('That doesn’t look like a Room Planner registry file');
   return data.marketplaces.filter((/** @type {any} */m)=>m&&m.url);
 }
-export {MARKET_VERSIONS, fetchJSON, resolveURL, marketIndexCache, marketItemCache, DEFAULT_MARKET_URL, ensureDefaultMarket, subscribeMarket, reloadMarketSub, removeMarketSub, fetchMarketItem, loadRegistry};
+export {fetchJSON, marketIndexCache, ensureDefaultMarket, subscribeMarket, reloadMarketSub, removeMarketSub, fetchMarketItem, loadRegistry};

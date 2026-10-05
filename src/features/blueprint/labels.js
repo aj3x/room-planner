@@ -65,4 +65,4 @@ function bpLabelBlocks(comps, pick, tPart){
   return {blocks, gh, glyphIds};
 }
 
-export {bpInkMedian, bpLabelBlocks};
+export {bpLabelBlocks};

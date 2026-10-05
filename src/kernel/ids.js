@@ -63,4 +63,4 @@ function retagItem(oldId,newId){
     });
   }
 }
-export {ID_SAFE, idParts, idFolder, idLeaf, idProblem, uniqueId, retagItem};
+export {idParts, idFolder, idLeaf, idProblem, uniqueId, retagItem};

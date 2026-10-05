@@ -120,5 +120,4 @@ function blockedOpenings(){
 /** @param {Pick<Opening, 'kind'|'dtype'>} o */
 const KIND = o => o.kind==='window' ? 'Window' : (o.dtype==='slide'?'Sliding door':o.dtype==='open'?'Doorway':o.dtype==='bifold'?'Bi-fold door':'Hinged door');
 
-export {KIND, openingDispOffset, setOpeningDispOffset, BP_BIFOLD_SHUT, openGeom,
-        swingPoly, blockedOpenings};
+export {KIND, openingDispOffset, setOpeningDispOffset, openGeom, swingPoly, blockedOpenings};

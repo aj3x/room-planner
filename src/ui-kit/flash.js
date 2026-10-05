@@ -32,4 +32,4 @@ function libFlash(msg,warn){
   clearTimeout(libFlashT); libFlashT=setTimeout(()=>el.classList.remove('on'),readTime(msg));
 }
 
-export {readTime, flash, libFlash, toast};
+export {flash, libFlash, toast};

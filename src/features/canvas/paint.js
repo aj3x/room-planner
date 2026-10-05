@@ -96,4 +96,4 @@ function drawDimension(r,color,C,dashed){
   return {p,q,x:cx-w/2,y:cy-h/2,w,h};
 }
 
-export {CANVAS, darkMQ, PAL, setForceLightCanvas, addPoly, pathPoly, clip, drawSquareTick, drawDimension};
+export {darkMQ, PAL, setForceLightCanvas, addPoly, pathPoly, clip, drawSquareTick, drawDimension};

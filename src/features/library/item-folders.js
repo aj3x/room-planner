@@ -16,11 +16,11 @@
    Library UI (see .claude/plans/refactor-split.md, the plan/ round).
 */
 import {idLeaf, retagItem, uniqueId} from '../../kernel/ids.js';
-/* The tree walks and tag inheritance moved to core/ in the decoupling pass, so
-   core/migrate.js could stop importing this file. Re-exported below: this
-   module is still the one place the rest of the app asks about item folders. */
+/* The tree walks and tag inheritance are kernel model (migrate() needs them on
+   every load); they are re-exported below so this module stays the one place
+   the rest of the app asks about item folders. */
 import {ancestorTags, applyTags, childItemFolders, itemCountInSubtree, itemFolderDescendant,
-        itemFolderOf, itemFolderPath, itemFolderSubtreeIds, itemsInFolder, reconcileTags,
+        itemFolderOf, itemFolderPath, itemFolderSubtreeIds, itemsInFolder,
         recomputeFolderSubtree} from '../../kernel/model/item-folders.js';
 import {S, uid} from '../../kernel/state.js';
 
@@ -68,4 +68,4 @@ function purgeItem(id){
   S.inventory=S.inventory.filter(i=>i.id!==id);
   for(const l of S.layouts) l.placed=l.placed.filter(p=>p.itemId!==id);
 }
-export {childItemFolders, itemFolderOf, itemsInFolder, itemFolderDescendant, itemFolderPath, itemFolderSubtreeIds, itemCountInSubtree, ancestorTags, applyTags, reconcileTags, recomputeFolderSubtree, ensureItemFolderPath, rehomeItemId, moveItemToFolder, purgeItem};
+export {childItemFolders, itemFolderOf, itemsInFolder, itemFolderDescendant, itemFolderPath, itemFolderSubtreeIds, itemCountInSubtree, ancestorTags, applyTags, recomputeFolderSubtree, ensureItemFolderPath, rehomeItemId, moveItemToFolder, purgeItem};

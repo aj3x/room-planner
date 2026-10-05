@@ -324,4 +324,4 @@ function startSplitRoom(id){
   fit();
   flash("Click a point on the room's wall to start the divider. Click inside the room to bend it, or click another wall to finish. Esc cancels.");
 }
-export {boundaryHit, splitAngleSnap, splitRefs, splitCornerRef, splitResolvePoint, cancelSplitDraw, trySplitLine, openSplitChoice, lastSplit, commitSplit, splitUndo, startSplitRoom};
+export {boundaryHit, splitCornerRef, splitResolvePoint, cancelSplitDraw, trySplitLine, lastSplit, splitUndo, startSplitRoom};

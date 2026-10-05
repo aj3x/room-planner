@@ -157,4 +157,4 @@ function bpDeriveRegions(barrier, w, h, tPart, blocks){
   return {regions, leak:out.frac};
 }
 
-export {bpIdentify, bpAbsorbSlivers, bpDeriveRegions};
+export {bpDeriveRegions};

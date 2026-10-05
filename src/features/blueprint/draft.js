@@ -180,4 +180,4 @@ function bpScaleSanity(draft){
   return '';
 }
 
-export {bpAttachOpenings, bpScaleXY, bpScaleMm, bpEffWall, bpEffExtWall, bpRebuild, bpScaleSanity};
+export {bpScaleXY, bpScaleMm, bpEffWall, bpEffExtWall, bpRebuild, bpScaleSanity};

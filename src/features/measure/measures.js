@@ -97,5 +97,4 @@ function closestBetween(A,B){
   return best;
 }
 
-export {measuresOf, anchorKey, measureObjs, objOfAnchor, anchorGeom, segCross,
-        closestBetween};
+export {measuresOf, anchorKey, measureObjs, objOfAnchor, anchorGeom, closestBetween};

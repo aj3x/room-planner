@@ -93,4 +93,4 @@ function bpOrtho(P,eps){
   return out;
 }
 
-export {BP_DIRS, bpTrace, bpRDP, bpOrtho};
+export {bpTrace, bpRDP, bpOrtho};

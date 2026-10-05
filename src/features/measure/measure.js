@@ -97,4 +97,4 @@ function setMeasure(on){
 function mountMeasureBar(){
   effect(() => { measureOn.value; renderMeasureCanvas(); });
 }
-export {mountMeasureBar, measurePick, pickMeasure, measureTargetAt, liveMeasures, resetMeasureState, removeMeasure, setMeasure};
+export {mountMeasureBar, measureTargetAt, liveMeasures, resetMeasureState, removeMeasure, setMeasure};

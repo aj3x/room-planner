@@ -224,4 +224,4 @@ function squareCorner(i){
   if(len<1){ vx=-(c[1]-a[1]); vy=c[0]-a[0]; len=rad*2; }   // dead centre: step off square to the span
   transact('room', ()=>tryRoomEdit(()=>{ P[i]=[mx+vx/len*rad, my+vy/len*rad]; }));
 }
-export {snapRadius, snapWallPoint, pickAt, bringToFront, pickRoom, alignRadius, snapToLines, lineProject, lineCross, guideSeg, alignPoint, isSquare, snapCorner, squareCorner};
+export {snapWallPoint, pickAt, bringToFront, pickRoom, alignRadius, alignPoint, isSquare, snapCorner, squareCorner};

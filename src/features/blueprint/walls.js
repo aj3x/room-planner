@@ -182,4 +182,4 @@ function bpCloseGaps(barrier,w,h,lines,tPart){
   return cuts;
 }
 
-export {bpBands, bpLineProfile, bpWallLines, bpFreeEnds, bpProposeArcCuts, bpCloseGaps};
+export {bpBands, bpWallLines, bpProposeArcCuts, bpCloseGaps};

@@ -120,4 +120,4 @@ function stepFloor(dir){
 }
 const undoFloor=()=>stepFloor(-1);
 const redoFloor=()=>stepFloor(1);
-export {histRev, roomHist, furnHist, snapRoom, snapFurn, histEntry, seedHistFor, commit, bumpRev, commitRoom, commitFurn, stepHist, floorHist, curFloorId, snapFloor, floorEntry, commitFloor, histAvail, applyRoomSnap, applyFurnSnap, undoRoom, redoRoom, undoFurn, redoFurn, applyFloorSnap, stepFloor, undoFloor, redoFloor};
+export {histRev, roomHist, furnHist, snapRoom, snapFurn, histEntry, seedHistFor, commit, bumpRev, commitRoom, commitFurn, floorHist, curFloorId, snapFloor, floorEntry, commitFloor, histAvail, undoRoom, redoRoom, undoFurn, redoFurn, undoFloor, redoFloor};

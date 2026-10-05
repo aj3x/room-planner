@@ -114,4 +114,4 @@ function TagField({id, initialTags, placeholder, read}){
   </div>;
 }
 
-export {tagSuggestions, TagField};
+export {TagField};

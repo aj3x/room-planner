@@ -62,4 +62,4 @@ function showLibrary(lib){
   if(!lib) applyPanes();
 }
 
-export {showLibrary, plural, normSearch, applySections, mountSections, toggleSection, wideLayout, applyPanes, paneShut};
+export {showLibrary, plural, normSearch, mountSections, toggleSection, wideLayout, paneShut};

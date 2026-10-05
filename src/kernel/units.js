@@ -74,4 +74,4 @@ const SNAPS = {
   metric:[['0','No snap'],['10','1 cm'],['50','5 cm'],['100','10 cm'],['250','25 cm'],['500','50 cm']]
 };
 
-export {MM, BARE, UNIT_RE, unitKey, parseLen, trimNum, unitWord, fmtLen, fmtArea, SNAPS};
+export {parseLen, trimNum, unitWord, fmtLen, fmtArea, SNAPS};

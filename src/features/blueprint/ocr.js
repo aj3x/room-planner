@@ -193,4 +193,4 @@ async function bpRunOcr(regions, blocks, gh, runId){
   return bpSolveScale(regions);
 }
 
-export {BP_TESS_VER, BP_TESS_JS, BP_TESS_WORKER, BP_TESS_CORE, BP_TESS_LANG, bpTimeout, bpTessLoad, bpLoadTesseract, bpOcrOpen, bpOcrCrop, bpLineKind, bpParseDimPair, bpReadBlockText, bpRegionIsBoxy, bpSolveScale, bpRunOcr};
+export {bpRunOcr};

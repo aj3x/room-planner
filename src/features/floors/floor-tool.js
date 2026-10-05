@@ -112,4 +112,4 @@ const floorTool = {
   onDown: floorDown, onMove: floorMove, onUp: floorUp, onCancel: floorCancel,
 };
 
-export {floorTool, floorSnapRadius, pickFloorRoom};
+export {floorTool, pickFloorRoom};

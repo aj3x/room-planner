@@ -198,6 +198,5 @@ function slideToValid(inst,it,from,to){
 }
 
 
-export {insideRoom, collides, validate, conflictSet, openThroughWall, OPEN_SLOP,
-        openConflicts, getConflicts, isBad, centreInside,
+export {insideRoom, collides, validate, openConflicts, getConflicts, isBad, centreInside,
         bisectToValid, slideToValid};

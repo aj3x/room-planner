@@ -54,4 +54,4 @@ function libItemMenu(id, anchor){
     {label:'Delete…', danger:true, fn:()=>deleteLibItem(id)},
   ], it.name);
 }
-export {folderCountLabel, createLibItem, duplicateLibItem, deleteLibItem, libItemMenu};
+export {folderCountLabel, createLibItem, libItemMenu};

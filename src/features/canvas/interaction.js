@@ -194,6 +194,7 @@ function onCanvasWheel(e){
   zoomAt(Math.pow(ZOOM_FACTOR, (norm<0?1:-1)*magnitude), e.offsetX, e.offsetY);
 }
 
-export {registerTool, activeTool, stopOtherTools, stopDrawing, stopToolsFor, resetTools, isGesturing, gestureTool, cancelGesture, onCanvasKey,
-        onCanvasPointerDown, onCanvasPointerMove, onCanvasMouseMove, onCanvasPointerUp,
-        onCanvasPointerLeave, onCanvasWheel, edgePanVel, edgePanTick};
+export {registerTool, activeTool, stopOtherTools, stopDrawing, stopToolsFor, resetTools,
+        isGesturing, gestureTool, cancelGesture, onCanvasKey, onCanvasPointerDown,
+        onCanvasPointerMove, onCanvasMouseMove, onCanvasPointerUp, onCanvasPointerLeave,
+        onCanvasWheel, edgePanTick};

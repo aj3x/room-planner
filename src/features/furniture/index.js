@@ -10,6 +10,5 @@ export {furnitureTool} from './furniture-tool.js';
 export {itemToolsLayer} from './item-tools-layer.js';
 export {drawItem, itemsLayer} from './items-layer.js';
 export {openRegionsLayer} from './open-regions-layer.js';
-export {removeSel, rotate} from './selection-panel.js';
 export {sections} from './sections.jsx';
 export {shortcuts} from './keys.js';

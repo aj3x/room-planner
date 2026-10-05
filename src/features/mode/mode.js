@@ -95,4 +95,4 @@ function paramMode(){
   return ['room','furniture','floor','inventory','marketplace'].includes(/** @type {string} */(m)) ? /** @type {import('../../kernel/types.js').Mode} */(m) : null;
 }
 
-export {mountMode, setPendingFit, syncModeParam, setMode, activateLayout, renderMode, applyLayoutMode, togglePane, paramMode, undo, redo};
+export {mountMode, setPendingFit, syncModeParam, setMode, activateLayout, applyLayoutMode, togglePane, paramMode, undo, redo};

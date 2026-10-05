@@ -45,4 +45,4 @@ function ExportItemsBody(){
 function exportLibraryDialog(){
   openDialog({title: 'Export items', ok: 'Export', body: <ExportItemsBody/>});
 }
-export {itemsExportPayload, exportLibItems, exportLibFolder, exportLibraryDialog};
+export {exportLibItems, exportLibFolder, exportLibraryDialog};

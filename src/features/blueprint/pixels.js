@@ -163,4 +163,4 @@ function bpValley(hist){
   return Math.max(3, pick);
 }
 
-export {bpGray, bpHist, bpOtsu, bpThresholds, bpMaskOf, bpLabel8, bpAutoCropRect, bpLeak, bpRuns, bpMedian, bpValley};
+export {bpGray, bpThresholds, bpMaskOf, bpLabel8, bpAutoCropRect, bpLeak, bpRuns, bpMedian, bpValley};

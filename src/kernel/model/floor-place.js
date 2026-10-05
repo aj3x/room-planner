@@ -192,5 +192,4 @@ function floorRoomAt(fl, pt){
   return null;
 }
 
-export {PARALLEL_TOL, floorMembers, floorSnapCandidates, snapFloorPlace, floorEdgeDepths,
-        extendEnd, depthRuns, floorRoomAt};
+export {PARALLEL_TOL, floorMembers, snapFloorPlace, floorEdgeDepths, depthRuns, floorRoomAt};

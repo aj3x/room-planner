@@ -99,4 +99,4 @@ function loadSamples(){
   });
 }
 
-export {allTags, itemMatchesFilter, placeItem, renamingItem, renameItem, itemMenu, deleteItem, loadSamples};
+export {allTags, itemMatchesFilter, placeItem, renamingItem, renameItem, itemMenu, loadSamples};

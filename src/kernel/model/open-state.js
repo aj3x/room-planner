@@ -60,4 +60,4 @@ function openSizeLabel(it){
   return b ? fmtLen(b.x1-b.x0,S.unit)+' × '+fmtLen(b.y1-b.y0,S.unit) : '';
 }
 
-export {OPEN_SIDES, normOpen, hasOpen, openLocalBox, openPoly, openSizeLabel};
+export {normOpen, hasOpen, openLocalBox, openPoly, openSizeLabel};

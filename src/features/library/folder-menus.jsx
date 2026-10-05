@@ -241,4 +241,4 @@ function moveListingDialog(l){
     transact('lib', ()=>{ l.parentId=v||null; });
   });
 }
-export {askNewLibFolder, libFolderTagsDialog, adhocFolderContents, moveLibItemDialog, renameLibFolder, renameAdhocFolder, renamedFolder, itemFolderContents, deleteLibFolder, deleteAdhocFolder, moveLibFolderDialog, moveAdhocFolderDialog, libFolderMenu, adhocFolderMenu, listingMenu, moveListingDialog};
+export {askNewLibFolder, libFolderTagsDialog, adhocFolderContents, moveLibItemDialog, renameLibFolder, renameAdhocFolder, renamedFolder, libFolderMenu, adhocFolderMenu, listingMenu};

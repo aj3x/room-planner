@@ -129,4 +129,4 @@ function preview(scope, fn){
   });
 }
 
-export {SCOPES, transact, preview};
+export {transact, preview};

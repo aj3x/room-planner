@@ -49,4 +49,4 @@ function zoomAt(f,px,py){
   scheduleDraw();
 }
 
-export {resize, fitBBox, fit, zoomAt};
+export {resize, fit, zoomAt};

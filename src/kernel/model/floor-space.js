@@ -90,5 +90,5 @@ function usedCount(itemId){
 /** @param {import('../types.js').Item} it */
 const availableCount = it => Math.max(0, (it.count==null?1:it.count) - usedCount(it.id));
 
-export {floorXf, ptsAt, floorPtInv, floorPt, floorPts, floorInst, floorIWall,
-        floorBBox, placeOnFloor, INV_SCOPES, scopeLayouts, usedCount, availableCount};
+export {floorXf, ptsAt, floorPtInv, floorPt, floorPts, floorInst, floorIWall, floorBBox,
+        placeOnFloor, INV_SCOPES, scopeLayouts, usedCount, availableCount};

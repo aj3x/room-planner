@@ -7,7 +7,6 @@
    imports it only from here (eslint.config.js enforces that). */
 
 export {roomDrawTool} from './room-draw-tool.js';
-export {cancelCustomDraw, startCustomDraw} from './room-draw.js';
 export {mergeGeometry} from './merge-rooms.js';
 /** @typedef {import('./merge-rooms.js').MergeOk} MergeOk */
 export {drawRoomFloor, roomFloorLayer} from './room-floor-layer.js';

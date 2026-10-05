@@ -42,13 +42,6 @@ function renamed(kind, id, v){
 }
 
 
-/* folder path from root to id, inclusive */
-/** @param {string|null|undefined} id */
-function folderPath(id){
-  const out=[]; let f=folderOf(id);
-  while(f){ out.unshift(f); f=folderOf(f.parentId); }
-  return out;
-}
 /* would putting `id` under `parentId` create a cycle? */
 /** is folder `id` parentId or above it? @param {string} id @param {string|null|undefined} parentId */
 function folderDescendant(id,parentId){
@@ -256,4 +249,4 @@ function treeDropSpot(e){
   return {mode:t<0.5?'before':'after',id,isFolder,row};
 }
 
-export {treeRenaming, renamed, renameFolder, renameLayout, renameFloor, folderPath, folderDescendant, enterFloor, folderMenu, layoutMenu, folderTagsDialog, folderContents, deleteFolder, duplicateLayout, deleteLayout, moveDialog, floorMenu, newFolder, dragTree, setDragTree, treeDropSpot};
+export {treeRenaming, renamed, renameFolder, renameLayout, renameFloor, folderDescendant, enterFloor, folderMenu, layoutMenu, floorMenu, newFolder, dragTree, setDragTree, treeDropSpot};

@@ -200,4 +200,4 @@ const furnitureTool = {
   overlay: marqueeOverlay,
 };
 
-export {furnitureTool, furnDrag};
+export {furnitureTool};

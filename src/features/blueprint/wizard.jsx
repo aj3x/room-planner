@@ -19,4 +19,4 @@ function Stepper({active}){
   })}</ol>;
 }
 
-export {BP_WIZARD_STEPS, Stepper};
+export {Stepper};
