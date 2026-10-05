@@ -21,3 +21,6 @@ coverage/
 
 # instrumented build used by the e2e suite (see vite.config.js, --mode instrumented)
 dist-test/
+
+# local development files
+furniture-import.json

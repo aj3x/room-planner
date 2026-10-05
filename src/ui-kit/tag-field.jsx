@@ -104,7 +104,8 @@ function TagField({id, initialTags, placeholder, read}){
       <input type="text" id={id+'Input'} ref={inpRef} autocomplete="off" autocapitalize="none" spellcheck={false} placeholder={placeholder||''}
         onInput={refresh}
         onFocus={()=>{ st.on=true; refresh(); }}
-        onBlur={()=>{ st.on=false; commit(); st.items=[]; st.idx=-1; paint(0); }}
+        onBlur={()=>{ if(!inpRef.current) return;   /* the dialog closing unmounts the box, and its blur comes after */
+          st.on=false; commit(); st.items=[]; st.idx=-1; paint(0); }}
         onKeyDown={onKeyDown}/>
     </div>
     <div class="tagsuggest" role="listbox" ref={sugRef} hidden={!st.items.length}

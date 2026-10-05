@@ -156,15 +156,18 @@ const boundaries = {
    takes props, and whose props cannot be read that way (no JSDoc, an imported
    type) is reported too: unknown is not compliant.
 
-   What it reads: `useState`/`useReducer`, `x.value`, `pref()`, and the same
-   through a function declared in this file (a custom hook like useIndex, or a
+   A component is a capitalised top-level `function`, or a capitalised
+   `const` (exported or not) holding a function. What it reads:
+   `useState`/`useReducer`, `x.value` (not `p.value` on its own props
+   parameter), `pref()`, and the same through a function declared in this file (a custom hook like useIndex, or a
    helper like watchRoom). What it cannot see, so review must:
    - a hook or helper imported from another module (other than `pref`) that
      holds state or reads a signal — the component counts as stateless;
    - whether the revision signal read is the right one: reading `rev.prefs`
      satisfies it for a component that shows furniture. */
 function jsdocParamType(sourceCode, node){
-  const target = node.parent && (node.parent.type === 'ExportNamedDeclaration' || node.parent.type === 'VariableDeclarator') ? (node.parent.type === 'VariableDeclarator' ? node.parent.parent : node.parent) : node;
+  let target = node.parent && (node.parent.type === 'ExportNamedDeclaration' || node.parent.type === 'VariableDeclarator') ? (node.parent.type === 'VariableDeclarator' ? node.parent.parent : node.parent) : node;
+  if(target.parent && target.parent.type === 'ExportNamedDeclaration') target = target.parent;
   const cs = sourceCode.getCommentsBefore(target);
   const c = cs.length ? cs[cs.length - 1] : null;
   if(!c || c.type !== 'Block' || !c.value.startsWith('*')) return null;
@@ -238,7 +241,7 @@ const signalsMemo = {
       'Program > FunctionDeclaration, Program > ExportNamedDeclaration > FunctionDeclaration'(node){
         if(node.id && /^[A-Z]/.test(node.id.name)) comps.push({name: node.id.name, node});
       },
-      'Program > VariableDeclaration > VariableDeclarator'(node){
+      'Program > VariableDeclaration > VariableDeclarator, Program > ExportNamedDeclaration > VariableDeclaration > VariableDeclarator'(node){
         if(node.id.type === 'Identifier' && /^[A-Z]/.test(node.id.name) && node.init && /Function/.test(node.init.type)) comps.push({name: node.id.name, node: node.init});
       },
       ExportSpecifier(node){ exported.add(node.local.name); },
@@ -270,6 +273,8 @@ const signalsMemo = {
         const helpers = new Map();
         const reads = (fn) => {
           const r = {state: false, signal: false, revision: false};
+          /* the component's own props object: `p.value` is a prop, not a signal */
+          const own = fn.params[0] && fn.params[0].type === 'Identifier' ? fn.params[0].name : null;
           const walk = n => {
             if(!n || typeof n.type !== 'string') return;
             if(n !== fn && /Function/.test(n.type)) return;   // handlers and effects run later, not while rendering
@@ -280,7 +285,7 @@ const signalsMemo = {
               const h = helpers.get(c);   /* a helper or custom hook in this file, e.g. watchRoom(), useIndex() */
               if(h){ r.state = r.state || h.state; r.signal = r.signal || h.signal; r.revision = r.revision || h.revision; }
             }
-            if(n.type === 'MemberExpression' && !n.computed && n.property.name === 'value'){
+            if(n.type === 'MemberExpression' && !n.computed && n.property.name === 'value' && !(own && n.object.type === 'Identifier' && n.object.name === own)){
               r.signal = true;
               const o = n.object;
               if((o.type === 'MemberExpression' && o.object.type === 'Identifier' && o.object.name === 'rev') || (o.type === 'Identifier' && /Rev$/.test(o.name))) r.revision = true;

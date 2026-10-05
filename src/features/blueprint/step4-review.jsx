@@ -142,7 +142,8 @@ function ReviewBody(){
               <input type="text" class="nm ghost" data-bp="name" value={ed.name||l.name}
                 onInput={ev=>{ ed.name=ev.currentTarget.value; ed.touched=true; }}
                 onFocus={()=>{ bpState.focusRid=rid; redraw(); }}
-                onBlur={()=>{ if(bpState.focusRid===rid){ bpState.focusRid=null; redraw(); } }}/>
+                /* bpState is gone once the wizard has closed, and an unmounting box still blurs */
+                onBlur={()=>{ if(bpState && bpState.focusRid===rid){ bpState.focusRid=null; redraw(); } }}/>
               <span class="meta">{fmtLen(b.x1-b.x0,S.unit)+' × '+fmtLen(b.y1-b.y0,S.unit)+' · '+fmtArea(polyArea(l.room.points),S.unit)}</span>
             </span>
             <span class="lact">
