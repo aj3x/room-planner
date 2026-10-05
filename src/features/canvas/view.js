@@ -17,19 +17,16 @@ import {S} from '../../kernel/state.js';
 
 /* ------------------------- view ------------------------- */
 /* Top-level DOM, and the one place in src/ that takes a rendering context at
-   import time. It is here rather than in boot.js because every canvas module
-   needs ctx, and leaving it in index.html would pin all of canvas/ there with
-   it. $('cv') is a lookup, not a mutation; getContext('2d') goes one step further, but it is a lazy
-   accessor rather than a mutation -- it allocates the element's 2D context,
-   memoises it, and returns the same object on every later call. It registers
-   no listener, schedules no work, paints nothing and reads no app state. What
-   moving it changes is only WHEN it runs: at module-evaluation time, ahead of
-   index.html's own body rather than partway down it. The two things that could
-   care are that #cv exists (the bundle runs after the document is parsed in all
-   three targets: the dev server's module, the build's classic script at the end
-   of <body>, and the jsdom harness's IIFE) and that the harness's recording
-   getContext stand-in is installed first (it is a prelude, evaluated before the
-   bundle). Canvas size is set later by resize(), exactly as before. */
+   import time: every canvas module needs ctx, so it is a live binding here
+   rather than something boot() hands round. $('cv') is a lookup;
+   getContext('2d') allocates the element's 2D context, memoises it and
+   returns the same object on every later call. Neither registers a listener,
+   schedules work, paints or reads app state. What it relies on is that #cv
+   exists when this module is evaluated (the script runs after the document is
+   parsed: the dev server's module, the build's classic script at the end of
+   <body>, the unit tests' jsdom shell) and, under test, that the recording
+   getContext stand-in is installed first (test/unit-setup.js). The canvas's
+   size is set later, by resize(). */
 const cv=/** @type {HTMLCanvasElement} */($('cv')), ctx=/** @type {CanvasRenderingContext2D} */(cv.getContext('2d'));   // a 2D context is always available
 /** @type {import('./types.js').View} */
 let view={scale:.1,ox:0,oy:0};

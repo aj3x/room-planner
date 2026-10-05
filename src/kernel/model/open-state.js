@@ -1,14 +1,7 @@
 // @ts-check
-/* Open state — the extra floor a thing needs when it is in use.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. It sat in the middle of the geometry region and could not
-   travel with it, because openSizeLabel reads S.unit; core/state.js now exists,
-   so it can.
-
-   openConflicts, which §3 also files here, is still in the monolith: it lives
-   in the validity region and walks a layout's placements. */
+/* Open state — the extra floor a thing needs when it is in use. What an open
+   footprint runs into is openConflicts, in validity.js, because it walks a
+   layout's placements. */
 
 import {fmtLen} from '../units.js';
 import {S} from '../state.js';

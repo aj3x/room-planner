@@ -1,8 +1,8 @@
 // @ts-check
 /* ---- blueprint: step 3, scale ----
    Detection runs entirely in pixel space (bpAnalyse never needs a real-world unit),
-   so this step doesn't gate detection — it's the calibration and wall-thickness tool
-   that used to be stranded at the top of the review screen, given its own screen.
+   so this step doesn't gate detection — it's the calibration and wall-thickness tool,
+   on a screen of its own.
    While detection runs, the stage shows its progress; when it is done the stage
    opens again with the photo to measure on. `to` holds the stages either side
    (see flow.js). */

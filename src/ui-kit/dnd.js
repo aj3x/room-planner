@@ -1,10 +1,6 @@
 // @ts-check
 /* Drag to reorder: the splice that moves a row, and where in a row a drag
-   is (which half, for the drop marks the lists render).
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. */
+   is (which half, for the drop marks the lists render). */
 
 /* ------------------------- drag to reorder ------------------------- */
 /** Move the entry with id movedId to just before (or after) targetId; to the end with no target.

@@ -1,9 +1,5 @@
 // @ts-check
-/* Floor space, and how far a thing's stock reaches.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. */
+/* Floor space, and how far a thing's stock reaches. */
 
 import {bbox} from '../geometry.js';
 import {S, L, blankFloorPlace, floorLayouts} from '../state.js';

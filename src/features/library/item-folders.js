@@ -1,20 +1,9 @@
 // @ts-check
 /* The Inventory tab's folder tree: the tree itself, the tags it materialises
    onto everything filed under it, and the id rehoming that keeps an item's id
-   filed under its folder path.
-
-   Extracted from index.html in Phase 3, move-only: the body below is
-   byte-identical to what stood there, and the `export` block at the end is
-   the only line added.
-
-   rehomeItemId is here rather than in core/ids.js, where §3 files it: it
-   needs folderIdPrefix, which needs itemFolderPath, which is this tree.
-
-   What acts on a folder did not come -- askNewLibFolder, libFolderMenu,
-   deleteLibFolder, moveLibFolderDialog and the rest all reach renderLibAll,
-   which is in the reference cycle between the Plan side panels and the
-   Library UI (see .claude/plans/refactor-split.md, the plan/ round).
-*/
+   filed under its folder path (here rather than in kernel/ids.js because it
+   needs itemFolderPath, which is this tree). The folder menus and dialogs
+   are folder-menus.jsx. */
 import {idLeaf, retagItem, uniqueId} from '../../kernel/ids.js';
 /* The tree walks and tag inheritance are kernel model (migrate() needs them on
    every load); they are re-exported below so this module stays the one place

@@ -1,13 +1,8 @@
 // @ts-check
 /* Ids. A thing's id is user-editable, so it is held to a URL/S3-safe character
-   set; a slash groups ids into folders the way an S3 key does.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. `retagItem` is here too, as §3 files it; `rehomeItemId`,
-   which §3 also lists, is not — it needs folderIdPrefix and itemFolderPath
-   from the Inventory tab's folder tree, so it went to
-   src/features/library/item-folders.js with them. */
+   set; a slash groups ids into folders the way an S3 key does. Rehoming an
+   id under its folder path needs the Library's folder tree, so that is
+   rehomeItemId in features/library/item-folders.js. */
 
 import {S, itemOf} from './state.js';
 import {furnHist} from './history.js';

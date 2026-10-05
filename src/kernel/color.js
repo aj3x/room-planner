@@ -1,11 +1,6 @@
 // @ts-check
 /* Colour helpers. A leaf: pure string/number maths, no canvas, no DOM.
-
-   These lived in canvas/draw.js, where they were used, but core/migrate.js
-   normalises every saved colour on load and that import made the core layer
-   depend on the renderer. Moved here in the decoupling pass
-   (.claude/plans/decoupling.md §4, step 2).
-*/
+   In the kernel because migrate() normalises every saved colour on load. */
 
 /* accepts #abc, #aabbcc, or the same without the # — returns canonical '#aabbcc' or null */
 /** @param {unknown} v @returns {string|null} */

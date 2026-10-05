@@ -1,9 +1,9 @@
 /* ===========================================================================
-   Phase 2 build scaffold.
+   The build.
 
    The deployment model is non-negotiable: ONE self-contained `index.html` that
    works when you double-click it off disk. Everything here exists to keep that
-   true while the source becomes many files in Phase 3.
+   true of a source tree that is many files.
 
      vite dev    -> module graph + HMR, index.html as the entry
      vite build  -> dist/index.html, all JS and CSS inlined, no siblings
@@ -36,20 +36,17 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
    `<!-- @include src/ui-kit/foo.html -->` in index.html, substituted for that
    file's contents.
 
-   This is what lets the static markup live in partials under src/ without becoming
-   anything else. It is a textual splice, deliberately: the panes stay static
-   markup that the browser parses before any script runs, which is what every
-   render*() function assumes when it looks up #paneRoom or #libContent at
-   boot. Building them from JS template strings instead would be a behaviour
-   change, not a refactor.
+   This is what lets static markup (the icon sprite, the dialog's host) live in
+   partials under src/. It is a textual splice, deliberately: the shell stays
+   static markup that the browser parses before any script runs, which is what
+   features/canvas/view.js assumes when it takes #cv's context at import time.
 
-   The directive's own indentation is consumed along with it, since each
-   partial already carries the indentation it had inside index.html.
+   The directive's own indentation is consumed along with it; each partial
+   carries its own.
 
    Runs first in the chain (`enforce: 'pre'`, `order: 'pre'`), so every other
    HTML transform — the test epilogue, Vite's own asset handling, the classic
-   script tag, and singlefile's inlining — sees one whole document, exactly the
-   one index.html described before A5 split it up.
+   script tag, and singlefile's inlining — sees one whole document.
    -------------------------------------------------------------------------- */
 function htmlIncludes() {
   const RE = /^[ \t]*<!--\s*@include\s+(\S+?)\s*-->[ \t]*$/gm;
@@ -64,8 +61,8 @@ function htmlIncludes() {
       },
     },
     /* A partial is not a module in the graph, so nothing would reload when one
-       changes. Partials live beside the code that binds them, anywhere under
-       src/, so watch src/ and ask the page to reload on any .html change. */
+       changes. Partials may live anywhere under src/, so watch src/ and ask
+       the page to reload on any .html change. */
     configureServer(server) {
       server.watcher.add(resolve(ROOT, 'src'));
       server.watcher.on('change', (f) => {
@@ -80,24 +77,18 @@ function htmlIncludes() {
 /* --------------------------------------------------------------------------
    Test instrumentation.
 
-   Suite B used to append the capture epilogue by rewriting the HTTP response
-   with `page.route`. That worked because the app was one inline classic script
-   sitting in the HTML, so appending text to the response appended it to the
-   script's own top-level scope.
-
-   Neither half of that survives the build:
+   Suite B reaches the app's internals through a capture epilogue appended to
+   index.html's script. It cannot be appended to what the server sends:
      - in dev, Vite hoists an inline module script out of the HTML into a
        `/index.html?html-proxy` module, so there is no script body in the
        response to append to;
      - in a build, the bundle is wrapped in an IIFE, so anything appended
        *after* it lands outside the closure and captures nothing.
 
-   So the epilogue moves from "rewrite the response" to "part of the source that
-   gets built", injected here with `order: 'pre'` — before Vite's own HTML
-   handling, which is what puts it inside the proxied module in dev and inside
-   the IIFE in a build. index.html on disk is still never modified; this is the
-   same in-memory-copy contract the baseline has always held, moved one stage
-   earlier in the pipeline.
+   So it is part of the source that gets built, injected here with
+   `order: 'pre'` — before Vite's own HTML handling, which is what puts it
+   inside the proxied module in dev and inside the IIFE in a build. index.html
+   on disk is never modified; this is an in-memory copy.
    -------------------------------------------------------------------------- */
 function testEpilogue() {
   return {
@@ -123,9 +114,9 @@ function testEpilogue() {
    so it still runs after the document is parsed. A classic script has no such
    defer, and `defer` on an *inline* script is ignored, so leaving it in <head>
    makes it run before <body> exists and the app dies on the first
-   `$('...').addEventListener`. Moving it to just before </body> restores both
-   the position it occupies in index.html today and the ordering guarantee the
-   module tag was providing. */
+   `$('cv')`. Moving it to just before </body> restores both the position it
+   occupies in index.html and the ordering guarantee the module tag was
+   providing. */
 function classicScriptTag() {
   const TAG = /<script\s+type="module"\s+crossorigin\s+src="([^"]+)"\s*><\/script>\s*/;
   return {

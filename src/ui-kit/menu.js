@@ -1,17 +1,12 @@
 // @ts-check
 /* Dropdown menus: the popup a ⋯ button opens, and the right-click
-   variant that has no button to anchor against.
+   variant that has no button to anchor against. (The ⋯ button is
+   ui-kit/parts.jsx's MoreButton.)
 
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added.
-
-   The four listener registrations that follow the region (document pointerdown
-   / keydown / scroll and window resize, all of which just close the menu) stay
-   in index.html: registering them at import time would be a top-level side
-   effect (plan §4 rule 6) and would move them ahead of every other listener in
-   the file. They read menuEl and closeMenu as live imported bindings. (The ⋯ button
-   they hang off is ui-kit/parts.jsx's MoreButton.) */
+   What closes a menu from outside it — a click elsewhere, a scroll or a
+   resize — is registered in index.html, and Escape is a shortcut
+   (app/shortcuts.js): nothing here registers a listener at import time. They
+   read menuEl and closeMenu as live imported bindings. */
 
 
 /* ------------------------- dropdown menus -------------------------

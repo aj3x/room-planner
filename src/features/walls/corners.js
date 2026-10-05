@@ -1,11 +1,7 @@
 // @ts-check
 /* Adding and taking away a corner. A wall has no id -- it IS the gap between
    two points -- so splicing the polygon renumbers walls underneath everything
-   standing in them; both functions renumber before they render.
-
-   Extracted from index.html in Phase 3 as part of the 49-name SCC commit,
-   move-only.
-*/
+   standing in them; both functions renumber before they commit. */
 import {polySimple} from '../../kernel/geometry.js';
 import {roomSel} from '../../kernel/selection.js';
 import {L, RP} from '../../kernel/state.js';
@@ -20,7 +16,7 @@ import {flash} from '../../ui-kit/flash.js';
    the polygon therefore renumbers walls underneath everything standing in them, and
    anything not renumbered to match stays behind on whichever wall inherited its old
    number — which is how a closet door ended up two walls down the room. Both of these
-   functions renumber before they render, and clampOpenings then pulls back anything
+   functions renumber before they commit, and clampOpenings then pulls back anything
    left hanging off the end of the wall it landed on. */
 /* Not tryRoomEdit, deliberately: it clamps the openings the moment the polygon changes,
    which here is one step too early. At that point every opening still carries its old

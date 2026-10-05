@@ -1,10 +1,6 @@
 // @ts-check
 /* Openings: doors and windows cut into a room wall, and the floor a hinged
-   door's leaf sweeps.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. */
+   door's leaf sweeps. */
 
 import {EPS, shrink, polyHit, worldPoly} from '../geometry.js';
 import {L, itemOf} from '../state.js';

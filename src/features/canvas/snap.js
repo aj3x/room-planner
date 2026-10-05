@@ -3,13 +3,12 @@
    room already lies on.
 
    After the magnet come squareCorner, which commits its edit through
-   transact(), and pickAt/pickRoom, the hit-testing that shares the region.
+   transact(), and pickAt/pickRoom, the hit-testing.
 
-   This is the least-covered code in the app by the Phase 3.5 audit's own
-   account: every magnet assertion in the pointer suite is on a rectangle, so
-   alignPoint's bias ordering (near corner 0, far corner 0.3, square-to-edge
-   +0.35) never decides an outcome. Nothing here changed, but that is the
-   reason to read it rather than trust the suite. */
+   This is some of the least-covered code in the app: every magnet assertion
+   in the pointer suite is on a rectangle, so alignPoint's bias ordering (near
+   corner 0, far corner 0.3, square-to-edge +0.35) never decides an outcome.
+   Read it rather than trust the suite. */
 
 import {view} from './view.js';
 import {RP, L, itemOf} from '../../kernel/state.js';
@@ -31,11 +30,9 @@ import {flash} from '../../ui-kit/flash.js';
     @typedef {import('../../kernel/types.js').RoomSel & {end?: 'a'|'b'|null}} RoomPick */
 
 /* ---- where a dragged wall end lands ----
-   These two were in model/walls.js until the decoupling pass
-   (.claude/plans/decoupling.md §4, step 3). Both are view-dependent — one
-   reads the camera scale, the other falls back to the grid snap — so they
-   could not stay in the domain layer once it stopped importing canvas/.
-   The wall-shaped half of the decision is still kernel/model/walls.js's
+   Both are view-dependent — one reads the camera scale, the other falls back
+   to the grid snap — so they are the canvas's, not the kernel's. The
+   wall-shaped half of the decision is still kernel/model/walls.js's
    magneticWallPoint; this is the camera's half. */
 
 /* world-space radius a drag should snap within, so pillars/wall ends catch
@@ -54,7 +51,7 @@ function snapWallPoint(raw, excludeId, magnetic){
 }
 
 /* ------------------------- the alignment magnet -------------------------
-   A dragged point used to land wherever the grid allowed, which is hopeless on a plan
+   A dragged point that lands wherever the grid allows is hopeless on a plan
    whose other corners are not on the grid themselves (anything imported or drawn
    freehand): a neighbour's exact x or y was simply unreachable, so squaring a corner
    by eye never came off. Instead the point is pulled onto the lines the rest of the
@@ -208,8 +205,6 @@ function pickRoom(px,py){
 }
 
 
-/* ---- Phase 3, the SCC commit: the rest of this file's region, which could
-   not move until the whole 49-name component could. Move-only. ---- */
 /* Put the corner at exactly 90° without dragging for it. Every point that squares this
    corner sits on the circle with its two neighbours as diameter, so the nearest point on
    that circle is the smallest move that does it. */

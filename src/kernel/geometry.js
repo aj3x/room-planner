@@ -1,11 +1,5 @@
 // @ts-check
-/* Geometry. Pure polygon maths: no state, no DOM, no canvas.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. The `open state` sub-block that sat between `worldPoly` and
-   `shrink` did not come along — `openSizeLabel` reads `S.unit`; it moved
-   separately once core/state.js existed. */
+/* Geometry. Pure polygon maths: no state, no DOM, no canvas. */
 
 /* ------------------------- geometry ------------------------- */
 /** @typedef {import('./types.js').Pt} Pt */

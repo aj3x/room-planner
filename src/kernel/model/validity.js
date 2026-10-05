@@ -1,11 +1,5 @@
 // @ts-check
-/* Validity: whether a placement is legal, and what it runs into if it is not.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. The walk-paths region that shares this banner's half of the
-   file did NOT come along — it draws (ctx, PAL, view, cv) and belongs behind
-   canvas/. */
+/* Validity: whether a placement is legal, and what it runs into if it is not. */
 
 import {EPS, bbox, bbHit, shrink, pointInPoly, segHit, polyHit, segDist,
         centroid, worldPoly} from '../geometry.js';

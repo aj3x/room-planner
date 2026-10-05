@@ -2,11 +2,6 @@
 /* State. The single mutable object the whole app reads, plus the blank shapes it
    starts from. A leaf: this module imports nothing.
 
-   Extracted from index.html in Phase 3. The code below is byte-identical to
-   what stood there — including `setS`, which landed in index.html in its own
-   commit first precisely so this one could stay a move. The only line added is
-   the `export` block at the end.
-
    `S.active = S.layouts[0].id;` is a top-level statement, and stays one: it is
    part of initialising this module's own state, the same as the object literal
    above it. Nothing here reaches outside the module at import time. */
@@ -55,18 +50,14 @@ let S = {unit:'ftin', snap:'25.4', showSwing:true, showDims:true, showOpen:true,
          defaultMarketDismissed:false, // user removed the built-in default marketplace subscription; don't re-add it
          uiLib:{tab:'library', libFolderId:null, marketFolderId:null}};
 S.active = S.layouts[0].id;
-/* S is reassigned wholesale on load and on import. Once it lives in a module
-   of its own those writers cannot assign to it — an imported binding is
-   read-only — so every write goes through this setter instead. The binding is
+/* S is reassigned wholesale on load and on import, and an imported binding is
+   read-only, so every such write goes through this setter. The binding is
    still live: importers see the new object, which is what migrate() relies on
    when reconcileTags reads S.itemFolders. */
 /** @param {State} v */
 function setS(v){ S = v; }
 
-/* The accessors that read S. Moved here after S itself: they are pure lookups
-   over the state object, they need nothing else, and core/floor-space.js could
-   not move without them. Byte-identical to index.html; §3 did not name a file
-   for this block. */
+/* The accessors that read S: pure lookups over the state object. */
 /** @type {() => Layout} */
 const L = () => S.layouts.find(l=>l.id===S.active) || S.layouts[0];
 const RP = () => L().room.points;

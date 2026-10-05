@@ -1,11 +1,6 @@
 // @ts-check
 /* Units. Everything in the app is stored in millimetres; these are the boundary
-   the user's numbers cross on the way in and out.
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added. `unitWord` stayed behind on the first pass because it reads
-   `S.unit`; it rejoined the region once `core/state.js` existed. */
+   the user's numbers cross on the way in and out. */
 
 import {S} from './state.js';
 

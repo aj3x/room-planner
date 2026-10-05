@@ -108,7 +108,6 @@ function deleteBothDialog(aId,bId){
 function turnFloorRoom(l,deg){
   transact('floor', ()=>{ l.floorPlace.rot=norm360((l.floorPlace.rot||0)+deg); });
 }
-/* ---- Phase 3: the rest of this file's region, move-only. ---- */
 /* ---- floors: a named arrangement of rooms. A floor owns no geometry of its
         own — each room keeps its outline and carries where it stands. ---- */
 function newFloor(){

@@ -5,13 +5,12 @@
    The codebase's dense style — `if(cond)`, no space after a keyword, short
    names — is a decision, not an accident, and a linter that argued with it
    would produce ten thousand findings that all mean nothing. Reformatting also
-   destroys `git blame`, which is the single thing this refactor is most careful
-   to preserve. A rule here that fires on how code looks is a bug in this file.
+   destroys `git blame`, which is worth more than any formatting. A rule here that fires on how code looks is a bug in this file.
 
    What it is for is `no-undef`: a function moved between modules that quietly
    stops being in scope is named, in the file, at the line, before a test
-   runs. `index.html` and the partials are linted as module scripts with
-   browser globals; `src/**` as ESM.
+   runs. `index.html`'s script is linted as a module with browser globals;
+   `src/**` as ESM.
 
    The other thing it does is hold src/'s boundaries: what kernel/, ui-kit/,
    each feature and app/ may import (BOUNDARIES, below). That rule is worth
@@ -34,24 +33,17 @@ const RELAXED = {
 
   /* `caughtErrors: 'none'`: `catch(e){ ... }` that ignores `e` is this
      codebase's house style for "this can fail and that is fine", and it accounts
-     for 26 of the 36 findings on a first run. Flagging all of them would train
+     for most of the findings it would make. Flagging all of them would train
      everyone to ignore the output, which is how `no-undef` — the rule that
-     actually earns its keep here — ends up ignored too.
+     actually earns its keep here — ends up ignored too. Anything else unused
+     (a local, a trailing parameter, a function nobody calls) is an error. */
+  'no-unused-vars': ['error', { caughtErrors: 'none', args: 'after-used', ignoreRestSiblings: true }],
 
-     `warn`, not `error`, for what is left: a genuinely unused local is a real
-     if minor finding, and Phase 2 is explicitly forbidden from editing
-     application code to clear it. So it stays visible and stays non-blocking,
-     rather than being switched off or quietly fixed. See BACKLOG.md. */
-  'no-unused-vars': ['warn', { caughtErrors: 'none', args: 'after-used', ignoreRestSiblings: true }],
+  'no-useless-assignment': 'error',
 
-  /* Same reasoning: three genuine dead stores in index.html, none of them
-     behaviour-affecting, none of them mine to fix in this phase. */
-  'no-useless-assignment': 'warn',
-
-  /* New in ESLint 10, and a modernization rule rather than a correctness one:
-     it wants `new Error(msg, { cause: e })` at every rethrow. Complying means
-     editing application code, which this phase forbids, and the rule says
-     nothing about whether the code is right. Off. */
+  /* A modernization rule rather than a correctness one: it wants
+     `new Error(msg, { cause: e })` at every rethrow, and says nothing about
+     whether the code is right. Off. */
   'preserve-caught-error': 'off',
 };
 
@@ -373,14 +365,10 @@ export default [
   },
 
   /* ---- the app ---------------------------------------------------------
-     index.html is linted as a **module**. Phase 3 has begun moving code into
-     `src/`, so the file now carries `import` declarations and `sourceType:
-     'script'` would refuse to parse them.
-
-     `no-undef` still asks the question worth asking of it — "references
-     something neither this file nor its imports define" — and now it also
-     catches the characteristic extraction failure: a symbol moved out of here
-     and never imported back. */
+     index.html's script is a module: it imports from src/. `no-undef` asks
+     the question worth asking of it — "references something neither this
+     file nor its imports define" — which is the failure when a name moves
+     between modules and is never imported back. */
   {
     files: ['**/*.html'],
     plugins: { html },

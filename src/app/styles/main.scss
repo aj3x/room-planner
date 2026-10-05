@@ -3,8 +3,7 @@
 //
 // This file is the only place the order of the stylesheet is declared, and
 // the order matters: these partials are plain CSS, so later rules win ties
-// with earlier ones on equal specificity. The sequence below is exactly the
-// order the rules sat in inside index.html's <style> block, and changing it
+// with earlier ones on equal specificity, so changing the sequence below
 // changes the page. Add a partial where its rules belong, not at the end.
 //
 // Design tokens stay CSS custom properties (_tokens.scss). They are never
@@ -13,7 +12,7 @@
 // cascade -- see DESIGN.md §3.
 //
 // `//` comments are silent: Sass strips them, so this header never reaches
-// the compiled CSS and the split stays byte-identical to the old <style>.
+// the compiled CSS.
 // ======================================================================
 
 @use 'tokens';

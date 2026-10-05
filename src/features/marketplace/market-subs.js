@@ -1,18 +1,8 @@
 // @ts-check
 /* Marketplace subscriptions: fetch and cache. A subscription is a live
    market.json URL per MARKET_SCHEMA.md; the two Maps below are in-memory only
-   and are never persisted (rule 5: the caches live in a module that nothing
-   reaches through).
-
-   Extracted from index.html in Phase 3, move-only: the body below is
-   byte-identical to what stood there, and the `export` block at the end is
-   the only line added.
-
-   What renders a subscription did not come -- renderMarketTop, renderMarketSub,
-   addMarketDialog, subMenu and addMarketItemToInventory all reach
-   renderLibAll, which is in the reference cycle between the Plan side panels
-   and the Library UI (see .claude/plans/refactor-split.md, the plan/ round).
-*/
+   and are never persisted. What shows a subscription is the Library's
+   (features/library/marketplace.jsx, market-views.jsx). */
 import {idProblem} from '../../kernel/ids.js';
 import {normItem} from '../../kernel/migrate.js';
 import {S, clone, uid} from '../../kernel/state.js';

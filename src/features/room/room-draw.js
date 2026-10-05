@@ -27,7 +27,7 @@ function finishCustomDraw(){
 }
 /* Where the next corner would land, and why — the same magnet the corner drag uses, so
    an outline comes out straight and square while it is being drawn rather than having to
-   be tidied up afterwards. Shift still means the old 45° lock off the last corner. */
+   be tidied up afterwards. Shift locks to 45° off the last corner instead. */
 /** @param {import('../../kernel/types.js').Pt} raw @param {boolean} shift @returns {import('../../kernel/types.js').Pt} */
 function drawSnapPoint(raw,shift){
   const pts=/** @type {{pts: import("../../kernel/types.js").Pt[]}} */(drawState.value).pts;   // drawing
