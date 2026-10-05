@@ -157,7 +157,20 @@ const boundaries = {
      state (TagField's initialTags);
    - any prop of a component used only as a dialog's body in its own file
      (`openDialog({…, body: <Body …/>})`, ui-kit/modal.jsx): the dialog
-     renders that vnode once and never re-renders it with new props. */
+     renders that vnode once and never re-renders it with new props.
+
+   A props type may also be a typedef in the same file (`@param {TileProps}
+   p`, or `TileProps & {…}`). A component that holds state or reads a signal,
+   takes props, and whose props cannot be read that way (no JSDoc, an imported
+   type) is reported too: unknown is not compliant.
+
+   What it reads: `useState`/`useReducer`, `x.value`, `pref()`, and the same
+   through a function declared in this file (a custom hook like useIndex, or a
+   helper like watchRoom). What it cannot see, so review must:
+   - a hook or helper imported from another module (other than `pref`) that
+     holds state or reads a signal — the component counts as stateless;
+   - whether the revision signal read is the right one: reading `rev.prefs`
+     satisfies it for a component that shows furniture. */
 function jsdocParamType(sourceCode, node){
   const target = node.parent && (node.parent.type === 'ExportNamedDeclaration' || node.parent.type === 'VariableDeclarator') ? (node.parent.type === 'VariableDeclarator' ? node.parent.parent : node.parent) : node;
   const cs = sourceCode.getCommentsBefore(target);
@@ -188,11 +201,19 @@ function splitTop(t, sep){
   if(cur.trim()) out.push(cur.trim());
   return out;
 }
-/** {name: type} of an object type literal `{a: T, b?: U}` (one level of `X & {…}` is read for its literal part). */
-function propTypes(t){
-  const parts = splitTop(t, '&').filter(p => p.startsWith('{') && p.endsWith('}'));
+/** {name: type} of an object type literal `{a: T, b?: U}`, an intersection of
+    them, or a typedef in this file naming either; null when a part is neither. */
+function propTypes(t, typedefs, seen = new Set()){
   const out = {};
-  for(const p of parts){
+  for(const p of splitTop(t, '&')){
+    if(typedefs[p] && !seen.has(p)){
+      seen.add(p);
+      const sub = propTypes(typedefs[p], typedefs, seen);
+      if(!sub) return null;
+      Object.assign(out, sub);
+      continue;
+    }
+    if(!(p.startsWith('{') && p.endsWith('}'))) return null;
     for(const m of splitTop(p.slice(1, -1), ',;')){
       const i = m.indexOf(':'); if(i < 0) continue;
       out[m.slice(0, i).replace(/[?'"\s]/g, '')] = m.slice(i + 1).trim();
@@ -264,8 +285,8 @@ const signalsMemo = {
               const c = n.callee.name;
               if(c === 'useState' || c === 'useReducer') r.state = true;
               if(c === 'pref') r.signal = true;
-              const h = helpers.get(c);   /* a helper in this file that reads signals, e.g. watchRoom() */
-              if(h){ r.signal = r.signal || h.signal; r.revision = r.revision || h.revision; }
+              const h = helpers.get(c);   /* a helper or custom hook in this file, e.g. watchRoom(), useIndex() */
+              if(h){ r.state = r.state || h.state; r.signal = r.signal || h.signal; r.revision = r.revision || h.revision; }
             }
             if(n.type === 'MemberExpression' && !n.computed && n.property.name === 'value'){
               r.signal = true;
@@ -281,7 +302,8 @@ const signalsMemo = {
           walk(fn.body);
           return r;
         };
-        for(const st of program.body){
+        /* twice, so a helper that calls one declared below it hears about it */
+        for(let pass = 0; pass < 2; pass++) for(const st of program.body){
           const d = st.type === 'ExportNamedDeclaration' ? st.declaration : st;
           if(d && d.type === 'FunctionDeclaration' && d.id && /^[a-z]/.test(d.id.name)) helpers.set(d.id.name, reads(d));
         }
@@ -289,15 +311,22 @@ const signalsMemo = {
           const fn = node;
           const {state, signal, revision} = reads(fn);
           if(!(state || signal) || revision) continue;
+          if(!fn.params.length) continue;
+          const used = usages.get(name) || [];
+          if(!exported.has(name) && used.length && used.every(asDialogBody)) continue;
+          const at = fn.id || node.parent.id || fn;
           const t = jsdocParamType(sourceCode, fn);
-          if(!t) continue;
-          const props = propTypes(t);
+          const props = t && propTypes(t, typedefs);
+          if(!props){
+            context.report({node: at, message:
+              `${name} ${state ? 'holds hook state' : 'reads a signal'} and takes props this rule cannot read`
+              + (t ? ` (\`${t}\`)` : ' (no JSDoc @param)') + ': type them with an object literal or a typedef in this file, so a stale object prop can be seen.'});
+            continue;
+          }
           if(Object.keys(props).some(k => /^(epoch|rev|\w+Rev)$/.test(k))) continue;
           const objects = Object.entries(props).filter(([k, ty]) => k !== 'children' && !/^initial[A-Z]/.test(k) && !isPlainData(ty, typedefs)).map(([k]) => k);
           if(!objects.length) continue;
-          const used = usages.get(name) || [];
-          if(!exported.has(name) && used.length && used.every(asDialogBody)) continue;
-          context.report({node: fn.id || node.parent.id || fn, message:
+          context.report({node: at, message:
             `${name} ${state ? 'holds hook state' : 'reads a signal'} and takes ${objects.map(o => '`' + o + '`').join(', ')} (an object): `
             + '@preact/signals re-renders it with its parent only when a prop changes by reference, and the model is edited in place. '
             + 'Read the revision signal it shows, or take an `epoch` prop (ui-kit/component.js).'});
