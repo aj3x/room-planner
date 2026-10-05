@@ -9,6 +9,7 @@ import {S, isCanvasMode} from '../kernel/state.js';
 import {loaded, pref, rev} from '../kernel/signals.js';
 import {transact} from '../kernel/tx.js';
 import {mountComponent} from '../ui-kit/component.js';
+import {$} from '../ui-kit/dom.js';
 import {flash} from '../ui-kit/flash.js';
 import {showShortcuts} from '../ui-kit/modal.jsx';
 import {Icon, PaneHead, Select} from '../ui-kit/parts.jsx';
@@ -87,14 +88,11 @@ function StageControls(){
   </>;
 }
 
-/** @param {string} id */
-const el = id => /** @type {HTMLElement} */(document.getElementById(id));   // the shell's
-
 function mountChrome(){
-  mountComponent(el('header'), <Header/>);
-  mountComponent(el('stageControls'), <StageControls/>);
-  mountComponent(el('paneHeadLeft'), <PaneHead side="left" name="Plan" label="the plan panel" onToggle={()=>togglePane('left')}/>);
-  mountComponent(el('paneHeadRight'), <PaneHead side="right" name="Properties" label="the properties panel" onToggle={()=>togglePane('right')}/>);
+  mountComponent($('header'), <Header/>);
+  mountComponent($('stageControls'), <StageControls/>);
+  mountComponent($('paneHeadLeft'), <PaneHead side="left" name="Plan" label="the plan panel" onToggle={()=>togglePane('left')}/>);
+  mountComponent($('paneHeadRight'), <PaneHead side="right" name="Properties" label="the properties panel" onToggle={()=>togglePane('right')}/>);
 }
 
 export {mountChrome};

@@ -11,6 +11,7 @@ import {marketFolderOf, ensureDefaultMarket} from '../features/marketplace/index
 import {itemFolderOf, mountLibraryPage, nav} from '../features/library/index.js';
 import {mountMode, paramMode, setPendingFit, syncModeParam} from '../features/mode/index.js';
 import {effect, loaded, notice, untracked} from '../kernel/signals.js';
+import {$} from '../ui-kit/dom.js';
 import {flash} from '../ui-kit/flash.js';
 import {mountSections} from '../ui-kit/panels.js';
 import {mountModal} from '../ui-kit/modal.jsx';
@@ -35,15 +36,12 @@ function mount(mountFills){
   effect(() => { const n=notice.value; if(n) untracked(() => flash(n.msg)); });
 }
 
-/** @param {string} id @returns {HTMLElement} */
-const shell = id => /** @type {HTMLElement} */(document.getElementById(id));   // index.html's
-
 async function boot(){
   /* the page's parts, before the (maybe slow) storage read: each shows
      itself empty until the project is loaded */
   mountChrome();
-  mountModal(shell('dialog'));
-  mountLibraryPage(shell('paneLibrary'));
+  mountModal($('dialog'));
+  mountLibraryPage($('paneLibrary'));
   bindCanvas();
   setupCanvas();
   const mountFills = fillSlots();   // the panes' headings, before the (maybe slow) storage read
