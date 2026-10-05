@@ -4,8 +4,8 @@
 
 > **Test code stays under 20% of the codebase, and ideally under 10%.**
 
-Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,771 lines
-against 15,318** today — 10.4% of the two together (11.6% of the app's own
+Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,782 lines
+against 15,585** today — 10.3% of the two together (11.4% of the app's own
 size). Check it before adding a
 file:
 
@@ -66,7 +66,7 @@ green — investigate.
 
 ## What the suite covers
 
-### Suite A — `test/unit`, Vitest + jsdom (118 tests)
+### Suite A — `test/unit`, Vitest + jsdom (126 tests)
 
 Pure logic, imported straight out of `src/`. No app boot, no bundler, no
 harness; a file evaluates the modules it names and calls them.
@@ -103,8 +103,11 @@ harness; a file evaluates the modules it names and calls them.
   checks the text on screen changed. The model is mutated, not replaced, and
   @preact/signals skips a component that reads signals or holds `useState`
   when its parent re-renders it with the same props, so a panel can go stale
-  with nothing thrown (the Library's tiles once did). The one test that reads
-  panel text; it guards the re-render rule, not the panels' contents.
+  with nothing thrown (the Library's tiles once did). It also replays an undo
+  and a redo (a snapshot, not a commit) and edits from the plan while the
+  Library is hidden. The one test that reads panel text; it guards the
+  re-render rule, not the panels' contents — `rp/signals-memo` (lint) guards
+  the same rule statically.
 
 ### `test/build` — the deployment model (6 tests)
 
@@ -154,8 +157,8 @@ knows what they are inheriting.
 - **The side panels and the Library UI.** Beyond `panels-follow-edits.test.js`
   checking that each one repaints after an edit, no test reads what the side-pane
   components (the Rooms tree, Items, the Selection, Room, Floor and View
-  sections, the Library and Marketplace pages), `itemDialog` or
-  `openingDialog` put on the page; the e2e suite only clicks two of their buttons, by accessible
+  sections, the Library and Marketplace pages), the dialogs, the header or the
+  canvas's controls put on the page; the e2e suite only clicks two of their buttons, by accessible
   name. A break that does not throw turns nothing
   red. This is the largest uncovered surface in the repo, and it is uncovered on
   purpose: 135 tests' worth of DOM-text assertions cost more to maintain than
@@ -219,29 +222,27 @@ a test.
 Do it *before* running the suite, not after. Moving every pane's wiring into
 its own bind module took ten names out of `index.html`'s scope in one pass — `readImport`,
 `startCustomDraw`, `draw`, `fit`, `save`, `setMode` among them, six of those in
-`GLOBALS` and therefore silent. `index.html` now holds twelve registrations and
-seven imports, so the shell's scope is small and most moves of any size will
+`GLOBALS` and therefore silent. `index.html` now holds five registrations and
+six imports, so the shell's scope is small and most moves of any size will
 touch this file.
 
 ### 3. `expandIncludes` must stay in step with the Vite plugin
 
-The static markup lives in HTML partials under `src/`, behind `<!-- @include src/…/foo.html -->`
+The icon sprite and the dialog's host live in HTML partials under `src/ui-kit/`, behind `<!-- @include src/…/foo.html -->`
 directives that a Vite plugin (`rp:html-includes`) substitutes in
 `transformIndexHtml`. Suite B is served by Vite and never sees a directive.
 **[`unit-setup.js`](unit-setup.js) is not** — it reads `index.html` off disk to
 build the jsdom shell — so it carries the same substitution. If it stops
-expanding, or expands differently, the shell has no `#cv`, `features/canvas/view.js`
-throws on `getContext('2d')` at module evaluation, and you get a wall of red
+expanding, or expands differently, the shell has no sprite or `#dialog`, and you get a wall of red
 unit tests **with a green build and a green browser** — the same signature as a
 stale `__rp` name, and for the same reason.
 
 The same applies to how it strips the scripts. It used to cut from the first
 `<script` to the last `</script>`, which was exact while `index.html` held one
-script and became silently destructive once each partial carried
-its own: the first `<script>` is the header partial's, near the top of `<body>`,
-so the cut deleted every pane between. It strips every block by regex now, and
-asserts one id per partial afterwards so a repeat names the pane that vanished
-instead of surfacing as a null dereference three imports deep.
+script and became silently destructive once partials carried scripts of
+their own, deleting every pane between. It strips every block by regex now,
+and asserts the ids the app needs afterwards, naming the file that lost one,
+instead of a null dereference three imports deep.
 
 ## Determinism
 

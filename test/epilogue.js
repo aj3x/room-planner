@@ -57,7 +57,7 @@ export const EPILOGUE = `
 ;import {undoRoom, redoRoom, undoFurn, redoFurn} from './src/kernel/history.js';
 ;import {exportPayload} from './src/features/io/export.js';
 /* readImport's last shell reader was the #fileIn change handler, which moved
- * into app/bind/header.js when the header's wiring went to its partial. It was in
+ * out of the shell with the header's wiring (now app/chrome.jsx). It was in
  * GLOBALS, where a missing name fails silently inside a try/catch — the
  * round-trip spec went red and lint said nothing, which is rule 2 exactly. */
 ;import {applyImport, readImport} from './src/features/io/import.js';

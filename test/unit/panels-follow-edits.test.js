@@ -12,6 +12,7 @@ import { migrate } from '../../src/kernel/migrate.js';
 import { loaded } from '../../src/kernel/signals.js';
 import { floorSel, roomSel, selectOnly } from '../../src/kernel/selection.js';
 import { transact } from '../../src/kernel/tx.js';
+import { undoRoom, redoRoom } from '../../src/kernel/history.js';
 import { fillSlots } from '../../src/app/slots.js';
 import { mountLibraryPage, nav } from '../../src/features/library/index.js';
 
@@ -43,6 +44,11 @@ describe('pane sections and the Library page follow in-place edits', () => {
     await follows(sec('shape'), () => transact('room', () => { L().room.wall = 200; }), '0.2 m');
     await follows(sec('roomsel'), () => transact('room', () => { L().openings[0].width = 900; }), '0.9 m');
   });
+  it('Room mode: undo and redo, which replay a snapshot rather than commit', async () => {
+    mode('room'); transact('room', () => { L().room.wall = 250; });
+    await follows(sec('shape'), () => undoRoom());
+    await follows(sec('shape'), () => redoRoom(), '0.25 m');
+  });
   it('Furniture mode: the Selection panel', async () => {
     mode('furniture'); selectOnly('p2');
     await follows(sec('sel'), () => transact('furn', () => { L().placed[1].rot = 90; }));
@@ -61,6 +67,12 @@ describe('pane sections and the Library page follow in-place edits', () => {
     await follows(content, () => transact('lib', () => { S.inventory.find((i) => i.id === 'sofa').name = 'Couch'; }), 'Couch');
     await follows(content, () => transact('lib', () => { S.itemFolders[0].name = 'Shelving'; }), 'Shelving');
     await follows(content, () => transact('prefs', () => { S.unit = 'cm'; }), 'cm');
+  });
+  it('the Library after a trip to the plan, where the edit was made', async () => {
+    mode('inventory'); await flush(); mode('furniture');
+    await follows($('#paneLibrary .lib-content'), () => {
+      transact('lib', () => { S.inventory.find((i) => i.id === 'sofa').name = 'Settee'; }); mode('inventory');
+    }, 'Settee');
   });
   it('the Marketplace: ad hoc folders', async () => {
     mode('marketplace');

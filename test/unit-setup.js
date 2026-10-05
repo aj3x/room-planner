@@ -13,7 +13,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '..');
 
 /* The static markup lives in HTML partials under src/, behind
-   `<!-- @include src/app/html/foo.html -->` directives that a Vite plugin
+   `<!-- @include src/ui-kit/foo.html -->` directives that a Vite plugin
    (rp:html-includes) substitutes in transformIndexHtml. Suite B is served by
    Vite and never sees a directive; this file reads index.html off disk, so it
    carries the same substitution. KEEP THE TWO IN STEP -- without it the shell
@@ -38,11 +38,10 @@ document.documentElement.innerHTML = src.replace(SCRIPTS, '');
 /* Fail loudly and here, rather than as a null dereference deep inside a
    module. One id per partial: if a future change to the stripping above, or
    to the include expansion, drops a pane again, this names the pane. */
-for (const [id, partial] of [['dialog', 'ui-kit/modal'], ['cv', 'app/html/stage'],
-  ['paneRoom', 'app/html/pane-left'], ['paneStuff', 'app/html/pane-right'],
-  ['paneLibrary', 'features/library/pane-library']]) {
+for (const [id, from] of [['dialog', 'src/ui-kit/modal.html'], ['i-plan', 'src/ui-kit/sprite.html'],
+  ['cv', 'index.html'], ['paneRoom', 'index.html'], ['paneStuff', 'index.html'], ['paneLibrary', 'index.html']]) {
   if (!document.getElementById(id))
-    throw new Error(`unit-setup: #${id} is missing — src/${partial}.html did not survive into the harness DOM`);
+    throw new Error(`unit-setup: #${id} is missing — ${from} did not survive into the harness DOM`);
 }
 
 /* jsdom has no canvas. This records calls rather than rasterising -- enough for
