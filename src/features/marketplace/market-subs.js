@@ -104,7 +104,7 @@ function reloadMarketSub(sub){
       });
     } finally { reloading.delete(sub.id); }
   })());
-  return reloading.get(sub.id);
+  return /** @type {Promise<void>} */(reloading.get(sub.id));   // set just above
 }
 /** @param {MarketSub} sub */
 function removeMarketSub(sub){

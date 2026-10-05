@@ -1,36 +1,24 @@
 // @ts-check
 /* Toasts. Two of them: flash() on the canvas, libFlash() on the Library and
-   Marketplace tabs. Both stay up for readTime(msg).
-
-   Extracted from index.html in Phase 3, move-only: the code below is
-   byte-identical to what stood there, and the `export` block at the end is the
-   only line added.
-
-   flash() joined this file in the canvas/ round. It was left behind by the
-   ui/ round because its timer handle was declared `let drag=null,
-   flashT=null;` at the head of the interaction region, sharing one declarator
-   list with `drag`, which is reassigned from all over canvas/. Splitting that
-   declarator was a one-line sanctioned code change, made in its own commit
-   immediately before this move; `let flashT=null;` and flash() then moved
-   byte-identically.
-
-   That in turn unblocked four functions of model/walls.js: tryRoomEdit (it
-   calls flash) and setWallAngle / setWallLen / setRectSize (they call
-   tryRoomEdit). */
+   Marketplace tabs. Both stay up for readTime(msg). The canvas's is a
+   signal its component (Toast, toast.jsx) shows; the Library's is the
+   shell's #libFlash (ui-kit/modal.html). */
 
 import {$} from './dom.js';
+import {signal} from '../kernel/signals.js';
 /* long enough to read: ~60ms a character, never under 1.6s or over 5s */
 /** @param {unknown} msg */
 const readTime = msg => Math.max(1600, Math.min(5000, String(msg).length*60));
 
+/** What the canvas's toast says, and whether it is up (its text stays while it fades). */
+const toast = signal({msg: '', on: false});
 /** @type {number|undefined} */
 let flashT;
 /** @param {string|null|undefined} msg */
 function flash(msg){
   if(!msg) return;
-  const el=$('flash');
-  el.textContent=msg; el.classList.add('on');
-  clearTimeout(flashT); flashT=setTimeout(()=>el.classList.remove('on'),readTime(msg));
+  toast.value = {msg, on: true};
+  clearTimeout(flashT); flashT=setTimeout(()=>{ toast.value = {msg, on: false}; },readTime(msg));
 }
 
 /* ------------------------- library flash (Inventory/Marketplace tabs) ------------------------- */
@@ -44,4 +32,4 @@ function libFlash(msg,warn){
   clearTimeout(libFlashT); libFlashT=setTimeout(()=>el.classList.remove('on'),readTime(msg));
 }
 
-export {readTime, flash, libFlash};
+export {readTime, flash, libFlash, toast};

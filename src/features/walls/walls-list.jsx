@@ -15,7 +15,8 @@ import {openMenu} from '../../ui-kit/menu.js';
 import {mountComponent} from '../../ui-kit/component.js';
 import {ActButton, EmptyRow, MoreButton, SecHead} from '../../ui-kit/parts.jsx';
 import {setMode} from '../mode/index.js';
-import {addPillar, deleteIWall, deletePillar, sizeLabelShape, wallDialog} from './walls-panel.js';
+import {addPillar, deleteIWall, deletePillar, sizeLabelShape} from './walls-panel.js';
+import {wallDialog} from './wall-dialog.jsx';
 import {cancelWallDraw, startWallDraw} from './wall-draw.js';
 
 /** What the room-scoped lists show: the room, the unit and the selection. */

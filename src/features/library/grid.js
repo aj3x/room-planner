@@ -1,7 +1,7 @@
 /* What the library grid's tiles do (grid.jsx renders them): create, edit,
    duplicate, delete an item, and an item tile's menu; and what a folder
    tile says it holds. */
-import {itemDialog} from './item-dialog.js';
+import {itemDialog} from './item-dialog.jsx';
 import {childItemFolders, itemsInFolder} from './item-folders.js';
 import {uniqueId} from '../../kernel/ids.js';
 import {selectClear} from '../../kernel/selection.js';
@@ -11,8 +11,8 @@ import {fileSlug} from '../io/index.js';
 import {libFlash} from '../../ui-kit/flash.js';
 import {openMenu} from '../../ui-kit/menu.js';
 import {askConfirm} from '../../ui-kit/modal.jsx';
-import {exportLibItems} from './export.js';
-import {moveLibItemDialog} from './folder-menus.js';
+import {exportLibItems} from './export.jsx';
+import {moveLibItemDialog} from './folder-menus.jsx';
 import {purgeItem} from './item-folders.js';
 
 function folderCountLabel(fid){

@@ -33,7 +33,7 @@ import { EPILOGUE } from './test/epilogue.js';
 const ROOT = dirname(fileURLToPath(import.meta.url));
 
 /* --------------------------------------------------------------------------
-   `<!-- @include src/app/html/foo.html -->` in index.html, substituted for that
+   `<!-- @include src/ui-kit/foo.html -->` in index.html, substituted for that
    file's contents.
 
    This is what lets the static markup live in partials under src/ without becoming

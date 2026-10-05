@@ -1,14 +1,12 @@
 // @ts-check
 /* The Measure tool's canvas half: which anchor is under the pointer, which
-   measurement is, the readout bar, and turning the tool on and off. Its
-   pointer and key handling is features/measure/measure-tool.js.
+   measurement is, the canvas's look while the tool is on, and turning the
+   tool on and off. Its pointer and key handling is features/measure/measure-tool.js,
+   its button and bar over the canvas bar.jsx.
 
    The arithmetic half is features/measure/measures.js and the tool's state is the
-   features/measure/measure-state.js signals; this is what sits between them. The bar
-   (renderMeasureBar) is an effect on those signals and on the room's
-   measurements (mountMeasureBar), so nothing here repaints it by hand.
+   features/measure/measure-state.js signals; this is what sits between them.
 */
-import {$} from '../../ui-kit/dom.js';
 import {S, L} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {pointInPoly, ptSegDist} from '../../kernel/geometry.js';
@@ -19,7 +17,7 @@ import {measuresLayer} from './measures-layer.js';
 import {roomSel, sel} from '../../kernel/selection.js';
 import {isCanvasMode} from '../../kernel/state.js';
 
-import {batch, effect, rev} from '../../kernel/signals.js';
+import {batch, effect} from '../../kernel/signals.js';
 
 
 /* the anchor under a screen point: a corner or centre point beats a side, which beats the
@@ -67,20 +65,10 @@ function liveMeasures(){
   const objs=measureObjs();
   return measuresOf().filter(m=>anchorGeom(m.a,objs)&&anchorGeom(m.b,objs));
 }
-function renderMeasureBar(){
-  const bar=$('measureBar');
-  $('btnMeasure').setAttribute('aria-pressed', String(measureOn.value));
+/* the canvas while measuring: its class, and the cursor back to the tool's own once it is off */
+function renderMeasureCanvas(){
   cv.classList.toggle('measuring', measureOn.value);
-  bar.hidden=!measureOn.value;
-  if(!measureOn.value){ cv.style.cursor=''; return; }
-  const msg = measureStart.value ? 'Now pick the second one'
-    : measureSel.value ? 'Measurement selected'
-    : 'Pick a corner, side, centre or door swing';
-  const acts = [];
-  if(measureSel.value) acts.push('<button type="button" class="btn quiet sm danger" data-act="remove">Remove</button>');
-  else if(!measureStart.value && liveMeasures().length) acts.push('<button type="button" class="btn quiet sm" data-act="clear">Clear all…</button>');
-  acts.push('<button type="button" class="btn sm" data-act="done">Done</button>');
-  bar.innerHTML=`<span class="mb-msg">${msg}</span>${acts.join('')}`;
+  if(!measureOn.value) cv.style.cursor='';
 }
 
 function resetMeasureState(){ batch(()=>{ measureStart.value = null; measureHover.value = null; measureHoverId.value = null; measureSel.value = null; measureCursor.value = null; }); }
@@ -105,9 +93,8 @@ function setMeasure(on){
   }
   batch(()=>{ measureOn.value = !!on; resetMeasureState(); });
 }
-/* The bar over the canvas, as an effect on the tool's state and the room's
-   measurements. */
+/* The canvas's look while measuring, as an effect on the tool's state. */
 function mountMeasureBar(){
-  effect(() => { rev.room.value; rev.project.value; measureOn.value; measureStart.value; measureSel.value; renderMeasureBar(); });
+  effect(() => { measureOn.value; renderMeasureCanvas(); });
 }
-export {mountMeasureBar, measurePick, pickMeasure, measureTargetAt, liveMeasures, renderMeasureBar, resetMeasureState, removeMeasure, setMeasure};
+export {mountMeasureBar, measurePick, pickMeasure, measureTargetAt, liveMeasures, resetMeasureState, removeMeasure, setMeasure};

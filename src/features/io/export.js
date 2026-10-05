@@ -1,19 +1,14 @@
 // @ts-check
-/* Export: what the Export dialog writes, and the "Save plan image" beside it.
+/* Export: what the Export dialog (export-dialog.jsx) writes, and the
+   "Save plan image" beside it.
 
-   Extracted from index.html in Phase 3, move-only: both blocks below are
-   byte-identical to what stood there, and the `export` block at the end is
-   the only line added.
-
-   savePlanImage is here, not in the canvas feature, because exportDialog is
-   its only caller; it reaches the canvas through features/canvas/index.js.
+   savePlanImage is here, not in the canvas feature, because the Export
+   dialog is its only caller; it reaches the canvas through
+   features/canvas/index.js.
 */
 import {draw, setForceLightCanvas, cv} from '../canvas/index.js';
-import {L, S, clone, isCanvasMode} from '../../kernel/state.js';
-import {ancestorFolderIds, fileSlug, folderLine, pickValues, pickerHTML, pickerMount} from './pickers.js';
-import {closeModal, moError, openModal} from '../../ui-kit/modal.jsx';
-import {$, svgI} from '../../ui-kit/dom.js';
-import {esc} from '../../ui-kit/panels.js';
+import {L, S, clone} from '../../kernel/state.js';
+import {ancestorFolderIds, fileSlug} from './pickers.js';
 
 /* a saved image is for printing and sharing, so it is always drawn in the light palette */
 function savePlanImage(){
@@ -64,47 +59,4 @@ function downloadJSON(obj, name){
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
-function exportDialog(){
-  const rooms=S.layouts.map(l=>({value:l.id, label:l.name, sub:folderLine(l), checked:true}));
-  const things=S.inventory.map(i=>({value:i.id, label:i.name, sub:i.id, checked:true}));
-  const img = isCanvasMode(S.mode) ? `<div class="export-img">
-      <span class="ico">${svgI('room')}</span>
-      <div class="grow"><div class="nm">Image of “${esc(L().name)}”</div><div class="dim">PNG of the plan as it's framed now</div></div>
-      <button type="button" class="btn sm" id="xPng">Save image</button></div>
-    <p class="group-title">Project file</p>` : '';
-  openModal('Export', `
-    ${img}
-    <p class="hint">Tick what goes in the file. It can be imported here or on another device.</p>
-    ${pickerHTML('xRooms','Rooms',rooms,'You have no rooms to export')}
-    ${pickerHTML('xThings','Items',things,'Your library is empty')}
-    <label class="check"><input type="checkbox" id="xPrefs" checked>Settings — units, snap, stock and view</label>
-    <p class="hint" id="xNote"></p>`,
-    'Export file',
-    ()=>{
-      const roomIds=pickValues('xRooms'), itemIds=pickValues('xThings');
-      if(!roomIds.length && !itemIds.length){ moError('Tick at least one room or item'); return false; }
-      const picked=S.layouts.filter(l=>roomIds.includes(l.id));
-      downloadJSON(exportPayload(roomIds,itemIds,$('xPrefs').checked), exportName(picked,itemIds));
-    },
-    ()=>{
-      /* a room is no use without the things standing in it, so picking a room locks those on */
-      const syncUsed=()=>{
-        const picked=new Set(pickValues('xRooms')), need=new Set();
-        for(const l of S.layouts) if(picked.has(l.id)) for(const p of l.placed) need.add(p.itemId);
-        for(const c of $('xThings').querySelectorAll('input[type=checkbox]')){
-          const must=need.has(c.value);
-          c.disabled=must;
-          if(must) c.checked=true;
-          c.closest('.pick').classList.toggle('locked',must);
-        }
-        $('xNote').textContent = need.size
-          ? 'Items placed in the rooms you picked always come along, so the plan still works at the other end.'
-          : '';
-      };
-      if($('xPng')) $('xPng').addEventListener('click', ()=>{ closeModal(); savePlanImage(); });
-      pickerMount('xRooms', syncUsed);
-      pickerMount('xThings');
-      syncUsed();
-    });
-}
-export {savePlanImage, PREF_KEYS, exportPayload, exportName, downloadJSON, exportDialog};
+export {savePlanImage, PREF_KEYS, exportPayload, exportName, downloadJSON};

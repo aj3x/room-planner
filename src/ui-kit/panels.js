@@ -1,6 +1,6 @@
 // @ts-check
-/* Side panels: text helpers for the render* functions (esc is ui-kit/dom.js's,
-   re-exported here), and collapsing a section of a pane or a whole pane.
+/* Side panels: text helpers for lists (plural, normSearch), collapsing a
+   section of a pane or a whole pane, and which half of the page shows.
 
    Which sections are shut is an effect on the settings (mountSections), so
    toggleSection only commits the change. Collapsing a whole pane is driven
@@ -8,8 +8,8 @@
    and setMode/togglePane resize the canvas after it. */
 import {S} from '../kernel/state.js';
 import {transact} from '../kernel/tx.js';
-import {$, esc, svgI} from './dom.js';
-import {effect, rev} from '../kernel/signals.js';
+import {$} from './dom.js';
+import {effect, rev, signal} from '../kernel/signals.js';
 
 /** @param {number} n @param {string} w */
 const plural = (n,w) => n+' '+w+(n===1?'':'s');
@@ -28,7 +28,9 @@ function applySections(){
 }
 /** @param {Element} h a section's heading */
 function toggleSection(h){
-  const k=/** @type {string} */(/** @type {HTMLElement} */(h.closest('section[data-sec]')).dataset.sec);   // every heading is in one
+  const sec=/** @type {HTMLElement|null} */(h.closest('.pane-body section[data-sec]'));
+  if(!sec) return;
+  const k=/** @type {string} */(sec.dataset.sec);   // the selector requires it
   transact('prefs', ()=>{ S.secClosed = S.secClosed.includes(k) ? S.secClosed.filter(x=>x!==k) : S.secClosed.concat(k); }, {canvas:false});
 }
 /* Which sections are shut, as an effect on the settings. */
@@ -40,6 +42,8 @@ function mountSections(){
    Only on wide screens: narrow ones already swap the panels with the tab bar,
    so collapsing there would leave nothing to look at. */
 const wideLayout = () => !window.matchMedia('(max-width:900px)').matches;
+/** Which side panels are shut, as applyPanes() last left them; the pane heads (PaneHead, parts.jsx) show it. */
+const paneShut = signal({left: false, right: false});
 function applyPanes(){
   const wide=wideLayout(), m=/** @type {HTMLElement} */(document.querySelector('main'));   // the shell's
   const lShut = wide && !S.leftOpen, rShut = wide && !S.rightOpen;
@@ -47,15 +51,15 @@ function applyPanes(){
   $('paneStuff').classList.toggle('collapsed', rShut);
   m.classList.toggle('lc', lShut);
   m.classList.toggle('rc', rShut);
-  // the head is the button; its chevron always points the way the panel would move
-  const set=(/** @type {string} */headId,/** @type {string} */chevId,/** @type {boolean} */shut,/** @type {boolean} */isLeft,/** @type {string} */name)=>{
-    const h=$(headId), label=(shut?'Show ':'Hide ')+name;
-    $(chevId).innerHTML = svgI((shut===isLeft) ? 'chev-r' : 'chev-l');
-    h.title=label; h.setAttribute('aria-label',label);
-    h.setAttribute('aria-expanded', String(!shut));
-  };
-  set('headLeft', 'tglLeft', lShut, true, 'the plan panel');
-  set('headRight', 'tglRight', rShut, false, 'the properties panel');
+  if(paneShut.value.left!==lShut || paneShut.value.right!==rShut) paneShut.value = {left: lShut, right: rShut};
 }
 
-export {esc, plural, normSearch, applySections, mountSections, toggleSection, wideLayout, applyPanes};
+/** The Library page (#paneLibrary) in place of the plan (<main>), or the plan with its panes.
+    @param {boolean} lib */
+function showLibrary(lib){
+  /** @type {HTMLElement} */(document.querySelector('main')).style.display = lib ? 'none' : '';   // the shell's
+  $('paneLibrary').classList.toggle('on', lib);
+  if(!lib) applyPanes();
+}
+
+export {showLibrary, plural, normSearch, applySections, mountSections, toggleSection, wideLayout, applyPanes, paneShut};

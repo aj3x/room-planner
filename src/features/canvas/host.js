@@ -11,11 +11,10 @@
    enforces the split). */
 
 export {alignGuidesLayer} from './align-guides-layer.js';
-export {zoomAt} from './camera.js';
 export {addLayer, mountCanvas} from './draw.js';
-export {activeTool, cancelGesture, edgePanTick, gestureTool, isGesturing, onCanvasKey, onCanvasMouseMove, onCanvasPointerDown, onCanvasPointerLeave, onCanvasPointerMove, onCanvasPointerUp, onCanvasWheel, registerTool} from './interaction.js';
+export {activeTool, edgePanTick, isGesturing, onCanvasMouseMove, onCanvasPointerDown, onCanvasPointerLeave, onCanvasPointerMove, onCanvasPointerUp, onCanvasWheel, registerTool} from './interaction.js';
 export {darkMQ} from './paint.js';
-export {panTool, setSpaceDown} from './pan-tool.js';
+export {shortcuts} from './keys.js';
 export {readoutLayer} from './readout-layer.js';
 export {sections} from './sections.jsx';
 export {stageLayer} from './stage-layer.js';

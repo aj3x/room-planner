@@ -58,8 +58,7 @@ import {L, S, clone, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {clampOpenings, syncWallOff} from '../../kernel/model/walls.js';
 import {flash} from '../../ui-kit/flash.js';
-import {askConfirm, closeModal, openModal} from '../../ui-kit/modal.jsx';
-import {$} from '../../ui-kit/dom.js';
+import {askConfirm, closeModal, openDialog} from '../../ui-kit/modal.jsx';
 import {plural} from '../../ui-kit/panels.js';
 
 import {mergeSplice} from './merge-rooms.js';
@@ -251,24 +250,13 @@ function trySplitLine(hitA, mid, hitB){
 }
 /** @param {SplitCtx} ctx */
 function openSplitChoice(ctx){
-  /* #moFoot is the shared modal chrome every dialog reuses, so the extra
-     button this one needs has to be added on mount and torn back out again
-     on close — otherwise it would linger in the footer of every later modal. */
-  /** @type {HTMLButtonElement|null} */
-  let openBtn=null;
-  openModal("Split this room into two?",
-    `<p>${ctx.straddling ? plural(ctx.straddling,'item')+' sit on the dividing line and will move fully onto one side. ' : ''}Choose how the new boundary between the two rooms should look.</p>
-     <p class="hint">Leaving it open removes the wall between the two rooms entirely, the same as the “Open this side” option on a wall.</p>`,
-    'Split with a wall',
-    ()=>{ commitSplit(ctx, false); },
-    ()=>{
-      openBtn=document.createElement('button');
-      openBtn.type='button'; openBtn.className='btn primary';
-      openBtn.textContent='Split and leave it open';
-      openBtn.addEventListener('click', ()=>{ closeModal(); commitSplit(ctx, true); });
-      $('moOk').insertAdjacentElement('afterend', openBtn);
-    },
-    {onClose:()=>{ if(openBtn){ openBtn.remove(); openBtn=null; } cancelSplitDraw(); }});
+  openDialog({title: "Split this room into two?", ok: 'Split with a wall', body: <>
+      <p>{(ctx.straddling ? plural(ctx.straddling,'item')+' sit on the dividing line and will move fully onto one side. ' : '')+'Choose how the new boundary between the two rooms should look.'}</p>
+      <p class="hint">Leaving it open removes the wall between the two rooms entirely, the same as the “Open this side” option on a wall.</p>
+    </>,
+    onOk: ()=>{ commitSplit(ctx, false); },
+    actions: <button type="button" class="btn primary" onClick={()=>{ closeModal(); commitSplit(ctx, true); }}>Split and leave it open</button>,
+    onClose: cancelSplitDraw});
 }
 /** @type {{aId: string, aBefore: import('../../kernel/types.js').Layout, bId: string,
     aRoomHist?: import('../../kernel/types.js').Hist, aFurnHist?: import('../../kernel/types.js').Hist}|null} */

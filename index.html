@@ -8,19 +8,45 @@
 <link rel="stylesheet" href="./src/app/styles/main.scss">
 </head>
 <body>
-<!-- @include src/app/html/sprite.html -->
+<!-- @include src/ui-kit/sprite.html -->
 <div id="app">
-  <!-- @include src/app/html/header.html -->
+  <!-- The page is a shell of empty places: boot() renders the header, the
+       controls over the canvas, the panes' heads, each pane section (its
+       feature's, app/slots.js) and the Library page into them. -->
+  <header id="header"></header>
 
   <main>
-    <!-- @include src/app/html/pane-left.html -->
+    <div class="pane left" id="paneRoom">
+      <div class="slot" id="paneHeadLeft"></div>
+      <div class="pane-body">
+        <section data-sec="layout"></section>
+        <section data-sec="things" class="for-furn"></section>
+        <section data-sec="walls" class="for-room"></section>
+        <section data-sec="openings" class="for-room"></section>
+        <section data-sec="structure" class="for-room"></section>
+      </div>
+    </div>
 
-    <!-- @include src/app/html/stage.html -->
+    <div id="stage">
+      <canvas id="cv" aria-label="Floor plan"></canvas>
+      <div class="slot" id="stageControls"></div>
+    </div>
 
-    <!-- @include src/app/html/pane-right.html -->
+    <div class="pane right" id="paneStuff">
+      <div class="slot" id="paneHeadRight"></div>
+      <div class="pane-body">
+        <section data-sec="sel" class="for-furn"></section>
+        <section data-sec="roomsel" class="for-room"></section>
+        <section data-sec="floorsel" class="for-floor"></section>
+        <section data-sec="floorprops" class="for-floor"></section>
+        <section data-sec="shape" class="for-room"></section>
+        <section data-sec="stock" class="for-furn"></section>
+        <section data-sec="drawing"></section>
+      </div>
+    </div>
   </main>
 
-  <!-- @include src/features/library/pane-library.html -->
+  <div id="paneLibrary"></div>
 </div>
 
 <!-- @include src/ui-kit/modal.html -->
@@ -31,39 +57,28 @@
    Room Planner. All lengths are stored internally in millimetres.
    Rooms are closed polygons: room.points = [[x,y], ...] clockwise.
 
-   This file is a shell. The markup is seven @include directives above.
-   The header, stage, Library and modal partials end with a module script
-   that binds their own listeners (the bind*() module beside each); the
-   two side panes are lists of slots, sections their features fill at
-   boot (app/slots.js).
+   This file is a shell: the markup above is the places the app renders
+   into, and what is left here is what belongs to no single part of the
+   page — the listeners on `document` and `window` that are not keys, the
+   colour-scheme query, the keyboard's one registration, and the calls
+   that start the app.
 
-   What is left here is what belongs to no single pane: the listeners on
-   `document` and `window`, the colour-scheme query, the pane-header
-   toggles — which bind BOTH panes and so belong to neither — and the two
-   calls that start the app.
-
-   Order still matters, and only here. Registration order decides nothing
-   between listeners on different elements; it decides everything between
-   listeners on the SAME element and phase, and `document` is the one
-   element several unrelated features all listen to. The four capture-phase
-   handlers run ahead of every bubble-phase one regardless, but the two
-   bubble keydowns below — shortcuts, then section toggling — are in the
-   order they must stay in.
+   Order matters only between listeners on the same element and phase.
+   The keyboard is one listener per phase (app/shortcuts.js), whose
+   shortcuts are ordered by priority, not by when they were added.
    =================================================================== */
 
 import {scheduleDraw, resize} from './src/features/canvas/index.js';
 import {darkMQ, edgePanTick} from './src/features/canvas/host.js';
-import {applyLayoutMode, togglePane} from './src/features/mode/index.js';
-import {onDocumentKeyDown, onDocumentKeyUp} from './src/app/shortcuts.js';
+import {applyLayoutMode} from './src/features/mode/index.js';
+import {bindKeys} from './src/app/shortcuts.js';
 import {closeMenu, menuEl} from './src/ui-kit/menu.js';
-import {$} from './src/ui-kit/dom.js';
-import {toggleSection} from './src/ui-kit/panels.js';
 import {boot} from './src/app/boot.js';
 
-/* Any open menu closes on a click outside it, Escape, a resize or a scroll.
-   Capture phase, so it runs before whatever was actually clicked. */
+/* Any open menu closes on a click outside it, a resize or a scroll (and on
+   Escape: app/shortcuts.js). Capture phase, so it runs before whatever was
+   actually clicked. */
 document.addEventListener('pointerdown', e=>{ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }, true);
-document.addEventListener('keydown', e=>{ if(e.key==='Escape' && menuEl) closeMenu(); }, true);
 window.addEventListener('resize', closeMenu);
 document.addEventListener('scroll', closeMenu, true);
 
@@ -75,34 +90,8 @@ darkMQ.addEventListener && darkMQ.addEventListener('change', ()=>scheduleDraw())
    top-level side effect. */
 edgePanTick();
 
-/* Keyboard shortcuts: canvas gestures, nudging, undo. Bubble phase. */
-document.addEventListener('keydown', onDocumentKeyDown);
-document.addEventListener('keyup', onDocumentKeyUp);
-
-/* The two pane headers collapse their pane. One loop, two elements, one in
-   pane-left.html and one in pane-right.html — it belongs to neither partial,
-   so it stays in the shell. */
-for(const [headId,side] of [['headLeft','left'],['headRight','right']]){
-  const h=$(headId);
-  h.addEventListener('click', ()=>togglePane(side));
-  h.addEventListener('keydown', e=>{
-    if(e.key==='Enter'||e.key===' '){ e.preventDefault(); togglePane(side); }
-  });
-}
-
-/* Section folding is delegated from `document`: every pane has sections,
-   each filled by a different feature (some as components, some still
-   re-set by innerHTML), and one listener serves every heading whoever
-   rendered it. */
-document.addEventListener('click', e=>{
-  const h=e.target.closest('.pane-body section[data-sec] > .sec-head > h2');
-  if(h) toggleSection(h);
-});
-document.addEventListener('keydown', e=>{
-  if(e.key!=='Enter' && e.key!==' ') return;
-  const h=e.target.closest && e.target.closest('.pane-body section[data-sec] > .sec-head > h2');
-  if(h){ e.preventDefault(); toggleSection(h); }
-});
+/* The keyboard: canvas gestures and tools, commands, nudging, undo. */
+bindKeys();
 
 window.addEventListener('resize', ()=>{ applyLayoutMode(); resize(); });
 

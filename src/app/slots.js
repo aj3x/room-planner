@@ -1,13 +1,12 @@
 // @ts-check
-/* The panes' slots. A pane partial (app/html/pane-left.html,
-   pane-right.html) lists its sections as empty
+/* The panes' slots. The shell (index.html) lists each pane's sections as empty
    `<section data-sec="…" class="for-…">` elements: where each sits, which
    mode shows it, and the key its collapsed state and its narrow-layout order
    go by. The feature that owns a section fills it — its index exports a
    `sections` map from that key to a fill function, which renders the
    section's head and body into the element and mounts what keeps it
    current. So panel work inside a feature touches no file here; a new
-   section is one line in a pane partial (and, for a feature with no
+   section is one line in the shell (and, for a feature with no
    sections yet, one line below).
 
    fillSlots() runs at the start of boot(), before the saved project is read,

@@ -1,0 +1,18 @@
+// @ts-check
+/* M switches the Measure tool on and off, in Room and Furniture mode. */
+import {S, floorMode, isCanvasMode} from '../../kernel/state.js';
+import {isModalOpen} from '../../ui-kit/modal.jsx';
+import {KEY_ORDER} from '../../ui-kit/shortcuts.js';
+import {measureOn} from './measure-state.js';
+import {setMeasure} from './measure.js';
+
+/** @type {import('../../ui-kit/shortcuts.js').Shortcut[]} */
+const shortcuts = [
+  {id: 'measure.toggle', priority: KEY_ORDER.command, keys: ['m', 'M'],
+    run: e => {
+      if(isModalOpen() || e.ctrlKey || e.metaKey || e.altKey || !isCanvasMode(S.mode) || floorMode()) return false;
+      setMeasure(!measureOn.value);
+    }},
+];
+
+export {shortcuts};

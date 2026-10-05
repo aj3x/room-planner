@@ -1,8 +1,8 @@
 // @ts-check
 /* What the page is showing: the mode (setMode) and the active room
-   (activateLayout), and the two views that follow the mode: the header and
-   canvas mode buttons (renderMode, plus which half of the page is showing),
-   and the undo/redo buttons.
+   (activateLayout), which half of the page shows for it, undo and redo on
+   the mode's own stack, and the canvas's mode and undo/redo buttons
+   (controls.jsx).
 
    setMode() commits the mode through transact('prefs') and resets the
    selection that does not survive it; every panel, the canvas and the
@@ -14,13 +14,12 @@
    fit, stopping tools) and ui-kit/ imports no feature.
 */
 import {fit, resize, resetTools, stopToolsFor} from '../canvas/index.js';
-import {floorEntry, histAvail, histRev, seedHistFor} from '../../kernel/history.js';
+import {floorEntry, redoFloor, redoFurn, redoRoom, seedHistFor, undoFloor, undoFurn, undoRoom} from '../../kernel/history.js';
 import {selectClear, alignGuides, alignNote, floorGuides, floorSel, floorSnapNote, roomSel, sel} from '../../kernel/selection.js';
-import {batch, effect, pref, rev} from '../../kernel/signals.js';
-import {L, S, folderOf, isCanvasMode} from '../../kernel/state.js';
+import {batch, effect, pref} from '../../kernel/signals.js';
+import {L, S, floorMode, folderOf, isCanvasMode, roomMode} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
-import {$} from '../../ui-kit/dom.js';
-import {applyPanes} from '../../ui-kit/panels.js';
+import {showLibrary} from '../../ui-kit/panels.js';
 import {closeMenu} from '../../ui-kit/menu.js';
 import {wideLayout} from '../../ui-kit/panels.js';
 
@@ -64,33 +63,23 @@ function activateLayout(id){
   S.lastFolderId = fid;
 }
 
-/* places (Plan / Library / Marketplace) live in the header; the Room/Furniture mode lives on the canvas it changes */
+/* which sections and canvas controls show follows the mode, through body[data-mode] in the stylesheet */
 function renderMode(){
-  const place = isCanvasMode(S.mode) ? 'plan' : S.mode;
-  for(const b of /** @type {NodeListOf<HTMLElement>} */(document.querySelectorAll('#navSeg button'))){
-    if(b.dataset.nav===place) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
-  }
-  for(const b of /** @type {NodeListOf<HTMLElement>} */(document.querySelectorAll('#modeSeg button'))) b.setAttribute('aria-pressed', String(b.dataset.mode===S.mode));
   document.body.dataset.mode = S.mode;
 }
 
 /* ------------------------- boot ------------------------- */
 function applyLayoutMode(){
-  const lib = !isCanvasMode(S.mode);
-  /** @type {HTMLElement} */(document.querySelector('main')).style.display = lib ? 'none' : '';
-  $('paneLibrary').classList.toggle('on', lib);
-  if(!lib) applyPanes();
+  showLibrary(!isCanvasMode(S.mode));
 }
 
-function renderHistButtons(){
-  const {canUndo, canRedo}=histAvail();
-  $('btnUndo').disabled=!canUndo; $('btnRedo').disabled=!canRedo;
-}
+/* Undo and redo, on whichever stack the mode edits: the buttons' and the keyboard's. */
+function undo(){ floorMode()?undoFloor():roomMode()?undoRoom():undoFurn(); }
+function redo(){ floorMode()?redoFloor():roomMode()?redoRoom():redoFurn(); }
 
-/* The mode's own views, as effects on what they show. */
+/* The mode's own view of the page, as an effect on what it shows. */
 function mountMode(){
   effect(() => { pref('mode'); pref('leftOpen'); pref('rightOpen'); renderMode(); applyLayoutMode(); });
-  effect(() => { histRev.value; pref('mode'); rev.project.value; rev.floor.value; renderHistButtons(); });
 }
 
 /** @param {'left'|'right'} side */
@@ -106,4 +95,4 @@ function paramMode(){
   return ['room','furniture','floor','inventory','marketplace'].includes(/** @type {string} */(m)) ? /** @type {import('../../kernel/types.js').Mode} */(m) : null;
 }
 
-export {mountMode, setPendingFit, syncModeParam, setMode, activateLayout, renderMode, applyLayoutMode, togglePane, paramMode};
+export {mountMode, setPendingFit, syncModeParam, setMode, activateLayout, renderMode, applyLayoutMode, togglePane, paramMode, undo, redo};

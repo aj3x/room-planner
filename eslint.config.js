@@ -135,11 +135,186 @@ const boundaries = {
     return {ImportDeclaration: check, ExportNamedDeclaration: check, ExportAllDeclaration: check, ImportExpression: check};
   },
 };
+/* ---- signals-memo: a memoised component must hear about in-place edits ----
+   @preact/signals memoises two kinds of component: one that reads a signal
+   while it renders (`x.value`, `pref(...)`), and one that holds hook state
+   (useState/useReducer). Its parent's re-render reaches it only when a prop
+   has changed by reference — and the model is edited in place, so the same
+   item, opening or folder object handed down again is not unchanged data.
+   Such a component with an object prop shows stale data with nothing
+   thrown (the Library's tiles did, 1b5e487). It must also read a revision
+   signal (`rev.<scope>.value`, `navRev.value`, any `<name>Rev.value`), or
+   take a prop that changes whenever its data may have (`epoch`, the
+   Library page's render count; or a `rev`/`<name>Rev` prop). See
+   ui-kit/component.js.
+
+   What counts as an object prop is read from the component's JSDoc
+   (`@param {{it: Item, ...}} p`): anything that is not a primitive, a
+   string-literal union, a function, a ref (`*Ref`, `RefObject`,
+   `{current: …}`) or children. Two kinds of prop are not data the parent
+   re-passes, and do not count:
+   - one named `initial…`: a seed, read once to start the component's own
+     state (TagField's initialTags);
+   - any prop of a component used only as a dialog's body in its own file
+     (`openDialog({…, body: <Body …/>})`, ui-kit/modal.jsx): the dialog
+     renders that vnode once and never re-renders it with new props. */
+function jsdocParamType(sourceCode, node){
+  const target = node.parent && (node.parent.type === 'ExportNamedDeclaration' || node.parent.type === 'VariableDeclarator') ? (node.parent.type === 'VariableDeclarator' ? node.parent.parent : node.parent) : node;
+  const cs = sourceCode.getCommentsBefore(target);
+  const c = cs.length ? cs[cs.length - 1] : null;
+  if(!c || c.type !== 'Block' || !c.value.startsWith('*')) return null;
+  const at = c.value.indexOf('@param');
+  if(at < 0) return null;
+  const open = c.value.indexOf('{', at);
+  let depth = 0;
+  for(let i = open; i < c.value.length; i++){
+    if(c.value[i] === '{') depth++;
+    else if(c.value[i] === '}' && --depth === 0) return c.value.slice(open + 1, i).replace(/\s*\n\s*\*?\s*/g, ' ').trim();
+  }
+  return null;
+}
+/** Split a type at top-level `sep`. */
+function splitTop(t, sep){
+  const out = []; let depth = 0, cur = '', q = null;
+  for(const ch of t){
+    if(q){ cur += ch; if(ch === q) q = null; continue; }
+    if(ch === "'" || ch === '"'){ q = ch; cur += ch; continue; }
+    if('({[<'.includes(ch)) depth++;
+    else if(')}]>'.includes(ch)) depth--;
+    if(depth === 0 && sep.includes(ch)){ out.push(cur.trim()); cur = ''; continue; }
+    if(ch === '=' && depth === 0 && sep.includes(',')){ cur += ch; continue; }
+    cur += ch;
+  }
+  if(cur.trim()) out.push(cur.trim());
+  return out;
+}
+/** {name: type} of an object type literal `{a: T, b?: U}` (one level of `X & {…}` is read for its literal part). */
+function propTypes(t){
+  const parts = splitTop(t, '&').filter(p => p.startsWith('{') && p.endsWith('}'));
+  const out = {};
+  for(const p of parts){
+    for(const m of splitTop(p.slice(1, -1), ',;')){
+      const i = m.indexOf(':'); if(i < 0) continue;
+      out[m.slice(0, i).replace(/[?'"\s]/g, '')] = m.slice(i + 1).trim();
+    }
+  }
+  return out;
+}
+const PRIMITIVE = /^(string|number|boolean|null|undefined|void|bigint|symbol|true|false|'[^']*'|"[^"]*"|-?\d+(\.\d+)?)$/;
+function isPlainData(type, typedefs, seen = new Set()){
+  const t = type.trim();
+  if(/=>/.test(t) && /^\(/.test(t)) return true;                         // a function
+  if(/(^|\W)(\w*Ref|RefObject)\b|^\{\s*current\s*:/.test(t)) return true;   // a ref
+  if(/Children|ComponentChild/.test(t)) return true;
+  return splitTop(t, '|').every(m => {
+    const u = m.replace(/^\((.*)\)$/, '$1').trim();
+    if(PRIMITIVE.test(u)) return true;
+    if(/=>/.test(u)) return true;
+    if(typedefs[u] && !seen.has(u)){ seen.add(u); return isPlainData(typedefs[u], typedefs, seen); }
+    return false;
+  });
+}
+const signalsMemo = {
+  meta: {type: 'problem', schema: []},
+  create(context){
+    const sourceCode = context.sourceCode;
+    const comps = [];
+    const usages = new Map();   // component name -> JSX usages
+    const exported = new Set();
+    return {
+      'Program > FunctionDeclaration, Program > ExportNamedDeclaration > FunctionDeclaration'(node){
+        if(node.id && /^[A-Z]/.test(node.id.name)) comps.push({name: node.id.name, node});
+      },
+      'Program > VariableDeclaration > VariableDeclarator'(node){
+        if(node.id.type === 'Identifier' && /^[A-Z]/.test(node.id.name) && node.init && /Function/.test(node.init.type)) comps.push({name: node.id.name, node: node.init});
+      },
+      ExportSpecifier(node){ exported.add(node.local.name); },
+      JSXOpeningElement(node){
+        if(node.name.type !== 'JSXIdentifier') return;
+        const a = usages.get(node.name.name) || []; a.push(node); usages.set(node.name.name, a);
+      },
+      'Program:exit'(program){
+        const typedefs = {};
+        for(const c of sourceCode.getAllComments()){
+          for(const m of c.value.matchAll(/@typedef\s*\{/g)){
+            let depth = 0, i = m.index + m[0].length - 1, j = i;
+            for(; j < c.value.length; j++){ if(c.value[j] === '{') depth++; else if(c.value[j] === '}' && --depth === 0) break; }
+            const name = /^\s*(\w+)/.exec(c.value.slice(j + 1));
+            if(name) typedefs[name[1]] = c.value.slice(i + 1, j).replace(/\s*\n\s*\*?\s*/g, ' ');
+          }
+        }
+        const asDialogBody = el => {
+          for(let p = el.parent; p; p = p.parent){
+            if(p.type === 'Property' && p.key && p.key.name === 'body'){
+              const call = p.parent && p.parent.parent;
+              return !!call && call.type === 'CallExpression' && call.callee.type === 'Identifier' && call.callee.name === 'openDialog';
+            }
+            if(/Function|Program/.test(p.type)) return false;
+          }
+          return false;
+        };
+        /* what a function reads while it runs, not counting the functions it defines */
+        const helpers = new Map();
+        const reads = (fn) => {
+          const r = {state: false, signal: false, revision: false};
+          const walk = n => {
+            if(!n || typeof n.type !== 'string') return;
+            if(n !== fn && /Function/.test(n.type)) return;   // handlers and effects run later, not while rendering
+            if(n.type === 'CallExpression' && n.callee.type === 'Identifier'){
+              const c = n.callee.name;
+              if(c === 'useState' || c === 'useReducer') r.state = true;
+              if(c === 'pref') r.signal = true;
+              const h = helpers.get(c);   /* a helper in this file that reads signals, e.g. watchRoom() */
+              if(h){ r.signal = r.signal || h.signal; r.revision = r.revision || h.revision; }
+            }
+            if(n.type === 'MemberExpression' && !n.computed && n.property.name === 'value'){
+              r.signal = true;
+              const o = n.object;
+              if((o.type === 'MemberExpression' && o.object.type === 'Identifier' && o.object.name === 'rev') || (o.type === 'Identifier' && /Rev$/.test(o.name))) r.revision = true;
+            }
+            for(const k of Object.keys(n)){
+              if(k === 'parent') continue;
+              const v = n[k];
+              if(Array.isArray(v)) v.forEach(walk); else if(v && typeof v.type === 'string') walk(v);
+            }
+          };
+          walk(fn.body);
+          return r;
+        };
+        for(const st of program.body){
+          const d = st.type === 'ExportNamedDeclaration' ? st.declaration : st;
+          if(d && d.type === 'FunctionDeclaration' && d.id && /^[a-z]/.test(d.id.name)) helpers.set(d.id.name, reads(d));
+        }
+        for(const {name, node} of comps){
+          const fn = node;
+          const {state, signal, revision} = reads(fn);
+          if(!(state || signal) || revision) continue;
+          const t = jsdocParamType(sourceCode, fn);
+          if(!t) continue;
+          const props = propTypes(t);
+          if(Object.keys(props).some(k => /^(epoch|rev|\w+Rev)$/.test(k))) continue;
+          const objects = Object.entries(props).filter(([k, ty]) => k !== 'children' && !/^initial[A-Z]/.test(k) && !isPlainData(ty, typedefs)).map(([k]) => k);
+          if(!objects.length) continue;
+          const used = usages.get(name) || [];
+          if(!exported.has(name) && used.length && used.every(asDialogBody)) continue;
+          context.report({node: fn.id || node.parent.id || fn, message:
+            `${name} ${state ? 'holds hook state' : 'reads a signal'} and takes ${objects.map(o => '`' + o + '`').join(', ')} (an object): `
+            + '@preact/signals re-renders it with its parent only when a prop changes by reference, and the model is edited in place. '
+            + 'Read the revision signal it shows, or take an `epoch` prop (ui-kit/component.js).'});
+        }
+      },
+    };
+  },
+};
 const BOUNDARIES = [
   {
     files: ['src/**/*.{js,jsx}'],
-    plugins: {rp: {rules: {boundaries}}},
+    plugins: {rp: {rules: {boundaries, 'signals-memo': signalsMemo}}},
     rules: {'rp/boundaries': 'error'},
+  },
+  {
+    files: ['src/**/*.jsx'],
+    rules: {'rp/signals-memo': 'error'},
   },
   {
     files: ['src/kernel/**/*.{js,jsx}'],

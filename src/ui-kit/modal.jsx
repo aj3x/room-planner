@@ -6,7 +6,8 @@
    component, or any vnode) and the footer's choices; opening another while
    one is up replaces it, which is how the blueprint wizard steps from stage
    to stage. It renders at once (Preact's render() is synchronous), so the
-   dialog is on screen, and its first box focused, when openDialog returns.
+   dialog is on screen, and its first box focused (unless `focus: false`),
+   when openDialog returns.
 
    OK runs the dialog's handler — the body's own, registered with
    useDialogOk() when the body holds what OK reads, else `onOk` — and the
@@ -20,14 +21,14 @@
    mountModal() is given the shell's (empty) host element by boot(). */
 import {Fragment} from 'preact';
 import {mountComponent} from './component.js';
-import {tagInputs} from './tag-input.js';
+import {TagField} from './tag-field.jsx';
 
 /** @typedef {import('preact').ComponentChildren} Children */
 /** What a dialog is made of.
     @typedef {{title: string, body: Children,
       ok?: string|null, onOk?: (() => unknown)|null, okDisabled?: boolean, okHidden?: boolean, danger?: boolean,
       actions?: Children, wide?: boolean, xwide?: boolean, stepper?: Children,
-      onBack?: (() => void)|null, onClose?: (() => void)|null, html?: string, stepperHtml?: string}} Dialog */
+      onBack?: (() => void)|null, onClose?: (() => void)|null, focus?: boolean}} Dialog */
 
 /** @type {HTMLElement|null} */
 let host = null;
@@ -49,6 +50,7 @@ function paint(){
 function openDialog(d){
   cur = d; seq++; err = ''; bodyOk = null;
   paint();
+  if(d.focus===false) return;
   const f = host && /** @type {HTMLInputElement|null} */(host.querySelector('#moBody input, #moBody select, #moBody textarea'));
   if(f){ f.focus(); if(f.select) try{ f.select(); }catch(e){} }
 }
@@ -91,12 +93,8 @@ function Modal({d, seq, err}){
     onKeyDown={e=>{ if(e.key==='Enter' && /** @type {Element} */(e.target).tagName!=='TEXTAREA'){ e.preventDefault(); ok(); } }}>
     <div id="modalCard" class={[d.wide&&'wide', d.xwide&&'xwide'].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-labelledby="moTitle">
       <div id="moTitle">{d.title}</div>
-      {d.stepperHtml != null
-        ? <div id="moStepper" hidden={!d.stepperHtml} dangerouslySetInnerHTML={{__html: d.stepperHtml}}/>
-        : <div id="moStepper" hidden={!d.stepper}>{d.stepper}</div>}
-      {d.html != null
-        ? <div id="moBody" key={seq} dangerouslySetInnerHTML={{__html: d.html}}/>
-        : <div id="moBody"><Fragment key={seq}>{d.body}</Fragment></div>}
+      <div id="moStepper" hidden={!d.stepper}>{d.stepper}</div>
+      <div id="moBody"><Fragment key={seq}>{d.body}</Fragment></div>
       <div id="moFoot">
         <span id="moErr" role="alert">{err}</span>
         <button type="button" class="btn" id="moCancel" onClick={()=>{ if(d.onBack) d.onBack(); else closeModal(); }}>
@@ -106,29 +104,6 @@ function Modal({d, seq, err}){
       </div>
     </div>
   </div>;
-}
-
-/* Transitional: a dialog whose body is still an HTML string, mounted by
-   hand. Goes once the last such dialog is a component. */
-/** @param {string} title @param {string} bodyHTML @param {string|null} [okLabel]
-    @param {(() => unknown)|null} [onOk] @param {(() => void)|null} [onMount]
-    @param {{danger?: boolean, wide?: boolean, xwide?: boolean, stepper?: string, onBack?: () => void, onClose?: () => void}} [opts] */
-function openModal(title, bodyHTML, okLabel, onOk, onMount, opts){
-  const o = opts || {};
-  tagInputs.clear();
-  cur = {title, body: null, html: bodyHTML, stepperHtml: o.stepper || '', ok: onOk ? (okLabel||'Save') : null, onOk: onOk||null,
-    danger: o.danger, wide: o.wide, xwide: o.xwide, onBack: o.onBack||null, onClose: o.onClose||null};
-  seq++; err = ''; bodyOk = null;
-  paint();
-  /* these dialogs change the footer by hand, which Preact does not see:
-     put it back the way this one wants it */
-  const okB = /** @type {HTMLButtonElement} */(document.getElementById('moOk'));
-  okB.hidden = !onOk; okB.disabled = false; okB.textContent = onOk ? (okLabel||'Save') : '';
-  okB.classList.toggle('danger', !!o.danger);
-  /** @type {HTMLElement} */(document.getElementById('moTitle')).textContent = title;
-  if(onMount) onMount();
-  const f = host && /** @type {HTMLInputElement|null} */(host.querySelector('#moBody input, #moBody select, #moBody textarea'));
-  if(f){ f.focus(); if(f.select) try{ f.select(); }catch(e){} }
 }
 
 /** @param {HTMLElement} el the shell's empty host for the dialog */
@@ -148,6 +123,56 @@ function askText(title, label, value, onOk){
   const box = {current: null};
   openDialog({title, ok: 'Save', body: <TextAsk label={label} value={value||''} box={box}/>,
     onOk: ()=>{ const v=(box.current ? box.current.value : '').trim(); if(!v){ moError('Enter a name'); return false; } onOk(v); }});
+}
+/** One of a list, in a select: where to move something, mostly.
+    @typedef {{value: string, label: string}} Choice */
+/** @param {{label: string, choices: Choice[], value: string, box: import('preact').RefObject<HTMLSelectElement>}} p */
+function ChoiceAsk({label, choices, value, box}){
+  return <>
+    <label class="stack-label" for="moFolder">{label}</label>
+    <select id="moFolder" ref={box}>{choices.map(c=><option key={c.value} value={c.value} selected={c.value===value}>{c.label}</option>)}</select>
+  </>;
+}
+/** @param {string} title @param {string} label @param {Choice[]} choices @param {string} value the one chosen to start with
+    @param {string} okLabel @param {(v: string) => void} onOk */
+function askChoice(title, label, choices, value, okLabel, onOk){
+  /** @type {import('preact').RefObject<HTMLSelectElement>} */
+  const box = {current: null};
+  openDialog({title, ok: okLabel, body: <ChoiceAsk label={label} choices={choices} value={value} box={box}/>,
+    onOk: ()=>onOk(box.current ? box.current.value : value)});
+}
+/** @param {{initialTags: string[], placeholder: string, hints: string[], read: import('./tag-field.jsx').TagRead}} p */
+function TagsAsk({initialTags, placeholder, hints, read}){
+  return <>
+    <label class="stack-label" for="fTagsInput">Tags</label>
+    <TagField id="fTags" initialTags={initialTags} placeholder={placeholder} read={read}/>
+    {hints.map(h=><p key={h} class="hint">{h}</p>)}
+  </>;
+}
+/** A list of tags to edit. @param {string} title @param {string[]} tags what it starts with @param {string} placeholder
+    @param {string[]} hints a paragraph each @param {(tags: string[]) => void} onOk */
+function askTags(title, tags, placeholder, hints, onOk){
+  /** @type {import('./tag-field.jsx').TagRead} */
+  const read = {current: null};
+  openDialog({title, ok: 'Save', body: <TagsAsk initialTags={tags} placeholder={placeholder} hints={hints} read={read}/>,
+    onOk: ()=>onOk(read.current ? read.current() : [])});
+}
+/** @param {{msg: string, option: string, hint?: string, box: import('preact').RefObject<HTMLInputElement>}} p */
+function OptionConfirm({msg, option, hint, box}){
+  return <>
+    <p>{msg}</p>
+    <label class="check"><input type="checkbox" id="keepKids" ref={box}/>{option}</label>
+    {hint ? <p class="hint">{hint}</p> : null}
+  </>;
+}
+/** A destructive confirmation with one choice to tick, which `onOk` gets.
+    @param {string} title @param {string} msg @param {string} option the box's label @param {string|null} hint
+    @param {string} okLabel @param {(ticked: boolean) => void} onOk */
+function askConfirmOption(title, msg, option, hint, okLabel, onOk){
+  /** @type {import('preact').RefObject<HTMLInputElement>} */
+  const box = {current: null};
+  openDialog({title, ok: okLabel, danger: true, body: <OptionConfirm msg={msg} option={option} hint={hint||undefined} box={box}/>,
+    onOk: ()=>onOk(!!box.current && box.current.checked)});
 }
 /* every confirmation in the app guards something destructive */
 /** @param {string} title @param {string} msg @param {string|null|undefined} okLabel @param {() => void} onOk */
@@ -177,4 +202,4 @@ function showShortcuts(){
     </dl>});
 }
 
-export {openModal, mountModal, openDialog, updateDialog, closeModal, moError, isModalOpen, useDialogOk, askText, askConfirm, showShortcuts};
+export {mountModal, openDialog, updateDialog, closeModal, moError, isModalOpen, useDialogOk, askText, askChoice, askTags, askConfirm, askConfirmOption, showShortcuts};

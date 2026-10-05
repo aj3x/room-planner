@@ -11,7 +11,7 @@ import {alignGuides, alignNote} from '../../kernel/selection.js';
 import {RP} from '../../kernel/state.js';
 import {flash} from '../../ui-kit/flash.js';
 import {draw, scheduleDraw, drawCursor, splitDrawState, wallDrawShift, PAL, drawSquareTick, snapWallPoint, ctx, sx, sy, wx, wy} from '../canvas/index.js';
-import {boundaryHit, cancelSplitDraw, splitCornerRef, splitResolvePoint, trySplitLine} from './split-room.js';
+import {boundaryHit, cancelSplitDraw, splitCornerRef, splitResolvePoint, trySplitLine} from './split-room.jsx';
 
 /** @type {import('../canvas/types.js').Tool['onDown']} */
 function splitDown(e,px,py){

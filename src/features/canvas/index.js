@@ -13,6 +13,7 @@
 
 export {fit, resize} from './camera.js';
 export {draw, scheduleDraw} from './draw.js';
+export {Readout, setReadout, ZoomControls} from './readout.jsx';
 export {drawCursor, drawState, splitDrawState, wallDrawShift, wallDrawState} from './interaction-state.js';
 export {resetTools, stopDrawing, stopOtherTools, stopToolsFor} from './interaction.js';
 export {addPoly, clip, drawDimension, drawSquareTick, PAL, pathPoly, setForceLightCanvas} from './paint.js';

@@ -24,7 +24,7 @@ import {closeMenu} from '../../ui-kit/menu.js';
 import {plural} from '../../ui-kit/panels.js';
 import {Icon, MoreButton, RenameField} from '../../ui-kit/parts.jsx';
 import {childMarketFolders, listingsInFolder, marketFolderDescendant, marketFolderOf} from '../marketplace/index.js';
-import {adhocFolderMenu, libFolderMenu, listingMenu, renameAdhocFolder, renameLibFolder, renamedFolder} from './folder-menus.js';
+import {adhocFolderMenu, libFolderMenu, listingMenu, renameAdhocFolder, renameLibFolder, renamedFolder} from './folder-menus.jsx';
 import {childItemFolders, itemCountInSubtree, itemFolderDescendant, itemFolderOf, moveItemToFolder, recomputeFolderSubtree} from './item-folders.js';
 import {gridDragItem, goLibFolder, libDropMark, libRenaming, libTreeOpen, nav, navChanged, navRev, selectListing, setGridDragItem} from './nav.js';
 
@@ -177,7 +177,7 @@ function LibTree(){
         onClick={()=>singleClick(()=>selectListing(l.id))} onDblClick={cancelSingleClick}>
         <span class="caret-zone" style={pad}></span>
         <span class="ico"><Icon name={l.kind==='link'?'link':'box'}/></span><span class="nm">{l.name}</span>
-        <MoreButton cls="tree-more" onClick={e=>{ e.stopPropagation(); cancelSingleClick(); listingMenu(l.id, e.currentTarget); }}/>
+        <MoreButton cls="tree-more" onClick={e=>{ e.stopPropagation(); cancelSingleClick(); listingMenu(l.id, /** @type {Element} */(e.currentTarget)); }}/>
       </div>;
     }
     const isLib=r.type==='folder', f=r.f, key=(isLib?'f:':'m:')+f.id, openKey=isLib?f.id:key, open=libTreeOpen.has(openKey);
@@ -193,7 +193,7 @@ function LibTree(){
       {n ? <span class="count" title={plural(n,'item')+' in this folder'}>{n}</span> : null}
       <MoreButton cls="tree-more" onClick={e=>{
         e.stopPropagation(); cancelSingleClick();
-        if(isLib) libFolderMenu(f.id, e.currentTarget); else adhocFolderMenu(f.id, e.currentTarget);
+        if(isLib) libFolderMenu(f.id, /** @type {Element} */(e.currentTarget)); else adhocFolderMenu(f.id, /** @type {Element} */(e.currentTarget));
       }}/>
     </div>;
   }

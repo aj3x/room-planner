@@ -21,12 +21,12 @@ import {askConfirm} from '../../ui-kit/modal.jsx';
 import {normSearch, plural} from '../../ui-kit/panels.js';
 import {Icon} from '../../ui-kit/parts.jsx';
 import {childMarketFolders, fetchMarketItem, listingsInFolder, loadListing, marketIndexCache, reloadMarketSub} from '../marketplace/index.js';
-import {addMarketItemToInventory} from './add-to-inventory.js';
-import {addListingDialog} from './adhoc-listings.js';
-import {adhocFolderContents, listingMenu} from './folder-menus.js';
+import {addMarketItemToInventory} from './add-to-inventory.jsx';
+import {addListingDialog} from './adhoc-listings.jsx';
+import {adhocFolderContents, listingMenu} from './folder-menus.jsx';
 import {sizeLabel} from './items.js';
 import {Crumbs, Preview, SearchCrumb} from './lib-grid.jsx';
-import {addMarketDialog, marketPathChildren, renderMarketItemPreview, subMenu} from './marketplace.js';
+import {addMarketDialog, marketPathChildren, renderMarketItemPreview, subMenu} from './marketplace.jsx';
 import {goLibFolder, nav, navChanged, selectListing} from './nav.js';
 
 /** @typedef {import('../../kernel/types.js').MarketSub} MarketSub */

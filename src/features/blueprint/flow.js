@@ -6,10 +6,10 @@
    before; the scale stage's Back also abandons a detection still running
    (bpRunSeq), which it does itself before calling to.back(). */
 
-import {bpUploadStage} from './step1-upload.js';
-import {bpCropStage} from './step2-crop.js';
-import {bpScaleStage} from './step3-scale.js';
-import {bpReviewStage} from './step4-review.js';
+import {bpUploadStage} from './step1-upload.jsx';
+import {bpCropStage} from './step2-crop.jsx';
+import {bpScaleStage} from './step3-scale.jsx';
+import {bpReviewStage} from './step4-review.jsx';
 
 /* The wizard's entry point. `keep` holds on to the photo already chosen
    (coming Back from the crop); `targetFloorId` is the floor the rooms land

@@ -14,5 +14,7 @@ export {drawRoomFloor, roomFloorLayer} from './room-floor-layer.js';
 export {roomHandlesLayer} from './room-handles-layer.js';
 export {sections} from './sections.jsx';
 export {roomTool} from './room-tool.js';
-export {lastSplit, splitUndo, startSplitRoom} from './split-room.js';
+export {lastSplit, splitUndo, startSplitRoom} from './split-room.jsx';
 export {splitTool} from './split-tool.js';
+export {DrawHint} from './draw-hint.jsx';
+export {shortcuts} from './keys.js';

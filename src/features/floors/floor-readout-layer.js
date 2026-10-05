@@ -2,7 +2,7 @@
 /* The floor scene's status corner: how many rooms, their total area, or
    what the magnet is doing while a room is dragged. */
 
-import {$} from '../../ui-kit/dom.js';
+import {setReadout} from '../canvas/index.js';
 import {plural} from '../../ui-kit/panels.js';
 import {polyArea} from '../../kernel/geometry.js';
 import {floorSnapNote} from '../../kernel/selection.js';
@@ -11,11 +11,12 @@ import {fmtArea} from '../../kernel/units.js';
 
 /** @param {import('../../kernel/types.js').Floor|null|undefined} fl @param {import('../../kernel/model/floor-place.js').Member[]} members */
 function updateFloorReadout(fl, members){
-  const el=$('readout'); if(!el) return;
-  if(!fl || !members.length){ el.textContent = fl ? 'No rooms on this floor' : 'Not on a floor'; return; }
-  if(floorSnapNote.value){ el.textContent = floorSnapNote.value; return; }
+  /** @param {string} text */
+  const say = text => setReadout({snap: '', text, bad: []});
+  if(!fl || !members.length){ say(fl ? 'No rooms on this floor' : 'Not on a floor'); return; }
+  if(floorSnapNote.value){ say(floorSnapNote.value); return; }
   let area=0; for(const m of members) area+=Math.abs(polyArea(m.P));
-  el.textContent = plural(members.length,'room')+' · '+fmtArea(area,S.unit);
+  say(plural(members.length,'room')+' · '+fmtArea(area,S.unit));
 }
 
 /** @satisfies {import('../canvas/types.js').Layer} */

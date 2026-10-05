@@ -17,14 +17,12 @@ import {transact} from '../../kernel/tx.js';
 import {clampOpenings, syncWallOff} from '../../kernel/model/walls.js';
 import {flash} from '../../ui-kit/flash.js';
 import {askConfirm} from '../../ui-kit/modal.jsx';
-import {$} from '../../ui-kit/dom.js';
-import {esc, plural} from '../../ui-kit/panels.js';
+import {plural} from '../../ui-kit/panels.js';
 import {activateLayout} from '../mode/index.js';
 import {placeOnFloor} from '../../kernel/model/floor-space.js';
 import {uid} from '../../kernel/state.js';
-import {folderLine, pickValues, pickerHTML} from '../io/index.js';
 import {menuAtPoint} from '../../ui-kit/menu.js';
-import {askText, openModal} from '../../ui-kit/modal.jsx';
+import {askText} from '../../ui-kit/modal.jsx';
 /* one slot, not a stack \u2014 mirrors bpLastImport's own "undo the last thing" precedent */
 /** Enough to put two merged rooms back: each one before, B's place in the list, their undo stacks.
     @typedef {{floorId: string|null, aId: string, aBefore: Layout, bId: string, bBefore: Layout, bIndex: number,
@@ -120,27 +118,6 @@ function newFloor(){
   });
 }
 
-/** @param {string} id a floor */
-function floorRoomsDialog(id){
-  const fl=floorOf(id); if(!fl) return;
-  const rooms=S.layouts.map(l=>{
-    const other = l.floorId && l.floorId!==id ? floorOf(l.floorId) : null;
-    return {value:l.id, label:l.name, sub: other ? 'on '+other.name : folderLine(l), checked: l.floorId===id};
-  });
-  openModal('Rooms on “'+fl.name+'”', `
-    <p class="hint">Tick the rooms that make up this floor. A room can only stand on one floor at a time.</p>
-    ${pickerHTML('flRooms','Rooms',rooms,'You have no rooms yet')}`,
-    'Save', ()=>{
-      const picked=new Set(pickValues('flRooms'));
-      transact('project', ()=>{
-          for(const l of S.layouts){
-            if(picked.has(l.id)){ if(l.floorId!==id){ placeOnFloor(l,id); l.floorId=id; } }
-            else if(l.floorId===id) l.floorId=null;
-          }
-          treeExpand(id);
-      });
-    });
-}
 /* deleting a floor never deletes a room: the arrangement goes, the rooms stay */
 /** @param {string} id */
 function deleteFloor(id){
@@ -167,22 +144,6 @@ function newFloorWith(l){
     transact('project', ()=>{ S.floors.push(fl); putOnFloor(l, fl.id); });
   });
 }
-/** @param {string} id a layout */
-function putOnFloorDialog(id){
-  const l=S.layouts.find(x=>x.id===id); if(!l) return;
-  const opts=S.floors.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
-  openModal('Put “'+l.name+'” on a floor', `
-    <div class="field"><label for="flPick">Floor</label>
-      <select id="flPick">${opts}<option value="">New floor…</option></select></div>
-    <p class="hint">The room keeps its own outline, walls and items. It just gains a place to stand.</p>`,
-    'Put on floor', ()=>{
-      const v=$('flPick').value;
-      /* deferred so this modal is closed before the name prompt opens over it */
-      if(!v){ setTimeout(()=>newFloorWith(l),0); return; }
-      putOnFloor(l, v);
-    });
-}
-
 function mergeUndo(){
   if(!lastMerge) return;
   const m=lastMerge;
@@ -214,4 +175,4 @@ function openFloorMergeMenu(ids, clientX, clientY){
     {label:'Delete both rooms\u2026', danger:true, fn:()=>deleteBothDialog(aId,bId)},
   ], a.name+' + '+b.name);
 }
-export {lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, turnFloorRoom, newFloor, floorRoomsDialog, deleteFloor, putOnFloor, newFloorWith, putOnFloorDialog, mergeUndo, openFloorMergeMenu};
+export {lastMerge, setLastMerge, mergeLayouts, deleteBothDialog, turnFloorRoom, newFloor, deleteFloor, putOnFloor, newFloorWith, mergeUndo, openFloorMergeMenu};

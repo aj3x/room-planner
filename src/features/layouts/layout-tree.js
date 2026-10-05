@@ -4,8 +4,6 @@
    drop. The tree itself is tree-section.jsx; the menu actions commit
    through transact() and the tree, the panels and the canvas follow on
    their own. */
-import {esc} from '../../ui-kit/panels.js';
-import {$} from '../../ui-kit/dom.js';
 import {S, floorLayouts, childFolders, childLayouts,
         folderOf, floorOf} from '../../kernel/state.js';
 import {treeExpand, treeCollapse} from '../../kernel/selection.js';
@@ -18,8 +16,7 @@ import {remapMeasures} from '../../kernel/migrate.js';
 import {blankLayout, uid} from '../../kernel/state.js';
 import {flash} from '../../ui-kit/flash.js';
 import {openMenu} from '../../ui-kit/menu.js';
-import {askConfirm, askText, openModal} from '../../ui-kit/modal.jsx';
-import {mountTagField, tagFieldHTML, tagFieldValue} from '../../ui-kit/tag-input.js';
+import {askChoice, askConfirm, askConfirmOption, askTags, askText} from '../../ui-kit/modal.jsx';
 import {deleteFloor, floorRoomsDialog, lastMerge, mergeUndo, newFloorWith, putOnFloorDialog, setLastMerge} from '../floors/index.js';
 import {bpLastImport, bpUndoImport, bpUploadDialog} from '../blueprint/index.js';
 import {activateLayout, setMode} from '../mode/index.js';
@@ -116,15 +113,10 @@ function layoutMenu(id, anchor){
 /** @param {string} id */
 function folderTagsDialog(id){
   const f=/** @type {import('../../kernel/types.js').Folder} */(folderOf(id));   // asked from that folder's menu
-  openModal('Tag filter for '+f.name, `
-    <label class="stack-label" for="fTagsInput">Tags</label>
-    ${tagFieldHTML('fTags','living room, seating')}
-    <p class="hint">Type to pick from tags you already use. Tab or comma adds one, backspace removes the last.</p>
-    <p class="hint">When you switch into a room in this folder from a room in a different folder, the item list's tag filter is set to this automatically. Switching between rooms inside this same folder leaves your filter as you left it.</p>`,
-    'Save', ()=>{
-      transact('project', ()=>{ f.tags=tagFieldValue('fTags'); });
-    },
-    ()=>{ mountTagField('fTags', f.tags||[]); });
+  askTags('Tag filter for '+f.name, f.tags||[], 'living room, seating', [
+    'Type to pick from tags you already use. Tab or comma adds one, backspace removes the last.',
+    'When you switch into a room in this folder from a room in a different folder, the item list\'s tag filter is set to this automatically. Switching between rooms inside this same folder leaves your filter as you left it.'],
+    tags=>{ transact('project', ()=>{ f.tags=tags; }); });
 }
 /* every folder and room under `id`, deepest last */
 /** @param {string} id */
@@ -166,11 +158,8 @@ function deleteFolder(id){
   const bits=[];
   if(layouts.length) bits.push(layouts.length+' room'+(layouts.length>1?'s':''));
   if(folders.length) bits.push(folders.length+' folder'+(folders.length>1?'s':''));
-  openModal('Delete \u201c'+f.name+'\u201d?', `
-    <p>It holds ${esc(bits.join(' and '))}. Deleting the folder deletes all of that too.</p>
-    <label class="check"><input type="checkbox" id="keepKids">Keep everything inside \u2014 move it up to ${esc(up)}</label>
-    <p class="hint">Your library is never touched, only the rooms themselves.</p>`,
-    'Delete folder', ()=>drop($('keepKids').checked), null, {danger:true});
+  askConfirmOption('Delete \u201c'+f.name+'\u201d?', 'It holds '+bits.join(' and ')+'. Deleting the folder deletes all of that too.',
+    'Keep everything inside \u2014 move it up to '+up, 'Your library is never touched, only the rooms themselves.', 'Delete folder', drop);
 }
 /** @param {string} id */
 function duplicateLayout(id){
@@ -209,23 +198,21 @@ function moveDialog(kind,id){
   const obj = /** @type {Partial<import('../../kernel/types.js').Folder & import('../../kernel/types.js').Layout>|null|undefined} */(kind==='folder' ? folderOf(id) : S.layouts.find(x=>x.id===id));   // a Folder when kind is 'folder', else a Layout
   if(!obj) return;
   const cur = (kind==='folder' ? obj.parentId : obj.folderId) || '';
-  let opts=`<option value="" ${cur?'':'selected'}>No folder (top level)</option>`;
+  const choices=[{value:'', label:'No folder (top level)'}];
   (function walk(/** @type {string|null} */pid,/** @type {number} */depth){
     for(const f of childFolders(pid)){
       const bad = kind==='folder' && (f.id===id || folderDescendant(id,f.id));
-      if(!bad) opts+=`<option value="${f.id}" ${f.id===cur?'selected':''}>${'\u00a0\u00a0'.repeat(depth)}${esc(f.name)}</option>`;
+      if(!bad) choices.push({value:f.id, label:'\u00a0\u00a0'.repeat(depth)+f.name});
       walk(f.id,depth+1);
     }
   })(null,0);
-  openModal('Move \u201c'+obj.name+'\u201d', `
-    <label class="stack-label" for="moFolder">Folder</label>
-    <select id="moFolder">${opts}</select>`, 'Move', ()=>{
-      const v=$('moFolder').value||null;
-      transact('project', ()=>{
-        if(kind==='folder') obj.parentId=v; else { obj.folderId=v; obj.floorId=null; }
-        if(v) treeExpand(v);
-      });
+  askChoice('Move \u201c'+obj.name+'\u201d', 'Folder', choices, cur, 'Move', s=>{
+    const v=s||null;
+    transact('project', ()=>{
+      if(kind==='folder') obj.parentId=v; else { obj.folderId=v; obj.floorId=null; }
+      if(v) treeExpand(v);
     });
+  });
 }
 /* The Rooms list holds more than one kind of thing, so + stays the one-click common case
    (a new room) and everything rarer sits behind the ⋯ with a word for a label. */

@@ -12,8 +12,7 @@
    leaves alone, so a hidden page neither repaints nor fetches. Typing in
    the search box shows at once; what it finds follows a moment later.
 
-   mountLibraryPage() is called by the page's partial (pane-library.html)
-   with the element it fills. */
+   mountLibraryPage() is called by boot() with the shell's #paneLibrary. */
 import {useRef} from 'preact/hooks';
 import {S, isCanvasMode, uid} from '../../kernel/state.js';
 import {loaded, rev} from '../../kernel/signals.js';
@@ -21,13 +20,13 @@ import {transact} from '../../kernel/tx.js';
 import {mountComponent} from '../../ui-kit/component.js';
 import {askText} from '../../ui-kit/modal.jsx';
 import {Icon} from '../../ui-kit/parts.jsx';
-import {addListingDialog} from './adhoc-listings.js';
-import {askNewLibFolder} from './folder-menus.js';
+import {addListingDialog} from './adhoc-listings.jsx';
+import {askNewLibFolder} from './folder-menus.jsx';
 import {createLibItem} from './grid.js';
 import {LibrarySearch, LibraryFolder} from './lib-grid.jsx';
 import {LibTree} from './lib-tree.jsx';
 import {AdhocFolder, ListingDetail, MarketSearch, MarketSub, MarketTop} from './market-views.jsx';
-import {addMarketDialog} from './marketplace.js';
+import {addMarketDialog} from './marketplace.jsx';
 import {libQuery, libTreeOpen, nav, navChanged, navRev} from './nav.js';
 
 /** @type {ReturnType<typeof setTimeout>|undefined} */
@@ -128,7 +127,7 @@ function LibraryPage(){
   return shown.current;
 }
 
-/** Render the page into its element, at the point in the document its partial occupies.
+/** Render the page into its element.
     @param {HTMLElement} el */
 function mountLibraryPage(el){ mountComponent(el, <LibraryPage/>); }
 

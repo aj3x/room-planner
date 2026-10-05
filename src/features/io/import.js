@@ -1,16 +1,11 @@
 // @ts-check
 /* Import: read a file back without assuming it is a whole project, then
-   either replace the project or merge into it.
-
-   Extracted from index.html in Phase 3, move-only: the body below is
-   byte-identical to what stood there, and the `export` block at the end is
-   the only line added.
+   either replace the project or merge into it. The dialog that picks what
+   comes in is import-dialog.jsx.
 
    One transact('project') covers either path, so every panel, the Library
    and the canvas repaint from the new state as effects; this module names
    none of them.
-
-   The $('btnImport') registration stays in index.html, per rule 6.
 */
 import {fit} from '../canvas/index.js';
 import {INV_SCOPES} from '../../kernel/model/floor-space.js';
@@ -22,11 +17,9 @@ import {S, clone, floorLayouts, setS, uid} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {ensureDefaultMarket} from '../marketplace/index.js';
 import {flash} from '../../ui-kit/flash.js';
-import {moError, openModal} from '../../ui-kit/modal.jsx';
-import {$} from '../../ui-kit/dom.js';
 import {plural} from '../../ui-kit/panels.js';
 import {PREF_KEYS} from './export.js';
-import {ancestorFolderIds, folderLine, pickValues, pickerHTML, pickerMount} from './pickers.js';
+import {ancestorFolderIds} from './pickers.js';
 /* ------------------------- import ------------------------- */
 /* pull the parts out of a file without assuming it is a whole project — a things-only
    or rooms-only export is a perfectly good file */
@@ -65,48 +58,6 @@ function readImport(data){
   if(prefs.snap!==undefined) prefs.snap=String(prefs.snap);
   for(const k of ['showSwing','showDims','showOpen','showWalk','showMeasure','onlyAvailable']) if(prefs[k]!==undefined) prefs[k]=!!prefs[k];
   return {layouts, folders, floors, inventory, active:data.active, prefs:Object.keys(prefs).length?prefs:null};
-}
-/** @param {Imported} inc */
-function importDialog(inc){
-  const rooms=inc.layouts.map(l=>({value:l.id, label:l.name, sub:folderLine(l,inc.folders), checked:true}));
-  const things=inc.inventory.map(i=>({value:i.id, label:i.name, sub:i.id, checked:true}));
-  openModal('Import', `
-    <div class="field"><label for="imHow">Mode</label><select id="imHow">
-      <option value="add">Add to my project</option>
-      <option value="replace">Replace my project</option></select></div>
-    <p class="hint" id="imHowNote"></p>
-    ${pickerHTML('imRooms','Rooms in this file',rooms,'No rooms in this file')}
-    ${pickerHTML('imThings','Items in this file',things,'No items in this file')}
-    ${inc.prefs?`<label class="check"><input type="checkbox" id="imPrefs">Settings — units, snap, stock, and what the plan shows</label>`:''}
-    <div class="field" id="imDupeRow"><label for="imDupe">Same id</label><select id="imDupe">
-      <option value="mine">Keep mine</option>
-      <option value="theirs">Overwrite mine</option>
-      <option value="copy">Add theirs as a copy</option></select></div>
-    <p class="hint" id="imDupeNote">An id already in your library, like <code>ikea/kallax/4x2</code>, means the same product — by default yours is kept and incoming rooms use it. "Overwrite mine" replaces your item's data with the incoming one, in place.</p>`,
-    'Import',
-    ()=>{
-      const roomIds=pickValues('imRooms'), itemIds=pickValues('imThings');
-      if(!roomIds.length && !itemIds.length){ moError('Tick at least one room or item'); return false; }
-      const replace=$('imHow').value==='replace';
-      if(replace && !roomIds.length){ moError('Replacing needs at least one room — a project has to have somewhere to stand'); return false; }
-      applyImport(inc, roomIds, itemIds, !!($('imPrefs')&&$('imPrefs').checked), replace, $('imDupe').value);
-    },
-    ()=>{
-      pickerMount('imRooms'); pickerMount('imThings');
-      const how=$('imHow');
-      const sayHow=()=>{
-        const rep=how.value==='replace';
-        $('imHowNote').textContent = rep
-          ? 'Everything you have now — rooms, items and all — is replaced by what you tick below. This can’t be undone.'
-          : 'What you tick is added to your project. Nothing you already have is touched.';
-        $('imDupeRow').hidden=rep;
-        $('imDupeNote').hidden=rep;
-        $('moOk').classList.toggle('danger', rep);
-        $('moOk').textContent = rep ? 'Replace project' : 'Import';
-      };
-      how.addEventListener('change',sayHow);
-      sayHow();
-    });
 }
 /* One project transaction, whichever way it goes: no undo stack covers it (a
    replace starts every stack afresh below). */
@@ -222,4 +173,4 @@ function importInto(inc, roomIds, itemIds, wantPrefs, replace, dupe){
   if(wantPrefs && inc.prefs) Object.assign(S, inc.prefs);
   flash('Added '+plural(layouts.length,'room')+' and '+plural(addedItems,'item'));
 }
-export {readImport, importDialog, applyImport};
+export {readImport, applyImport};

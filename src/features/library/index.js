@@ -7,7 +7,7 @@
    This file is the feature's public API: code outside src/features/library/
    imports it only from here (eslint.config.js enforces that). */
 
-export {itemDialog} from './item-dialog.js';
+export {itemDialog} from './item-dialog.jsx';
 export {itemFolderOf} from './item-folders.js';
 export {sizeLabel} from './items.js';
 export {nav} from './nav.js';

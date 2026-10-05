@@ -9,13 +9,11 @@ import {transact} from '../../kernel/tx.js';
 import {clampOpenings, syncWallOff} from '../../kernel/model/walls.js';
 import {batch} from '../../kernel/signals.js';
 import {flash} from '../../ui-kit/flash.js';
-import {$} from '../../ui-kit/dom.js';
 import {drawState, drawCursor, alignPoint, alignRadius, isSquare, snapPt, fit, stopOtherTools} from '../canvas/index.js';
 import {roomMode} from '../../kernel/state.js';
 import {setMode} from '../mode/index.js';
 function cancelCustomDraw(){
   batch(()=>{ drawState.value = null; alignGuides.value = []; alignNote.value = ''; });
-  $('drawHint').hidden=true;
 }
 function finishCustomDraw(){
   if(!drawState.value||drawState.value.pts.length<3){ flash('Add at least 3 corners first'); return; }
@@ -23,7 +21,7 @@ function finishCustomDraw(){
     L().room.points=/** @type {{pts: import("../../kernel/types.js").Pt[]}} */(drawState.value).pts.map(p=>p.slice());   // drawing
     L().room.wallOff=[]; syncWallOff(L().room);   // a new outline starts with every wall in place
     clampOpenings(); roomSel.value = null;
-    drawState.value = null; alignGuides.value = []; alignNote.value = ''; $('drawHint').hidden=true;
+    drawState.value = null; alignGuides.value = []; alignNote.value = '';
   });
   fit();
 }
@@ -58,6 +56,5 @@ function startCustomDraw(){
   stopOtherTools('room-draw');
   if(!roomMode()) setMode('room');
   batch(()=>{ drawState.value = {pts:[]}; drawCursor.value = null; roomSel.value = null; });
-  $('drawHint').hidden=false;
 }
 export {cancelCustomDraw, finishCustomDraw, drawSnapPoint, startCustomDraw};

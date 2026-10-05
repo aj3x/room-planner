@@ -37,8 +37,8 @@
    so a new tool needs no edit to the commands that end one.
 
    Tools are registered by setupCanvas() from boot(), never at import time;
-   adding one is a module and a line there. The listeners are registered in
-   src/app/bind/stage.js. */
+   adding one is a module and a line there. The canvas's listeners are
+   registered by src/app/canvas-events.js, its keys by keys.js. */
 
 import {S} from '../../kernel/state.js';
 import {addLayer, scheduleDraw} from './draw.js';

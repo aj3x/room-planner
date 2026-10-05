@@ -13,7 +13,7 @@ import {openMenu} from '../../ui-kit/menu.js';
 import {mountComponent} from '../../ui-kit/component.js';
 import {ActButton, EmptyRow, MoreButton, SecHead} from '../../ui-kit/parts.jsx';
 import {setMode} from '../mode/index.js';
-import {openingDialog} from './opening-dialog.js';
+import {openingDialog} from './opening-dialog.jsx';
 import {deleteOpening} from './openings-panel.js';
 
 /** @param {MouseEvent} e */

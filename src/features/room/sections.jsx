@@ -19,7 +19,7 @@ import {mountComponent} from '../../ui-kit/component.js';
 import {Check, Field, SecHead} from '../../ui-kit/parts.jsx';
 import {OpeningProps, openingTitle} from '../openings/index.js';
 import {CornerProps, IWallProps, PillarProps, WallProps, wallPartTitle} from '../walls/index.js';
-import {presetL, presetRect, toggleCustomDraw} from './outline-presets.js';
+import {presetL, presetRect, toggleCustomDraw} from './outline-presets.jsx';
 
 /** What both sections show: the room and the unit. */
 function watchRoom(){ rev.room.value; rev.project.value; pref('unit'); }
@@ -47,7 +47,7 @@ function RoomSelSection({section}){
     if(gone) roomSel.value = null;
   });
   return <>
-    <div class="sec-head"><h2>{title || 'Selection'}</h2></div>
+    <SecHead title={title || 'Selection'}/>
     <div>{!ready ? null : s && !gone ? partView(s)
       : <p class="hint">Click a wall, corner, door or pillar in the plan to change it here.</p>}</div>
   </>;

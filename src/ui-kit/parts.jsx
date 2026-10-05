@@ -2,10 +2,9 @@
 /* The small pieces every pane component is built from, as components: the
    sprite icon, a section's head, the ⋯ row button, an empty list row, the
    rename box a row swaps its name for, and the form boxes a properties
-   panel is made of (Field, Select, Check). Icon renders what svgI in dom.js
-   renders for the innerHTML that is left (dialogs), so the styles and
-   DESIGN.md's component rules apply to both. */
+   panel is made of (Field, Select, Check), and a side panel's head. */
 import {useEffect, useLayoutEffect, useRef} from 'preact/hooks';
+import {paneShut, toggleSection} from './panels.js';
 
 /** @typedef {import('preact').ComponentChildren} Children */
 
@@ -14,11 +13,26 @@ function Icon({name}){
   return <svg class="i" aria-hidden="true"><use href={'#i-'+name}/></svg>;
 }
 
-/** A section's head: the title (ui-kit/panels.js makes it the collapse
-    toggle) and the section's actions on the right.
+/** A section's head: the title, which folds the section away (ui-kit/panels.js
+    gives it its role and state), and the section's actions on the right.
     @param {{title: string, children?: Children}} p */
 function SecHead({title, children}){
-  return <div class="sec-head"><h2>{title}</h2>{children ? <div class="sec-act">{children}</div> : null}</div>;
+  return <div class="sec-head"><h2 onClick={e=>toggleSection(e.currentTarget)}
+    onKeyDown={e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleSection(e.currentTarget); } }}>{title}</h2>
+    {children ? <div class="sec-act">{children}</div> : null}</div>;
+}
+
+/** A side panel's head: its name, and the chevron that shuts or opens it,
+    which always points the way the panel would move.
+    @param {{side: 'left'|'right', name: string, label: string, onToggle: () => void}} p */
+function PaneHead({side, name, label, onToggle}){
+  const shut=paneShut.value[side], title=(shut?'Show ':'Hide ')+label;
+  return <div class="pane-head" id={side==='left'?'headLeft':'headRight'} role="button" tabIndex={0} aria-expanded={!shut}
+    aria-controls={side==='left'?'paneRoom':'paneStuff'} title={title} aria-label={title}
+    onClick={onToggle} onKeyDown={e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onToggle(); } }}>
+    <span class="pane-name">{name}</span>
+    <span class="pane-toggle" aria-hidden="true"><Icon name={(shut===(side==='left')) ? 'chev-r' : 'chev-l'}/></span>
+  </div>;
 }
 
 /** A quiet icon button in a section's head. @param {{icon: string, label: string, onClick: (e: MouseEvent) => void}} p */
@@ -135,7 +149,7 @@ function Field({value, onCommit, onInput, onBlur, type='text', ...attrs}){
 /** A <select> over a value the model holds; after `onCommit` it shows the
     model's value again, so a choice the model turns down does not stay (a
     choice it takes comes back with the panel's re-render).
-    @param {{value: string, onCommit: (v: string) => void, id?: string, class?: string, 'aria-label'?: string, children: Children}} p */
+    @param {{value: string, onCommit: (v: string) => void, id?: string, class?: string, title?: string, 'aria-label'?: string, children: Children}} p */
 function Select({value, onCommit, children, ...attrs}){
   return <select value={value} {...attrs} onChange={e => { const el=e.currentTarget; onCommit(el.value); el.value = value; }}>{children}</select>;
 }
@@ -148,4 +162,4 @@ function Check({checked, onCommit, children}){
     onChange={e => { const el=e.currentTarget; onCommit(el.checked); el.checked = checked; }}/>{children}</label>;
 }
 
-export {Icon, SecHead, ActButton, MoreButton, EmptyRow, RenameField, Field, Select, Check};
+export {Icon, SecHead, PaneHead, ActButton, MoreButton, EmptyRow, RenameField, Field, Select, Check};

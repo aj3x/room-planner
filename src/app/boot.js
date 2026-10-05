@@ -8,14 +8,15 @@ import {migrate} from '../kernel/migrate.js';
 import {S, isCanvasMode, setS} from '../kernel/state.js';
 import {KEY, Store} from '../kernel/store.js';
 import {marketFolderOf, ensureDefaultMarket} from '../features/marketplace/index.js';
-import {itemFolderOf, nav} from '../features/library/index.js';
+import {itemFolderOf, mountLibraryPage, nav} from '../features/library/index.js';
 import {mountMode, paramMode, setPendingFit, syncModeParam} from '../features/mode/index.js';
 import {effect, loaded, notice, untracked} from '../kernel/signals.js';
 import {flash} from '../ui-kit/flash.js';
 import {mountSections} from '../ui-kit/panels.js';
 import {mountModal} from '../ui-kit/modal.jsx';
 import {fillSlots} from './slots.js';
-import {mountHeader} from './bind/header.js';
+import {mountChrome} from './chrome.jsx';
+import {bindCanvas} from './canvas-events.js';
 
 /* Every view, as an effect on the signals it shows. Each one renders once
    here, from the loaded project, and again whenever what it reads changes —
@@ -28,15 +29,22 @@ function mount(mountFills){
   mountMode();
   mountFills();
   mountSections();
-  mountHeader();
   mountMeasureBar();
   mountCanvas();
   /* what the domain layer reports (a refused edit), as a toast */
   effect(() => { const n=notice.value; if(n) untracked(() => flash(n.msg)); });
 }
 
+/** @param {string} id @returns {HTMLElement} */
+const shell = id => /** @type {HTMLElement} */(document.getElementById(id));   // index.html's
+
 async function boot(){
-  mountModal(/** @type {HTMLElement} */(document.getElementById('dialog')));   // the shell's
+  /* the page's parts, before the (maybe slow) storage read: each shows
+     itself empty until the project is loaded */
+  mountChrome();
+  mountModal(shell('dialog'));
+  mountLibraryPage(shell('paneLibrary'));
+  bindCanvas();
   setupCanvas();
   const mountFills = fillSlots();   // the panes' headings, before the (maybe slow) storage read
   try{
