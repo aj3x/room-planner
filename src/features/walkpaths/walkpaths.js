@@ -165,31 +165,6 @@ function walkSolve(grid, fromPt){
   }
   return {dist,prev,cols,rows,s};
 }
-function walkTrace(grid, solved, targetPt){
-  if(!solved) return null;
-  const {res,cols}=grid;
-  let ix=Math.round((targetPt[0]-grid.x0)/res-.5), iy=Math.round((targetPt[1]-grid.y0)/res-.5);
-  ix=Math.max(0,Math.min(cols-1,ix)); iy=Math.max(0,Math.min(solved.rows-1,iy));
-  let t=iy*cols+ix;
-  if(solved.dist[t]===Infinity){
-    // fall back to the reachable cell nearest the target
-    let best=-1, bd=Infinity;
-    for(let i=0;i<solved.dist.length;i++){
-      if(solved.dist[i]===Infinity) continue;
-      const jx=i%cols, jy=(i-jx)/cols;
-      const dx=grid.x0+(jx+.5)*res-targetPt[0], dy=grid.y0+(jy+.5)*res-targetPt[1];
-      const dd=dx*dx+dy*dy;
-      if(dd<bd){ bd=dd; best=i; }
-    }
-    if(best===-1) return null;
-    t=best;
-  }
-  const idx=[]; let cur=t;
-  while(cur!==-1){ idx.push(cur); cur=solved.prev[cur]; }
-  idx.reverse();
-  return idx.map(i=>{ const ix2=i%cols, iy2=(i-ix2)/cols;
-    return {pt:[grid.x0+(ix2+.5)*res, grid.y0+(iy2+.5)*res], clear:grid.cells[i]}; });
-}
 const doorEntry = o => { const g=openGeom(o), inset=Math.max(150,(walkGrid().res||150)/2); return [g.mid[0]+g.nrm[0]*inset, g.mid[1]+g.nrm[1]*inset]; };
 /* signed area (shoelace) — sign gives the polygon's winding, which is all
    the outward-normal math below needs, convex or not */

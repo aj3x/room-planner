@@ -47,7 +47,7 @@ function bpLineProfile(wall,w,h,L,minSeg){
   const half = Math.max(1, Math.round(L.t*0.45));
   const c = Math.round(L.c);
   const segs=[];
-  let a=0, runStart=-1;
+  let a, runStart=-1;
   const hit=q=>{
     for(let d=-half;d<=half;d++){
       const x = L.axis==='h' ? q : c+d, y = L.axis==='h' ? c+d : q;

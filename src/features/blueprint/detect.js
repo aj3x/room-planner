@@ -155,7 +155,7 @@ function bpAnalyse(work, opts){
       for(let i=0;i<w*h;i++) barrier[i]=(wall[i]||skin[i]||cavity[i])?1:0;
       const gapCuts=bpCloseGaps(barrier,w,h,lines,tPart);
       const arcCandidates=bpProposeArcCuts(lines,tPart);
-      let cuts=bpClassifyCuts([...gapCuts, ...arcCandidates], structure, wall, w, h, tPart);
+      let cuts=bpClassifyCuts([...gapCuts, ...arcCandidates], structure, wall, w, h);
       /* A proposed free-standing arc only earns the wall it's guessing at by actually
          reading as a swing arc above — the same test a real gap has to pass to be called
          a door rather than a doorway. Anything weaker (a plain gap, or a fill ratio high

@@ -60,8 +60,8 @@ function mergeSplice(work, i, t){
 /* cut a room's edge `i` at both ends of the overlap interval [lo,hi] (its own units,
    measured from that edge's start), leaving the shared portion as its own edge and
    returning that edge's index once both cuts have landed. */
-/** @param {MergeWork} work @param {number} i @param {number} lo @param {number} hi @param {number} len @returns {number} */
-function mergeInsertCuts(work, i, lo, hi, len){
+/** @param {MergeWork} work @param {number} i @param {number} lo @param {number} hi @returns {number} */
+function mergeInsertCuts(work, i, lo, hi){
   let idx=i;
   if(lo>1){ mergeSplice(work, i, lo); idx=i+1; }
   mergeSplice(work, idx, hi-(lo>1?lo:0));
@@ -103,12 +103,12 @@ function mergeGeometry(A, B){
   const lo=Math.max(0, Math.min(sa,sb)), hi=Math.min(len1, Math.max(sa,sb));
   if(hi-lo<50) return {error:"These rooms don't share a wall"};
 
-  const idxA=mergeInsertCuts(workA, i0, lo, hi, len1);
+  const idxA=mergeInsertCuts(workA, i0, lo, hi);
   const len2=Math.hypot(b2[0]-a2[0], b2[1]-a2[1]);
   const rAt = (/** @type {number} */s) => (s-sa)*len2/(sb-sa);
   let rLo=rAt(lo), rHi=rAt(hi);
   if(rLo>rHi){ const t=rLo; rLo=rHi; rHi=t; }
-  const idxB=mergeInsertCuts(workB, j0, rLo, rHi, len2);
+  const idxB=mergeInsertCuts(workB, j0, rLo, rHi);
 
   /* Every corner survives — A_lo/A_hi (the ends of A's now-removed shared edge) and
      their opposite numbers on B stay put; only the edge directly between A_lo and A_hi

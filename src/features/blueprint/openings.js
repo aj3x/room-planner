@@ -9,7 +9,7 @@
    the hinge with a radius equal to the clear width, so counting thin-stroke pixels at that
    radius from each jamb picks the hinge by a wide margin — measured 402 against 92 on the
    test plan's bedroom door. The sweep direction then gives the side it opens to. */
-function bpClassifyCuts(cuts, structure, wall, w, h, tPart){
+function bpClassifyCuts(cuts, structure, wall, w, h){
   const thin=new Uint8Array(w*h);
   for(let i=0;i<w*h;i++) thin[i]=(structure[i]&&!wall[i])?1:0;
   const at=(x,y)=>{ x=Math.round(x); y=Math.round(y); return (x<0||y<0||x>=w||y>=h)?0:1; };

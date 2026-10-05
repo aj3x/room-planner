@@ -30,7 +30,7 @@ function importFile(e){
   const input=e.currentTarget, f=input.files && input.files[0]; if(!f) return;
   const rd=new FileReader();
   rd.onload=()=>{
-    let inc=null;
+    let inc;
     try{ inc=readImport(JSON.parse(/** @type {string} */(rd.result))); }catch(err){ inc=null; }
     if(!inc){ flash("That file isn't a Room Planner export"); return; }
     importDialog(inc);
