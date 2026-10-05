@@ -402,24 +402,28 @@ layouts are both currently active).
   dialog coverage. **No longer pinned by a test** — `panel-dialogs.spec.js`
   was scaffolding for the SCC move and went with it.
 
-- **Dead code the linter found.** ESLint (added in Phase 2, correctness rules
-  only) reports **six** unused bindings and dead stores. None is a behaviour
-  bug; all are noise, and they are worth clearing in a follow-up. They were
-  seven before Phase 3: `folderPath` gained a caller on the way out of
-  `index.html` and is no longer flagged. The rest came through the split
-  untouched, which is what move-only means, and they now report against the
-  module they landed in:
-  - `walkTrace` (`src/features/walkpaths/walkpaths.js:168`): a top-level function with no
-    caller anywhere.
-  - unused parameters: `len` (`src/features/room/merge-rooms.js:64`), `tPart`
-    (`src/features/blueprint/openings.js:12`).
-  - dead stores: `a` (`src/features/blueprint/walls.js:50`), `raw`
-    (`src/features/library/adhoc-listings.js:78`), `inc` (`src/app/bind/header.js:44`) — each
-    assigned and then overwritten or never read.
-  They are reported as ESLint **warnings** rather than errors, deliberately:
-  Phase 2 may not edit application code, and a lint that fails the build over
-  findings nobody is allowed to fix would just get switched off. `no-undef`,
-  the rule that matters for the extraction, is an error and is clean.
+- **Keys act on the plan's selection behind an open dialog.** Delete, the
+  arrows and `R` (`furniture.remove`/`nudge`/`turn` in
+  **`src/features/furniture/keys.js`**) and Delete on a room part
+  (`room.delete`, **`src/features/room/keys.js`**) do not check
+  `isModalOpen()`. Typing in a dialog's box is safe — the registry skips
+  shortcuts while focus is in a field — but with focus on one of the dialog's
+  buttons (after Tab, or a click on OK that refused), Delete removes the
+  selected items or the picked door, and the arrows nudge them, unseen under
+  the dialog. Pre-existing: the old `document` handler had the same hole. The
+  fix is an `isModalOpen()` check in those entries, or a registry-level rule
+  that only `command`-band shortcuts run while a dialog is up.
+
+- **The blueprint wizard leaks object URLs.** Counted with
+  `URL.createObjectURL`/`revokeObjectURL` wrapped: closing the wizard with
+  Esc at the scale stage creates 5 and revokes 4, and finishing an import
+  leaves 2 unrevoked. `bpDispose()` (**`src/features/blueprint/state.js`**,
+  run from the dialog's `onClose`) revokes only `bpState.url`, the photo's
+  current URL, so any URL that was replaced (`bpLoadImage` in
+  **`src/features/blueprint/image.js`**, reached from the upload and crop
+  stages) or created outside it is held until the page closes — each a
+  full-resolution image. Pre-existing. The fix is for the wizard to keep
+  every URL it creates and revoke them all in `bpDispose()`.
 
 - **A stray `/*$vite$:1*/` comment rides in the shipped CSS.** Since A4 moved the
   styles to `src/app/styles/main.scss`, `dist/index.html`'s `<style>` block ends with
