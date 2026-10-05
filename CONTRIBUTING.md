@@ -59,23 +59,23 @@ src/ui-kit/            generic UI: modal, menus, panels, drag and drop,
 src/features/<name>/   one feature each: canvas, mode, walls, openings, room,
                        furniture, floors, measure, walkpaths, layouts, library,
                        marketplace, io, blueprint. Its index.js is its public API.
-src/app/               composition: boot(), the canvas's list of layers and
-                       tools, global shortcuts, the pane partials (the side
-                       panes are lists of slots features fill, slots.js),
-                       main.scss
+src/app/               composition: boot(), the header and canvas controls
+                       (chrome.jsx), the canvas's list of layers and tools,
+                       every feature's shortcuts (shortcuts.js), the panes'
+                       slots features fill (slots.js), main.scss
 ```
 
 A feature imports `kernel/`, `ui-kit/`, its own files, and other features
 **only through their `index.js`**; `kernel/` imports only itself; `ui-kit/`
 imports `kernel/`. `npm run lint` enforces that, and fails on any import
-cycle. AGENTS.md's *Adding things* says where a new feature, layer, tool or
-panel goes.
+cycle. AGENTS.md's *Adding things* says where a new feature, layer, tool,
+panel, dialog or shortcut goes.
 
-New code goes in the module, partial or stylesheet where it belongs — **not in
-`index.html`**, which is a shell. The one thing that still belongs there is a
-listener registration on `document` or `window`, at the spot its markup
-implies, because a module that called `addEventListener` at import time would
-reorder that listener ahead of every other one in the file.
+New code goes in the module or stylesheet where it belongs — **not in
+`index.html`**, which is a shell of empty places the components render into.
+A keyboard shortcut is an entry in its feature's `shortcuts` list with a
+priority, not a listener: the registry (`ui-kit/shortcuts.js`) decides who
+gets a key, so nobody has to add listeners in the right order.
 
 [`AGENTS.md`](AGENTS.md) is the architecture guide and is worth reading before
 a non-trivial change; it is written for coding agents but it is the same
@@ -128,7 +128,8 @@ anything with a visible surface — read it *before* adding UI, not after.
 - **Panels are Preact components** (`.jsx`) that read the signals they show
   while rendering and re-render on their own; a pane section is a slot its
   feature fills (`sections` in the feature's `index.js`, one line in the pane
-  partial). A change commits through `transact()` and never calls a render
+  in `index.html`). Dialogs are components too (`openDialog`,
+  `ui-kit/modal.jsx`). A change commits through `transact()` and never calls a render
   function or names a panel. A box over a model value is a `Field`
   (`ui-kit/parts.jsx`): it keeps what is typed while the plan repaints and
   shows the model's value after a commit, refused or not. AGENTS.md's
