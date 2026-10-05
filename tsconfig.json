@@ -12,9 +12,10 @@
 
    2. tsconfig.strict.json: `strict: true`, for each module whose first line
       is `// @ts-check`. In this repo that pragma means "held to strict".
-      kernel/, ui-kit/, every feature's index.js and every module an index.js
-      re-exports from must carry it, and the script fails if one does not.
-      The rest (a feature's private modules, app/bind/) is the ratchet: the
+      kernel/, ui-kit/, every feature's index.js (and host.js), every module
+      those re-export from, and every .jsx component must carry it, and the
+      script fails if one does not. The rest (a feature's private modules,
+      app/'s .js) is the ratchet: the
       script lists them, and making one strict is adding the pragma and
       fixing what pass 2 then reports.
 
