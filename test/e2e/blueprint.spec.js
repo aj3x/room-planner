@@ -45,7 +45,7 @@ test.describe('blueprint detection', () => {
       const p = window.__rp.bpState.proposal;
       return { regions: p.regions.length, openings: p.openings.length, work: [p.w, p.h] };
     });
-    /* Verified by hand against the photo during Phase 0. If these move, the
+    /* Verified by hand against the photo. If these move, the
        pipeline changed — that is the whole signal. */
     expect(counts.regions).toBe(9);
     expect(counts.openings).toBe(14);

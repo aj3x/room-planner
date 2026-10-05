@@ -24,20 +24,17 @@ const expandIncludes = (html) => html.replace(INCLUDE_RE, (_, rel) =>
 
 const src = expandIncludes(fs.readFileSync(path.join(REPO_ROOT, 'index.html'), 'utf8'));
 
-/* Strip EVERY script block, not the span from the first <script to the last
-   </script>. That shortcut was exact while index.html held a single script,
-   and became silently destructive the moment each HTML partial started
-   carrying its own: the first <script> is now the header partial's, near the
-   top of <body>, so cutting to the last </script> deleted every pane between
-   them. The DOM still looked plausible — it just had no #cv, and the failure
-   surfaced as `Cannot read properties of null (reading 'getContext')` from
-   features/canvas/view.js, three imports deep and nowhere near the cause. */
+/* Strip EVERY script block, one by one. Cutting from the first <script to the
+   last </script> deletes whatever markup lies between two scripts, and the DOM
+   still looks plausible: the failure surfaces as `Cannot read properties of
+   null (reading 'getContext')` from features/canvas/view.js, three imports
+   deep and nowhere near the cause. */
 const SCRIPTS = /<script\b[^>]*>[\s\S]*?<\/script>/gi;
 document.documentElement.innerHTML = src.replace(SCRIPTS, '');
 
 /* Fail loudly and here, rather than as a null dereference deep inside a
-   module. One id per partial: if a future change to the stripping above, or
-   to the include expansion, drops a pane again, this names the pane. */
+   module: if a change to the stripping above, or to the include expansion,
+   drops a place the app renders into, this names it. */
 for (const [id, from] of [['dialog', 'src/ui-kit/modal.html'], ['i-plan', 'src/ui-kit/sprite.html'],
   ['cv', 'index.html'], ['paneRoom', 'index.html'], ['paneStuff', 'index.html'], ['paneLibrary', 'index.html']]) {
   if (!document.getElementById(id))
