@@ -1,10 +1,11 @@
 // @ts-check
 /* What the keyboard does to the selected items: Delete removes them, R
    turns one (Shift+R the other way), the arrows nudge by the snap step
-   (five with Shift). Not in Room mode, where the keys belong to the room. */
+   (five with Shift). Not in Room mode, where Delete belongs to the room's
+   parts (room/keys.js); in every other mode, as long as items are picked. */
 import {worldPoly} from '../../kernel/geometry.js';
 import {selSet} from '../../kernel/selection.js';
-import {instOf, itemOf, roomMode} from '../../kernel/state.js';
+import {instOf, itemOf} from '../../kernel/state.js';
 import {transact} from '../../kernel/tx.js';
 import {bisectToValid, centreInside, isBad, validate} from '../../kernel/model/validity.js';
 import {flash} from '../../ui-kit/flash.js';
@@ -12,7 +13,9 @@ import {KEY_ORDER} from '../../ui-kit/shortcuts.js';
 import {snapMM} from '../canvas/index.js';
 import {removeSel, rotate} from './selection-panel.js';
 
-const selected = () => !roomMode() && selSet.value.size>0;
+const selected = () => selSet.value.size>0;
+/** @type {import('../../kernel/types.js').Mode[]} */
+const modes = ['furniture', 'floor', 'inventory', 'marketplace'];
 
 /** @param {KeyboardEvent} e */
 function nudge(e){
@@ -40,11 +43,11 @@ function nudge(e){
 
 /** @type {import('../../ui-kit/shortcuts.js').Shortcut[]} */
 const shortcuts = [
-  {id: 'furniture.remove', priority: KEY_ORDER.selection, keys: ['Delete', 'Backspace'],
+  {id: 'furniture.remove', priority: KEY_ORDER.selection, modes, keys: ['Delete', 'Backspace'],
     run: e => { if(!selected()) return false; e.preventDefault(); removeSel(); }},
-  {id: 'furniture.turn', priority: KEY_ORDER.selection, keys: ['r', 'R'],
+  {id: 'furniture.turn', priority: KEY_ORDER.selection, modes, keys: ['r', 'R'],
     run: e => { if(!selected()) return false; if(selSet.value.size===1){ e.preventDefault(); rotate(e.shiftKey?-90:90); } }},
-  {id: 'furniture.nudge', priority: KEY_ORDER.selection, keys: ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'],
+  {id: 'furniture.nudge', priority: KEY_ORDER.selection, modes, keys: ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'],
     run: e => { if(!selected()) return false; nudge(e); }},
 ];
 
