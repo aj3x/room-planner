@@ -121,8 +121,8 @@ and each was re-verified against the code at that point rather than translated.
 | **Doherty Threshold** — respond within ~400ms and keep users informed | Followed | Toasts read `Math.max(1600, Math.min(5000, len*60))` ms (`readTime`, `src/ui-kit/flash.js:23`), so short and long messages are both legible; no action currently runs long enough to need a spinner. |
 | **Postel's Law** — be liberal in what input you accept | Followed | `parseLen()` accepts mixed units, fractions and slop in one string ("3ft 6in", "3 1/2\"", bare numbers) rather than one rigid format (`parseLen`, `src/kernel/units.js:25`). |
 | **Von Restorff Effect** — the one thing that matters should look different | Followed | Danger actions get their own colour (`.menu button.danger`, `.btn.danger`) and destructive buttons are visually distinct from the neutral default (§3.2, §3.9). |
-| **Serial Position Effect** — order affects what's remembered/misclicked | Followed | Destructive items are placed last, after a divider, in all nine `openMenu()` call sites — `features/furniture/item-list.js`, `features/layouts/layout-tree.js` (×2), `features/floors/floors.js`, `features/library/grid.js`, `features/library/adhoc-listings.js`, `features/library/folder-menus.js` (×2) and `features/library/marketplace.js` — each ending `{sep:true}, {label:'Delete…', danger:true, …}`. `openMenu` renders both (`src/ui-kit/menu.js:32,35`). A reflexive first/last click never lands on Delete. |
-| **Zeigarnik Effect** — unfinished tasks stay in mind | Followed | Ordinary actions (add item, place object) complete in one step, so there is nothing to leave unfinished. The one multi-step flow, blueprint import, shows how far along it is: a four-stage stepper (`bpStepperHTML`, `src/features/blueprint/wizard.js:9`) marks the stage you are on, every stage after the first has a Back handler, and the committed import stays reversible afterwards through “Undo this import”. |
+| **Serial Position Effect** — order affects what's remembered/misclicked | Followed | Destructive items are placed last, after a divider, in every `openMenu()` menu that has one (the room tree's rows, the item list, the Library's tiles, folders, listings and marketplaces) — each ending `{sep:true}, {label:'Delete…', danger:true, …}`; `openMenu` (`src/ui-kit/menu.js`) renders both. A reflexive first/last click never lands on Delete. |
+| **Zeigarnik Effect** — unfinished tasks stay in mind | Followed | Ordinary actions (add item, place object) complete in one step, so there is nothing to leave unfinished. The one multi-step flow, blueprint import, shows how far along it is: a four-stage stepper (`bpStepperHTML`, `src/features/blueprint/wizard.jsx:9`) marks the stage you are on, every stage after the first has a Back handler, and the committed import stays reversible afterwards through “Undo this import”. |
 | **Tesler's Law** — complexity can be moved, not removed | Followed | The app absorbs unit conversion, collision/fit checks and snapping instead of asking the user to compute or avoid them (§1.2, Norman "constraints over errors"). |
 
 No violations were found in this pass. The table exists so a future change can
@@ -306,9 +306,7 @@ All colour comes from these tokens. No hex values in component CSS. Canvas
 colours come from the matching `CANVAS` palette in JS.
 
 **Where they live:** [`src/app/styles/_tokens.scss`](src/app/styles/_tokens.scss), the
-first partial loaded by [`src/app/styles/main.scss`](src/app/styles/main.scss). They
-used to sit at the top of `index.html`'s `<style>` block; Phase 3 split that
-block into fourteen partials and nothing else about them changed.
+first partial loaded by [`src/app/styles/main.scss`](src/app/styles/main.scss).
 
 **They are CSS custom properties and they stay CSS custom properties.** Do not
 convert one to a Sass `$variable`, however tempting the tooling makes it look.

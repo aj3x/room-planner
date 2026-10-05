@@ -1,6 +1,6 @@
 // @ts-check
 /* Rendering a Preact component into an element the shell owns — a pane's
-   section, which the shell's partial declares and a feature fills.
+   section, which the shell declares and a feature fills, or a whole page.
 
    A component reads the signals it shows while it renders (`rev.room.value`,
    `pref('unit')`, the selection) and re-renders when one of them changes:
@@ -30,8 +30,8 @@
    (ui-kit/parts.jsx), which also puts the model's value back after a
    commit, refused or not.
 
-   Called from a section's fill function at boot (or, for a whole page, from
-   its partial's script), never at import time. */
+   Called from a section's fill function or from boot(), never at import
+   time. */
 import '@preact/signals';
 import {render} from 'preact';
 

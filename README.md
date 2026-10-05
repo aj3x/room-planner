@@ -57,26 +57,18 @@ npm run test:e2e
 npm run lint
 ```
 
-109 Vitest tests and 26 Playwright ones. The browser suite runs twice — against
-the dev server and against the built single file, sharing one set of goldens —
-so the thing that ships is the thing that is tested. The suite is deliberately
-small: test code is held under 10% of the codebase, and what it does *not*
-cover is written down rather than left to be discovered. See
-[test/README.md](test/README.md).
+Vitest runs the unit tests and the build-pipeline checks; Playwright runs the
+browser suite twice — against the dev server and against the built single
+file, sharing one set of goldens — so the thing that ships is the thing that
+is tested. The suite is deliberately small: test code is held under 20% of the
+codebase (ideally 10%), and what it does *not* cover is written down rather
+than left to be discovered. See [test/README.md](test/README.md).
 
 ## How the source is laid out
 
-The app was a single 10,893-line `index.html`. It has been taken apart into
-modules so several people can work on it without colliding, and that is
-finished: `index.html` is now a 112-line shell — a `<head>`, a stylesheet
-link, seven include directives for the static markup, and a short script
-holding the dozen listeners that belong to no single pane, plus the call to
-`boot()`. The header, stage, Library and modal partials end with a module
-script that calls one `bind*()` from the module beside it (the Library's
-renders its page component instead); the two side panes are lists of empty
-sections that the owning features fill with Preact components. Everything
-else is **143 JS modules, 16 JSX component modules, 15 SCSS partials and 7
-HTML partials** under `src/`:
+`index.html` is a shell: the page's empty places, and a short script that
+calls `boot()`. Everything else is modules under `src/`, in four kinds of
+place:
 
 ```
 src/kernel/            the document and its rules: state, transact(), signals,
@@ -85,13 +77,15 @@ src/ui-kit/            generic UI: modal, menus, panels, drag and drop, toasts
 src/features/<name>/   one feature each (canvas, walls, openings, room,
                        furniture, floors, measure, library, blueprint, …),
                        with an index.js that is its public API
-src/app/               boot, the canvas's layers and tools, shortcuts, panes
+src/app/               boot, the chrome, the canvas's layers and tools, the
+                       keyboard, the panes' slots
 ```
 
 What may import what is enforced by `npm run lint`; [AGENTS.md](AGENTS.md)
-has the details and how to add a feature, a layer, a tool or a panel.
+has the details and how to add a feature, a panel, a dialog, a layer, a tool
+or a shortcut.
 
-The build is what puts it back together into one file. Note that the source
+The build bundles it into one file. Note that the source
 `index.html` is a module entry point and so does **not** open over `file://` —
 run `npm run dev`, or build and open `dist/index.html`.
 

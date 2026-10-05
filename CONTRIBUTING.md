@@ -30,15 +30,16 @@ product, not an implementation detail — a change that breaks it is a change
 that breaks the app.
 
 The repository's own `index.html` is the *source* entry point: a shell of
-`<head>`, a stylesheet link, seven `<!-- @include -->` directives and one
-`<script type="module">`. It is not the built file and it is not openable over
+`<head>`, a stylesheet link, the empty places the components render into,
+two `<!-- @include -->` directives (the icon sprite and the dialog's host)
+and one `<script type="module">`. It is not the built file and it is not openable over
 `file://` — module scripts are fetched under CORS rules an opaque `file://`
 origin cannot satisfy. Use `npm run dev`, or build and open `dist/index.html`.
 
 ## Before you open a PR
 
 ```sh
-npm run lint       # ESLint (correctness + import boundaries), then the cycle check
+npm run lint       # ESLint (correctness, import boundaries, rp/signals-memo), then the cycle check
 npm run typecheck  # tsc over the JSDoc types (see tsconfig.json)
 npm test           # unit tests, then the browser suite (~45s)
 npm run build      # must still produce one file
@@ -74,7 +75,7 @@ panel, dialog or shortcut goes.
 New code goes in the module or stylesheet where it belongs — **not in
 `index.html`**, which is a shell of empty places the components render into.
 A keyboard shortcut is an entry in its feature's `shortcuts` list with a
-priority, not a listener: the registry (`ui-kit/shortcuts.js`) decides who
+priority (and the modes it works in), not a listener: the registry (`ui-kit/shortcuts.js`) decides who
 gets a key, so nobody has to add listeners in the right order.
 
 [`AGENTS.md`](AGENTS.md) is the architecture guide and is worth reading before
@@ -91,8 +92,8 @@ anything with a visible surface — read it *before* adding UI, not after.
   panels' components) and `@preact/signals` (the two joined); AGENTS.md
   gives each one's reason. Tooling is a `devDependency`.
 - **`dist/` is never committed.** It is gitignored and CI fails if it is
-  tracked. A 322 kB generated file touched by every change puts a merge
-  conflict on every PR — the exact problem the module split exists to remove.
+  tracked. A generated file touched by every change puts a merge conflict on
+  every PR — the exact problem the module layout exists to remove.
 - **Design tokens stay CSS custom properties.** Dark mode works by re-declaring
   all 24 of them under `@media (prefers-color-scheme:dark)`. A Sass `$variable`
   is resolved at compile time and cannot cascade, so converting one deletes
@@ -105,7 +106,7 @@ anything with a visible surface — read it *before* adding UI, not after.
   [`BACKLOG.md`](BACKLOG.md) and move on. A behaviour change belongs in its own
   commit, stated in its message.
 - **The test suite has a budget: under 20% of the codebase, ideally under
-  10%.** It is at 11% of the app. A new test needs an argument about what it catches
+  10%.** `test/README.md` says how to measure it. A new test needs an argument about what it catches
   that nothing else does — "it covers a function" is not one; "a silent break
   here corrupts a user's saved project" is. Read
   [`test/README.md`](test/README.md) before touching `test/`; it also lists
@@ -118,19 +119,24 @@ anything with a visible surface — read it *before* adding UI, not after.
   one. Break it by moving the shared piece into a leaf, or by turning the back
   edge into a signal the other side subscribes to — not by a late-bound lookup.
 - **`function` declarations stay `function` declarations** — never rewritten as
-  `const f = () => {}`. It keeps the house style, and it is what made the
-  cycles this codebase used to have survivable.
+  `const f = () => {}`. It keeps the house style, and a hoisted function
+  survives an import cycle that a `const` read at load time would not.
 - ES2017-ish, `"use strict"`. JS with JSDoc types checked by `tsc` — no
   `.ts` source files; shared types live in `src/kernel/types.d.ts` and
   `src/features/canvas/types.d.ts`. `kernel/`, `ui-kit/`, every feature's
   public API and every `.jsx` component are strict (first line
-  `// @ts-check`), and `npm run typecheck` fails if one stops being.
+  `// @ts-check`), and `npm run typecheck` fails if one stops being. It also
+  lists the modules that are not strict yet: making one strict is adding the
+  pragma and fixing what it reports, and the list only gets shorter.
 - **Panels are Preact components** (`.jsx`) that read the signals they show
   while rendering and re-render on their own; a pane section is a slot its
   feature fills (`sections` in the feature's `index.js`, one line in the pane
   in `index.html`). Dialogs are components too (`openDialog`,
   `ui-kit/modal.jsx`). A change commits through `transact()` and never calls a render
-  function or names a panel. A box over a model value is a `Field`
+  function or names a panel. A component that reads a signal or holds state
+  and takes an object prop must also read the revision signal that object
+  changes with (or take an `epoch` prop) — the model is edited in place, and
+  `rp/signals-memo` fails the lint otherwise; AGENTS.md's *Rendering* says why. A box over a model value is a `Field`
   (`ui-kit/parts.jsx`): it keeps what is typed while the plan repaints and
   shows the model's value after a commit, refused or not. AGENTS.md's
   *Adding things* has the recipe.

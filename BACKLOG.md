@@ -346,7 +346,7 @@ layouts are both currently active).
   `test/e2e/smoke.spec.js` ("dist/index.html boots and paints straight off disk").
 
 - **A marketplace item's folder path does not find a folder that differs only
-  in case.** `addMarketItemToInventory()` (**`src/features/library/add-to-inventory.js`**) files an
+  in case.** `addMarketItemToInventory()` (**`src/features/library/add-to-inventory.jsx`**) files an
   incoming item under its id path via `ensureItemFolderPath(parts)`
   (**`src/features/library/item-folders.js`**), which matches an existing folder with
   `x.name===name` — exact, case-sensitive. Marketplace ids
@@ -360,7 +360,7 @@ layouts are both currently active).
   marketplace were scaffolding for the SCC move and went with it.
 
 - **Stepping out of a subscription answers the typed search about a different
-  collection.** `renderLibContent()` (**`src/features/library/router.js`**) routes to
+  collection.** The Library page (**`src/features/library/page.jsx`**) routes to
   `renderMarketSub()` *before* the generic search view (the comment there says
   so deliberately), so while a subscription is open the search box searches that
   marketplace's index. Press "Marketplaces" to go back and `nav.searching` is
@@ -396,8 +396,8 @@ layouts are both currently active).
   without touching anything stores **810**. The same applies to any existing
   opening or item re-saved from its dialog — the value drifts to whatever the
   current display unit can express, once per save, silently, and switching
-  units between saves drifts it again. The dialogs are now **`src/features/library/item-dialog.js`** and
-  **`src/features/openings/opening-dialog.js`**; the fix is to keep the original millimetre
+  units between saves drifts it again. The dialogs are now **`src/features/library/item-dialog.jsx`** and
+  **`src/features/openings/opening-dialog.jsx`**; the fix is to keep the original millimetre
   value when the field's text is unchanged. Found while writing the Phase 3.6
   dialog coverage. **No longer pinned by a test** — `panel-dialogs.spec.js`
   was scaffolding for the SCC move and went with it.

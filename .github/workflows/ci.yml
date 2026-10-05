@@ -23,9 +23,9 @@ permissions:
 
 jobs:
   no-build-output:
-    # dist/ is generated, 322 kB, and touched by every change. Committing it
-    # would put a merge conflict on every PR — the exact problem the module
-    # split exists to remove. It is gitignored; this is the check that keeps it
+    # dist/ is generated, a few hundred kB, and touched by every change.
+    # Committing it would put a merge conflict on every PR — the exact problem
+    # the module layout exists to remove. It is gitignored; this is the check that keeps it
     # that way if somebody ever forces it in.
     name: dist/ is not committed
     runs-on: ubuntu-latest

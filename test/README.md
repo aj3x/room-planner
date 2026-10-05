@@ -4,10 +4,8 @@
 
 > **Test code stays under 20% of the codebase, and ideally under 10%.**
 
-Measured as `test/**/*.js` against `index.html` + `src/**`. It is **1,782 lines
-against 15,585** today — 10.3% of the two together (11.4% of the app's own
-size). Check it before adding a
-file:
+Measured as `test/**/*.js` against `index.html` + `src/**`. Check it before
+adding a file:
 
 ```sh
 find test -name '*.js' -not -path '*__screenshots__*' | xargs wc -l | tail -1
@@ -24,28 +22,18 @@ that nothing else does? If the answer is "it covers a function", that is not an
 argument. If the answer is "a silent break here corrupts a user's saved
 project", it is.
 
-### What was here before, and why it went
+### Scaffolding has a finish line
 
-Until the module split landed, `test/` held a **characterization baseline** —
-7,111 lines recording how a 10,893-line `index.html` behaved, so the split could
-be proved to change nothing. Two suites inside it were written for two specific
-moves:
+Characterization tests written to make one large change safe — pinning how
+the code behaves so a move can be proved to change nothing — are deleted when
+that change lands, and are labelled as such while they live. Several suites
+went that way (DOM-text checks of every panel, pointer scripts for every drag
+mode, screenshot baselines). The defects they found are in
+[`BACKLOG.md`](../BACKLOG.md) under `## Known defects`, each marked where it
+lost its pinning test — the write-ups were always the durable artifact.
 
-| suite | written for | size |
-|---|---|---|
-| `pointer-*.spec.js` (43 tests) | the 766-line `draw()` keystone move | 5 files |
-| `panel-*.spec.js` (135 tests) | the 1,232-line Plan+Library SCC move | 8 files |
-
-**Both moves landed green.** That was scaffolding, and the building stands. It
-was removed deliberately, along with 20 screenshot baselines, the `page.route`
-stub marketplace, the jsdom bundling harness and five saved-state fixtures. The
-defects those tests found are all still written up in
-[`BACKLOG.md`](../BACKLOG.md) under `## Known defects`, each one marked where it
-has lost its pinning test — the write-ups were always the durable artifact, and
-they name the module and the fix.
-
-Do not treat that removal as licence to delete anything inconvenient. The
-difference is that scaffolding has a finish line and these tests do not.
+That is not licence to delete anything inconvenient: scaffolding has a
+finish line, and the tests below do not.
 
 ## Running it
 
@@ -66,7 +54,7 @@ green — investigate.
 
 ## What the suite covers
 
-### Suite A — `test/unit`, Vitest + jsdom (126 tests)
+### Suite A — `test/unit`, Vitest + jsdom
 
 Pure logic, imported straight out of `src/`. No app boot, no bundler, no
 harness; a file evaluates the modules it names and calls them.
@@ -109,7 +97,7 @@ harness; a file evaluates the modules it names and calls them.
   re-render rule, not the panels' contents — `rp/signals-memo` (lint) guards
   the same rule statically.
 
-### `test/build` — the deployment model (6 tests)
+### `test/build` — the deployment model
 
 Not about the app's behaviour. It runs the real `vite.config.js` over
 `test/fixtures/build/` and asserts the three properties the product rests on:
@@ -118,7 +106,7 @@ is what makes dark mode work — turn them into Sass `$variables` and dark mode
 dies silently), the output is exactly one file, and its script tag is classic so
 it opens from `file://`.
 
-### Suite B — `test/e2e`, Playwright + Chromium (13 tests × 2 targets)
+### Suite B — `test/e2e`, Playwright + Chromium (each test × 2 targets)
 
 Everything that needs a real browser: real pixels, real `getImageData`, a real
 file input, a real pointer.
@@ -164,8 +152,8 @@ knows what they are inheriting.
   purpose: 135 tests' worth of DOM-text assertions cost more to maintain than
   they return once the code they guarded has stopped moving. **If you are about
   to restructure that region, write the characterization first, use it, and take
-  it out again** — that is exactly what Phase 3.6 was, and what Phase 6
-  did with screenshots and scripted clicks kept outside the repo.
+  it out again** (or keep it outside the repo, as scripted clicks and
+  screenshots).
 - **The canvas's pixels.** No screenshot baselines. Nothing asserts that
   `draw()`, `drawAlignGuides`, `drawOpening` or the dark palette paint what the
   state says. Screenshot baselines are per-platform, per-colour-scheme, and go
@@ -188,45 +176,29 @@ knows what they are inheriting.
 - **Narrow layouts.** Everything runs at 1280×800. Under 900px the panes become
   `display:contents` and sections reorder.
 
-## The harness — three things that will bite you
+## The harness — two things that will bite you
 
-These are about the *machinery*, not about any test, and they survived the cut
-because they cost an afternoon each to learn.
+These are about the *machinery*, not about any test, and each cost an
+afternoon to learn.
 
-### 1. `__rp` is not linted
+### 1. The epilogue is not linted
 
 [`epilogue.js`](epilogue.js) is appended to an in-memory copy of `index.html`'s
-script so the suite can reach `S`, `view`, `drag` and the undo entry points.
-**ESLint lints `index.html` on its own and never sees the epilogue appended to
-it.** So when the last `index.html` reader of an `__rp` name moves into `src/`,
-nothing goes red at lint time — instead the app throws a bare
-`ReferenceError: idFolder is not defined` during *module evaluation*, the
-epilogue never runs, and every Suite B test fails with no `__rp`. **The build and
-the browser stay green**, because the failure is about which names are in
-`index.html`'s closure, not about whether the app works. It happened twice in one
-extraction round.
+script under `--mode instrumented`, so Suite B can reach `S`, `view`, the room
+tool's drag and the undo entry points (`window.__rp`) and call a few functions
+as `window.foo()` (`GLOBALS`). It imports every one of those names itself,
+straight from the module that defines it. **ESLint lints `index.html` on its
+own and never sees the epilogue**, so when one of those modules is renamed or
+stops exporting the name, nothing goes red at lint, unit or build time:
+the instrumented app fails to load and every Suite B test fails with no
+`__rp`. `GLOBALS` assigns inside a `try/catch`, so a name listed there but not
+imported fails *silently*, much later, as `window.foo is not a function` in a
+spec that looks unrelated.
 
-### 2. `GLOBALS` fails *silently*, and later
+**So: after moving or renaming anything the epilogue names, fix its import in
+the same change.** Never add an export to `index.html` to feed a test.
 
-`GLOBALS` assigns inside a `try/catch`. A name that has left `index.html`'s scope
-simply stops being on `window`, with no error at boot — it surfaces much later as
-`window.swingPoly is not a function` in a spec that looks unrelated. That has
-been the dangerous half of this check every time.
-
-**So: after any move, audit the epilogue.** Read every name `__rp` and `GLOBALS`
-reference and check each is still declared or imported in `index.html` — or
-**import it in the epilogue**, which is strictly better and is what the eighteen
-imports at the top of `EPILOGUE` do. Never add an export to `index.html` to feed
-a test.
-
-Do it *before* running the suite, not after. Moving every pane's wiring into
-its own bind module took ten names out of `index.html`'s scope in one pass — `readImport`,
-`startCustomDraw`, `draw`, `fit`, `save`, `setMode` among them, six of those in
-`GLOBALS` and therefore silent. `index.html` now holds five registrations and
-six imports, so the shell's scope is small and most moves of any size will
-touch this file.
-
-### 3. `expandIncludes` must stay in step with the Vite plugin
+### 2. `expandIncludes` must stay in step with the Vite plugin
 
 The icon sprite and the dialog's host live in HTML partials under `src/ui-kit/`, behind `<!-- @include src/…/foo.html -->`
 directives that a Vite plugin (`rp:html-includes`) substitutes in
@@ -234,15 +206,12 @@ directives that a Vite plugin (`rp:html-includes`) substitutes in
 **[`unit-setup.js`](unit-setup.js) is not** — it reads `index.html` off disk to
 build the jsdom shell — so it carries the same substitution. If it stops
 expanding, or expands differently, the shell has no sprite or `#dialog`, and you get a wall of red
-unit tests **with a green build and a green browser** — the same signature as a
-stale `__rp` name, and for the same reason.
+unit tests **with a green build and a green browser**.
 
-The same applies to how it strips the scripts. It used to cut from the first
-`<script` to the last `</script>`, which was exact while `index.html` held one
-script and became silently destructive once partials carried scripts of
-their own, deleting every pane between. It strips every block by regex now,
-and asserts the ids the app needs afterwards, naming the file that lost one,
-instead of a null dereference three imports deep.
+It strips every `<script>` block one by one (cutting from the first `<script`
+to the last `</script>` silently deletes any markup between two scripts), and
+then asserts the ids the app needs, naming the file that lost one, instead of
+failing as a null dereference three imports deep.
 
 ## Determinism
 
@@ -253,7 +222,7 @@ Nothing here may depend on wall-clock time, random ids or animation timing.
 | `uid()` → `Math.random` | seeded mulberry32 installed before any app code runs (Suite B) |
 | `exportPayload()` → `new Date()` | clock frozen at 2024-01-01T00:00:00Z (Suite B) |
 | ids appearing in snapshots | normalised to ordinals by `stableIds()` — identity is still proven, since the same id maps to the same ordinal everywhere |
-| `save()`'s 350ms debounce | `flushSave()` **polls** storage until the write lands (pass a predicate when a *particular* write must be seen). It used to sleep 450ms; a loaded machine ate the margin, and that was the one flake this suite ever had. |
+| `save()`'s 350ms debounce | `flushSave()` **polls** storage until the write lands (pass a predicate when a *particular* write must be seen). A fixed sleep is the one flake this suite has had: a loaded machine ate the margin. |
 | rAF-scheduled repaints | `settle()` awaits two frames |
 | viewport / DPR | fixed at 1280×800, `deviceScaleFactor: 1` — `fit()` derives the zoom from the canvas box, so the viewport is an input to every projected point |
 

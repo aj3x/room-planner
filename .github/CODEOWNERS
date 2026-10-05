@@ -2,8 +2,8 @@
 # the default are the ones that decide.
 #
 # @aj3x is the only maintainer today, so every line names the same person and
-# nothing here gates anything yet. It is written anyway because the code is now
-# 150 modules in fourteen features: when a second contributor arrives, the
+# nothing here gates anything yet. It is written anyway because the code is
+# split into fourteen features: when a second contributor arrives, the
 # question "who should look at this?" has to have an answer that does not
 # depend on recognising a path.
 # The specific entries are not ceremony — each one is a place where a change
@@ -60,17 +60,18 @@
 # and the collision rules decide whether a merge keeps or overwrites their work.
 /src/features/io/           @aj3x
 
-# The boundary rule and the cycle check. Loosening either lets features grow
-# back into one another without a test going red.
+# The boundary rule, rp/signals-memo and the cycle check. Loosening any of
+# them lets features grow back into one another, or panels go stale, without
+# a test going red. The type-check ratchet's list lives in scripts/ too.
 /eslint.config.js           @aj3x
-/scripts/import-cycles.mjs  @aj3x
+/scripts/                   @aj3x
 
 # CI, Pages deployment and this file. A bad change here can publish the wrong
 # thing to the live site, or quietly stop running the gate.
 /.github/                   @aj3x
 
-# The suite is capped at 20% of the codebase (ideally under 10%; it is at 12%
-# of the app). Additions need an argument about what they catch, and deletions
+# The suite is capped at 20% of the codebase (ideally under 10%; test/README.md
+# says how to measure it). Additions need an argument about what they catch, and deletions
 # need to be distinguished from removing scaffolding that has finished its job
 # — both are review questions, not mechanical ones. See test/README.md.
 /test/                      @aj3x
@@ -78,3 +79,7 @@
 # The build is what makes the one-file deployment model work: the include
 # plugin, the classic script tag and the singlefile inlining are load-bearing.
 /vite.config.js             @aj3x
+
+# The keyboard registry: which feature gets a key is decided by priorities and
+# modes here, and a change reorders every shortcut at once.
+/src/ui-kit/shortcuts.js    @aj3x
