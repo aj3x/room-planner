@@ -1,0 +1,910 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`migrate() golden output > edge-dangling-refs.json migrates to a stable shape 1`] = `
+{
+  "_comment": "Every repair branch in migrate()/normLayout()/pruneMeasures() fired at once: an active id that names no layout, a floorId whose floor was deleted, out-of-range enums (mode/invScope/unit), a non-finite zoomSpeed, malformed pillars and iwalls, a placement with no itemId, measures pointing at things that no longer exist, an unparseable colour, an all-zero open box, and a marketSub with no id. Nothing here should throw; everything should be repaired in place.",
+  "active": "id1",
+  "defaultMarketDismissed": false,
+  "floors": [
+    {
+      "extWall": 0,
+      "id": "floor-real",
+      "name": "Upstairs",
+      "parentId": null,
+    },
+  ],
+  "folders": [],
+  "invScope": "project",
+  "invSearch": "",
+  "inventory": [
+    {
+      "color": "#aabbcc",
+      "count": 1,
+      "folderId": null,
+      "id": "chair",
+      "manualTags": [],
+      "name": "Chair",
+      "open": null,
+      "shape": {
+        "d": 450,
+        "type": "rect",
+        "w": 450,
+      },
+      "tags": [],
+    },
+    {
+      "color": "#6e8b7a",
+      "count": 1,
+      "folderId": null,
+      "id": "ghost",
+      "manualTags": [],
+      "name": "Untitled",
+      "open": null,
+      "shape": {
+        "d": 100,
+        "type": "rect",
+        "w": 100,
+      },
+      "tags": [],
+    },
+  ],
+  "itemFolders": [],
+  "lastFolderId": null,
+  "layouts": [
+    {
+      "dimLabel": "",
+      "floorId": null,
+      "floorPlace": {
+        "rot": 90,
+        "x": 0,
+        "y": null,
+      },
+      "folderId": null,
+      "id": "id1",
+      "measures": [
+        {
+          "a": {
+            "id": 0,
+            "k": "wall",
+            "n": 0,
+            "part": "side",
+          },
+          "b": {
+            "id": "p1",
+            "k": "item",
+            "part": "whole",
+          },
+          "id": "m-live",
+        },
+      ],
+      "name": "No id room",
+      "openings": [
+        {
+          "corner": "cw",
+          "dtype": "hinge",
+          "id": "op-1",
+          "kind": "door",
+          "offset": 100,
+          "wall": 0,
+          "width": 800,
+        },
+      ],
+      "placed": [
+        {
+          "id": "p1",
+          "itemId": "chair",
+          "rot": 0,
+          "x": 0,
+          "y": 0,
+        },
+      ],
+      "room": {
+        "floor": "#f5f3ee",
+        "iwalls": [
+          {
+            "a": [
+              0,
+              0,
+            ],
+            "b": [
+              300,
+              0,
+            ],
+            "id": "id2",
+            "t": 114,
+          },
+          {
+            "a": [
+              100,
+              100,
+            ],
+            "b": [
+              900,
+              100,
+            ],
+            "id": "iw-ok",
+            "t": 10,
+          },
+        ],
+        "pillars": [
+          {
+            "id": "id3",
+            "rot": 0,
+            "shape": {
+              "d": 300,
+              "type": "rect",
+              "w": 300,
+            },
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "id": "pil-ok",
+            "rot": null,
+            "shape": {
+              "d": 400,
+              "type": "ellipse",
+              "w": 400,
+            },
+            "x": 0,
+            "y": 10,
+          },
+        ],
+        "points": [
+          [
+            0,
+            0,
+          ],
+          [
+            3000,
+            0,
+          ],
+          [
+            3000,
+            3000,
+          ],
+          [
+            0,
+            3000,
+          ],
+        ],
+        "trim": 19,
+        "wall": 114,
+        "wallOff": [
+          false,
+          false,
+          false,
+          false,
+        ],
+      },
+    },
+  ],
+  "leftOpen": true,
+  "marketFolders": [],
+  "marketListings": [],
+  "marketSubs": [
+    {
+      "id": "id4",
+      "name": "Idless",
+      "url": "https://example.invalid/market.json",
+    },
+  ],
+  "mode": "furniture",
+  "onlyAvailable": false,
+  "planMode": "furniture",
+  "rightOpen": true,
+  "secClosed": [],
+  "showMeasure": true,
+  "showOpen": true,
+  "tagFilter": [],
+  "uiLib": {
+    "libFolderId": null,
+    "marketFolderId": null,
+    "tab": "library",
+  },
+  "unit": "id5",
+  "untaggedOnly": false,
+  "zoomSpeed": 1,
+}
+`;
+
+exports[`migrate() golden output > v0-legacy-rect-doors.json migrates to a stable shape 1`] = `
+{
+  "_comment": "Oldest saved shape migrate() still handles: a width/depth rectangle instead of room.points, N/E/S/W doors instead of openings, items with no tags/count/color, and no folders, floors, measures, pillars or iwalls at all. Exercises the normLayout() rectPts()/door-map branch and every \`if(!Array.isArray(...))\` default in migrate().",
+  "active": "room-a",
+  "defaultMarketDismissed": false,
+  "floors": [],
+  "folders": [],
+  "invScope": "project",
+  "invSearch": "",
+  "inventory": [
+    {
+      "color": "#6e8b7a",
+      "count": 1,
+      "folderId": null,
+      "id": "bed",
+      "manualTags": [],
+      "name": "Queen bed",
+      "open": null,
+      "shape": {
+        "d": 2030,
+        "type": "rect",
+        "w": 1530,
+      },
+      "tags": [],
+    },
+    {
+      "color": "#6e8b7a",
+      "count": 1,
+      "folderId": null,
+      "id": "desk",
+      "manualTags": [],
+      "name": "Untitled",
+      "open": null,
+      "shape": {
+        "d": 610,
+        "type": "rect",
+        "w": 1220,
+      },
+      "tags": [],
+    },
+  ],
+  "itemFolders": [],
+  "lastFolderId": null,
+  "layouts": [
+    {
+      "dimLabel": "",
+      "floorId": null,
+      "floorPlace": {
+        "rot": 0,
+        "x": 0,
+        "y": 0,
+      },
+      "folderId": null,
+      "id": "room-a",
+      "measures": [],
+      "name": "Bedroom",
+      "openings": [
+        {
+          "corner": "cw",
+          "dtype": "hinge",
+          "hinge": "start",
+          "id": "door-n",
+          "kind": "door",
+          "offset": 500,
+          "swing": "in",
+          "wall": 0,
+          "width": 813,
+        },
+        {
+          "corner": "cw",
+          "dtype": "slide",
+          "hinge": "start",
+          "id": "door-w",
+          "kind": "door",
+          "offset": 900,
+          "swing": "in",
+          "wall": 3,
+          "width": 900,
+        },
+      ],
+      "placed": [
+        {
+          "id": "p1",
+          "itemId": "bed",
+          "rot": 0,
+          "x": 1200,
+          "y": 900,
+        },
+        {
+          "id": "p2",
+          "itemId": "gone-item",
+          "rot": 90,
+          "x": 100,
+          "y": 100,
+        },
+        {
+          "id": "id1",
+          "itemId": "desk",
+          "rot": 180,
+          "x": 2400,
+          "y": 2400,
+        },
+      ],
+      "room": {
+        "floor": "#f5f3ee",
+        "iwalls": [],
+        "pillars": [],
+        "points": [
+          [
+            0,
+            0,
+          ],
+          [
+            4270,
+            0,
+          ],
+          [
+            4270,
+            3660,
+          ],
+          [
+            0,
+            3660,
+          ],
+        ],
+        "trim": 19,
+        "wall": 114,
+        "wallOff": [
+          false,
+          false,
+          false,
+          false,
+        ],
+      },
+    },
+  ],
+  "leftOpen": true,
+  "marketFolders": [],
+  "marketListings": [],
+  "marketSubs": [],
+  "mode": "furniture",
+  "onlyAvailable": false,
+  "planMode": "furniture",
+  "rightOpen": true,
+  "secClosed": [],
+  "showMeasure": true,
+  "showOpen": true,
+  "tagFilter": [],
+  "uiLib": {
+    "libFolderId": null,
+    "marketFolderId": null,
+    "tab": "library",
+  },
+  "unit": "ftin",
+  "untaggedOnly": false,
+  "zoomSpeed": 1,
+}
+`;
+
+exports[`migrate() golden output > v1-points-openings.json migrates to a stable shape 1`] = `
+{
+  "_comment": "Mid-era shape: room.points and openings already exist, folders exist, items carry tags/count — but there are no floors, no measures, no dimLabel, no floorPlace, no pillars/iwalls, no itemFolders and no marketplace state. Exercises the 'fill in everything added since' half of migrate(), and the item.manualTags backfill from item.tags.",
+  "active": "room-a",
+  "defaultMarketDismissed": false,
+  "floors": [],
+  "folders": [
+    {
+      "id": "fold-home",
+      "name": "Home",
+      "parentId": null,
+    },
+  ],
+  "invScope": "project",
+  "invSearch": "",
+  "inventory": [
+    {
+      "color": "#6e8b7a",
+      "count": 1,
+      "folderId": null,
+      "id": "sofa",
+      "manualTags": [
+        "seating",
+        "living",
+      ],
+      "name": "Sofa",
+      "open": null,
+      "shape": {
+        "d": 910,
+        "type": "rect",
+        "w": 2130,
+      },
+      "tags": [
+        "seating",
+        "living",
+      ],
+    },
+    {
+      "color": "#a8735a",
+      "count": 3,
+      "folderId": null,
+      "id": "rug",
+      "manualTags": [],
+      "name": "Rug 5x8",
+      "open": null,
+      "passThrough": true,
+      "shape": {
+        "d": 2440,
+        "type": "rect",
+        "w": 1520,
+      },
+      "tags": [],
+    },
+    {
+      "color": "#5c7a99",
+      "count": 1,
+      "folderId": null,
+      "id": "lamp",
+      "manualTags": [],
+      "name": "Floor lamp",
+      "open": null,
+      "shape": {
+        "d": 400,
+        "type": "ellipse",
+        "w": 400,
+      },
+      "tags": [],
+    },
+  ],
+  "itemFolders": [],
+  "lastFolderId": "fold-home",
+  "layouts": [
+    {
+      "dimLabel": "",
+      "floorId": null,
+      "floorPlace": {
+        "rot": 0,
+        "x": 0,
+        "y": 0,
+      },
+      "folderId": "fold-home",
+      "id": "room-a",
+      "measures": [],
+      "name": "Studio",
+      "openings": [
+        {
+          "corner": "cw",
+          "dtype": "hinge",
+          "hinge": "start",
+          "id": "op-1",
+          "kind": "door",
+          "offset": 800,
+          "swing": "in",
+          "wall": 0,
+          "width": 813,
+        },
+        {
+          "corner": "cw",
+          "dtype": "open",
+          "id": "op-2",
+          "kind": "window",
+          "offset": 400,
+          "wall": 2,
+          "width": 1200,
+        },
+      ],
+      "placed": [
+        {
+          "id": "p1",
+          "itemId": "sofa",
+          "rot": 0,
+          "x": 1500,
+          "y": 800,
+        },
+        {
+          "id": "p2",
+          "itemId": "rug",
+          "rot": 45,
+          "x": 3200,
+          "y": 2000,
+        },
+      ],
+      "room": {
+        "floor": "#e8e2d5",
+        "iwalls": [],
+        "pillars": [],
+        "points": [
+          [
+            0,
+            0,
+          ],
+          [
+            5000,
+            0,
+          ],
+          [
+            5000,
+            4000,
+          ],
+          [
+            2500,
+            4000,
+          ],
+          [
+            2500,
+            2500,
+          ],
+          [
+            0,
+            2500,
+          ],
+        ],
+        "trim": 19,
+        "trimOn": true,
+        "wall": 114,
+        "wallOff": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+        ],
+      },
+    },
+    {
+      "dimLabel": "",
+      "floorId": null,
+      "floorPlace": {
+        "rot": 0,
+        "x": 0,
+        "y": 0,
+      },
+      "folderId": null,
+      "id": "room-b",
+      "measures": [],
+      "name": "Hall",
+      "openings": [],
+      "placed": [],
+      "room": {
+        "floor": "#cccccc",
+        "iwalls": [],
+        "pillars": [],
+        "points": [
+          [
+            0,
+            0,
+          ],
+          [
+            2000,
+            0,
+          ],
+          [
+            2000,
+            6000,
+          ],
+          [
+            0,
+            6000,
+          ],
+        ],
+        "trim": 19,
+        "wall": 90,
+        "wallOff": [
+          false,
+          false,
+          false,
+          false,
+        ],
+      },
+    },
+  ],
+  "leftOpen": true,
+  "marketFolders": [],
+  "marketListings": [],
+  "marketSubs": [],
+  "mode": "room",
+  "onlyAvailable": false,
+  "planMode": "room",
+  "rightOpen": true,
+  "secClosed": [],
+  "showMeasure": true,
+  "showOpen": true,
+  "snap": "10",
+  "tagFilter": [],
+  "uiLib": {
+    "libFolderId": null,
+    "marketFolderId": null,
+    "tab": "library",
+  },
+  "unit": "cm",
+  "untaggedOnly": false,
+  "zoomSpeed": 1,
+}
+`;
+
+exports[`migrate() golden output > v2-modern-full.json migrates to a stable shape 1`] = `
+{
+  "_comment": "Current-era shape with every subsystem populated: floors + floorPlace, measures, pillars, iwalls, itemFolders with inherited tags, ad hoc market listings/folders and a subscribed marketplace. migrate() should be very close to a no-op here — which is exactly what makes it a good regression detector.",
+  "active": "room-a",
+  "defaultMarketDismissed": false,
+  "floors": [
+    {
+      "extWall": 200,
+      "id": "floor-1",
+      "name": "Ground floor",
+      "parentId": null,
+    },
+  ],
+  "folders": [
+    {
+      "id": "fold-home",
+      "name": "Home",
+      "parentId": null,
+      "tags": [],
+    },
+  ],
+  "invScope": "folder",
+  "invSearch": "",
+  "inventory": [
+    {
+      "color": "#b8975a",
+      "count": 2,
+      "folderId": "if-ikea",
+      "id": "ikea/kallax/4x2",
+      "manualTags": [
+        "storage",
+      ],
+      "name": "Kallax 4x2",
+      "open": {
+        "bottom": 400,
+        "left": 0,
+        "right": 0,
+        "top": 0,
+      },
+      "shape": {
+        "d": 390,
+        "type": "rect",
+        "w": 1470,
+      },
+      "tags": [
+        "storage",
+        "ikea",
+      ],
+    },
+    {
+      "color": "#6e8b7a",
+      "count": 1,
+      "folderId": null,
+      "id": "sofa",
+      "manualTags": [
+        "seating",
+      ],
+      "name": "Sofa",
+      "open": null,
+      "shape": {
+        "d": 910,
+        "type": "rect",
+        "w": 2130,
+      },
+      "tags": [
+        "seating",
+      ],
+    },
+  ],
+  "itemFolders": [
+    {
+      "id": "if-ikea",
+      "name": "IKEA",
+      "parentId": null,
+      "tags": [
+        "ikea",
+      ],
+    },
+  ],
+  "lastFolderId": "fold-home",
+  "layouts": [
+    {
+      "dimLabel": "16' x 13'",
+      "floorId": "floor-1",
+      "floorPlace": {
+        "rot": 0,
+        "x": 0,
+        "y": 0,
+      },
+      "folderId": "fold-home",
+      "id": "room-a",
+      "measures": [
+        {
+          "a": {
+            "id": 0,
+            "k": "wall",
+            "n": 0,
+            "part": "side",
+          },
+          "b": {
+            "id": "p1",
+            "k": "item",
+            "part": "whole",
+          },
+          "id": "m-1",
+        },
+        {
+          "a": {
+            "id": "pil-1",
+            "k": "pillar",
+            "part": "whole",
+          },
+          "b": {
+            "id": "iw-1",
+            "k": "iwall",
+            "part": "whole",
+          },
+          "id": "m-2",
+        },
+      ],
+      "name": "Living area",
+      "openings": [
+        {
+          "corner": "cw",
+          "dtype": "hinge",
+          "hinge": "start",
+          "id": "op-1",
+          "kind": "door",
+          "offset": 1000,
+          "swing": "in",
+          "wall": 3,
+          "width": 813,
+        },
+      ],
+      "placed": [
+        {
+          "id": "p1",
+          "itemId": "ikea/kallax/4x2",
+          "rot": 0,
+          "x": 600,
+          "y": 400,
+        },
+        {
+          "id": "p2",
+          "itemId": "sofa",
+          "rot": 180,
+          "x": 2400,
+          "y": 2800,
+        },
+      ],
+      "room": {
+        "floor": "#f5f3ee",
+        "iwalls": [
+          {
+            "a": [
+              3000,
+              0,
+            ],
+            "b": [
+              3000,
+              1500,
+            ],
+            "id": "iw-1",
+            "t": 90,
+          },
+        ],
+        "pillars": [
+          {
+            "id": "pil-1",
+            "rot": 0,
+            "shape": {
+              "d": 300,
+              "type": "rect",
+              "w": 300,
+            },
+            "x": 2400,
+            "y": 1980,
+          },
+        ],
+        "points": [
+          [
+            0,
+            0,
+          ],
+          [
+            4880,
+            0,
+          ],
+          [
+            4880,
+            3960,
+          ],
+          [
+            0,
+            3960,
+          ],
+        ],
+        "trim": 19,
+        "trimOn": false,
+        "wall": 114,
+        "wallOff": [
+          false,
+          false,
+          false,
+          false,
+        ],
+      },
+    },
+    {
+      "dimLabel": "",
+      "floorId": "floor-1",
+      "floorPlace": {
+        "rot": 90,
+        "x": 5200,
+        "y": 0,
+      },
+      "folderId": "fold-home",
+      "id": "room-b",
+      "measures": [],
+      "name": "Bedroom",
+      "openings": [],
+      "placed": [],
+      "room": {
+        "floor": "#efe9dc",
+        "iwalls": [],
+        "pillars": [],
+        "points": [
+          [
+            0,
+            0,
+          ],
+          [
+            3400,
+            0,
+          ],
+          [
+            3400,
+            3000,
+          ],
+          [
+            0,
+            3000,
+          ],
+        ],
+        "trim": 19,
+        "wall": 114,
+        "wallOff": [
+          false,
+          false,
+          false,
+          false,
+        ],
+      },
+    },
+  ],
+  "leftOpen": true,
+  "marketFolders": [
+    {
+      "id": "mf-1",
+      "name": "Shared",
+      "parentId": null,
+    },
+  ],
+  "marketListings": [
+    {
+      "id": "ml-1",
+      "kind": "link",
+      "name": "A bundle",
+      "parentId": "mf-1",
+      "url": "https://example.invalid/items.json",
+    },
+  ],
+  "marketSubs": [
+    {
+      "id": "ms-1",
+      "itemURL": "https://example.invalid/items/",
+      "name": "Example market",
+      "url": "https://example.invalid/market.json",
+      "version": 1,
+    },
+  ],
+  "mode": "furniture",
+  "onlyAvailable": true,
+  "planMode": "furniture",
+  "rightOpen": false,
+  "secClosed": [
+    "walls",
+  ],
+  "showDims": true,
+  "showMeasure": true,
+  "showOpen": true,
+  "showSwing": true,
+  "showWalk": false,
+  "snap": "100",
+  "tagFilter": [],
+  "uiLib": {
+    "libFolderId": "if-ikea",
+    "marketFolderId": null,
+    "tab": "library",
+  },
+  "unit": "m",
+  "untaggedOnly": false,
+  "zoomSpeed": 1.5,
+}
+`;

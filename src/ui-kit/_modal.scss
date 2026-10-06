@@ -1,0 +1,55 @@
+/* ---------------- modal (plain div: <dialog>/<form> are blocked in sandboxed frames) ---------------- */
+#modal{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:center;padding:16px;z-index:50;animation:fade var(--dur) var(--ease)}
+#modalCard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);width:min(480px,100%);max-height:min(88vh,760px);display:flex;flex-direction:column;box-shadow:var(--shadow-3);animation:rise var(--dur) var(--ease)}
+#modalCard.wide{width:min(980px,100%)}
+#modalCard.xwide{width:min(1120px,100%)}
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(4px) scale(.99)}}
+#moTitle{padding:16px 20px 4px;font-size:var(--fs-lg);font-weight:600;line-height:20px}
+#moBody{padding:12px 20px 16px;overflow:auto}
+/* wizard stepper: numbered badges joined by a line. Navigation state (which step
+   you're on) is shown by weight and fill, never colour, matching DESIGN.md §2.3 */
+#moStepper{padding:4px 20px 0}
+.wizard-steps{list-style:none;display:flex;margin:0;padding:0}
+.wizard-steps li{display:flex;align-items:center;flex:1;min-width:0;gap:8px;font-size:var(--fs-sm);color:var(--ink-3)}
+.wizard-steps li:last-child{flex:none}
+.wizard-steps .num{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line-strong);display:grid;place-items:center;font-weight:600;font-size:var(--fs-xs)}
+.wizard-steps .num .i{width:13px;height:13px}
+.wizard-steps .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wizard-steps li[data-state=active]{color:var(--ink);font-weight:600}
+.wizard-steps li[data-state=active] .num{border-color:var(--ink);color:var(--ink)}
+.wizard-steps li[data-state=done]{color:var(--ink-2)}
+.wizard-steps li[data-state=done] .num{border-color:var(--line-strong);background:var(--surface-3);color:var(--ink-2)}
+.wizard-steps .bar{flex:1;height:1.5px;background:var(--line);margin:0 4px}
+.wizard-steps li[data-state=done] .bar{background:var(--line-strong)}
+#moBody > p:first-child{margin-top:0}
+#moBody p{margin:0 0 8px}
+#moFoot{padding:12px 20px 16px;display:flex;gap:8px;align-items:center;border-top:1px solid var(--line)}
+#moErr{flex:1;color:var(--danger);font-size:var(--fs-sm);line-height:16px;min-height:16px}
+.group{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.group-title{margin:0 0 8px;font-size:var(--fs-sm);font-weight:600;color:var(--ink-2)}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.swatches button{width:22px;height:22px;padding:0;border:0;border-radius:var(--r-sm);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+.swatches button:hover{transform:scale(1.08)}
+.swatches button[aria-pressed=true]{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
+details.adv{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+details.adv > summary{display:flex;align-items:center;gap:8px;height:var(--h-sm);cursor:pointer;user-select:none;list-style:none;font-weight:600;color:var(--ink-2);border-radius:var(--r-sm)}
+details.adv > summary::-webkit-details-marker{display:none}
+details.adv > summary::before{content:"";width:6px;height:6px;margin:0 2px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform var(--dur-fast) var(--ease)}
+details.adv[open] > summary::before{transform:translateY(-2px) rotate(45deg)}
+details.adv > summary:hover{color:var(--ink)}
+details.adv .advbody{padding-top:8px}
+.picker{border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:12px;overflow:hidden}
+.picker-head{display:flex;align-items:center;gap:4px;height:36px;padding:0 4px 0 12px;background:var(--surface-2);border-bottom:1px solid var(--line);font-weight:600}
+.picker-head .grow{flex:1;min-width:0}
+.picker-body{max-height:176px;overflow:auto;padding:4px}
+.pick{display:flex;align-items:center;gap:8px;min-height:var(--h-sm);padding:0 8px;border-radius:var(--r-sm);cursor:pointer;min-width:0}
+.pick:hover{background:var(--surface-2)}
+.pick.locked{cursor:default;color:var(--ink-2)}
+.pick .dim{max-width:45%;overflow:hidden;text-overflow:ellipsis}
+.picker .empty{padding:12px}
+.export-img{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:16px;border:1px solid var(--line);border-radius:var(--r-md)}
+.export-img .grow{flex:1;min-width:0}
+.export-img .ico{color:var(--ink-3)}
+.export-img .nm{font-weight:500}
+

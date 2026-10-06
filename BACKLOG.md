@@ -150,3 +150,272 @@ layouts are both currently active).
 - Resolving any one of the conflicting placements (deleting/moving it) should
   clear the warning once the count is back within stock (partially, if more
   than one duplicate exists beyond stock).
+
+## Known defects
+
+- **Typing an item's position in the Selected panel is not undoable.** The
+  `sX`/`sY` fields (`move` in **`src/features/furniture/selection-section.jsx`**) save but never
+  recorded a furniture undo step, unlike the rotate field next to them and
+  every other placement edit. It is kept that way by an explicit
+  `transact('furn', …, {history:false})` so the move to `transact()` changed
+  no behaviour; the fix is to drop that option. Ctrl+Z today skips over the
+  typed move to whatever came before it, and the next furniture commit folds
+  it into its own step.
+
+- **Filing an item into a folder derives its id prefix from the folder's
+  *display name*, case and all.** `rehomeItemId()` builds the new id from
+  `folderIdPrefix(folderId)`, which is `itemFolderPath(...).map(f=>idSlug(f.name))`
+  (now **`src/kernel/ids.js`**, used from **`src/features/library/item-folders.js`**), and
+  `idSlug` only strips characters outside the id charset — it does not
+  case-fold. So dragging "sofa" onto a folder named
+  **IKEA** files it as `IKEA/sofa`, while an item already sitting in that same
+  folder because its id said so (`ikea/kallax`, placed there by
+  `ensureItemFolderPath`) keeps its lowercase path. One folder, two id paths:
+  the S3-style grouping the whole id convention exists for (`ikea/kallax/4x2`
+  and `ikea/kallax/2x4` "sit in the same folder") silently stops holding for
+  whichever half was not dropped there, and the divergence is invisible in the
+  UI because the grid groups by `folderId`, not by id. Renaming the folder
+  afterwards does not re-home anything either, so the prefix is a snapshot of
+  whatever the name was on the day of the drop. The fix is to case-fold in `folderIdPrefix`, or to match
+  case-insensitively in `ensureItemFolderPath` — but either changes existing
+  ids, so it needs a migration. Found while writing the `bindLibGrid` drop
+  coverage. **No longer pinned by a test** — `panel-libgrid.spec.js` was
+  scaffolding for the SCC move and went with it.
+
+- **"Added" never appears on a listing's Add button.** In
+  `renderListingDetail` (now `ListingDetail`, **`src/features/library/market-views.jsx`**, which keeps
+  the behaviour: its "Added" marks last until the page's next render) the per-item handler is
+  `addMarketItemToInventory(it); b.textContent='Added'; b.disabled=true;` —
+  but `addMarketItemToInventory` ends in `save(); renderLibAll();`, which
+  re-runs `renderListingDetail` and replaces the whole of `#listingBody`. The
+  button the handler then marks is already detached, so what the user sees is
+  the panel flashing back to "Loading…" and returning with every button still
+  reading "Add". An item that was added is indistinguishable from one that was
+  not, and clicking twice is the natural response — which lands on the
+  "Already in your library" collision dialog. "Add all to library" has the
+  same shape and the same outcome. The fix is to mark the buttons before the
+  re-render, or to have the re-render derive the state from `S.inventory`.
+  Found while writing the Phase 3.6 panel coverage. **No longer pinned by a
+  test** — `panel-library.spec.js` was scaffolding for the SCC move and went
+  with it.
+
+- **`renderSnap()` silently rewrites `S.snap` when the value is not in the
+  list.** The picker is rebuilt from `SNAPS.imperial` or `SNAPS.metric`
+  depending on `S.unit`, and if the saved snap size is not one of the six
+  options it is reset to the list's **third** entry
+  (`SnapSelect` in `src/features/canvas/sections.jsx`, `if(list.length && !list.some(([v])=>v===S.snap)) S.snap=list[2][0]`).
+  Changing the display unit therefore changes the user's snap size, with no
+  flash, no confirmation and no undo: 10 cm becomes 1 inch on the way to ft+in,
+  and 1 inch becomes 5 cm on the way back — a round trip through the unit
+  picker does not return the setting it started with. It bites code as well as
+  users: anything that sets `S.snap` directly keeps it only until the next
+  `renderAll()`, which is why `useCoarseSnap()` in the Playwright fixture has
+  to set the unit too, and why `startSplitRoom()` (which calls `renderAll()`)
+  drops a snap set just before it. Pre-existing; named by the `plan/` round and
+  deliberately not fixed there because extraction commits are move-only.
+  **No longer pinned by a test** — `panel-room.spec.js` was scaffolding for
+  the SCC move and went with it. The fix is to keep `S.snap` when it is not in
+  the list (or convert it to the nearest equivalent in the new unit) rather
+  than resetting to `list[2]`.
+
+- **A room standing on a floor is invisible in the tree at boot.** `treeOpen`
+  (`src/kernel/selection.js`) starts as an empty `Set` and is never persisted, so
+  every floor and folder row renders collapsed on load. When the active room
+  sits on a floor — the normal case once floors are used at all — the left pane
+  opens with no row for the room the canvas is showing, no `.active` row
+  anywhere, and nothing that reveals it short of finding and expanding the
+  right floor by hand. The tree (**`src/features/layouts/tree-section.jsx`**) has all it needs to auto-expand
+  the ancestors of `S.active`; it does not. The fix is to seed `treeOpen` with
+  those ancestors at boot, or to expand them in the tree when nothing else
+  has. **No longer pinned by a test** — `panel-tree.spec.js` was scaffolding
+  for the SCC move and went with it.
+
+- **A half-drawn outline, interior wall or split survives leaving Plan or
+  switching mode.** The three drawing tools (room-draw, wall-draw, split, in
+  **`src/features/room/`** and **`src/features/walls/`**) are ended only by
+  Escape, finishing, or another tool starting; `setMode()` stops only tools
+  that declare `modes` (today just Measure, via `stopToolsFor`). So a drawing
+  started in Room mode is still live after switching to Furniture, Floor or
+  the Library, and picks up again on return. Pre-existing. The fix is one line
+  per tool: give each `modes: ['room']`.
+
+- **A placement that is already invalid can be dragged *further* out of the
+  room.** `drag.loose` is seeded from `isBad(hit)` at pointerdown, and while it
+  is true the `move` branch of the furniture tool's `furnMove` (**`src/features/furniture/furniture-tool.js`**) skips
+  `slideToValid` entirely and accepts any position whose *centre* is still
+  inside the room (`centreInside`). The intent is clear and right — a piece
+  that does not fit has to be draggable at all, or it would be stuck — but the
+  loose path does not distinguish "moving back towards legal" from "moving
+  further out", so a bed already poking through a wall can be pushed another
+  300mm through it. It goes strict again the instant the placement becomes
+  valid (`if(v.ok) drag.loose=false`), so the state is not sticky. The fix is
+  to accept a loose position only when it does not increase the overlap. Found
+  while writing the Phase 3.5 pointer coverage. **No longer pinned by a test**
+  — `pointer-item.spec.js` was scaffolding for the `draw()` move and went with
+  it.
+
+- **`sel = null` does not clear `selSet`.** Three sites set the primary
+  selection directly — `setSel(null)` in **`src/features/io/import.js`**,
+  **`src/features/layouts/layout-tree.js`** (`activateLayout`) and
+  **`src/features/measure/measure.js`** — without going through `selectClear()`
+  (**`src/kernel/selection.js`**), so the multi-select set can survive a clear of the primary
+  selection and leave the two out of sync. Pre-existing on `main` (not
+  introduced by the blueprint merge); found during the Phase 0 merge audit.
+  Every other path uses the `selectOnly`/`selectAdd`/`selectToggle`/
+  `selectSet`/`selectClear` helpers that keep both in step.
+
+- **`isFinite(null)` is `true`, so `null` coordinates survive normalisation.**
+  `normLayout()` guards its numeric fields with `isFinite(p.y) ? p.y : 0`
+  (**`src/kernel/migrate.js`**, in `normLayout()`: the `floorPlace` line and the
+  pillar loop's `x`/`y`/`rot`). `null`
+  coerces to `0`, so `isFinite(null)` is `true` and a `null` passes straight
+  through, while a genuinely bad value like the string `"nope"` is correctly
+  repaired to `0`. The result is a `floorPlace.y` or `pillar.rot` of `null`
+  sitting in geometry code that expects a number. It mostly behaves as `0`
+  downstream because `null` coerces again in arithmetic, which is exactly why
+  it has gone unnoticed. `Number.isFinite` would reject it, as would an
+  explicit `typeof x === 'number'` test. Found while writing the Phase 1
+  characterization baseline; pinned by `test/unit/migrate.golden.test.js`
+  ("CHARACTERIZED, NOT ENDORSED: isFinite(null) is true, so null coordinates
+  survive").
+
+- **A negative ft+in length does not survive a `fmtLen` → `parseLen` round
+  trip.** `fmtLen` renders the sign once, on the front of the whole string
+  (`-3' 6"`), but `parseLen` sums each term with its own sign, so it reads that
+  back as −3ft **plus** 6in = −762mm rather than −1066.8mm. Every other unit
+  round-trips correctly; ft+in is the only compound one and so the only one
+  affected. A fix would have to either bracket the whole ft+in string or carry
+  the sign onto every term. Pinned by `test/unit/units.test.js`
+  ("a negative ft+in length does NOT round-trip (known defect)").
+
+- **`migrate()` never validates `S.unit`.** It range-checks `mode`, `planMode`,
+  `invScope` and `zoomSpeed`, but a saved state carrying a nonsense `unit`
+  keeps it forever. `readImport()` *does* validate the same field
+  (**`src/features/io/import.js`**), so the import path is stricter than the load path. The
+  two halves of the unit system then disagree: `fmtLen` falls through to its
+  ft+in `default:` branch while `parseLen`, finding no `BARE` entry, reads bare
+  numbers as millimetres — so the app displays feet and inches but silently
+  interprets typed numbers as mm. Only reachable through corrupt or hand-edited
+  storage, since import filters it. Pinned by
+  `test/unit/migrate.golden.test.js` ("migrate() does not validate S.unit").
+
+- **The Library folder tree does not survive export/import.**
+  `exportPayload()` writes the *layout* folder tree (`S.folders`) and the floors,
+  but never `S.itemFolders` — the Inventory tab's own folder tree — while still
+  writing each item's `item.folderId`. `readImport()`/`applyImport()` have no
+  notion of it either, and `ITEM_SCHEMA.md` has no slot for it, so the Library
+  tab's own Export has the same hole. Two things follow on import:
+  (1) `item.folderId` is a dangling reference in the receiving project; and
+  (2) `reconcileTags()` cannot explain the folder-inherited half of `item.tags`,
+  so it folds those tags into `manualTags`, permanently promoting an inherited
+  tag to a hand-picked one — after which re-filing the item no longer removes
+  it. Replace-mode import does this immediately; merge-mode defers it to the
+  next load, but it is equally permanent. Pinned by `test/unit/io-roundtrip.test.js`
+  ("the Library folder tree does not survive export/import — characterized
+  defect").
+
+- **The app is not request-free on `file://`.** `ensureDefaultMarket()` runs
+  during boot and fetches the built-in marketplace subscription from
+  `raw.githubusercontent.com` (one manifest plus one index shard per
+  marketplace — 4 requests today), on `file://` as much as over http. The app
+  degrades gracefully when they fail, so it still *works* offline with no page
+  error, but `.claude/plans/refactor-split.md` §5 states the deployment
+  contract as "`dist/index.html` opened via `file://` works with **zero network
+  requests**", and that is not true today — it was already untrue before this
+  refactor branch. Either the plan's wording or the default subscription needs
+  to change; whichever it is, it should be decided deliberately rather than
+  discovered as an apparent Phase 2 regression. Pinned by
+  `test/e2e/smoke.spec.js` ("dist/index.html boots and paints straight off disk").
+
+- **A marketplace item's folder path does not find a folder that differs only
+  in case.** `addMarketItemToInventory()` (**`src/features/library/add-to-inventory.jsx`**) files an
+  incoming item under its id path via `ensureItemFolderPath(parts)`
+  (**`src/features/library/item-folders.js`**), which matches an existing folder with
+  `x.name===name` — exact, case-sensitive. Marketplace ids
+  are lower-case by convention (`ikea/kallax/4x2`), so a user whose Library
+  already has a folder called "IKEA" gets a second, separate folder called
+  "ikea" beside it, and their IKEA items are split across two folders that look
+  the same in the tree. Nothing warns, and the two never merge. Same root cause as the
+  `folderIdPrefix` case defect above, and one case-insensitive match would fix
+  both. Found while writing the Phase 3.6 marketplace coverage. **No longer
+  pinned by a test** — `panel-market.spec.js` and its `page.route` stub
+  marketplace were scaffolding for the SCC move and went with it.
+
+- **Stepping out of a subscription answers the typed search about a different
+  collection.** The Library page (**`src/features/library/page.jsx`**) routes to
+  `renderMarketSub()` *before* the generic search view (the comment there says
+  so deliberately), so while a subscription is open the search box searches that
+  marketplace's index. Press "Marketplaces" to go back and `nav.searching` is
+  still set and the box still holds the query, but the render now falls through
+  to `renderLibSearchResults()`'s marketplace branch — which searches the **ad
+  hoc listings**. The user sees their own query, unchanged, answered with
+  "Nothing matches “kallax” here." under a `Listings /` crumb, about a
+  collection they never searched. Either the back-out should clear the search
+  (as `goLibFolder` does) or the generic search should cover the subscriptions.
+  **No longer pinned by a test** — `panel-market.spec.js` went with the rest of
+  the SCC scaffolding.
+
+- **An index entry with a malformed id disappears without a word.**
+  `subscribeMarket()` (**`src/features/marketplace/market-subs.js`**) filters shard entries
+  with `if(it&&it.id&&!idProblem(it.id))` and says nothing
+  about the ones it drops — not to the user, not to the console. Every other
+  validation failure in that function throws a message the Add dialog shows;
+  this one is silent, so a publisher's typo shows up only as a catalogue that
+  is quietly short of items, on every client, forever. The same filter is the
+  app's only protection against a malicious id, so it should stay — it is the
+  silence that is the defect; the fix is a console warning, or a dropped-entry
+  count in the subscription tile. **No longer pinned by a test** —
+  `panel-market.spec.js` proved it by publishing seven entries and asserting
+  the tile read six, and went with the rest of the SCC scaffolding.
+
+- **Opening a dialog and pressing Save re-rounds its lengths to display
+  precision.** Every length field in `itemDialog` and `openingDialog` is filled
+  with `fmtLen(mm, S.unit)` and read back with `parseLen`, and `fmtLen` rounds
+  to the unit's displayed precision — two decimals for metres. So a field
+  nobody touched still round-trips through that rounding on Save. The default
+  door width is the clearest case: `openingDialog(null,'door')` seeds 813mm
+  (a 32" door), the box reads "0.81 m" on a metric project, and pressing Save
+  without touching anything stores **810**. The same applies to any existing
+  opening or item re-saved from its dialog — the value drifts to whatever the
+  current display unit can express, once per save, silently, and switching
+  units between saves drifts it again. The dialogs are now **`src/features/library/item-dialog.jsx`** and
+  **`src/features/openings/opening-dialog.jsx`**; the fix is to keep the original millimetre
+  value when the field's text is unchanged. Found while writing the Phase 3.6
+  dialog coverage. **No longer pinned by a test** — `panel-dialogs.spec.js`
+  was scaffolding for the SCC move and went with it.
+
+- **Keys act on the plan's selection behind an open dialog.** Delete, the
+  arrows and `R` (`furniture.remove`/`nudge`/`turn` in
+  **`src/features/furniture/keys.js`**) and Delete on a room part
+  (`room.delete`, **`src/features/room/keys.js`**) do not check
+  `isModalOpen()`. Typing in a dialog's box is safe — the registry skips
+  shortcuts while focus is in a field — but with focus on one of the dialog's
+  buttons (after Tab, or a click on OK that refused), Delete removes the
+  selected items or the picked door, and the arrows nudge them, unseen under
+  the dialog. Pre-existing: the old `document` handler had the same hole. The
+  fix is an `isModalOpen()` check in those entries, or a registry-level rule
+  that only `command`-band shortcuts run while a dialog is up.
+
+- **The blueprint wizard leaks object URLs.** Counted with
+  `URL.createObjectURL`/`revokeObjectURL` wrapped: closing the wizard with
+  Esc at the scale stage creates 5 and revokes 4, and finishing an import
+  leaves 2 unrevoked. `bpDispose()` (**`src/features/blueprint/state.js`**,
+  run from the dialog's `onClose`) revokes only `bpState.url`, the photo's
+  current URL, so any URL that was replaced (`bpLoadImage` in
+  **`src/features/blueprint/image.js`**, reached from the upload and crop
+  stages) or created outside it is held until the page closes — each a
+  full-resolution image. Pre-existing. The fix is for the wizard to keep
+  every URL it creates and revoke them all in `bpDispose()`.
+
+- **A stray `/*$vite$:1*/` comment rides in the shipped CSS.** Since A4 moved the
+  styles to `src/app/styles/main.scss`, `dist/index.html`'s `<style>` block ends with
+  a 12-byte marker comment: `…{padding-inline:16px}}\n/*$vite$:1*/</style>`. It is
+  `vite-plugin-singlefile`'s own placeholder, left behind when it inlines a real
+  stylesheet asset rather than an already-inline `<style>`; it did not appear
+  before A4, when the CSS never became an asset. It is an inert CSS comment — no
+  rule, no selector, nothing parses it as anything but a comment, and the light
+  and dark screenshot baselines are unmoved — so it is cosmetic, not a defect in
+  behaviour. Left unfixed deliberately: removing it means post-processing another
+  plugin's output in `transformIndexHtml`, which is a change to the build, and A4
+  was a rename and a cut. Worth a look if the single-file artifact is ever
+  byte-compared against something, or when `vite-plugin-singlefile` is upgraded.

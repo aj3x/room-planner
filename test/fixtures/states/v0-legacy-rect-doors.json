@@ -1,0 +1,25 @@
+{
+  "_comment": "Oldest saved shape migrate() still handles: a width/depth rectangle instead of room.points, N/E/S/W doors instead of openings, items with no tags/count/color, and no folders, floors, measures, pillars or iwalls at all. Exercises the normLayout() rectPts()/door-map branch and every `if(!Array.isArray(...))` default in migrate().",
+  "layouts": [
+    {
+      "id": "room-a",
+      "name": "Bedroom",
+      "room": { "w": 4270, "d": 3660, "floor": "#f5f3ee" },
+      "doors": [
+        { "id": "door-n", "wall": "N", "offset": 500, "width": 813, "type": "hinge", "hinge": "start", "swing": "in" },
+        { "id": "door-w", "wall": "W", "offset": 900, "width": 900, "type": "slide" }
+      ],
+      "placed": [
+        { "id": "p1", "itemId": "bed", "x": 1200, "y": 900, "rot": 0 },
+        { "id": "p2", "itemId": "gone-item", "x": 100, "y": 100, "rot": 90 },
+        { "itemId": "desk", "x": 2400, "y": 2400, "rot": 180 }
+      ]
+    }
+  ],
+  "inventory": [
+    { "id": "bed", "name": "Queen bed", "shape": { "type": "rect", "w": 1530, "d": 2030 } },
+    { "id": "desk", "shape": { "type": "rect", "w": 1220, "d": 610 }, "color": "BAD-HEX" }
+  ],
+  "active": "room-a",
+  "unit": "ftin"
+}

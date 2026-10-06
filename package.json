@@ -1,0 +1,39 @@
+{
+  "name": "room-planner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Room Planner — a client-only, single-file web app.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:test": "vite build --mode instrumented",
+    "preview": "vite preview",
+    "lint": "eslint . && npm run cycles",
+    "cycles": "node scripts/import-cycles.mjs",
+    "typecheck": "node scripts/typecheck.mjs",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:e2e": "npm run build && npm run build:test && playwright test",
+    "test:e2e:update": "npm run build && npm run build:test && playwright test --update-snapshots"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "eslint": "^10.11.0",
+    "eslint-plugin-html": "^8.2.1",
+    "globals": "^17.12.0",
+    "jsdom": "^29.1.1",
+    "sass": "^1.105.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^5.0.1"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.11.3",
+    "@preact/signals-core": "^1.14.4",
+    "preact": "^10.29.8"
+  }
+}

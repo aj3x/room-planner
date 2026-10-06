@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- A miniature of index.html's shape — an HTML shell, one module entry, one
+     linked SCSS entry — so the build pipeline's properties (one file, a classic
+     script tag, tokens surviving as custom properties) are proved on something
+     small and stable rather than on the app. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>scss pipeline fixture</title>
+<link rel="stylesheet" href="./styles/main.scss">
+</head>
+<body>
+<div class="card"><p class="title">hi</p></div>
+<!-- Three script blocks, deliberately: the app puts one inside each
+     HTML partial, so the build must merge them into a single ordered
+     bundle. See the ordering test in test/build/pipeline.test.js. -->
+<script type="module">import {mark} from './order.js'; mark('BLOCK_ALPHA');</script>
+<script type="module" src="./main.js"></script>
+<script type="module">import {mark} from './order.js'; mark('BLOCK_OMEGA');</script>
+</body>
+</html>

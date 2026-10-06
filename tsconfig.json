@@ -1,0 +1,46 @@
+/* Type checking: JS with JSDoc types, checked by tsc. There are no .ts
+   sources and nothing here changes the build — Vite never reads this file, and
+   `noEmit` means tsc only reports. `npm run typecheck` (scripts/typecheck.mjs)
+   runs two passes:
+
+   1. this file: every module under src/ at TypeScript's default level. Calls
+      must match the declared signatures, properties must exist on the
+      declared types; an unannotated parameter is simply `any`. Its findings
+      in a strict module are dropped — pass 2 covers that module, and the
+      default level, lacking strictNullChecks, cannot narrow a union on a
+      missing field or a boolean flag, so it misreports code strict proves.
+
+   2. tsconfig.strict.json: `strict: true`, for each module whose first line
+      is `// @ts-check`. In this repo that pragma means "held to strict".
+      kernel/, ui-kit/, every feature's index.js (and host.js), every module
+      those re-export from, and every .jsx component must carry it, and the
+      script fails if one does not. The rest (a feature's private modules,
+      app/'s .js) is the ratchet: the
+      script lists them, and making one strict is adding the pragma and
+      fixing what pass 2 then reports.
+
+   Shared types are declarations in src/kernel/types.d.ts (the saved document,
+   transact()'s scopes) and src/features/canvas/types.d.ts (Layer, Tool),
+   named from JS with JSDoc `import('…').Name`. */
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    /* no ambient @types: the app runs in a browser and nothing else */
+    "types": [],
+    /* our own .d.ts files are checked too */
+    "skipLibCheck": false,
+    /* components are .jsx, compiled by Vite with Preact's automatic runtime
+       (vite.config.js); this is the same setting, so tsc reads a tag's type
+       from preact/jsx-runtime */
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  },
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.d.ts"]
+}

@@ -1,0 +1,58 @@
+# Publish the built single file to GitHub Pages.
+#
+# Pages must be configured with Source = "GitHub Actions" (Settings -> Pages).
+# While it is set to "Deploy from a branch" this workflow runs, succeeds, and
+# changes nothing visible — the site keeps serving the branch contents.
+#
+# What is published is `dist/`, which holds exactly one file: the self-contained
+# index.html that `npm run build` produces. The repository's own root
+# index.html is the app's *source* entry point, not a build artifact, and is
+# never what gets served from here.
+name: Deploy to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; let a run in progress finish rather than cancelling it
+# half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
